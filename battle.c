@@ -7,6 +7,7 @@
 
 #include "heap.h"
 #include "battle.h"
+#include "interface.h"
 
 /*
 in-battle commands:
@@ -583,12 +584,6 @@ void battle_init(struct pawn *battlefield[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH]
 		}
 		battlefield[y][x] = pawns + i;
 	}
-
-	//
-
-#if defined(DEBUG)
-	print(battlefield, pawns, pawns_count);
-#endif
 }
 
 int battle(const struct player *restrict players, size_t players_count, struct pawn *restrict pawns, size_t pawns_count)
@@ -606,6 +601,10 @@ int battle(const struct player *restrict players, size_t players_count, struct p
 
 	struct pawn *battlefield[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH];
 	battle_init(battlefield, pawns, pawns_count);
+
+	if_set(battlefield);
+
+	input_player(0);
 
 	count = malloc(players_count * sizeof(*count));
 	if (!count)
@@ -725,10 +724,7 @@ f(x) where:
 		}
 	}
 
-#if defined(DEBUG)
-	print(battlefield, pawns, pawns_count);
-	write(1, "\n", 1);
-#endif
+	input_player(0);
 
 	// TODO win/lose conditions
 

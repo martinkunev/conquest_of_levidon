@@ -303,17 +303,17 @@ static void distance(const struct player *restrict players, struct pawn *battlef
 	distance(players, battlefield, pawns, 7);
 }*/
 
-int main(void)
+int main(int argc, char *argv[])
 {
 	srandom(time(0));
 
 	struct unit peasant = {.health = 3, .damage = 1, .speed = 3};
 	s0 = (struct slot){._prev = 0, ._next = 0, .unit = &peasant, .player = 0, .count = 10};
-	s1 = (struct slot){._prev = 0, ._next = 0, .unit = &peasant, .player = 1, .count = 10};
-	s2 = (struct slot){._prev = 0, ._next = 0, .unit = &peasant, .player = 2, .count = 10};
+	s1 = (struct slot){._prev = 0, ._next = 0, .unit = &peasant, .player = 5, .count = 10};
+	s2 = (struct slot){._prev = 0, ._next = 0, .unit = &peasant, .player = 8, .count = 10};
 	s3 = (struct slot){._prev = 0, ._next = 0, .unit = &peasant, .player = 0, .count = 10};
 
-	struct player players[] = {0, 1, 2, 0};
+	struct player players[] = {0, 1, 2, 0, 3, 4, 5, 6, 7};
 	size_t players_count = sizeof(players) / sizeof(*players);
 
 #define test(n) do \
@@ -322,7 +322,30 @@ int main(void)
 		else write(1, #n ": error\n", 9); \
 	} while (0)
 
-	test(7);
+	void if_init(void);
+
+	struct pawn pawns[] = {
+		{._prev = 0, ._next = 0, .slot = &s0, .move = {.x[0] = 0, .y[0] = 1, .t = {0, 8}}},
+		{._prev = 0, ._next = 0, .slot = &s1, .move = {.x[0] = 6, .y[0] = 1, .t = {0, 8}}},
+		{._prev = 0, ._next = 0, .slot = &s2, .move = {.x[0] = 3, .y[0] = 6, .t = {0, 8}}},
+	};
+	size_t pawns_count = sizeof(pawns) / sizeof(*pawns);
+
+	reset(pawns, pawns_count);
+
+	pawns[0].move.x[1] = 6;
+	pawns[0].move.y[1] = 1;
+
+	pawns[1].move.x[1] = 0;
+	pawns[1].move.y[1] = 1;
+
+	pawns[2].move.x[1] = 3;
+	pawns[2].move.y[1] = 0;
+
+	if_init();
+	battle(players, players_count, pawns, pawns_count);
+
+	/*test(7);
 	test(8);
 
 	test(0);
@@ -331,7 +354,7 @@ int main(void)
 	test(3);
 	test(4);
 	test(5);
-	test(6);
+	test(6);*/
 
 	//distances(players, players_count);
 
