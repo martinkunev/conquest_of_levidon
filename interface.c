@@ -1,7 +1,6 @@
 #include <stdlib.h>
 
 #include <GL/gl.h>
-#include <GL/glut.h> /* TODO remove this */
 #include <GL/glx.h>
 
 #include <xcb/xcb.h>
@@ -230,12 +229,18 @@ int input_player(unsigned char player)
 			{
 				free(event);
 				XFree(keymap);
+				return -1;
+			}
+			else if (*input == 'n')
+			{
+				free(event);
+				XFree(keymap);
 				return 0;
 			}
 			break;
 
 		case XCB_BUTTON_RELEASE:
-			printf("release: %d\n", (int)((xcb_button_release_event_t *)event)->detail);
+			//printf("release: %d\n", (int)((xcb_button_release_event_t *)event)->detail);
 			break;
 		}
 

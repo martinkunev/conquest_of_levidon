@@ -1,3 +1,5 @@
+void if_init(void);
+
 void if_expose(void);
 
 int input_player(unsigned char player);

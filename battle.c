@@ -590,7 +590,7 @@ int battle(const struct player *restrict players, size_t players_count, struct p
 {
 	size_t i, j;
 
-	unsigned *count, *damage;
+	unsigned *count = 0, *damage = 0;
 	struct pawn *pawn;
 	unsigned char alliance;
 
@@ -604,7 +604,11 @@ int battle(const struct player *restrict players, size_t players_count, struct p
 
 	if_set(battlefield);
 
-	input_player(0);
+	if (input_player(0) < 0)
+	{
+		status = -1;
+		goto finally;
+	}
 
 	count = malloc(players_count * sizeof(*count));
 	if (!count)
@@ -724,7 +728,11 @@ f(x) where:
 		}
 	}
 
-	input_player(0);
+	if (input_player(0) < 0)
+	{
+		status = -1;
+		goto finally;
+	}
 
 	// TODO win/lose conditions
 
