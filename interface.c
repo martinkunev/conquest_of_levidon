@@ -10,6 +10,9 @@
 #include "format.h"
 #include "battle.h"
 
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #include <stdio.h>
 
 // http://xcb.freedesktop.org/opengl/
@@ -39,8 +42,9 @@ static struct pawn *(*battlefield)[BATTLEFIELD_WIDTH];
 
 static struct
 {
-	unsigned char player;
-	unsigned char x, y;
+	unsigned char player; // current player
+	unsigned char x, y; // current field
+	signed char pawn; // number of the pawn in the field
 } state;
 
 enum {White, Gray, Black, B0, Select, Self, Ally, Enemy, Player};
@@ -84,6 +88,101 @@ static int font_init(Display *dpy, struct font *restrict font)
 	if (!font->base) return -1;
 
 	glXUseXFont(font->info->fid, first, last - first + 1, font->base + first);
+	return 0;
+}
+
+#include <png.h>
+
+#define MAGIC_NUMBER_SIZE 2
+
+struct image
+{
+	png_bytep *rows;
+	png_structp png_ptr;
+	png_infop info_ptr, end_ptr;
+};
+
+static int image_load(char *filename, struct image *restrict key)
+{
+	int img;
+	struct stat info;
+	char header[MAGIC_NUMBER_SIZE];
+
+	// Open the file for reading
+	if ((img = open(filename, O_RDONLY)) < 0)
+		return -1;
+
+	// Check file size and file type
+	fstat(img, &info);
+	if ((info.st_size < MAGIC_NUMBER_SIZE) || (read(img, header, MAGIC_NUMBER_SIZE) < 0) || png_sig_cmp(header, 0, MAGIC_NUMBER_SIZE))
+	{
+		close(img);
+		return -1;
+	}
+
+	// TODO: error handling is very complicated. currently it is not how it should be
+
+	FILE *img_stream;
+
+	png_structp png_ptr;
+	png_infop info_ptr, end_ptr;
+	png_bytep *row_pointers;
+
+	key->png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+	if (!key->png_ptr)
+	{
+		close(img);
+		return -1;
+	}
+	key->info_ptr = png_create_info_struct(key->png_ptr);
+	if (!key->info_ptr)
+	{
+		close(img);
+		png_destroy_read_struct(&key->png_ptr, NULL, NULL);
+		return -1;
+	}
+	key->end_ptr = png_create_info_struct(key->png_ptr);
+	if (!key->end_ptr)
+	{
+		close(img);
+		png_destroy_read_struct(&key->png_ptr, &key->info_ptr, NULL);
+		return -1;
+	}
+
+	// TODO: the i/o is done the stupid way. it must be rewritten
+	img_stream = fdopen(img, "r");
+	png_init_io(key->png_ptr, img_stream);
+
+	// Tell libpng how many bytes of the file are already read
+	png_set_sig_bytes(key->png_ptr, MAGIC_NUMBER_SIZE);
+
+	// Read the content
+	png_read_png(key->png_ptr, key->info_ptr, 0, NULL);
+	key->rows = png_get_rows(key->png_ptr, key->info_ptr);
+
+	fclose(img_stream);
+
+	close(img);
+
+	return 0;
+}
+
+static int if_image(int x, int y, int width, int height, char *filename)
+{
+	struct image image;
+	if (image_load(filename, &image) < 0) return -1;
+
+	// Display the image.
+	// TODO: check if there is a way to show the whole image at once (not row by row)
+	unsigned i;
+	for(i = 0; i < height; i++)
+	{
+		glRasterPos2i(x, y + i);
+		glDrawPixels(width, 1, GL_RGBA, GL_UNSIGNED_BYTE, image.rows[i]);
+	}
+
+	png_destroy_read_struct(&image.png_ptr, &image.info_ptr, &image.end_ptr);
+
 	return 0;
 }
 
@@ -168,6 +267,12 @@ void if_expose(void)
 			glRasterPos2i(CTRL_X + 4 + (FIELD_SIZE + 4) * (position % 7) + (32 - (length * 10)) / 2, CTRL_Y + 32 + 32 + 18);
 			glString(buffer, length);
 
+			// Show destination of each moving pawn.
+			// TODO don't draw at the same place twice
+			if ((state.pawn < 0) || (position == state.pawn))
+				if ((p->move.x[1] != p->move.x[0]) || (p->move.y[1] != p->move.y[0]))
+					if_image(FIELD_SIZE * p->move.x[1], FIELD_SIZE * p->move.y[1], FIELD_SIZE, FIELD_SIZE, "img/move_destination.png");
+
 			position += 1;
 		} while (p = p->_next);
 	}
@@ -183,6 +288,8 @@ int input_player(unsigned char player)
 	// Set current field to a field outside of the board.
 	state.x = BATTLEFIELD_WIDTH;
 	state.y = BATTLEFIELD_HEIGHT;
+
+	state.pawn = -1;
 
 	if_expose();
 
@@ -214,8 +321,18 @@ int input_player(unsigned char player)
 		{
 		case XCB_BUTTON_PRESS:
 			mouse = (xcb_button_release_event_t *)event;
-			state.x = mouse->event_x / FIELD_SIZE;
-			state.y = mouse->event_y / FIELD_SIZE;
+			if (mouse->event_x < 768)
+			{
+				state.x = mouse->event_x / FIELD_SIZE;
+				state.y = mouse->event_y / FIELD_SIZE;
+			}
+			else
+			{
+				if (((CTRL_Y + 32) <= mouse->event_y) && (mouse->event_y < (CTRL_Y + 32 + FIELD_SIZE)) && ((CTRL_X + 4) <= mouse->event_x) && (mouse->event_x < (CTRL_X + 4 + (FIELD_SIZE + 4) * 7)))
+					state.pawn = (mouse->event_x - CTRL_X - 4) / (FIELD_SIZE + 4);
+				else
+					state.pawn = -1;
+			}
 		case XCB_EXPOSE:
 			if_expose();
 			break;
