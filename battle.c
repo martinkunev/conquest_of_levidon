@@ -17,23 +17,15 @@ in-battle commands:
 	linked list starting at battlefield[y][x]
 */
 
-/* plan:
-- add fighting
-- simplify code
-*/
-
 // Alliance number must be less than the number of players.
-
-/*
-damage depends on whether the other side is fighting (fleeing will lead to more damage received)
-*/
-
-// When escaping from enemy, unit speed is reduced by 1.
 
 // Constraints necessary to ensure that no overflow can happen:
 // x < 32
 // y < 32
 // t <= 8
+
+// damage depends on whether the other side is fighting (fleeing will lead to more damage received)
+// When escaping from enemy, unit speed is reduced by 1.
 
 #define DIAMETER 1
 

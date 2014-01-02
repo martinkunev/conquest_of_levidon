@@ -7,19 +7,15 @@
 
 #include <X11/Xlib-xcb.h>
 
-#include <png.h>
-
 #include "format.h"
 #include "battle.h"
-
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <stdio.h>
+#include "image.h"
+#include "interface.h"
 
 // http://xcb.freedesktop.org/opengl/
 // http://xcb.freedesktop.org/tutorial/events/
 // http://techpubs.sgi.com/library/dynaweb_docs/0640/SGI_Developer/books/OpenGL_Porting/sgi_html/ch04.html
+// http://open.gl
 
 #define SCREEN_WIDTH 1024
 #define SCREEN_HEIGHT 768
@@ -28,8 +24,6 @@
 
 #define CTRL_X 768
 #define CTRL_Y 0
-
-#define MAGIC_NUMBER_SIZE 8
 
 // TODO rename these
 #define glFont glListBase
@@ -43,6 +37,8 @@ static GLXDrawable drawable;
 static GLXContext context;
 
 static struct pawn *(*battlefield)[BATTLEFIELD_WIDTH];
+
+static struct image image_move_destination;
 
 static struct
 {
@@ -95,154 +91,17 @@ static int font_init(Display *dpy, struct font *restrict font)
 	return 0;
 }
 
-static int texture_png(char *filename, GLuint *restrict texture)
+static void rectangle(unsigned x, unsigned y, unsigned width, unsigned height, int color)
 {
-	int img;
-	struct stat info;
-	char header[MAGIC_NUMBER_SIZE];
+	glColor4ubv(colors[color]);
 
-	// TODO fix error handling
-
-	// Open the file for reading
-	if ((img = open(filename, O_RDONLY)) < 0)
-		return -1;
-
-	// Check file size and file type
-	// TODO read() may not read the whole magic
-	fstat(img, &info);
-	if ((info.st_size < MAGIC_NUMBER_SIZE) || (read(img, header, MAGIC_NUMBER_SIZE) != MAGIC_NUMBER_SIZE) || png_sig_cmp(header, 0, MAGIC_NUMBER_SIZE))
-	{
-		close(img);
-		return -1;
-	}
-
-	FILE *img_stream;
-
-	png_structp png_ptr;
-	png_infop info_ptr, end_ptr;
-
-	png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, 0, 0, 0);
-	if (!png_ptr)
-	{
-		close(img);
-		return -1;
-	}
-	info_ptr = png_create_info_struct(png_ptr);
-	if (!info_ptr)
-	{
-		png_destroy_read_struct(&png_ptr, 0, 0);
-		close(img);
-		return -1;
-	}
-	end_ptr = png_create_info_struct(png_ptr); // TODO why is this necessary
-	if (!end_ptr)
-	{
-		png_destroy_read_struct(&png_ptr, &info_ptr, 0);
-		close(img);
-		return -1;
-	}
-
-	// TODO: the i/o is done the stupid way. it must be rewritten
-	img_stream = fdopen(img, "r");
-	// TODO error check?
-	png_init_io(png_ptr, img_stream);
-
-	// Tell libpng that we already read MAGIC_NUMBER_SIZE bytes.
-	png_set_sig_bytes(png_ptr, MAGIC_NUMBER_SIZE);
-
-	// Read all the info up to the image data.
-	png_read_info(png_ptr, info_ptr);
-
-	// get info about png
-	png_uint_32 width, height;
-	int bit_depth, color_type;
-	png_get_IHDR(png_ptr, info_ptr, &width, &height, &bit_depth, &color_type, 0, 0, 0);
-
-	if (bit_depth != 8) ; // TODO unsupported
-
-	GLint format;
-	switch (color_type)
-	{
-	case PNG_COLOR_TYPE_RGB:
-		format = GL_RGB;
-		break;
-	case PNG_COLOR_TYPE_RGB_ALPHA:
-		format = GL_RGBA;
-		break;
-	default:
-		//fprintf(stderr, "%s: Unknown libpng color type %d.\n", file_name, color_type);
-		// TODO error
-		break;
-	}
-
-	// Row size in bytes.
-	// glTexImage2d requires rows to be 4-byte aligned
-	unsigned rowbytes = png_get_rowbytes(png_ptr, info_ptr);
-	rowbytes += 3 - ((rowbytes - 1) % 4);
-
-	png_byte **rows = malloc(height * (sizeof(png_byte *) + rowbytes * sizeof(png_byte)) + 15); // TODO why + 15
-	if (!rows)
-	{
-		fclose(img_stream);
-		png_destroy_read_struct(&png_ptr, &info_ptr, &end_ptr);
-		close(img);
-		return -1;
-	}
-
-	// set the individual row_pointers to point at the correct offsets
-	size_t i;
-	png_byte *image_data = (png_byte *)(rows + height);
-	for(i = 0; i < height; i++)
-		rows[height - 1 - i] = image_data + i * rowbytes;
-
-	// read the png into image_data through row_pointers
-	png_read_image(png_ptr, rows);
-
-	fclose(img_stream);
-	png_destroy_read_struct(&png_ptr, &info_ptr, &end_ptr);
-	close(img);
-
-	// Generate the OpenGL texture object.
-    glGenTextures(1, texture);
-    glBindTexture(GL_TEXTURE_2D, *texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, image_data);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-	free(rows);
-
-	return 0;
-}
-
-static int if_image(int x, int y, int width, int height, char *filename)
-{
-	GLuint texture;
-
-	if (texture_png(filename, &texture) < 0) return -1;
-
-	glEnable(GL_TEXTURE_2D);
-
+	// TODO why not width - 1 and height - 1
 	glBegin(GL_QUADS);
-
-	glTexCoord2d(0, 0);
-	glVertex2f(x + width, y + height);
-
-	glTexCoord2d(1, 0);
-	glVertex2f(x, y + height);
-
-	glTexCoord2d(1, 1);
 	glVertex2f(x, y);
-
-	glTexCoord2d(0, 1);
 	glVertex2f(x + width, y);
-
+	glVertex2f(x + width, y + height);
+	glVertex2f(x, y + height);
 	glEnd();
-
-	glDisable(GL_TEXTURE_2D);
-
-	glDeleteTextures(1, &texture);
-
-	return 0;
 }
 
 static void if_reshape(int width, int height)
@@ -255,19 +114,6 @@ static void if_reshape(int width, int height)
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
-}
-
-static void rectangle(unsigned x, unsigned y, unsigned width, unsigned height, int color)
-{
-	glColor4ubv(colors[color]);
-
-	// TODO why not width - 1 and height - 1
-	glBegin(GL_QUADS);
-	glVertex2f(x, y);
-	glVertex2f(x + width, y);
-	glVertex2f(x + width, y + height);
-	glVertex2f(x, y + height);
-	glEnd();
 }
 
 void if_expose(void)
@@ -330,7 +176,7 @@ void if_expose(void)
 			// TODO don't draw at the same place twice
 			if ((state.pawn < 0) || (position == state.pawn))
 				if ((p->move.x[1] != p->move.x[0]) || (p->move.y[1] != p->move.y[0]))
-					if_image(FIELD_SIZE * p->move.x[1], FIELD_SIZE * p->move.y[1], FIELD_SIZE, FIELD_SIZE, "img/move_destination.png");
+					image_draw(&image_move_destination, FIELD_SIZE * p->move.x[1], FIELD_SIZE * p->move.y[1]);
 
 			position += 1;
 		} while (p = p->_next);
@@ -338,91 +184,6 @@ void if_expose(void)
 
 	glFlush();
 	glXSwapBuffers(display, drawable);
-}
-
-int input_player(unsigned char player)
-{
-	state.player = player;
-
-	// Set current field to a field outside of the board.
-	state.x = BATTLEFIELD_WIDTH;
-	state.y = BATTLEFIELD_HEIGHT;
-
-	state.pawn = -1;
-
-	if_expose();
-
-	KeySym *keysym;
-	int keysyms_per_keycode_return;
-	KeySym *input;
-
-	// TODO handle modifier keys
-	// TODO handle dead keys
-	// TODO the keyboard mappings don't work as expected for different keyboard layouts
-
-	// Initialize keyboard mapping table.
-	int min_keycode, max_keycode;
-	int keysyms_per_keycode;
-	XDisplayKeycodes(display, &min_keycode, &max_keycode);
-	KeySym *keymap = XGetKeyboardMapping(display, min_keycode, (max_keycode - min_keycode + 1), &keysyms_per_keycode);
-	if (!keymap) return -1;
-
-	xcb_generic_event_t *event;
-	xcb_button_release_event_t *mouse;
-
-	while (1)
-	{
-		event = xcb_wait_for_event(connection);
-		// TODO consider using xcb_poll_for_event()
-		if (!event) return -1;
-
-		switch (event->response_type & ~0x80)
-		{
-		case XCB_BUTTON_PRESS:
-			mouse = (xcb_button_release_event_t *)event;
-			if (mouse->event_x < 768)
-			{
-				state.x = mouse->event_x / FIELD_SIZE;
-				state.y = mouse->event_y / FIELD_SIZE;
-				state.pawn = -1;
-			}
-			else
-			{
-				if (((CTRL_Y + 32) <= mouse->event_y) && (mouse->event_y < (CTRL_Y + 32 + FIELD_SIZE)) && ((CTRL_X + 4) <= mouse->event_x) && (mouse->event_x < (CTRL_X + 4 + (FIELD_SIZE + 4) * 7)))
-					state.pawn = (mouse->event_x - CTRL_X - 4) / (FIELD_SIZE + 4);
-				else
-					state.pawn = -1;
-			}
-		case XCB_EXPOSE:
-			if_expose();
-			break;
-
-		case XCB_KEY_PRESS:
-			input = keymap + (((xcb_key_press_event_t *)event)->detail - min_keycode) * keysyms_per_keycode;
-
-			//printf("%d %c %c %c %c\n", (int)*input, (int)input[0], (int)input[1], (int)input[2], (int)input[3]);
-
-			if (*input == 'q')
-			{
-				free(event);
-				XFree(keymap);
-				return -1;
-			}
-			else if (*input == 'n')
-			{
-				free(event);
-				XFree(keymap);
-				return 0;
-			}
-			break;
-
-		case XCB_BUTTON_RELEASE:
-			//printf("release: %d\n", (int)((xcb_button_release_event_t *)event)->detail);
-			break;
-		}
-
-		free(event);
-	}
 }
 
 void if_init(void)
@@ -510,6 +271,8 @@ void if_init(void)
 
 	if_reshape(SCREEN_WIDTH, SCREEN_HEIGHT); // TODO call this after resize
 
+	image_load_png(&image_move_destination, "img/move_destination.png");
+
 	return;
 
 error:
@@ -527,4 +290,86 @@ void if_term(void)
 	xcb_destroy_window(connection, window);
 	glXDestroyContext(display, context);
 	XCloseDisplay(display);
+}
+
+int input_player(unsigned char player)
+{
+	state.player = player;
+
+	// Set current field to a field outside of the board.
+	state.x = BATTLEFIELD_WIDTH;
+	state.y = BATTLEFIELD_HEIGHT;
+
+	state.pawn = -1;
+
+	if_expose();
+
+	// TODO handle modifier keys
+	// TODO handle dead keys
+	// TODO the keyboard mappings don't work as expected for different keyboard layouts
+
+	// Initialize keyboard mapping table.
+	// TODO do this just once
+	int min_keycode, max_keycode;
+	int keysyms_per_keycode;
+	XDisplayKeycodes(display, &min_keycode, &max_keycode);
+	KeySym *input, *keymap = XGetKeyboardMapping(display, min_keycode, (max_keycode - min_keycode + 1), &keysyms_per_keycode);
+	if (!keymap) return -1;
+
+	xcb_generic_event_t *event;
+	xcb_button_release_event_t *mouse;
+
+	while (1)
+	{
+		event = xcb_wait_for_event(connection);
+		// TODO consider using xcb_poll_for_event()
+		if (!event) return -1;
+
+		switch (event->response_type & ~0x80)
+		{
+		case XCB_BUTTON_PRESS:
+			mouse = (xcb_button_release_event_t *)event;
+			if (mouse->event_x < 768)
+			{
+				state.x = mouse->event_x / FIELD_SIZE;
+				state.y = mouse->event_y / FIELD_SIZE;
+				state.pawn = -1;
+			}
+			else
+			{
+				if (((CTRL_Y + 32) <= mouse->event_y) && (mouse->event_y < (CTRL_Y + 32 + FIELD_SIZE)) && ((CTRL_X + 4) <= mouse->event_x) && (mouse->event_x < (CTRL_X + 4 + (FIELD_SIZE + 4) * 7)))
+					state.pawn = (mouse->event_x - CTRL_X - 4) / (FIELD_SIZE + 4);
+				else
+					state.pawn = -1;
+			}
+		case XCB_EXPOSE:
+			if_expose();
+			break;
+
+		case XCB_KEY_PRESS:
+			input = keymap + (((xcb_key_press_event_t *)event)->detail - min_keycode) * keysyms_per_keycode;
+
+			//printf("%d %c %c %c %c\n", (int)*input, (int)input[0], (int)input[1], (int)input[2], (int)input[3]);
+
+			if (*input == 'q')
+			{
+				free(event);
+				XFree(keymap);
+				return -1;
+			}
+			else if (*input == 'n')
+			{
+				free(event);
+				XFree(keymap);
+				return 0;
+			}
+			break;
+
+		case XCB_BUTTON_RELEASE:
+			//printf("release: %d\n", (int)((xcb_button_release_event_t *)event)->detail);
+			break;
+		}
+
+		free(event);
+	}
 }
