@@ -133,6 +133,8 @@ int image_load_png(struct image *restrict image, const char *restrict filename)
 
 void image_draw(const struct image *restrict image, unsigned x, unsigned y)
 {
+	glBindTexture(GL_TEXTURE_2D, image->texture);
+
 	glEnable(GL_TEXTURE_2D);
 	glBegin(GL_QUADS);
 

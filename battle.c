@@ -27,6 +27,18 @@ in-battle commands:
 // damage depends on whether the other side is fighting (fleeing will lead to more damage received)
 // When escaping from enemy, unit speed is reduced by 1.
 
+/*
+Too many units on a single field don't deal the full amount of damage.
+
+The damage coefficient when the units are more than n is described by the function:
+f(x) where:
+	f(n) = 1
+	f(2n) = 0.5
+	lim(x->oo) f(x) = 0
+	f'(n) = 0
+	f"(2n) = 0
+*/
+
 #define DIAMETER 1
 
 struct encounter
@@ -74,25 +86,6 @@ static unsigned deaths(struct pawn *restrict pawn)
 	return 0;
 }*/
 
-static void print(struct pawn *battlefield[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH]) // TODO change this
-{
-	unsigned char x, y;
-	for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
-	{
-		//write(1, "+-+-+-+-+-+-+-+-+-+-+-+-+\n", BATTLEFIELD_WIDTH * 2 + 1 + 1);
-		write(1, "+-+-+-+-+-+-+-+-++-+-+-+-+-+-+-+\n", BATTLEFIELD_WIDTH * 2 + 1 + 1);
-		write(1, "|", 1);
-		for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
-		{
-			if (battlefield[y][x]) write(1, "*|", 2);
-			else write(1, " |", 2);
-		}
-		write(1, "\n", 1);
-	}
-	//write(1, "+-+-+-+-+-+-+-+-+-+-+-+-+\n", BATTLEFIELD_WIDTH * 2 + 1 + 1);
-	write(1, "+-+-+-+-+-+-+-+-++-+-+-+-+-+-+-+\n", BATTLEFIELD_WIDTH * 2 + 1 + 1);
-}
-
 int reachable(const struct player *restrict players, struct pawn *battlefield[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH], const struct pawn *restrict pawn, unsigned char x, unsigned char y)
 {
 	const struct pawn *item;
@@ -119,22 +112,15 @@ int reachable(const struct player *restrict players, struct pawn *battlefield[BA
 
 static void pawn_remove(struct pawn *battlefield[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH], struct pawn *pawn)
 {
-	// Remove the pawn from its current field.
 	if (pawn->_prev) pawn->_prev->_next = pawn->_next;
-	if (pawn->_next) pawn->_next->_prev = pawn->_prev;
+	else battlefield[pawn->move.y[0]][pawn->move.x[0]] = pawn->_next;
 
-	// If there are no pawns left at the field, mark the field as empty.
-	if (!pawn->_prev && !pawn->_next) battlefield[pawn->move.y[0]][pawn->move.x[0]] = 0;
+	if (pawn->_next) pawn->_next->_prev = pawn->_prev;
 }
 
 static void pawn_move(struct pawn *battlefield[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH], struct pawn *pawn, unsigned char x, unsigned char y)
 {
-	// Remove the pawn from its current field.
-	if (pawn->_prev) pawn->_prev->_next = pawn->_next;
-	if (pawn->_next) pawn->_next->_prev = pawn->_prev;
-
-	// If there are no pawns left at the field, mark the field as empty.
-	if (!pawn->_prev && !pawn->_next) battlefield[pawn->move.y[0]][pawn->move.x[0]] = 0;
+	pawn_remove(battlefield, pawn);
 
 	pawn->_prev = 0;
 	pawn->_next = 0;
@@ -588,6 +574,11 @@ int battle(const struct player *restrict players, size_t players_count, struct p
 
 	int status;
 
+	unsigned char a;
+	unsigned c, d;
+
+	int dx, dy;
+
 	struct heap collisions;
 	if (!heap_init(&collisions)) return -1;
 
@@ -595,12 +586,6 @@ int battle(const struct player *restrict players, size_t players_count, struct p
 	battle_init(battlefield, pawns, pawns_count);
 
 	if_set(battlefield);
-
-	if (input_player(0) < 0)
-	{
-		status = -1;
-		goto finally;
-	}
 
 	count = malloc(players_count * sizeof(*count));
 	if (!count)
@@ -617,116 +602,103 @@ int battle(const struct player *restrict players, size_t players_count, struct p
 		goto finally;
 	}
 
-/*
-Too many units on a single field don't deal the full amount of damage.
-
-The damage coefficient when the units are more than n is described by the function:
-f(x) where:
-	f(n) = 1
-	f(2n) = 0.5
-	lim(x->oo) f(x) = 0
-	f'(n) = 0
-	f"(2n) = 0
-*/
-
-	unsigned char a;
-	unsigned c, d;
-
-	int dx, dy;
-
-	// Deal damage to each pawn escaping from enemy pawns.
-	for(i = 0; i < BATTLEFIELD_HEIGHT; ++i)
+	unsigned p;
+	do
 	{
-		for(j = 0; j < BATTLEFIELD_WIDTH; ++j)
-		{
-			if (!battlefield[i][j]) continue;
-			pawn = battlefield[i][j];
-
-			battle_escape(players, players_count, pawn, count, damage);
-
-			do
+		// TODO skip dead players
+		for(p = 0; p < players_count; ++p)
+			if (input_player(p, players) < 0)
 			{
-				if ((pawn->move.x[1] == pawn->move.x[0]) && (pawn->move.y[1] == pawn->move.y[0]))
-					continue;
+				status = -1;
+				goto finally;
+			}
 
-				alliance = players[pawn->slot->player].alliance;
-
-				d = 0;
-
-				// Each alliance deals damage equally to each enemy unit.
-				for(a = 0; a < players_count; ++a)
-				{
-					if (a == alliance) continue;
-
-					// Calculate the number of enemy units for a.
-					c = count[players_count - 1] - (count[a] - (a ? count[a - 1] : 0));
-
-					d += (double)((damage[a] - (a ? damage[a - 1] : 0)) * pawn->slot->count) / c + 0.5;
-				}
-
-				// TODO implement the too many units sanction
-				// d = ...;
-
-				// Pawn takes more damage if it moves slower.
-				dx = (pawn->move.x[1] - pawn->move.x[0]);
-				dy = (pawn->move.y[1] - pawn->move.y[0]);
-				d *= sqrt((pawn->move.t[1] - pawn->move.t[0]) / sqrt(dx * dx + dy * dy));
-
-				// Deal damage and kill some of the units.
-				battle_damage(battlefield, pawn, d);
-
-				// TODO handle dead pawns
-			} while (pawn = pawn->_next);
-		}
-	}
-
-	status = battle_round(players, battlefield, pawns, pawns_count, &collisions);
-
-	// Deal damage to enemy pawns located on the same field.
-	for(i = 0; i < BATTLEFIELD_HEIGHT; ++i)
-	{
-		for(j = 0; j < BATTLEFIELD_WIDTH; ++j)
+		// Deal damage to each pawn escaping from enemy pawns.
+		for(i = 0; i < BATTLEFIELD_HEIGHT; ++i)
 		{
-			if (!battlefield[i][j]) continue;
-			pawn = battlefield[i][j];
-
-			battle_fight(players, players_count, pawn, count, damage);
-
-			do
+			for(j = 0; j < BATTLEFIELD_WIDTH; ++j)
 			{
-				alliance = players[pawn->slot->player].alliance;
+				if (!battlefield[i][j]) continue;
+				pawn = battlefield[i][j];
 
-				d = 0;
+				battle_escape(players, players_count, pawn, count, damage);
 
-				// Each alliance deals damage equally to each enemy unit.
-				for(a = 0; a < players_count; ++a)
+				do
 				{
-					if (a == alliance) continue;
+					if ((pawn->move.x[1] == pawn->move.x[0]) && (pawn->move.y[1] == pawn->move.y[0]))
+						continue;
 
-					// Calculate the number of enemy units for a.
-					c = count[players_count - 1] - (count[a] - (a ? count[a - 1] : 0));
+					alliance = players[pawn->slot->player].alliance;
 
-					d += (double)((damage[a] - (a ? damage[a - 1] : 0)) * pawn->slot->count) / c + 0.5;
-				}
+					d = 0;
 
-				// TODO implement the too many units sanction
-				// d = ...;
+					// Each alliance deals damage equally to each enemy unit.
+					for(a = 0; a < players_count; ++a)
+					{
+						if (a == alliance) continue;
 
-				// Deal damage and kill some of the units.
-				battle_damage(battlefield, pawn, d);
+						// Calculate the number of enemy units for a.
+						c = count[players_count - 1] - (count[a] - (a ? count[a - 1] : 0));
 
-				// TODO handle dead pawns
-			} while (pawn = pawn->_next);
+						d += (double)((damage[a] - (a ? damage[a - 1] : 0)) * pawn->slot->count) / c + 0.5;
+					}
+
+					// TODO implement the too many units sanction
+					// d = ...;
+
+					// Pawn takes more damage if it moves slower.
+					dx = (pawn->move.x[1] - pawn->move.x[0]);
+					dy = (pawn->move.y[1] - pawn->move.y[0]);
+					d *= sqrt((pawn->move.t[1] - pawn->move.t[0]) / sqrt(dx * dx + dy * dy));
+
+					// Deal damage and kill some of the units.
+					if (d) battle_damage(battlefield, pawn, d);
+
+					// TODO handle dead pawns
+				} while (pawn = pawn->_next);
+			}
 		}
-	}
 
-	if (input_player(0) < 0)
-	{
-		status = -1;
-		goto finally;
-	}
+		status = battle_round(players, battlefield, pawns, pawns_count, &collisions);
 
-	// TODO win/lose conditions
+		// Deal damage to enemy pawns located on the same field.
+		for(i = 0; i < BATTLEFIELD_HEIGHT; ++i)
+		{
+			for(j = 0; j < BATTLEFIELD_WIDTH; ++j)
+			{
+				if (!battlefield[i][j]) continue;
+				pawn = battlefield[i][j];
+
+				battle_fight(players, players_count, pawn, count, damage);
+
+				do
+				{
+					alliance = players[pawn->slot->player].alliance;
+
+					d = 0;
+
+					// Each alliance deals damage equally to each enemy unit.
+					for(a = 0; a < players_count; ++a)
+					{
+						if (a == alliance) continue;
+
+						// Calculate the number of enemy units for a.
+						c = count[players_count - 1] - (count[a] - (a ? count[a - 1] : 0));
+
+						d += (double)((damage[a] - (a ? damage[a - 1] : 0)) * pawn->slot->count) / c + 0.5;
+					}
+
+					// TODO implement the too many units sanction
+					// d = ...;
+
+					// Deal damage and kill some of the units.
+					if (d) battle_damage(battlefield, pawn, d);
+
+					// TODO handle dead pawns
+				} while (pawn = pawn->_next);
+			}
+		}
+	} while (!TEST); // TODO win/lose conditions
 
 finally:
 

@@ -1,9 +1,14 @@
+#include <fcntl.h>
 #include <math.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
 #include <time.h>
 #include <unistd.h>
 
+#include "types.h"
+#include "json.h"
 #include "battle.h"
 #include "interface.h"
 
@@ -302,6 +307,7 @@ static void distance(const struct player *restrict players, struct pawn *battlef
 	distance(players, battlefield, pawns, 7);
 }*/
 
+#if TEST
 int main(int argc, char *argv[])
 {
 	srandom(time(0));
@@ -312,7 +318,8 @@ int main(int argc, char *argv[])
 	s2 = (struct slot){._prev = 0, ._next = 0, .unit = &peasant, .player = 2, .count = 20};
 	s3 = (struct slot){._prev = 0, ._next = 0, .unit = &peasant, .player = 0, .count = 20};
 
-	struct player players[] = {0, 1, 2, 0, 3, 4, 5, 6, 7};
+	//struct player players[] = {0, 1, 2, 0, 3, 4, 5, 6, 7};
+	struct player players[] = {0, 1, 2};
 	size_t players_count = sizeof(players) / sizeof(*players);
 
 #define test(n) do \
@@ -338,3 +345,113 @@ int main(int argc, char *argv[])
 
 	return 0;
 }
+#else
+#include <stdio.h>
+int main(int argc, char *argv[])
+{
+	if (argc < 2)
+	{
+		fprintf(stderr, "You must specify battle\n");
+		return 0;
+	}
+
+	srandom(time(0));
+
+	struct unit peasant = {.health = 3, .damage = 1, .speed = 3};
+
+	struct stat info;
+	int fight = open(argv[1], O_RDONLY);
+	if (fight < 0) return -1;
+	if (fstat(fight, &info) < 0) return -1;
+	char *buffer = mmap(0, info.st_size, PROT_READ, MAP_SHARED, fight, 0);
+	close(fight);
+	if (buffer == MAP_FAILED) return -1;
+
+	struct string dump = string(buffer, info.st_size);
+	union json *json = json_parse(&dump);
+	munmap(buffer, info.st_size);
+
+	if (!json)
+	{
+		printf("Invalid battle\n");
+		return -1;
+	}
+
+	struct string key;
+	union json *item, *node, *field;
+	size_t index;
+
+	struct player *players = 0;
+	struct pawn *pawns = 0;
+
+	if (json_type(json) != OBJECT) goto finally;
+
+	key = string("players");
+	node = dict_get(json->object, &key);
+	if (!node || (json_type(node) != ARRAY)) goto finally;
+
+	size_t players_count = node->array_node.length;
+	players = malloc(players_count * sizeof(struct player));
+	if (!players) goto finally;
+	for(index = 0; index < players_count; ++index)
+	{
+		item = node->array_node.data[index];
+		if (json_type(item) != INTEGER) goto finally;
+		players[index].alliance = item->integer;
+	}
+
+	key = string("pawns");
+	node = dict_get(json->object, &key);
+	if (!node || (json_type(node) != ARRAY)) goto finally;
+
+	size_t pawns_count = node->array_node.length;
+	pawns = malloc(pawns_count * (sizeof(struct pawn) + sizeof(struct slot)));
+	if (!pawns) goto finally;
+	for(index = 0; index < pawns_count; ++index)
+	{
+		item = node->array_node.data[index];
+		if (json_type(item) != OBJECT) goto finally;
+
+		pawns[index]._prev = 0;
+		pawns[index]._next = 0;
+		pawns[index].slot = (struct slot *)(pawns + pawns_count) + index;
+
+		pawns[index].slot->_prev = 0;
+		pawns[index].slot->_next = 0;
+		pawns[index].slot->unit = &peasant;
+
+		key = string("player");
+		field = dict_get(item->object, &key);
+		if (!field || (json_type(field) != INTEGER)) goto finally;
+		pawns[index].slot->player = field->integer;
+
+		key = string("count");
+		field = dict_get(item->object, &key);
+		if (!field || (json_type(field) != INTEGER)) goto finally;
+		pawns[index].slot->count = field->integer;
+
+		key = string("x");
+		field = dict_get(item->object, &key);
+		if (!field || (json_type(field) != INTEGER)) goto finally;
+		pawns[index].move.x[1] = pawns[index].move.x[0] = field->integer;
+
+		key = string("y");
+		field = dict_get(item->object, &key);
+		if (!field || (json_type(field) != INTEGER)) goto finally;
+		pawns[index].move.y[1] = pawns[index].move.y[0] = field->integer;
+
+		pawns[index].move.t[0] = 0;
+		pawns[index].move.t[1] = 8;
+	}
+
+	if_init();
+
+	battle(players, players_count, pawns, pawns_count);
+
+finally:
+	free(pawns);
+	free(players);
+	json_free(json);
+	return 0;
+}
+#endif
