@@ -1,0 +1,7 @@
+{
+	"players": [0, 1],
+	"pawns": [
+		{"player": 0, "count": 10, "x": 3, "y": 0},
+		{"player": 1, "count": 10, "x": 4, "y": 7}
+	]
+}

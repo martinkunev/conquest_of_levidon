@@ -5,6 +5,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "types.h"
 #include "heap.h"
 #include "battle.h"
 #include "interface.h"
@@ -564,7 +565,35 @@ void battle_init(struct pawn *battlefield[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH]
 	}
 }
 
-int battle(const struct player *restrict players, size_t players_count, struct pawn *restrict pawns, size_t pawns_count)
+#include <stdio.h>
+static int battle_end(const struct player *restrict players, size_t players_count, struct vector *player_pawns)
+{
+	//unsigned char alive[256] = {0}; // TODO make this better
+	signed char alliance = -1;
+
+	unsigned char a;
+	struct pawn *pawn;
+
+	size_t i, j;
+	for(i = 0; i < players_count; ++i)
+	{
+		for(j = 0; j < player_pawns[i].length; ++j)
+		{
+			pawn = player_pawns[i].data[j];
+			if (pawn->slot->count)
+			{
+				a = players[pawn->slot->player].alliance;
+				if (alliance < 0) alliance = a;
+				else if (a != alliance) return 0;
+			}
+		}
+	}
+
+	printf("winner alliance: %d\n", alliance);
+	return 1;
+}
+
+int battle(const struct player *restrict players, size_t players_count, struct pawn *pawns, size_t pawns_count, struct vector *player_pawns)
 {
 	size_t i, j;
 
@@ -698,7 +727,11 @@ int battle(const struct player *restrict players, size_t players_count, struct p
 				} while (pawn = pawn->_next);
 			}
 		}
-	} while (!TEST); // TODO win/lose conditions
+#if !TEST
+	} while (!battle_end(players, players_count, player_pawns));
+#else
+	} while (0);
+#endif
 
 finally:
 

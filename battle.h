@@ -45,4 +45,4 @@ struct pawn
 int reachable(const struct player *restrict players, struct pawn *battlefield[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH], const struct pawn *restrict pawn, unsigned char x, unsigned char y);
 
 void battle_init(struct pawn *battlefield[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH], struct pawn *restrict pawns, size_t pawns_count);
-int battle(const struct player *restrict players, size_t players_count, struct pawn *restrict pawns, size_t pawns_count);
+int battle(const struct player *restrict players, size_t players_count, struct pawn *pawns, size_t pawns_count, struct vector *player_pawns);
