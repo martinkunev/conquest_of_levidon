@@ -62,7 +62,7 @@ static unsigned char colors[][4] = {
 	[Self] = {0, 192, 0, 255},
 	[Ally] = {0, 0, 255, 255},
 	[Enemy] = {255, 0, 0, 255},
-	[Player + 0] = {192, 0, 0, 255},
+	[Player + 0] = {192, 192, 192, 255},
 	[Player + 1] = {255, 255, 0, 255},
 	[Player + 2] = {128, 128, 0, 255},
 	[Player + 3] = {0, 255, 0, 255},
@@ -71,6 +71,7 @@ static unsigned char colors[][4] = {
 	[Player + 6] = {0, 0, 128, 255},
 	[Player + 7] = {255, 0, 255, 255},
 	[Player + 8] = {128, 0, 128, 255},
+	[Player + 9] = {192, 0, 0, 255},
 };
 
 struct font

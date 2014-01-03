@@ -10,14 +10,6 @@
 #include "battle.h"
 #include "interface.h"
 
-/*
-in-battle commands:
-- get all pawns of a player
-	for player number n, it's an array that starts at element n of ...
-- get all pawns at a field (x, y)
-	linked list starting at battlefield[y][x]
-*/
-
 // Alliance number must be less than the number of players.
 
 // Constraints necessary to ensure that no overflow can happen:
@@ -27,6 +19,8 @@ in-battle commands:
 
 // damage depends on whether the other side is fighting (fleeing will lead to more damage received)
 // When escaping from enemy, unit speed is reduced by 1.
+
+// player 0 is the neutral player
 
 /*
 Too many units on a single field don't deal the full amount of damage.
@@ -543,57 +537,102 @@ static void battle_damage(struct pawn *battlefield[BATTLEFIELD_HEIGHT][BATTLEFIE
 	}
 }
 
-void battle_init(struct pawn *battlefield[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH], struct pawn *restrict pawns, size_t pawns_count)
+int battle_init(struct battle *restrict battle, const struct player *restrict players, size_t players_count, struct pawn *restrict pawns, size_t pawns_count)
 {
-	memset((void *)battlefield, 0, BATTLEFIELD_HEIGHT * BATTLEFIELD_WIDTH * sizeof(struct pawn *));
+	// TODO pass just slots; position should be determined by other mechanisms
+
+	size_t i;
+
+	battle->players = players;
+	battle->players_count = players_count;
+
+	battle->player_pawns = malloc(players_count * sizeof(struct vector));
+	if (!battle->player_pawns) return -1;
+	for(i = 0; i < players_count; ++i)
+		if (!vector_init(battle->player_pawns + i))
+			goto error;
+
+	memset((void *)battle->field, 0, BATTLEFIELD_HEIGHT * BATTLEFIELD_WIDTH * sizeof(struct pawn *));
 
 	// Put the pawns on the battlefield.
+	// Add each pawn to an array of pawns for the corresponding player.
 	unsigned char x, y;
-	size_t i;
 	for(i = 0; i < pawns_count; ++i)
 	{
-		// TODO set some pawn properties (hurt, _prev, _next, etc.)
+		x = pawns[i].move.x[1] = pawns[i].move.x[0];
+		y = pawns[i].move.y[1] = pawns[i].move.y[0];
+		pawns[i].move.t[0] = 0;
+		pawns[i].move.t[1] = 8;
 
-		x = pawns[i].move.x[0];
-		y = pawns[i].move.y[0];
-		if (battlefield[y][x])
+		pawns[i]._prev = 0;
+		if (battle->field[y][x])
 		{
-			battlefield[y][x]->_prev = pawns + i;
-			pawns[i]._next = battlefield[y][x];
+			battle->field[y][x]->_prev = pawns + i;
+			pawns[i]._next = battle->field[y][x];
 		}
-		battlefield[y][x] = pawns + i;
+		else pawns[i]._next = 0;
+		battle->field[y][x] = pawns + i;
+
+		pawns[i].hurt = 0;
+
+		if (!vector_add(battle->player_pawns + pawns[i].slot->player, pawns + i)) goto error;
 	}
+
+	return 0;
+
+error:
+	// TODO free memory
+	free(battle->player_pawns);
+	return -1;
 }
 
-#include <stdio.h>
-static int battle_end(const struct player *restrict players, size_t players_count, struct vector *player_pawns)
+// TODO handle cases when there is no winner
+static int battle_end(struct battle *restrict battle)
 {
-	//unsigned char alive[256] = {0}; // TODO make this better
+	bool end = 1;
+	bool alive;
+
 	signed char alliance = -1;
 
 	unsigned char a;
 	struct pawn *pawn;
 
 	size_t i, j;
-	for(i = 0; i < players_count; ++i)
+	for(i = 0; i < battle->players_count; ++i)
 	{
-		for(j = 0; j < player_pawns[i].length; ++j)
+		if (!battle->player_pawns[i].length) continue; // skip dead players
+
+		a = battle->players[i].alliance;
+
+		alive = 0;
+		for(j = 0; j < battle->player_pawns[i].length; ++j)
 		{
-			pawn = player_pawns[i].data[j];
+			pawn = battle->player_pawns[i].data[j];
 			if (pawn->slot->count)
 			{
-				a = players[pawn->slot->player].alliance;
+				alive = 1;
+
 				if (alliance < 0) alliance = a;
-				else if (a != alliance) return 0;
+				else if (a != alliance) end = 0;
 			}
 		}
+
+		// Mark players with no pawns left as dead.
+		if (!alive) battle->player_pawns[i].length = 0;
 	}
 
-	printf("winner alliance: %d\n", alliance);
-	return 1;
+	// If the battle is over, free the memory allocated in battle_init().
+	if (end)
+	{
+		for(i = 0; i < battle->players_count; ++i)
+			vector_term(battle->player_pawns + i);
+		free(battle->player_pawns);
+	}
+
+	return (end ? alliance : -1);
 }
 
-int battle(const struct player *restrict players, size_t players_count, struct pawn *pawns, size_t pawns_count, struct vector *player_pawns)
+int battle(const struct player *restrict players, size_t players_count, struct pawn *pawns, size_t pawns_count)
 {
 	size_t i, j;
 
@@ -603,6 +642,8 @@ int battle(const struct player *restrict players, size_t players_count, struct p
 
 	int status;
 
+	unsigned char player;
+
 	unsigned char a;
 	unsigned c, d;
 
@@ -611,10 +652,14 @@ int battle(const struct player *restrict players, size_t players_count, struct p
 	struct heap collisions;
 	if (!heap_init(&collisions)) return -1;
 
-	struct pawn *battlefield[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH];
-	battle_init(battlefield, pawns, pawns_count);
+	struct battle battle;
+	if (battle_init(&battle, players, players_count, pawns, pawns_count) < 0)
+	{
+		heap_term(&collisions);
+		return -1;
+	}
 
-	if_set(battlefield);
+	if_set(battle.field);
 
 	count = malloc(players_count * sizeof(*count));
 	if (!count)
@@ -631,24 +676,26 @@ int battle(const struct player *restrict players, size_t players_count, struct p
 		goto finally;
 	}
 
-	unsigned p;
 	do
 	{
-		// TODO skip dead players
-		for(p = 0; p < players_count; ++p)
-			if (input_player(p, players) < 0)
+		// Ask each player to perform battle actions.
+		for(player = 1; player < players_count; ++player) // TODO skip player 0 in a natural way
+		{
+			if (!battle.player_pawns[player].length) continue; // skip dead players
+			if (input_player(player, players) < 0)
 			{
 				status = -1;
 				goto finally;
 			}
+		}
 
 		// Deal damage to each pawn escaping from enemy pawns.
 		for(i = 0; i < BATTLEFIELD_HEIGHT; ++i)
 		{
 			for(j = 0; j < BATTLEFIELD_WIDTH; ++j)
 			{
-				if (!battlefield[i][j]) continue;
-				pawn = battlefield[i][j];
+				if (!battle.field[i][j]) continue;
+				pawn = battle.field[i][j];
 
 				battle_escape(players, players_count, pawn, count, damage);
 
@@ -681,22 +728,22 @@ int battle(const struct player *restrict players, size_t players_count, struct p
 					d *= sqrt((pawn->move.t[1] - pawn->move.t[0]) / sqrt(dx * dx + dy * dy));
 
 					// Deal damage and kill some of the units.
-					if (d) battle_damage(battlefield, pawn, d);
+					if (d) battle_damage(battle.field, pawn, d);
 
 					// TODO handle dead pawns
 				} while (pawn = pawn->_next);
 			}
 		}
 
-		status = battle_round(players, battlefield, pawns, pawns_count, &collisions);
+		status = battle_round(players, battle.field, pawns, pawns_count, &collisions);
 
 		// Deal damage to enemy pawns located on the same field.
 		for(i = 0; i < BATTLEFIELD_HEIGHT; ++i)
 		{
 			for(j = 0; j < BATTLEFIELD_WIDTH; ++j)
 			{
-				if (!battlefield[i][j]) continue;
-				pawn = battlefield[i][j];
+				if (!battle.field[i][j]) continue;
+				pawn = battle.field[i][j];
 
 				battle_fight(players, players_count, pawn, count, damage);
 
@@ -721,17 +768,19 @@ int battle(const struct player *restrict players, size_t players_count, struct p
 					// d = ...;
 
 					// Deal damage and kill some of the units.
-					if (d) battle_damage(battlefield, pawn, d);
+					if (d) battle_damage(battle.field, pawn, d);
 
 					// TODO handle dead pawns
 				} while (pawn = pawn->_next);
 			}
 		}
 #if !TEST
-	} while (!battle_end(players, players_count, player_pawns));
+	} while (battle_end(&battle) < 0);
 #else
 	} while (0);
 #endif
+
+	input_player(0, players); // TODO fix this
 
 finally:
 

@@ -40,9 +40,19 @@ struct pawn
 		int x[2], y[2];
 		double t[2];
 	} move;
+
+	// TODO ranged attack
+};
+
+struct battle
+{
+	struct pawn *field[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH];
+	const struct player *restrict players;
+	struct vector *player_pawns;
+	size_t players_count;
 };
 
 int reachable(const struct player *restrict players, struct pawn *battlefield[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH], const struct pawn *restrict pawn, unsigned char x, unsigned char y);
 
-void battle_init(struct pawn *battlefield[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH], struct pawn *restrict pawns, size_t pawns_count);
-int battle(const struct player *restrict players, size_t players_count, struct pawn *pawns, size_t pawns_count, struct vector *player_pawns);
+int battle_init(struct battle *restrict battle, const struct player *restrict players, size_t players_count, struct pawn *restrict pawns, size_t pawns_count);
+int battle(const struct player *restrict players, size_t players_count, struct pawn *pawns, size_t pawns_count);
