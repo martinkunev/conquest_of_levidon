@@ -12,6 +12,8 @@
 
 #define MAGIC_NUMBER_SIZE 8
 
+// TODO fix image transparency problem that appears on the map
+
 int image_load_png(struct image *restrict image, const char *restrict filename)
 {
 	int img;
@@ -138,16 +140,16 @@ void image_draw(const struct image *restrict image, unsigned x, unsigned y)
 	glEnable(GL_TEXTURE_2D);
 	glBegin(GL_QUADS);
 
-	glTexCoord2d(0, 0);
+	glTexCoord2d(1, 0);
 	glVertex2f(x + image->width, y + image->height);
 
-	glTexCoord2d(1, 0);
+	glTexCoord2d(0, 0);
 	glVertex2f(x, y + image->height);
 
-	glTexCoord2d(1, 1);
+	glTexCoord2d(0, 1);
 	glVertex2f(x, y);
 
-	glTexCoord2d(0, 1);
+	glTexCoord2d(1, 1);
 	glVertex2f(x + image->width, y);
 
 	glEnd();

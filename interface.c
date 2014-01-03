@@ -20,6 +20,7 @@
 #define SCREEN_WIDTH 1024
 #define SCREEN_HEIGHT 768
 
+#define REGION_SIZE 48
 #define FIELD_SIZE 32
 
 #define CTRL_X 768
@@ -39,8 +40,9 @@ static GLXDrawable drawable;
 static GLXContext context;
 
 static struct pawn *(*battlefield)[BATTLEFIELD_WIDTH];
+static struct region (*regions)[MAP_HEIGHT];
 
-static struct image image_move_destination, image_selected;
+static struct image image_move_destination, image_selected, image_flag;
 
 static struct
 {
@@ -209,6 +211,7 @@ void if_init(void)
 
 	image_load_png(&image_move_destination, "img/move_destination.png");
 	image_load_png(&image_selected, "img/selected.png");
+	image_load_png(&image_flag, "img/flag.png");
 
 	return;
 
@@ -289,9 +292,48 @@ void if_expose(const struct player *restrict players)
 	glXSwapBuffers(display, drawable);
 }
 
+void if_map(const struct player *restrict players) // TODO finish this
+{
+	// clear window
+	glClearColor(0.0, 0.0, 0.0, 0.0);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	// show the right panel in gray
+	rectangle(768, 0, 256, 768, Gray);
+
+	// draw rectangle with current player's color
+	rectangle(768, 0, 256, 16, Player + state.player);
+
+	size_t x, y;
+	struct pawn *p;
+
+	// Map
+
+	for(y = 0; y < MAP_HEIGHT; y += 1)
+		for(x = 0; x < MAP_WIDTH; x += 1)
+		{
+			if (regions[y][x].owner)
+			{
+				rectangle(x * REGION_SIZE, y * REGION_SIZE, REGION_SIZE, REGION_SIZE, Player + regions[y][x].owner);
+				image_draw(&image_flag, x * REGION_SIZE, y * REGION_SIZE);
+			}
+		}
+
+	if ((state.x < MAP_WIDTH) && (state.y < MAP_HEIGHT))
+		rectangle(768 + 32, 32, 192, 64, Player + regions[state.y][state.x].owner);
+
+	glFlush();
+	glXSwapBuffers(display, drawable);
+}
+
 void if_set(struct pawn *bf[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH])
 {
 	battlefield = bf;
+}
+
+void if_regions(struct region reg[MAP_HEIGHT][MAP_WIDTH])
+{
+	regions = reg;
 }
 
 void if_term(void)
@@ -387,6 +429,115 @@ static void input_field(const xcb_button_release_event_t *restrict mouse, unsign
 				pawn = pawn->_next;
 			}
 		}
+	}
+}
+
+static void input_region(const xcb_button_release_event_t *restrict mouse, unsigned x, unsigned y, const struct player *restrict players)
+{
+	x /= REGION_SIZE;
+	y /= REGION_SIZE;
+
+	if (mouse->detail == 1)
+	{
+		// Set current field.
+		state.x = x;
+		state.y = y;
+	}
+	/*else if (mouse->detail == 3)
+	{
+		if (state.pawn_index >= 0)
+		{
+			// Set the move destination of the selected pawn.
+			if ((state.player == state.pawn->slot->player) && reachable(players, battlefield, state.pawn, x, y))
+			{
+				state.pawn->move.x[1] = x;
+				state.pawn->move.y[1] = y;
+			}
+		}
+		else
+		{
+			// Set the move destination of all pawns on the field.
+			struct pawn *pawn = state.pawn;
+			while (pawn)
+			{
+				if ((state.player == pawn->slot->player) && reachable(players, battlefield, pawn, x, y))
+				{
+					pawn->move.x[1] = x;
+					pawn->move.y[1] = y;
+				}
+				pawn = pawn->_next;
+			}
+		}
+	}*/
+}
+
+int input_map(unsigned char player, const struct player *restrict players)
+{
+	state.player = player;
+
+	// Set current field to a field outside of the board.
+	state.x = MAP_WIDTH;
+	state.y = MAP_HEIGHT;
+
+	if_map(players);
+
+	// TODO handle modifier keys
+	// TODO handle dead keys
+	// TODO the keyboard mappings don't work as expected for different keyboard layouts
+
+	// Initialize keyboard mapping table.
+	// TODO do this just once
+	int min_keycode, max_keycode;
+	int keysyms_per_keycode;
+	XDisplayKeycodes(display, &min_keycode, &max_keycode);
+	KeySym *input, *keymap = XGetKeyboardMapping(display, min_keycode, (max_keycode - min_keycode + 1), &keysyms_per_keycode);
+	if (!keymap) return -1;
+
+	xcb_generic_event_t *event;
+	xcb_button_release_event_t *mouse;
+
+	struct area reg = {.left = 0, .right = MAP_WIDTH * REGION_SIZE - 1, .top = 0, .bottom = MAP_HEIGHT * REGION_SIZE - 1};
+
+	while (1)
+	{
+		event = xcb_wait_for_event(connection);
+		// TODO consider using xcb_poll_for_event()
+		if (!event) return -1;
+
+		switch (event->response_type & ~0x80)
+		{
+		case XCB_BUTTON_PRESS:
+			mouse = (xcb_button_release_event_t *)event;
+			if (input_in(mouse, &reg)) input_region(mouse, mouse->event_x - reg.left, mouse->event_y - reg.top, players);
+		case XCB_EXPOSE:
+			if_map(players);
+			break;
+
+		case XCB_KEY_PRESS:
+			input = keymap + (((xcb_key_press_event_t *)event)->detail - min_keycode) * keysyms_per_keycode;
+
+			//printf("%d %c %c %c %c\n", (int)*input, (int)input[0], (int)input[1], (int)input[2], (int)input[3]);
+
+			if (*input == 'q')
+			{
+				free(event);
+				XFree(keymap);
+				return -1;
+			}
+			else if (*input == 'n')
+			{
+				free(event);
+				XFree(keymap);
+				return 0;
+			}
+			break;
+
+		case XCB_BUTTON_RELEASE:
+			//printf("release: %d\n", (int)((xcb_button_release_event_t *)event)->detail);
+			break;
+		}
+
+		free(event);
 	}
 }
 

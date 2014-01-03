@@ -45,7 +45,7 @@ static int test0(const struct player *restrict players, size_t players_count)
 	pawns[0].move.x[1] = 0;
 	pawns[0].move.y[1] = 5;
 
-	battle(players, players_count, pawns, pawns_count, 0);
+	battle(players, players_count, pawns, pawns_count);
 
 	return (pos(pawns, 0, 5) && pos(pawns + 1, 0, 3));
 }
@@ -63,7 +63,7 @@ static int test1(const struct player *restrict players, size_t players_count)
 	pawns[0].move.x[1] = 0;
 	pawns[0].move.y[1] = 5;
 
-	battle(players, players_count, pawns, pawns_count, 0);
+	battle(players, players_count, pawns, pawns_count);
 
 	return (pos(pawns, 0, 3) && pos(pawns + 1, 0, 3));
 }
@@ -84,7 +84,7 @@ static int test2(const struct player *restrict players, size_t players_count)
 	pawns[1].move.x[1] = 0;
 	pawns[1].move.y[1] = 0;
 
-	battle(players, players_count, pawns, pawns_count, 0);
+	battle(players, players_count, pawns, pawns_count);
 
 	return (pos(pawns, 2, 0) && pos(pawns + 1, 2, 0));
 }
@@ -109,7 +109,7 @@ static int test3(const struct player *restrict players, size_t players_count)
 	pawns[2].move.x[1] = 3;
 	pawns[2].move.y[1] = 0;
 
-	battle(players, players_count, pawns, pawns_count, 0);
+	battle(players, players_count, pawns, pawns_count);
 
 	return (pos(pawns, 3, 1) && pos(pawns + 1, 3, 1) && pos(pawns + 2, 3, 1));
 }
@@ -134,7 +134,7 @@ static int test4(const struct player *restrict players, size_t players_count)
 	pawns[2].move.x[1] = 3;
 	pawns[2].move.y[1] = 0;
 
-	battle(players, players_count, pawns, pawns_count, 0);
+	battle(players, players_count, pawns, pawns_count);
 
 	return (pos(pawns, 6, 1) && pos(pawns + 1, 0, 1) && pos(pawns + 2, 3, 0));
 }
@@ -159,7 +159,7 @@ static int test5(const struct player *restrict players, size_t players_count)
 	pawns[2].move.x[1] = 3;
 	pawns[2].move.y[1] = 6;
 
-	battle(players, players_count, pawns, pawns_count, 0);
+	battle(players, players_count, pawns, pawns_count);
 
 	return (pos(pawns, 3, 1) && pos(pawns + 1, 3, 1) && pos(pawns + 2, 3, 6));
 }
@@ -188,7 +188,7 @@ static int test6(const struct player *restrict players, size_t players_count)
 	pawns[3].move.x[1] = 2;
 	pawns[3].move.y[1] = 3;
 
-	battle(players, players_count, pawns, pawns_count, 0);
+	battle(players, players_count, pawns, pawns_count);
 
 	return (pos(pawns, 2, 1) && pos(pawns + 1, 2, 1) && pos(pawns + 2, 2, 3) && pos(pawns + 3, 2, 3));
 }
@@ -206,7 +206,7 @@ static int dmg(struct pawn *p, unsigned count, unsigned damage)
 		d[0] = c[0] * pawns[0].slot->unit->damage + pawns[1].hurt; \
 		d[1] = c[1] * pawns[1].slot->unit->damage + pawns[0].hurt; \
 \
-		battle(players, players_count, pawns, pawns_count, 0); \
+		battle(players, players_count, pawns, pawns_count); \
 \
 		if (!dmg(pawns, c[0], d[1]) || !dmg(pawns + 1, c[1], d[0])) return 0; \
 	} while (0)
@@ -262,7 +262,7 @@ static int test8(const struct player *restrict players, size_t players_count)
 	dy = (pawns[0].move.y[1] - pawns[0].move.y[0]);
 	d[1] = (c[1] * pawns[1].slot->unit->damage * sqrt((pawns[0].move.t[1] - pawns[0].move.t[0]) / sqrt(dx * dx + dy * dy)) + pawns[0].hurt);
 
-	battle(players, players_count, pawns, pawns_count, 0);
+	battle(players, players_count, pawns, pawns_count);
 
 	return (dmg(pawns, c[0], d[1]) && dmg(pawns + 1, c[1], d[0]));
 }
@@ -453,7 +453,7 @@ int main(int argc, char *argv[])
 
 	if_init();
 
-	battle(players, players_count, pawns, pawns_count, player_pawns);
+	battle(players, players_count, pawns, pawns_count);
 
 finally:
 	free(pawns);

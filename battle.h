@@ -2,25 +2,7 @@
 
 //#define DEBUG
 
-struct player
-{
-	unsigned char alliance;
-};
-
-struct unit
-{
-	unsigned char health;
-	unsigned char damage;
-	unsigned char speed;
-};
-
-struct slot
-{
-	struct slot *_prev, *_next;
-	const struct unit *unit;
-	unsigned count;
-	unsigned char player;
-};
+#include "map.h"
 
 #define SLOT_COUNT_MAX 256
 
