@@ -28,6 +28,8 @@
 
 #define PAWN_MARGIN 4
 
+#define STRING(s) (s), sizeof(s) - 1
+
 // TODO rename these
 #define glFont glListBase
 #define glString_(s, l, ...) glCallLists((l), GL_UNSIGNED_BYTE, (s));
@@ -321,6 +323,31 @@ void if_map(const struct player *restrict players) // TODO finish this
 
 	if ((state.x < MAP_WIDTH) && (state.y < MAP_HEIGHT))
 		rectangle(768 + 32, 32, 192, 64, Player + regions[state.y][state.x].owner);
+
+	// treasury
+	char buffer[16];
+	size_t length;
+	glColor4ubv(colors[White]);
+
+	length = format_uint(format_bytes(buffer, STRING("gold: ")), players[state.player].treasury.gold) - buffer;
+	glRasterPos2i(768 + 16, 654);
+	glString(buffer, length);
+
+	length = format_uint(format_bytes(buffer, STRING("food: ")), players[state.player].treasury.food) - buffer;
+	glRasterPos2i(768 + 16, 674);
+	glString(buffer, length);
+
+	length = format_uint(format_bytes(buffer, STRING("wood: ")), players[state.player].treasury.wood) - buffer;
+	glRasterPos2i(768 + 16, 694);
+	glString(buffer, length);
+
+	length = format_uint(format_bytes(buffer, STRING("iron: ")), players[state.player].treasury.iron) - buffer;
+	glRasterPos2i(768 + 16, 714);
+	glString(buffer, length);
+
+	length = format_uint(format_bytes(buffer, STRING("rock: ")), players[state.player].treasury.rock) - buffer;
+	glRasterPos2i(768 + 16, 734);
+	glString(buffer, length);
 
 	glFlush();
 	glXSwapBuffers(display, drawable);

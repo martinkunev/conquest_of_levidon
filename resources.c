@@ -12,7 +12,7 @@ int resource_enough(const struct resources *restrict total, const struct resourc
 }
 
 // Add the collected resources to the total amount of resources.
-void resource_collect(const struct resources *restrict total, const struct resources *restrict collected)
+void resource_collect(struct resources *restrict total, const struct resources *restrict collected)
 {
 	total->gold += collected->gold;
 	total->food += collected->food;
@@ -23,7 +23,7 @@ void resource_collect(const struct resources *restrict total, const struct resou
 
 // Substract the spent resoures from the total amount.
 // If more than the total of a given resource is spent, set the total amount to 0.
-void resource_spend(const struct resources *restrict total, const struct resources *restrict spent)
+void resource_spend(struct resources *restrict total, const struct resources *restrict spent)
 {
 	total->gold = ((total->gold > spent->gold) ? (total->gold - spent->gold) : 0);
 	total->food = ((total->food > spent->food) ? (total->food - spent->food) : 0);

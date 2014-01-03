@@ -29,6 +29,8 @@ void map_init(const struct player *restrict players, size_t players_count)
 			regions[y][x].neighbors[3] = ((regions[y][x].neighbors[2] && regions[y][x].neighbors[4]) ? (regions[y - 1] + x - 1) : 0);
 			regions[y][x].neighbors[5] = ((regions[y][x].neighbors[4] && regions[y][x].neighbors[6]) ? (regions[y + 1] + x - 1) : 0);
 			regions[y][x].neighbors[7] = ((regions[y][x].neighbors[6] && regions[y][x].neighbors[0]) ? (regions[y + 1] + x + 1) : 0);
+
+			regions[y][x].income = (struct resources){.gold = 1, .food = 1};
 		}
 	}
 
@@ -48,6 +50,12 @@ void map_init(const struct player *restrict players, size_t players_count)
 
 			if (input_map(player, players) < 0) return;
 		}
+
+		// Add the income of each region to the owner's treasury.
+		for(y = 0; y < MAP_HEIGHT; ++y)
+			for(x = 0; x < MAP_WIDTH; ++x)
+				if (regions[y][x].owner)
+					resource_collect(&players[regions[y][x].owner].treasury, &regions[y][x].income);
 	}
 }
 
@@ -57,7 +65,7 @@ int main(void)
 
 	if_init();
 
-	struct player players[] = {0, 1, 2, 3};
+	struct player players[] = {{.alliance = 0}, {.alliance = 1}, {.alliance = 2}, {.alliance = 3}};
 
 	map_init(players, sizeof(players) / sizeof(*players));
 	return 0;

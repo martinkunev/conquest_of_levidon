@@ -319,7 +319,7 @@ int main(int argc, char *argv[])
 	s3 = (struct slot){._prev = 0, ._next = 0, .unit = &peasant, .player = 0, .count = 20};
 
 	//struct player players[] = {0, 1, 2, 0, 3, 4, 5, 6, 7};
-	struct player players[] = {0, 1, 2};
+	struct player players[] = {{.alliance = 0}, {.alliance = 1}, {.alliance = 2}};
 	size_t players_count = sizeof(players) / sizeof(*players);
 
 #define test(n) do \
@@ -401,6 +401,9 @@ int main(int argc, char *argv[])
 		item = node->array_node.data[index];
 		if (json_type(item) != INTEGER) goto finally;
 		players[index].alliance = item->integer;
+
+		players[index].type = Local;
+		players[index].treasury = (struct resources){.gold = 0, .food = 0};
 
 		vector_init(player_pawns + index); // TODO error detection; free memory
 	}

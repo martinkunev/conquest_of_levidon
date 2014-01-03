@@ -5,7 +5,7 @@ LDFLAGS=-pthread -L/usr/X11/lib -lm -lpng -lGL -lX11 -lxcb -lX11-xcb
 all: main.o interface.o image.o battle.o format.o heap.o json.o dictionary.o vector.o
 	$(CC) $(LDFLAGS) $^ -o battle
 
-map: map.o interface.o image.o battle.o format.o heap.o json.o dictionary.o vector.o
+map: map.o resources.o interface.o image.o battle.o format.o heap.o json.o dictionary.o vector.o
 	$(CC) $(LDFLAGS) $^ -o map
 
 clean:

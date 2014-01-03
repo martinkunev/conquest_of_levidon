@@ -3,10 +3,13 @@
 
 #define NEIGHBORS_MAX 8
 
+#include "resources.h"
+
 struct player
 {
+	enum {Neutral, Local, Computer, Remote} type;
+	struct resources treasury;
 	unsigned char alliance;
-	//enum {Neutral, Local, Computer, Remote} type;
 };
 
 struct unit
@@ -32,6 +35,7 @@ struct region
 	struct slot *slots;
 	struct region *neighbors[NEIGHBORS_MAX];
 	struct unit *train;
+	struct resources income;
 };
 
 /* neighbors

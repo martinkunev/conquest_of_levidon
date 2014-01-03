@@ -8,7 +8,7 @@ struct resources
 };
 
 int resource_enough(const struct resources *restrict total, const struct resources *restrict required);
-void resource_collect(const struct resources *restrict total, const struct resources *restrict collected);
-void resource_spend(const struct resources *restrict total, const struct resources *restrict spent);
+void resource_collect(struct resources *restrict total, const struct resources *restrict collected);
+void resource_spend(struct resources *restrict total, const struct resources *restrict spent);
 
 // TODO think how to prevent overflow
