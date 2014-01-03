@@ -9,6 +9,6 @@ map: map.o resources.o interface.o image.o battle.o format.o heap.o json.o dicti
 	$(CC) $(LDFLAGS) $^ -o map
 
 clean:
-	rm battle.o heap.o format.o main.o
+	rm battle.o heap.o format.o main.o resources.o map.o interface.o json.o dictionary.o vector.o
 	rm battle
 	rm x

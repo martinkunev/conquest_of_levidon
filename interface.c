@@ -35,6 +35,8 @@
 #define glString_(s, l, ...) glCallLists((l), GL_UNSIGNED_BYTE, (s));
 #define glString(...) glString_(__VA_ARGS__, sizeof(__VA_ARGS__) - 1)
 
+// TODO add checks like the one in input_train() to make sure a player can only act on its own regions
+
 static Display *display;
 static xcb_connection_t *connection;
 static xcb_window_t window;
@@ -53,6 +55,12 @@ static struct
 	struct pawn *pawn;
 	signed char pawn_index;
 } state;
+
+struct area
+{
+	unsigned left, right, top, bottom;
+	void (*callback)(const xcb_button_release_event_t *restrict, unsigned, unsigned, const struct player *restrict);
+};
 
 // Create a struct that stores all the information about the battle (battlefield, players, etc.)
 
@@ -309,44 +317,73 @@ void if_map(const struct player *restrict players) // TODO finish this
 	size_t x, y;
 	struct pawn *p;
 
+	char buffer[16];
+	size_t length;
+
 	// Map
 
 	for(y = 0; y < MAP_HEIGHT; y += 1)
 		for(x = 0; x < MAP_WIDTH; x += 1)
-		{
 			if (regions[y][x].owner)
 			{
 				rectangle(x * REGION_SIZE, y * REGION_SIZE, REGION_SIZE, REGION_SIZE, Player + regions[y][x].owner);
 				image_draw(&image_flag, x * REGION_SIZE, y * REGION_SIZE);
 			}
-		}
 
 	if ((state.x < MAP_WIDTH) && (state.y < MAP_HEIGHT))
-		rectangle(768 + 32, 32, 192, 64, Player + regions[state.y][state.x].owner);
+	{
+		const struct region *region = regions[state.y] + state.x;
 
-	// treasury
-	char buffer[16];
-	size_t length;
+		glColor4ubv(colors[White]);
+		glRasterPos2i(CTRL_X + 16, 46);
+		glString(STRING("owner:"));
+
+		rectangle(CTRL_X + 16 + 7 * 10, 32, 16, 16, Player + region->owner);
+
+		if (state.player == region->owner)
+		{
+			// Display train queue.
+			size_t index;
+			for(index = 0; index < TRAIN_QUEUE; ++index)
+				if (region->train[index]) rectangle(CTRL_X + 16 + ((FIELD_SIZE + 4) * index), 64, FIELD_SIZE, FIELD_SIZE, Player + region->owner);
+				else break;
+
+			// Display units available for training.
+			rectangle(CTRL_X + 16, 128, FIELD_SIZE, FIELD_SIZE, Player + region->owner);
+		}
+
+		if (players[state.player].alliance == players[region->owner].alliance)
+		{
+			// TODO make this work for more than 7 units
+			size_t position = 0;
+			const struct slot *slot;
+			for(slot = region->slots; slot; slot = slot->_next)
+				rectangle(CTRL_X + 4 + ((FIELD_SIZE + 4) * position++), 256, FIELD_SIZE, FIELD_SIZE, Player + slot->player);
+		}
+	}
+
+	// Treasury
+
 	glColor4ubv(colors[White]);
 
 	length = format_uint(format_bytes(buffer, STRING("gold: ")), players[state.player].treasury.gold) - buffer;
-	glRasterPos2i(768 + 16, 654);
+	glRasterPos2i(CTRL_X + 16, 672);
 	glString(buffer, length);
 
 	length = format_uint(format_bytes(buffer, STRING("food: ")), players[state.player].treasury.food) - buffer;
-	glRasterPos2i(768 + 16, 674);
+	glRasterPos2i(CTRL_X + 16, 692);
 	glString(buffer, length);
 
 	length = format_uint(format_bytes(buffer, STRING("wood: ")), players[state.player].treasury.wood) - buffer;
-	glRasterPos2i(768 + 16, 694);
+	glRasterPos2i(CTRL_X + 16, 712);
 	glString(buffer, length);
 
 	length = format_uint(format_bytes(buffer, STRING("iron: ")), players[state.player].treasury.iron) - buffer;
-	glRasterPos2i(768 + 16, 714);
+	glRasterPos2i(CTRL_X + 16, 732);
 	glString(buffer, length);
 
 	length = format_uint(format_bytes(buffer, STRING("rock: ")), players[state.player].treasury.rock) - buffer;
-	glRasterPos2i(768 + 16, 734);
+	glRasterPos2i(CTRL_X + 16, 752);
 	glString(buffer, length);
 
 	glFlush();
@@ -370,11 +407,6 @@ void if_term(void)
 	glXDestroyContext(display, context);
 	XCloseDisplay(display);
 }
-
-struct area
-{
-	unsigned left, right, top, bottom;
-};
 
 static int input_in(xcb_button_release_event_t *restrict mouse, const struct area *restrict area)
 {
@@ -498,6 +530,23 @@ static void input_region(const xcb_button_release_event_t *restrict mouse, unsig
 	}*/
 }
 
+static void input_train(const xcb_button_release_event_t *restrict mouse, unsigned x, unsigned y, const struct player *restrict players)
+{
+	if (state.player != regions[state.y][state.x].owner) return;
+
+	if (mouse->detail == 1)
+	{
+		struct unit **train = regions[state.y][state.x].train;
+		size_t index;
+		for(index = 0; index < TRAIN_QUEUE; ++index)
+			if (!train[index])
+			{
+				train[index] = &peasant;
+				break;
+			}
+	}
+}
+
 int input_map(unsigned char player, const struct player *restrict players)
 {
 	state.player = player;
@@ -523,7 +572,13 @@ int input_map(unsigned char player, const struct player *restrict players)
 	xcb_generic_event_t *event;
 	xcb_button_release_event_t *mouse;
 
-	struct area reg = {.left = 0, .right = MAP_WIDTH * REGION_SIZE - 1, .top = 0, .bottom = MAP_HEIGHT * REGION_SIZE - 1};
+	struct area areas[] = {
+		{.left = 0, .right = MAP_WIDTH * REGION_SIZE - 1, .top = 0, .bottom = MAP_HEIGHT * REGION_SIZE - 1, .callback = input_region},
+		{.left = CTRL_X + 16, .right = CTRL_X + 16 + FIELD_SIZE - 1, .top = 128, .bottom = 128 + FIELD_SIZE - 1, .callback = input_train}
+	};
+	size_t areas_count = sizeof(areas) / sizeof(*areas);
+
+	size_t index;
 
 	while (1)
 	{
@@ -535,15 +590,14 @@ int input_map(unsigned char player, const struct player *restrict players)
 		{
 		case XCB_BUTTON_PRESS:
 			mouse = (xcb_button_release_event_t *)event;
-			if (input_in(mouse, &reg)) input_region(mouse, mouse->event_x - reg.left, mouse->event_y - reg.top, players);
+			for(index = 0; index < areas_count; ++index)
+				if (input_in(mouse, areas + index)) areas[index].callback(mouse, mouse->event_x - areas[index].left, mouse->event_y - areas[index].top, players);
 		case XCB_EXPOSE:
 			if_map(players);
 			break;
 
 		case XCB_KEY_PRESS:
 			input = keymap + (((xcb_key_press_event_t *)event)->detail - min_keycode) * keysyms_per_keycode;
-
-			//printf("%d %c %c %c %c\n", (int)*input, (int)input[0], (int)input[1], (int)input[2], (int)input[3]);
 
 			if (*input == 'q')
 			{

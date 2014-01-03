@@ -3,11 +3,11 @@
 // Check whether there are enough resources available for a given requirement.
 int resource_enough(const struct resources *restrict total, const struct resources *restrict required)
 {
-	if (required->gold < total->gold) return 0;
-	if (required->food < total->food) return 0;
-	if (required->wood < total->wood) return 0;
-	if (required->iron < total->iron) return 0;
-	if (required->rock < total->rock) return 0;
+	if (required->gold > total->gold) return 0;
+	if (required->food > total->food) return 0;
+	if (required->wood > total->wood) return 0;
+	if (required->iron > total->iron) return 0;
+	if (required->rock > total->rock) return 0;
 	return 1;
 }
 
