@@ -15,6 +15,7 @@
 // http://xcb.freedesktop.org/opengl/
 // http://xcb.freedesktop.org/tutorial/events/
 // http://techpubs.sgi.com/library/dynaweb_docs/0640/SGI_Developer/books/OpenGL_Porting/sgi_html/ch04.html
+// http://tronche.com/gui/x/xlib/graphics/font-metrics/
 // http://open.gl
 
 #define SCREEN_WIDTH 1024
@@ -30,10 +31,29 @@
 
 #define STRING(s) (s), sizeof(s) - 1
 
+#define PANEL_X 4
+#define PANEL_Y 4
+
+#define PANEL_WIDTH 248
+#define PANEL_HEIGHT 760
+
+#define RESOURCE_GOLD 660
+#define RESOURCE_FOOD 680
+#define RESOURCE_WOOD 700
+#define RESOURCE_IRON 720
+#define RESOURCE_ROCK 740
+
+#define MAP_X 256
+#define MAP_Y 0
+
+#define BATTLE_X 256
+#define BATTLE_Y 0
+
 // TODO rename these
 #define glFont glListBase
 #define glString_(s, l, ...) glCallLists((l), GL_UNSIGNED_BYTE, (s));
 #define glString(...) glString_(__VA_ARGS__, sizeof(__VA_ARGS__) - 1)
+#define glStringPos(x, y) glRasterPos2i((x) - font.info->min_bounds.lbearing, (y) + font.info->max_bounds.ascent)
 
 // TODO add checks like the one in input_train() to make sure a player can only act on its own regions
 
@@ -54,6 +74,11 @@ static struct
 	unsigned char x, y; // current field
 	struct pawn *pawn;
 	signed char pawn_index;
+	union
+	{
+		struct slot *slot;
+	} selected;
+	int index;
 } state;
 
 struct area
@@ -64,12 +89,13 @@ struct area
 
 // Create a struct that stores all the information about the battle (battlefield, players, etc.)
 
-enum {White, Gray, Black, B0, Select, Self, Ally, Enemy, Player};
+enum {White, Gray, Black, B0, Progress, Select, Self, Ally, Enemy, Player};
 static unsigned char colors[][4] = {
 	[White] = {192, 192, 192, 255},
 	[Gray] = {128, 128, 128, 255},
-	[Black] = {64, 64, 64, 255},
+	[Black] = {0, 0, 0, 255},
 	[B0] = {96, 96, 96, 255},
+	[Progress] = {128, 128, 128, 128},
 	[Select] = {255, 255, 255, 96},
 	[Self] = {0, 192, 0, 255},
 	[Ally] = {0, 0, 255, 255},
@@ -89,8 +115,11 @@ static unsigned char colors[][4] = {
 struct font
 {
 	XFontStruct *info;
+	unsigned width, height;
 	GLuint base;
 };
+
+struct font font;
 
 static int font_init(Display *dpy, struct font *restrict font)
 {
@@ -101,6 +130,9 @@ static int font_init(Display *dpy, struct font *restrict font)
 
 	first = font->info->min_char_or_byte2;
 	last = font->info->max_char_or_byte2;
+
+	font->width = font->info->max_bounds.rbearing - font->info->min_bounds.lbearing;
+	font->height = font->info->max_bounds.ascent + font->info->max_bounds.descent;
 
 	font->base = glGenLists(last + 1);
 	if (!font->base) return -1;
@@ -205,9 +237,8 @@ void if_init(void)
 		goto error;
 	}
 
-	struct font f;
-	font_init(display, &f); // TODO error check
-	glFont(f.base);
+	font_init(display, &font); // TODO error check
+	glFont(font.base);
 
 	// enable transparency
 	glEnable(GL_BLEND);
@@ -308,11 +339,14 @@ void if_map(const struct player *restrict players) // TODO finish this
 	glClearColor(0.0, 0.0, 0.0, 0.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	// show the right panel in gray
-	rectangle(768, 0, 256, 768, Gray);
+	// display current player's color as background
+	rectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, Player + state.player);
 
-	// draw rectangle with current player's color
-	rectangle(768, 0, 256, 16, Player + state.player);
+	// show the panel in black
+	rectangle(PANEL_X, PANEL_Y, PANEL_WIDTH, PANEL_HEIGHT, Black);
+
+	// show map in black
+	rectangle(MAP_X, MAP_Y, MAP_WIDTH * REGION_SIZE, MAP_WIDTH * REGION_SIZE, Black);
 
 	size_t x, y;
 	struct pawn *p;
@@ -326,8 +360,8 @@ void if_map(const struct player *restrict players) // TODO finish this
 		for(x = 0; x < MAP_WIDTH; x += 1)
 			if (regions[y][x].owner)
 			{
-				rectangle(x * REGION_SIZE, y * REGION_SIZE, REGION_SIZE, REGION_SIZE, Player + regions[y][x].owner);
-				image_draw(&image_flag, x * REGION_SIZE, y * REGION_SIZE);
+				rectangle(MAP_X + x * REGION_SIZE, MAP_Y + y * REGION_SIZE, REGION_SIZE, REGION_SIZE, Player + regions[y][x].owner);
+				image_draw(&image_flag, MAP_X + x * REGION_SIZE, MAP_Y + y * REGION_SIZE);
 			}
 
 	if ((state.x < MAP_WIDTH) && (state.y < MAP_HEIGHT))
@@ -335,30 +369,39 @@ void if_map(const struct player *restrict players) // TODO finish this
 		const struct region *region = regions[state.y] + state.x;
 
 		glColor4ubv(colors[White]);
-		glRasterPos2i(CTRL_X + 16, 46);
+		glStringPos(PANEL_X, PANEL_Y);
 		glString(STRING("owner:"));
 
-		rectangle(CTRL_X + 16 + 7 * 10, 32, 16, 16, Player + region->owner);
+		rectangle(PANEL_X + 7 * font.width, PANEL_Y + ((int)font.height - 16) / 2, 16, 16, Player + region->owner);
+
+		// Display the slots at the current region.
+		if (players[state.player].alliance == players[region->owner].alliance)
+		{
+			// TODO make this work for more than 6 slots
+			size_t position = 0;
+			const struct slot *slot;
+			for(slot = region->slots; slot; slot = slot->_next)
+			{
+				rectangle(PANEL_X + 20 + ((FIELD_SIZE + 4) * position), PANEL_Y + 32, FIELD_SIZE, FIELD_SIZE, Player + slot->player);
+				if (position == state.index) image_draw(&image_selected, PANEL_X + 20 + ((FIELD_SIZE + 4) * position), PANEL_Y + 32);
+				position += 1;
+			}
+		}
 
 		if (state.player == region->owner)
 		{
 			// Display train queue.
 			size_t index;
 			for(index = 0; index < TRAIN_QUEUE; ++index)
-				if (region->train[index]) rectangle(CTRL_X + 16 + ((FIELD_SIZE + 4) * index), 64, FIELD_SIZE, FIELD_SIZE, Player + region->owner);
+				if (region->train[index])
+				{
+					rectangle(PANEL_X + ((FIELD_SIZE + PAWN_MARGIN) * index), PANEL_Y + 128, FIELD_SIZE, FIELD_SIZE, Player + region->owner);
+					rectangle(PANEL_X + ((FIELD_SIZE + PAWN_MARGIN) * index), PANEL_Y + 128, FIELD_SIZE, FIELD_SIZE, Progress);
+				}
 				else break;
 
 			// Display units available for training.
-			rectangle(CTRL_X + 16, 128, FIELD_SIZE, FIELD_SIZE, Player + region->owner);
-		}
-
-		if (players[state.player].alliance == players[region->owner].alliance)
-		{
-			// TODO make this work for more than 7 units
-			size_t position = 0;
-			const struct slot *slot;
-			for(slot = region->slots; slot; slot = slot->_next)
-				rectangle(CTRL_X + 4 + ((FIELD_SIZE + 4) * position++), 256, FIELD_SIZE, FIELD_SIZE, Player + slot->player);
+			rectangle(PANEL_X, PANEL_Y + 192, FIELD_SIZE, FIELD_SIZE, Player + region->owner);
 		}
 	}
 
@@ -367,23 +410,23 @@ void if_map(const struct player *restrict players) // TODO finish this
 	glColor4ubv(colors[White]);
 
 	length = format_uint(format_bytes(buffer, STRING("gold: ")), players[state.player].treasury.gold) - buffer;
-	glRasterPos2i(CTRL_X + 16, 672);
+	glRasterPos2i(PANEL_X, RESOURCE_GOLD);
 	glString(buffer, length);
 
 	length = format_uint(format_bytes(buffer, STRING("food: ")), players[state.player].treasury.food) - buffer;
-	glRasterPos2i(CTRL_X + 16, 692);
+	glRasterPos2i(PANEL_X, RESOURCE_FOOD);
 	glString(buffer, length);
 
 	length = format_uint(format_bytes(buffer, STRING("wood: ")), players[state.player].treasury.wood) - buffer;
-	glRasterPos2i(CTRL_X + 16, 712);
+	glRasterPos2i(PANEL_X, RESOURCE_WOOD);
 	glString(buffer, length);
 
 	length = format_uint(format_bytes(buffer, STRING("iron: ")), players[state.player].treasury.iron) - buffer;
-	glRasterPos2i(CTRL_X + 16, 732);
+	glRasterPos2i(PANEL_X, RESOURCE_IRON);
 	glString(buffer, length);
 
 	length = format_uint(format_bytes(buffer, STRING("rock: ")), players[state.player].treasury.rock) - buffer;
-	glRasterPos2i(CTRL_X + 16, 752);
+	glRasterPos2i(PANEL_X, RESOURCE_ROCK);
 	glString(buffer, length);
 
 	glFlush();
@@ -501,6 +544,8 @@ static void input_region(const xcb_button_release_event_t *restrict mouse, unsig
 		// Set current field.
 		state.x = x;
 		state.y = y;
+
+		state.index = -1;
 	}
 	/*else if (mouse->detail == 3)
 	{
@@ -532,6 +577,7 @@ static void input_region(const xcb_button_release_event_t *restrict mouse, unsig
 
 static void input_train(const xcb_button_release_event_t *restrict mouse, unsigned x, unsigned y, const struct player *restrict players)
 {
+	if ((state.x >= MAP_WIDTH) || (state.y >= MAP_HEIGHT)) return;
 	if (state.player != regions[state.y][state.x].owner) return;
 
 	if (mouse->detail == 1)
@@ -547,6 +593,41 @@ static void input_train(const xcb_button_release_event_t *restrict mouse, unsign
 	}
 }
 
+static void input_dismiss(const xcb_button_release_event_t *restrict mouse, unsigned x, unsigned y, const struct player *restrict players)
+{
+	if ((state.x >= MAP_WIDTH) || (state.y >= MAP_HEIGHT)) return;
+	if (state.player != regions[state.y][state.x].owner) return;
+	if ((x % (FIELD_SIZE + PAWN_MARGIN)) >= FIELD_SIZE) return;
+
+	if (mouse->detail == 1)
+	{
+		struct unit **train = regions[state.y][state.x].train;
+
+		size_t index;
+		for(index = (x / (FIELD_SIZE + PAWN_MARGIN) + 1); index < TRAIN_QUEUE; ++index)
+			train[index - 1] = train[index];
+		train[TRAIN_QUEUE - 1] = 0;
+	}
+}
+
+static void input_slot(const xcb_button_release_event_t *restrict mouse, unsigned x, unsigned y, const struct player *restrict players)
+{
+	if ((state.x >= MAP_WIDTH) || (state.y >= MAP_HEIGHT)) return;
+
+	if (mouse->detail == 1)
+	{
+		if ((x % (FIELD_SIZE + PAWN_MARGIN)) >= FIELD_SIZE) goto reset;
+
+		state.index = x / (FIELD_SIZE + PAWN_MARGIN);
+	}
+
+	return;
+
+reset:
+	state.index = -1;
+	return;
+}
+
 int input_map(unsigned char player, const struct player *restrict players)
 {
 	state.player = player;
@@ -554,6 +635,9 @@ int input_map(unsigned char player, const struct player *restrict players)
 	// Set current field to a field outside of the board.
 	state.x = MAP_WIDTH;
 	state.y = MAP_HEIGHT;
+
+	state.index = -1;
+	state.selected.slot = 0;
 
 	if_map(players);
 
@@ -572,9 +656,37 @@ int input_map(unsigned char player, const struct player *restrict players)
 	xcb_generic_event_t *event;
 	xcb_button_release_event_t *mouse;
 
+	// TODO cancel training
+
 	struct area areas[] = {
-		{.left = 0, .right = MAP_WIDTH * REGION_SIZE - 1, .top = 0, .bottom = MAP_HEIGHT * REGION_SIZE - 1, .callback = input_region},
-		{.left = CTRL_X + 16, .right = CTRL_X + 16 + FIELD_SIZE - 1, .top = 128, .bottom = 128 + FIELD_SIZE - 1, .callback = input_train}
+		{
+			.left = MAP_X,
+			.right = MAP_X + MAP_WIDTH * REGION_SIZE - 1,
+			.top = MAP_Y,
+			.bottom = MAP_Y + MAP_HEIGHT * REGION_SIZE - 1,
+			.callback = input_region
+		},
+		{
+			.left = PANEL_X,
+			.right = PANEL_X + FIELD_SIZE - 1,
+			.top = PANEL_Y + 192,
+			.bottom = PANEL_Y + 192 + FIELD_SIZE - 1,
+			.callback = input_train
+		},
+		{
+			.left = PANEL_X,
+			.right = PANEL_X + ((FIELD_SIZE + PAWN_MARGIN) * TRAIN_QUEUE) - 1,
+			.top = PANEL_Y + 128,
+			.bottom = PANEL_Y + 128 + FIELD_SIZE - 1,
+			.callback = input_dismiss
+		},
+		{
+			.left = PANEL_X + 20,
+			.right = PANEL_X + 20 + (FIELD_SIZE + PAWN_MARGIN) * 6 - PAWN_MARGIN - 1,
+			.top = PANEL_Y + 32,
+			.bottom = PANEL_Y + 32 + FIELD_SIZE - 1,
+			.callback = input_slot,
+		}
 	};
 	size_t areas_count = sizeof(areas) / sizeof(*areas);
 
