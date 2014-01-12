@@ -36,5 +36,4 @@ struct battle
 
 int reachable(const struct player *restrict players, struct pawn *battlefield[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH], const struct pawn *restrict pawn, unsigned char x, unsigned char y);
 
-int battle_init(struct battle *restrict battle, const struct player *restrict players, size_t players_count, struct pawn *restrict pawns, size_t pawns_count);
-int battle(const struct player *restrict players, size_t players_count, struct pawn *pawns, size_t pawns_count);
+int battle(const struct player *restrict players, size_t players_count, struct slot *restrict slots);

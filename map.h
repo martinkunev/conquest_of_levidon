@@ -29,7 +29,7 @@ struct slot
 	unsigned count;
 	unsigned char player;
 
-	struct region *location, *move;
+	struct region *location, *move; // TODO change this to *location[2]
 };
 
 struct region
@@ -39,6 +39,9 @@ struct region
 	struct region *neighbors[NEIGHBORS_MAX];
 	struct unit *train[TRAIN_QUEUE];
 	struct resources income;
+
+	// TODO store position better
+	unsigned char x, y;
 };
 
 /* neighbors

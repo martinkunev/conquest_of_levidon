@@ -14,6 +14,8 @@
 
 #include <stdio.h>
 
+struct unit peasant = {.health = 3, .damage = 1, .speed = 3, .cost = {.gold = 1, .food = 2}};
+
 void reset(struct pawn *restrict pawns, size_t pawns_count)
 {
 	// By default, each pawn stays at its place.

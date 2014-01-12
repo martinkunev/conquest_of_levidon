@@ -537,10 +537,8 @@ static void battle_damage(struct pawn *battlefield[BATTLEFIELD_HEIGHT][BATTLEFIE
 	}
 }
 
-int battle_init(struct battle *restrict battle, const struct player *restrict players, size_t players_count, struct pawn *restrict pawns, size_t pawns_count)
+static int battle_init(struct battle *restrict battle, const struct player *restrict players, size_t players_count, struct pawn *restrict pawns, size_t pawns_count)
 {
-	// TODO pass just slots; position should be determined by other mechanisms
-
 	size_t i;
 
 	battle->players = players;
@@ -632,9 +630,30 @@ static int battle_end(struct battle *restrict battle)
 	return (end ? alliance : -1);
 }
 
-int battle(const struct player *restrict players, size_t players_count, struct pawn *pawns, size_t pawns_count)
+int battle(const struct player *restrict players, size_t players_count, struct slot *restrict slots)
 {
+	struct slot *slot;
+	struct pawn *pawns;
+	size_t pawns_count = 0;
+
 	size_t i, j;
+
+	for(slot = slots; slot; slot = slot->_next)
+		pawns_count += 1;
+	pawns = malloc(pawns_count * sizeof(*pawns));
+	if (!pawns) return -1;
+
+	i = 0;
+	for(slot = slots; slot; slot = slot->_next)
+	{
+		pawns[i]._prev = 0;
+		pawns[i]._next = 0;
+		pawns[i].slot = slot;
+		pawns[i].hurt = 0;
+		pawns[i].move = (struct move){.x = {i, i}, .y = {0, 0}, .t = {0, 8}};
+
+		i += 1;
+	}
 
 	unsigned *count = 0, *damage = 0;
 	struct pawn *pawn;
@@ -775,7 +794,7 @@ int battle(const struct player *restrict players, size_t players_count, struct p
 			}
 		}
 #if !TEST
-	} while (battle_end(&battle) < 0);
+	} while ((status = battle_end(&battle)) < 0);
 #else
 	} while (0);
 #endif

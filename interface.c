@@ -315,7 +315,7 @@ void if_expose(const struct player *restrict players)
 
 			glColor4ubv(colors[White]);
 			length = format_uint(buffer, p->slot->count) - buffer;
-			glRasterPos2i(CTRL_X + 4 + (FIELD_SIZE + 4) * (position % 7) + (32 - (length * 10)) / 2, CTRL_Y + 32 + 32 + 18);
+			glRasterPos2i(CTRL_X + 4 + (FIELD_SIZE + 4) * (position % 7) + (FIELD_SIZE - (length * 10)) / 2, CTRL_Y + 32 + 32 + 18);
 			glString(buffer, length);
 
 			// Show destination of each moving pawn.
@@ -384,6 +384,15 @@ void if_map(const struct player *restrict players) // TODO finish this
 			{
 				rectangle(PANEL_X + 20 + ((FIELD_SIZE + 4) * position), PANEL_Y + 32, FIELD_SIZE, FIELD_SIZE, Player + slot->player);
 				if (position == state.index) image_draw(&image_selected, PANEL_X + 20 + ((FIELD_SIZE + 4) * position), PANEL_Y + 32);
+
+				glColor4ubv(colors[White]);
+				length = format_uint(buffer, slot->count) - buffer;
+				glRasterPos2i(PANEL_X + 20 + ((FIELD_SIZE + 4) * position) + (FIELD_SIZE - (length * 10)) / 2, PANEL_Y + 32 + FIELD_SIZE + 18);
+				glString(buffer, length);
+
+				if ((state.player == region->owner) && ((state.index < 0) || (state.index == position)) && ((slot->move->x != state.x) || (slot->move->y != state.y)))
+					image_draw(&image_move_destination, MAP_X + slot->move->x * REGION_SIZE + 8, MAP_Y + slot->move->y * REGION_SIZE + 8);
+
 				position += 1;
 			}
 		}
@@ -520,15 +529,14 @@ static void input_field(const xcb_button_release_event_t *restrict mouse, unsign
 		else
 		{
 			// Set the move destination of all pawns on the field.
-			struct pawn *pawn = state.pawn;
-			while (pawn)
+			struct pawn *pawn;
+			for(pawn = state.pawn; pawn; pawn = pawn->_next)
 			{
 				if ((state.player == pawn->slot->player) && reachable(players, battlefield, pawn, x, y))
 				{
 					pawn->move.x[1] = x;
 					pawn->move.y[1] = y;
 				}
-				pawn = pawn->_next;
 			}
 		}
 	}
@@ -547,32 +555,35 @@ static void input_region(const xcb_button_release_event_t *restrict mouse, unsig
 
 		state.index = -1;
 	}
-	/*else if (mouse->detail == 3)
+	else if (mouse->detail == 3)
 	{
-		if (state.pawn_index >= 0)
+		struct region *region = regions[state.y] + state.x;
+		struct slot *slot;
+
+		if (state.index >= 0)
 		{
-			// Set the move destination of the selected pawn.
-			if ((state.player == state.pawn->slot->player) && reachable(players, battlefield, state.pawn, x, y))
+			size_t position = 0;
+			slot = region->slots;
+			while (position < state.index)
 			{
-				state.pawn->move.x[1] = x;
-				state.pawn->move.y[1] = y;
+				if (!slot) return;
+
+				slot = slot->_next;
+				position += 1;
 			}
+
+			// Set the move destination of the selected slot.
+			if ((state.player == slot->player) && 1) // TODO check distance
+				slot->move = regions[y] + x;
 		}
 		else
 		{
-			// Set the move destination of all pawns on the field.
-			struct pawn *pawn = state.pawn;
-			while (pawn)
-			{
-				if ((state.player == pawn->slot->player) && reachable(players, battlefield, pawn, x, y))
-				{
-					pawn->move.x[1] = x;
-					pawn->move.y[1] = y;
-				}
-				pawn = pawn->_next;
-			}
+			// Set the move destination of all slots in the region.
+			for(slot = region->slots; slot; slot = slot->_next)
+				if ((state.player == slot->player) && 1) // TODO check distance
+					slot->move = regions[y] + x;
 		}
-	}*/
+	}
 }
 
 static void input_train(const xcb_button_release_event_t *restrict mouse, unsigned x, unsigned y, const struct player *restrict players)
@@ -637,7 +648,7 @@ int input_map(unsigned char player, const struct player *restrict players)
 	state.y = MAP_HEIGHT;
 
 	state.index = -1;
-	state.selected.slot = 0;
+	state.selected.slot = 0; // TODO should I use this?
 
 	if_map(players);
 
