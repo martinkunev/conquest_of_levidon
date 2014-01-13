@@ -584,15 +584,15 @@ error:
 	return -1;
 }
 
-// TODO handle cases when there is no winner
-static int battle_end(struct battle *restrict battle)
+// Returns winner's alliance number or -1 on error.
+static int battle_end(struct battle *restrict battle, unsigned char host)
 {
 	bool end = 1;
 	bool alive;
 
-	signed char alliance = -1;
+	signed char winner = -1;
+	unsigned char alliance;
 
-	unsigned char a;
 	struct pawn *pawn;
 
 	size_t i, j;
@@ -600,7 +600,7 @@ static int battle_end(struct battle *restrict battle)
 	{
 		if (!battle->player_pawns[i].length) continue; // skip dead players
 
-		a = battle->players[i].alliance;
+		alliance = battle->players[i].alliance;
 
 		alive = 0;
 		for(j = 0; j < battle->player_pawns[i].length; ++j)
@@ -610,8 +610,8 @@ static int battle_end(struct battle *restrict battle)
 			{
 				alive = 1;
 
-				if (alliance < 0) alliance = a;
-				else if (a != alliance) end = 0;
+				if (winner < 0) winner = alliance;
+				else if (alliance != winner) end = 0;
 			}
 		}
 
@@ -627,10 +627,11 @@ static int battle_end(struct battle *restrict battle)
 		free(battle->player_pawns);
 	}
 
-	return (end ? alliance : -1);
+	if (end) return ((winner >= 0) ? winner : host);
+	else return -1;
 }
 
-int battle(const struct player *restrict players, size_t players_count, struct slot *restrict slots)
+int battle(const struct player *restrict players, size_t players_count, struct region *restrict region)
 {
 	struct slot *slot;
 	struct pawn *pawns;
@@ -638,13 +639,13 @@ int battle(const struct player *restrict players, size_t players_count, struct s
 
 	size_t i, j;
 
-	for(slot = slots; slot; slot = slot->_next)
+	for(slot = region->slots; slot; slot = slot->_next)
 		pawns_count += 1;
 	pawns = malloc(pawns_count * sizeof(*pawns));
 	if (!pawns) return -1;
 
 	i = 0;
-	for(slot = slots; slot; slot = slot->_next)
+	for(slot = region->slots; slot; slot = slot->_next)
 	{
 		pawns[i]._prev = 0;
 		pawns[i]._next = 0;
@@ -794,7 +795,7 @@ int battle(const struct player *restrict players, size_t players_count, struct s
 			}
 		}
 #if !TEST
-	} while ((status = battle_end(&battle)) < 0);
+	} while ((status = battle_end(&battle, region->owner)) < 0);
 #else
 	} while (0);
 #endif

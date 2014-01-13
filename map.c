@@ -10,7 +10,6 @@
 #define WINNER_BATTLE -2
 
 /* TODO
-fix battle draw behavior
 support more than 6 slots
 */
 
@@ -93,7 +92,7 @@ void map_init(struct player *restrict players, size_t players_count)
 					slot = malloc(sizeof(*slot));
 					if (!slot) ; // TODO
 					slot->unit = region->train[0];
-					slot->count = 10; // TODO fix this
+					slot->count = 1; // TODO fix this
 					slot->player = region->owner;
 
 					slot->_prev = 0;
@@ -147,7 +146,7 @@ void map_init(struct player *restrict players, size_t players_count)
 					slots += 1;
 				}
 
-				if (winner == WINNER_BATTLE) winner = battle(players, players_count, region->slots); // TODO distinguish between error and draw
+				if (winner == WINNER_BATTLE) winner = battle(players, players_count, region);
 
 				// winner - the number of the region's new owner
 
