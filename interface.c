@@ -121,6 +121,10 @@ struct font
 
 struct font font;
 
+static int keysyms_per_keycode;
+static int keycode_min, keycode_max;
+static KeySym *keymap;
+
 static int font_init(Display *dpy, struct font *restrict font)
 {
 	unsigned int first, last;
@@ -253,6 +257,15 @@ void if_init(void)
 	image_load_png(&image_move_destination, "img/move_destination.png");
 	image_load_png(&image_selected, "img/selected.png");
 	image_load_png(&image_flag, "img/flag.png");
+
+	// TODO handle modifier keys
+	// TODO handle dead keys
+	// TODO the keyboard mappings don't work as expected for different keyboard layouts
+
+	// Initialize keyboard mapping table.
+	XDisplayKeycodes(display, &keycode_min, &keycode_max);
+	keymap = XGetKeyboardMapping(display, keycode_min, (keycode_max - keycode_min + 1), &keysyms_per_keycode);
+	if (!keymap) return; // TODO error
 
 	return;
 
@@ -652,17 +665,7 @@ int input_map(unsigned char player, const struct player *restrict players)
 
 	if_map(players);
 
-	// TODO handle modifier keys
-	// TODO handle dead keys
-	// TODO the keyboard mappings don't work as expected for different keyboard layouts
-
-	// Initialize keyboard mapping table.
-	// TODO do this just once
-	int min_keycode, max_keycode;
-	int keysyms_per_keycode;
-	XDisplayKeycodes(display, &min_keycode, &max_keycode);
-	KeySym *input, *keymap = XGetKeyboardMapping(display, min_keycode, (max_keycode - min_keycode + 1), &keysyms_per_keycode);
-	if (!keymap) return -1;
+	KeySym *input;
 
 	xcb_generic_event_t *event;
 	xcb_button_release_event_t *mouse;
@@ -720,7 +723,7 @@ int input_map(unsigned char player, const struct player *restrict players)
 			break;
 
 		case XCB_KEY_PRESS:
-			input = keymap + (((xcb_key_press_event_t *)event)->detail - min_keycode) * keysyms_per_keycode;
+			input = keymap + (((xcb_key_press_event_t *)event)->detail - keycode_min) * keysyms_per_keycode;
 
 			if (*input == 'q')
 			{
@@ -758,17 +761,7 @@ int input_player(unsigned char player, const struct player *restrict players)
 
 	if_expose(players);
 
-	// TODO handle modifier keys
-	// TODO handle dead keys
-	// TODO the keyboard mappings don't work as expected for different keyboard layouts
-
-	// Initialize keyboard mapping table.
-	// TODO do this just once
-	int min_keycode, max_keycode;
-	int keysyms_per_keycode;
-	XDisplayKeycodes(display, &min_keycode, &max_keycode);
-	KeySym *input, *keymap = XGetKeyboardMapping(display, min_keycode, (max_keycode - min_keycode + 1), &keysyms_per_keycode);
-	if (!keymap) return -1;
+	KeySym *input;
 
 	xcb_generic_event_t *event;
 	xcb_button_release_event_t *mouse;
@@ -793,7 +786,7 @@ int input_player(unsigned char player, const struct player *restrict players)
 			break;
 
 		case XCB_KEY_PRESS:
-			input = keymap + (((xcb_key_press_event_t *)event)->detail - min_keycode) * keysyms_per_keycode;
+			input = keymap + (((xcb_key_press_event_t *)event)->detail - keycode_min) * keysyms_per_keycode;
 
 			//printf("%d %c %c %c %c\n", (int)*input, (int)input[0], (int)input[1], (int)input[2], (int)input[3]);
 
