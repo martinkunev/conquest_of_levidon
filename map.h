@@ -40,7 +40,17 @@ struct region
 	struct unit *train[TRAIN_QUEUE];
 	struct resources income;
 
-	// TODO store position better
+	struct polygon
+	{
+		size_t count;
+		struct point 
+		{ 
+			unsigned x, y;
+		} points[];
+	} location;
+	size_t index;
+
+	// TODO store position in a better way
 	unsigned char x, y;
 };
 
