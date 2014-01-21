@@ -315,6 +315,21 @@ error:
 	XCloseDisplay(display);
 }
 
+static void display_unit(size_t unit, unsigned x, unsigned y, int color, unsigned count)
+{
+	rectangle(x, y, FIELD_SIZE, FIELD_SIZE, color);
+	image_draw(&image_units[unit], x, y);
+
+	if (count)
+	{
+		char buffer[16];
+		size_t length = format_uint(buffer, count) - buffer;
+		glColor4ubv(colors[White]);
+		glRasterPos2i(x + (FIELD_SIZE - (length * 10)) / 2, y + FIELD_SIZE + 18);
+		glString(buffer, length);
+	}
+}
+
 void if_expose(const struct player *restrict players)
 {
 	// clear window
@@ -365,13 +380,8 @@ void if_expose(const struct player *restrict players)
 		p = battlefield[state.y][state.x];
 		do
 		{
-			rectangle(CTRL_X + 4 + (FIELD_SIZE + 4) * (position % 7), CTRL_Y + 32, FIELD_SIZE, FIELD_SIZE, Player + p->slot->player);
+			display_unit(p->slot->unit->index, CTRL_X + 4 + (FIELD_SIZE + 4) * (position % 7), CTRL_Y + 32, Player + p->slot->player, p->slot->count);
 			if (position == state.pawn_index) image_draw(&image_selected, CTRL_X + 4 + (FIELD_SIZE + 4) * (position % 7), CTRL_Y + 32);
-
-			glColor4ubv(colors[White]);
-			length = format_uint(buffer, p->slot->count) - buffer;
-			glRasterPos2i(CTRL_X + 4 + (FIELD_SIZE + 4) * (position % 7) + (FIELD_SIZE - (length * 10)) / 2, CTRL_Y + 32 + 32 + 18);
-			glString(buffer, length);
 
 			// Show destination of each moving pawn.
 			// TODO don't draw at the same place twice
@@ -390,21 +400,6 @@ void if_expose(const struct player *restrict players)
 
 	glFlush();
 	glXSwapBuffers(display, drawable);
-}
-
-static void display_unit(size_t unit, unsigned x, unsigned y, int color, unsigned count)
-{
-	rectangle(x, y, FIELD_SIZE, FIELD_SIZE, color);
-	image_draw(&image_units[unit], x, y);
-
-	if (count)
-	{
-		char buffer[16];
-		size_t length = format_uint(buffer, count) - buffer;
-		glColor4ubv(colors[White]);
-		glRasterPos2i(x + (FIELD_SIZE - (length * 10)) / 2, y + FIELD_SIZE + 18);
-		glString(buffer, length);
-	}
 }
 
 void if_map(const struct player *restrict players) // TODO finish this
@@ -687,7 +682,7 @@ static void input_field(const xcb_button_release_event_t *restrict mouse, unsign
 			struct pawn *pawn;
 			for(pawn = state.pawn; pawn; pawn = pawn->_next)
 			{
-				if (mouse->state & XCB_MOD_MASK_CONTROL) pawn_shoot(players, state.pawn, x, y);
+				if (mouse->state & XCB_MOD_MASK_CONTROL) pawn_shoot(players, pawn, x, y);
 				else pawn_move(players, pawn, x, y);
 			}
 		}
@@ -720,12 +715,13 @@ static void input_region(const xcb_button_release_event_t *restrict mouse, unsig
 
 		unsigned index;
 		struct region *destination = regions + pixel_color[2];
+		if (destination == region) goto valid;
 		for(index = 0; index < 8; ++index)
-			if (region->neighbors[index] == destination)
-				goto neighbor;
+			if (destination == region->neighbors[index])
+				goto valid;
 		return;
 
-neighbor:
+valid:
 		if (state.index >= 0)
 		{
 			size_t position = 0;

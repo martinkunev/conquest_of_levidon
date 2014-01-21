@@ -11,7 +11,9 @@
 #define WINNER_BATTLE -2
 
 /* TODO
+shooting
 support more than 6 slots
+pawn start positions in battles
 */
 
 struct unit units[] = {
@@ -138,7 +140,7 @@ void map_init(struct player *restrict players, size_t players_count)
 
 	if_regions(regions, regions_count, units, units_count);
 
-	struct slot *slot;
+	struct slot *slot, *next;
 
 	unsigned char alliance;
 	signed char winner;
@@ -185,8 +187,10 @@ void map_init(struct player *restrict players, size_t players_count)
 			}
 
 			// Move each unit for which movement is specified.
-			for(slot = region->slots; slot; slot = slot->_next)
+			slot = region->slots;
+			while (slot)
 			{
+				next = slot->_next;
 				if (slot->move != slot->location)
 				{
 					// Remove the slot from its current location.
@@ -200,6 +204,7 @@ void map_init(struct player *restrict players, size_t players_count)
 					if (slot->move->slots) slot->move->slots->_prev = slot;
 					slot->move->slots = slot;
 				}
+				slot = next;
 			}
 		}
 
