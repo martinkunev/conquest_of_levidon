@@ -14,7 +14,11 @@
 support more than 6 slots
 */
 
-struct unit peasant = {.health = 3, .damage = 1, .speed = 3, .cost = {.gold = 1, .food = 2}};
+struct unit units[] = {
+	{.index = 0, .health = 3, .damage = 1, .speed = 3, .cost = {.food = 2}},
+	{.index = 1, .health = 3, .damage = 1, .speed = 3, .cost = {.gold = 1, .food = 2}, .shoot = 1, .range = 4},
+};
+size_t units_count = 2;
 
 #define REGIONS_MAX 256
 
@@ -132,14 +136,13 @@ void map_init(struct player *restrict players, size_t players_count)
 	regions[3].owner = 2;
 	regions[5].owner = 3;
 
-	if_regions(regions, regions_count);
+	if_regions(regions, regions_count, units, units_count);
 
 	struct slot *slot;
 
 	unsigned char alliance;
 	signed char winner;
 
-	struct pawn *pawns;
 	unsigned char owner, slots;
 
 	size_t i;

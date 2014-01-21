@@ -80,10 +80,14 @@ static GLXContext context;
 
 static struct pawn *(*battlefield)[BATTLEFIELD_WIDTH];
 
+static const struct unit *units;
+static size_t units_count;
+
 static struct region *restrict regions;
 static size_t regions_count;
 
-static struct image image_move_destination, image_selected, image_flag;
+static struct image image_move_destination, image_shoot_destination, image_selected, image_flag;
+static struct image image_units[2]; // TODO the array must be enough to hold units_count units
 
 static struct
 {
@@ -277,8 +281,12 @@ void if_init(void)
 	if_reshape(SCREEN_WIDTH, SCREEN_HEIGHT); // TODO call this after resize
 
 	image_load_png(&image_move_destination, "img/move_destination.png");
+	image_load_png(&image_shoot_destination, "img/shoot_destination.png");
 	image_load_png(&image_selected, "img/selected.png");
 	image_load_png(&image_flag, "img/flag.png");
+
+	image_load_png(&image_units[0], "img/peasant.png");
+	image_load_png(&image_units[1], "img/archer.png");
 
 	// TODO handle modifier keys
 	// TODO handle dead keys
@@ -368,9 +376,13 @@ void if_expose(const struct player *restrict players)
 			// Show destination of each moving pawn.
 			// TODO don't draw at the same place twice
 			if ((state.pawn_index < 0) || (position == state.pawn_index))
-				if (players[p->slot->player].alliance == players[state.player].alliance)
+				if (p->slot->player == state.player)
+				{
 					if ((p->move.x[1] != p->move.x[0]) || (p->move.y[1] != p->move.y[0]))
 						image_draw(&image_move_destination, p->move.x[1] * FIELD_SIZE, p->move.y[1] * FIELD_SIZE);
+					else if ((p->shoot.x >= 0) && (p->shoot.y >= 0) && ((p->shoot.x != p->move.x[0]) || (p->shoot.y != p->move.y[0])))
+						image_draw(&image_shoot_destination, p->shoot.x * FIELD_SIZE, p->shoot.y * FIELD_SIZE);
+				}
 
 			position += 1;
 		} while (p = p->_next);
@@ -378,6 +390,21 @@ void if_expose(const struct player *restrict players)
 
 	glFlush();
 	glXSwapBuffers(display, drawable);
+}
+
+static void display_unit(size_t unit, unsigned x, unsigned y, int color, unsigned count)
+{
+	rectangle(x, y, FIELD_SIZE, FIELD_SIZE, color);
+	image_draw(&image_units[unit], x, y);
+
+	if (count)
+	{
+		char buffer[16];
+		size_t length = format_uint(buffer, count) - buffer;
+		glColor4ubv(colors[White]);
+		glRasterPos2i(x + (FIELD_SIZE - (length * 10)) / 2, y + FIELD_SIZE + 18);
+		glString(buffer, length);
+	}
 }
 
 void if_map(const struct player *restrict players) // TODO finish this
@@ -447,16 +474,11 @@ void if_map(const struct player *restrict players) // TODO finish this
 			const struct slot *slot;
 			for(slot = region->slots; slot; slot = slot->_next)
 			{
-				rectangle(PANEL_X + 20 + ((FIELD_SIZE + 4) * position), PANEL_Y + 32, FIELD_SIZE, FIELD_SIZE, Player + slot->player);
+				display_unit(slot->unit->index, PANEL_X + 20 + ((FIELD_SIZE + 4) * position), PANEL_Y + 32, Player + slot->player, slot->count);
 				if (position == state.index) image_draw(&image_selected, PANEL_X + 20 + ((FIELD_SIZE + 4) * position), PANEL_Y + 32);
 
-				glColor4ubv(colors[White]);
-				length = format_uint(buffer, slot->count) - buffer;
-				glRasterPos2i(PANEL_X + 20 + ((FIELD_SIZE + 4) * position) + (FIELD_SIZE - (length * 10)) / 2, PANEL_Y + 32 + FIELD_SIZE + 18);
-				glString(buffer, length);
-
 				// Draw the destination of each moving slot.
-				if ((state.player == region->owner) && ((state.index < 0) || (state.index == position)) && (slot->move->index != state.region))
+				if ((region->owner == state.player) && ((state.index < 0) || (state.index == position)) && (slot->move->index != state.region))
 					image_draw(&image_move_destination, MAP_X + slot->move->center.x, MAP_Y + slot->move->center.y);
 
 				position += 1;
@@ -470,13 +492,14 @@ void if_map(const struct player *restrict players) // TODO finish this
 			for(index = 0; index < TRAIN_QUEUE; ++index)
 				if (region->train[index])
 				{
-					rectangle(PANEL_X + ((FIELD_SIZE + PAWN_MARGIN) * index), PANEL_Y + 128, FIELD_SIZE, FIELD_SIZE, Player + region->owner);
+					display_unit(region->train[index]->index, PANEL_X + ((FIELD_SIZE + PAWN_MARGIN) * index), PANEL_Y + 128, White, 0);
 					rectangle(PANEL_X + ((FIELD_SIZE + PAWN_MARGIN) * index), PANEL_Y + 128, FIELD_SIZE, FIELD_SIZE, Progress);
 				}
 				else break;
 
 			// Display units available for training.
-			rectangle(PANEL_X, PANEL_Y + 192, FIELD_SIZE, FIELD_SIZE, Player + region->owner);
+			display_unit(0, PANEL_X + (FIELD_SIZE + 8) * 0, PANEL_Y + 192, White, 0);
+			display_unit(1, PANEL_X + (FIELD_SIZE + 8) * 1, PANEL_Y + 192, White, 0);
 		}
 	}
 
@@ -513,10 +536,13 @@ void if_set(struct pawn *bf[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH])
 	battlefield = bf;
 }
 
-void if_regions(struct region *restrict reg, size_t count)
+void if_regions(struct region *restrict reg, size_t count, const struct unit *u, size_t u_count)
 {
 	regions = reg;
 	regions_count = count;
+
+	units = u;
+	units_count = u_count;
 
 	glBindFramebuffer(GL_FRAMEBUFFER, map_framebuffer);
 
@@ -596,10 +622,47 @@ reset:
 	while (state.pawn->_prev) state.pawn = state.pawn->_prev;
 }
 
+// Sets move destination of a pawn. Returns -1 if the current player is not allowed to move the pawn at the destination.
+static int pawn_move(const struct player *restrict players, struct pawn *restrict pawn, unsigned x, unsigned y)
+{
+	// TODO support fast move
+	if ((state.player == pawn->slot->player) && reachable(players, battlefield, pawn, x, y))
+	{
+		// Reset shoot commands.
+		pawn->shoot.x = -1;
+		pawn->shoot.y = -1;
+
+		pawn->move.x[1] = x;
+		pawn->move.y[1] = y;
+
+		return 0;
+	}
+	else return -1;
+}
+
+// Sets shoot target of a pawn. Returns -1 if the current player is not allowed to shoot at the target with this pawn.
+static int pawn_shoot(const struct player *restrict players, struct pawn *restrict pawn, unsigned x, unsigned y)
+{
+	if ((state.player == pawn->slot->player) && shootable(players, battlefield, pawn, x, y))
+	{
+		// Reset move commands.
+		pawn->move.x[1] = pawn->move.x[0];
+		pawn->move.y[1] = pawn->move.y[0];
+
+		pawn->shoot.x = x;
+		pawn->shoot.y = y;
+
+		return 0;
+	}
+	else return -1;
+}
+
 static void input_field(const xcb_button_release_event_t *restrict mouse, unsigned x, unsigned y, const struct player *restrict players)
 {
 	x /= FIELD_SIZE;
 	y /= FIELD_SIZE;
+
+	// if (mouse->state & XCB_MOD_MASK_SHIFT) ; // TODO fast move
 
 	if (mouse->detail == 1)
 	{
@@ -611,26 +674,21 @@ static void input_field(const xcb_button_release_event_t *restrict mouse, unsign
 	}
 	else if (mouse->detail == 3)
 	{
+		// shoot if CONTROL is pressed; move otherwise
+		// If there is a pawn selected, apply the command just to it.
+		// Otherwise apply the command to each pawn on the current field.
 		if (state.pawn_index >= 0)
 		{
-			// Set the move destination of the selected pawn.
-			if ((state.player == state.pawn->slot->player) && reachable(players, battlefield, state.pawn, x, y))
-			{
-				state.pawn->move.x[1] = x;
-				state.pawn->move.y[1] = y;
-			}
+			if (mouse->state & XCB_MOD_MASK_CONTROL) pawn_shoot(players, state.pawn, x, y);
+			else pawn_move(players, state.pawn, x, y);
 		}
 		else
 		{
-			// Set the move destination of all pawns on the field.
 			struct pawn *pawn;
 			for(pawn = state.pawn; pawn; pawn = pawn->_next)
 			{
-				if ((state.player == pawn->slot->player) && reachable(players, battlefield, pawn, x, y))
-				{
-					pawn->move.x[1] = x;
-					pawn->move.y[1] = y;
-				}
+				if (mouse->state & XCB_MOD_MASK_CONTROL) pawn_shoot(players, state.pawn, x, y);
+				else pawn_move(players, pawn, x, y);
 			}
 		}
 	}
@@ -655,7 +713,6 @@ static void input_region(const xcb_button_release_event_t *restrict mouse, unsig
 	}
 	else if (mouse->detail == 3)
 	{
-		// TODO fix this
 		struct region *region = regions + state.region;
 		struct slot *slot;
 
@@ -699,15 +756,19 @@ static void input_train(const xcb_button_release_event_t *restrict mouse, unsign
 {
 	if ((state.x >= MAP_WIDTH) || (state.y >= MAP_HEIGHT)) return;
 	if (state.player != regions[state.region].owner) return;
+	if ((x % (FIELD_SIZE + PAWN_MARGIN)) >= FIELD_SIZE) return;
 
 	if (mouse->detail == 1)
 	{
+		size_t unit = x / (FIELD_SIZE + PAWN_MARGIN);
+		if (unit >= units_count) return;
+
 		struct unit **train = regions[state.region].train;
 		size_t index;
 		for(index = 0; index < TRAIN_QUEUE; ++index)
 			if (!train[index])
 			{
-				train[index] = &peasant;
+				train[index] = (struct unit *)(units + unit); // TODO fix this cast
 				break;
 			}
 	}
@@ -763,6 +824,7 @@ int input_map(unsigned char player, const struct player *restrict players)
 
 	xcb_generic_event_t *event;
 	xcb_button_release_event_t *mouse;
+	xcb_key_press_event_t *keyboard;
 
 	struct area areas[] = {
 		{
@@ -774,7 +836,7 @@ int input_map(unsigned char player, const struct player *restrict players)
 		},
 		{
 			.left = PANEL_X,
-			.right = PANEL_X + FIELD_SIZE - 1,
+			.right = PANEL_X + (FIELD_SIZE + 8) * units_count - 1,
 			.top = PANEL_Y + 192,
 			.bottom = PANEL_Y + 192 + FIELD_SIZE - 1,
 			.callback = input_train
@@ -815,7 +877,8 @@ int input_map(unsigned char player, const struct player *restrict players)
 			break;
 
 		case XCB_KEY_PRESS:
-			input = keymap + (((xcb_key_press_event_t *)event)->detail - keycode_min) * keysyms_per_keycode;
+			keyboard = (xcb_key_press_event_t *)event;
+			input = keymap + (keyboard->detail - keycode_min) * keysyms_per_keycode;
 
 			if (*input == 'q')
 			{
@@ -856,8 +919,25 @@ int input_player(unsigned char player, const struct player *restrict players)
 	xcb_generic_event_t *event;
 	xcb_button_release_event_t *mouse;
 
-	struct area fields = {.left = 0, .right = BATTLEFIELD_WIDTH * FIELD_SIZE - 1, .top = 0, .bottom = BATTLEFIELD_HEIGHT * FIELD_SIZE - 1};
-	struct area pawns = {.left = CTRL_X + 4, .right = CTRL_X + 4 + 7 * (FIELD_SIZE + 4) - 5, .top = CTRL_Y + 32, .bottom = CTRL_Y + 32 + FIELD_SIZE - 1};
+	struct area areas[] = {
+		{
+			.left = 0,
+			.right = BATTLEFIELD_WIDTH * FIELD_SIZE - 1,
+			.top = 0,
+			.bottom = BATTLEFIELD_HEIGHT * FIELD_SIZE - 1,
+			.callback = input_field
+		},
+		{
+			.left = CTRL_X + 4,
+			.right = CTRL_X + 4 + 7 * (FIELD_SIZE + 4) - 5,
+			.top = CTRL_Y + 32,
+			.bottom = CTRL_Y + 32 + FIELD_SIZE - 1,
+			.callback = input_pawn
+		},
+	};
+	size_t areas_count = sizeof(areas) / sizeof(*areas);
+
+	size_t index;
 
 	while (1)
 	{
@@ -869,8 +949,8 @@ int input_player(unsigned char player, const struct player *restrict players)
 		{
 		case XCB_BUTTON_PRESS:
 			mouse = (xcb_button_release_event_t *)event;
-			if (input_in(mouse, &fields)) input_field(mouse, mouse->event_x - fields.left, mouse->event_y - fields.top, players);
-			else if (input_in(mouse, &pawns)) input_pawn(mouse, mouse->event_x - pawns.left, mouse->event_y - pawns.top, players);
+			for(index = 0; index < areas_count; ++index)
+				if (input_in(mouse, areas + index)) areas[index].callback(mouse, mouse->event_x - areas[index].left, mouse->event_y - areas[index].top, players);
 		case XCB_EXPOSE:
 			if_expose(players);
 			break;

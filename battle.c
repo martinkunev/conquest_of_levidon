@@ -105,6 +105,12 @@ int reachable(const struct player *restrict players, struct pawn *battlefield[BA
 	return (distance <= speed);
 }
 
+int shootable(const struct player *restrict players, struct pawn *battlefield[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH], const struct pawn *restrict pawn, unsigned char x, unsigned char y)
+{
+	// TODO implement this
+	return 1;
+}
+
 static void pawn_remove(struct pawn *battlefield[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH], struct pawn *pawn)
 {
 	if (pawn->_prev) pawn->_prev->_next = pawn->_next;
@@ -652,6 +658,9 @@ int battle(const struct player *restrict players, size_t players_count, struct r
 		pawns[i].slot = slot;
 		pawns[i].hurt = 0;
 		pawns[i].move = (struct move){.x = {i, i}, .y = {0, 0}, .t = {0, 8}};
+
+		pawns[i].shoot.x = -1;
+		pawns[i].shoot.y = -1;
 
 		i += 1;
 	}

@@ -15,11 +15,16 @@ struct player
 
 struct unit
 {
+	size_t index;
+
 	unsigned char health;
 	unsigned char damage;
 	unsigned char speed;
 
 	struct resources cost;
+
+	unsigned char shoot; // damage while shooting
+	unsigned char range;
 };
 
 struct slot
@@ -56,5 +61,3 @@ struct region
 /* neighbors
 listed in order: east, north-east, north, north-west, west, south-west, south, south-east
 */
-
-extern struct unit peasant;
