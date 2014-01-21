@@ -36,12 +36,21 @@ struct region
 {
 	unsigned char owner;
 	struct slot *slots;
-	struct region *neighbors[NEIGHBORS_MAX];
 	struct unit *train[TRAIN_QUEUE];
 	struct resources income;
 
-	// TODO store position better
-	unsigned char x, y;
+	size_t index;
+	struct region *neighbors[NEIGHBORS_MAX];
+	struct polygon
+	{
+		size_t count;
+		struct point 
+		{ 
+			unsigned x, y;
+		} points[];
+	} *location;
+
+	struct point center;
 };
 
 /* neighbors

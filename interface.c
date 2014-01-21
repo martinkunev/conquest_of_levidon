@@ -1,4 +1,3 @@
-#include <stdarg.h>
 #include <stdlib.h>
 
 #define GL_GLEXT_PROTOTYPES
@@ -59,7 +58,17 @@
 #define glString(...) glString_(__VA_ARGS__, sizeof(__VA_ARGS__) - 1)
 #define glStringPos(x, y) glRasterPos2i((x) - font.info->min_bounds.lbearing, (y) + font.info->max_bounds.ascent)
 
+// TODO compatibility with OpenGL 2.1 (used in MacOS X)
+#define glGenFramebuffers(...) glGenFramebuffersEXT(__VA_ARGS__)
+#define glGenRenderbuffers(...) glGenRenderbuffersEXT(__VA_ARGS__)
+#define glBindFramebuffer(...) glBindFramebufferEXT(__VA_ARGS__)
+#define glBindRenderbuffer(...) glBindRenderbufferEXT(__VA_ARGS__)
+#define glRenderbufferStorage(...) glRenderbufferStorageEXT(__VA_ARGS__)
+#define glFramebufferRenderbuffer(...) glFramebufferRenderbufferEXT(__VA_ARGS__)
+
 #include <stdio.h>
+
+// http://www.opengl.org/sdk/docs/man2/
 
 // TODO add checks like the one in input_train() to make sure a player can only act on its own regions
 
@@ -70,7 +79,9 @@ static GLXDrawable drawable;
 static GLXContext context;
 
 static struct pawn *(*battlefield)[BATTLEFIELD_WIDTH];
-static struct region (*regions)[MAP_HEIGHT];
+
+static struct region *restrict regions;
+static size_t regions_count;
 
 static struct image image_move_destination, image_selected, image_flag;
 
@@ -85,9 +96,9 @@ static struct
 		struct slot *slot;
 	} selected;
 	int index;
-} state;
 
-GLubyte pixel_color[4] = {0, 0, 0, 255}; // TODO remove this
+	int region;
+} state;
 
 struct area
 {
@@ -125,15 +136,6 @@ struct font
 	XFontStruct *info;
 	unsigned width, height;
 	GLuint base;
-};
-
-struct polygon
-{
-	size_t count;
-	struct point 
-	{ 
-		unsigned x, y;
-	} points[];
 };
 
 static GLuint map_framebuffer, map_renderbuffer;
@@ -287,26 +289,17 @@ void if_init(void)
 	keymap = XGetKeyboardMapping(display, keycode_min, (keycode_max - keycode_min + 1), &keysyms_per_keycode);
 	if (!keymap) return; // TODO error
 
-	printf("%s\n", glGetString(GL_VERSION));
-
 	glGenFramebuffers(1, &map_framebuffer);
-	printf("result: %u (error=%d)\n", map_framebuffer, glGetError());
-	glBindFramebuffer(GL_FRAMEBUFFER, map_framebuffer);
-
 	glGenRenderbuffers(1, &map_renderbuffer);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, map_framebuffer);
 	glBindRenderbuffer(GL_RENDERBUFFER, map_renderbuffer);
 
 	glRenderbufferStorage(GL_RENDERBUFFER, GL_RGB8, 768, 768); // TODO this must be map size
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, map_renderbuffer);
-	//if_reshape(768, 768);
-
-	GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-	if (status != GL_FRAMEBUFFER_COMPLETE) printf("%d\n", status); // TODO fix this
 
 	glBindRenderbuffer(GL_RENDERBUFFER, 0);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-	// TODO glDeleteFramebuffers(1, &map_framebuffer);
 
 	return;
 
@@ -387,45 +380,11 @@ void if_expose(const struct player *restrict players)
 	glXSwapBuffers(display, drawable);
 }
 
-static struct polygon *region_create(size_t count, ...)
-{
-	size_t index;
-	va_list vertices;
-
-	// Allocate memory for the region and its vertices.
-	struct polygon *polygon = malloc(sizeof(struct polygon) + count * sizeof(struct point));
-	polygon->count = count;
-
-	// Initialize region vertices.
-	va_start(vertices, count);
-	for(index = 0; index < count; ++index)
-		polygon->points[index] = va_arg(vertices, struct point);
-	va_end(vertices);
-
-	return polygon;
-}
-
 void if_map(const struct player *restrict players) // TODO finish this
 {
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
 	// clear window
 	glClearColor(0.0, 0.0, 0.0, 0.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-	glBindFramebuffer(GL_FRAMEBUFFER, map_framebuffer);
-	glReadPixels(10, 10, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixel_color);
-	printf("%d %d %d\n", pixel_color[0], pixel_color[1], pixel_color[2]);
-	glReadPixels(650, 10, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixel_color);
-	printf("%d %d %d\n", pixel_color[0], pixel_color[1], pixel_color[2]);
-	glReadPixels(300, 300, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixel_color);
-	printf("%d %d %d\n", pixel_color[0], pixel_color[1], pixel_color[2]);
-	glReadPixels(10, 650, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixel_color);
-	printf("%d %d %d\n", pixel_color[0], pixel_color[1], pixel_color[2]);
-	glReadPixels(650, 650, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixel_color);
-	printf("%d %d %d\n", pixel_color[0], pixel_color[1], pixel_color[2]);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	printf("<<<<\n");
 
 	// display current player's color as background
 	rectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, Player + state.player);
@@ -444,25 +403,35 @@ void if_map(const struct player *restrict players) // TODO finish this
 
 	// Map
 
-	for(y = 0; y < MAP_HEIGHT; y += 1)
+	/*for(y = 0; y < MAP_HEIGHT; y += 1)
 		for(x = 0; x < MAP_WIDTH; x += 1)
 			if (regions[y][x].owner)
 			{
 				rectangle(MAP_X + x * REGION_SIZE, MAP_Y + y * REGION_SIZE, REGION_SIZE, REGION_SIZE, Player + regions[y][x].owner);
 				image_draw(&image_flag, MAP_X + x * REGION_SIZE, MAP_Y + y * REGION_SIZE);
-			}
+			}*/
 
-	glColor4ubv(pixel_color);
-	glBegin(GL_QUADS);
-	glVertex2f(200, 500);
-	glVertex2f(200, 400);
-	glVertex2f(50, 400);
-	glVertex2f(50, 500);
-	glEnd();
-
-	if ((state.x < MAP_WIDTH) && (state.y < MAP_HEIGHT))
+	size_t i, j;
+	for(i = 0; i < regions_count; ++i)
 	{
-		const struct region *region = regions[state.y] + state.x;
+		// Fill each region with the color of its owner.
+		glColor4ubv(colors[Player + regions[i].owner]);
+		glBegin(GL_POLYGON);
+		for(j = 0; j < regions[i].location->count; ++j)
+			glVertex2f(MAP_X + regions[i].location->points[j].x, MAP_Y + regions[i].location->points[j].y);
+		glEnd();
+
+		// Draw region borders.
+		glColor4ubv(colors[Black]);
+		glBegin(GL_LINE_STRIP);
+		for(j = 0; j < regions[i].location->count; ++j)
+			glVertex2f(MAP_X + regions[i].location->points[j].x, MAP_Y + regions[i].location->points[j].y);
+		glEnd();
+	}
+
+	if (state.region >= 0)
+	{
+		const struct region *region = regions + state.region;
 
 		glColor4ubv(colors[White]);
 		glStringPos(PANEL_X, PANEL_Y);
@@ -486,8 +455,9 @@ void if_map(const struct player *restrict players) // TODO finish this
 				glRasterPos2i(PANEL_X + 20 + ((FIELD_SIZE + 4) * position) + (FIELD_SIZE - (length * 10)) / 2, PANEL_Y + 32 + FIELD_SIZE + 18);
 				glString(buffer, length);
 
-				if ((state.player == region->owner) && ((state.index < 0) || (state.index == position)) && ((slot->move->x != state.x) || (slot->move->y != state.y)))
-					image_draw(&image_move_destination, MAP_X + slot->move->x * REGION_SIZE + 8, MAP_Y + slot->move->y * REGION_SIZE + 8);
+				// Draw the destination of each moving slot.
+				if ((state.player == region->owner) && ((state.index < 0) || (state.index == position)) && (slot->move->index != state.region))
+					image_draw(&image_move_destination, MAP_X + slot->move->center.x, MAP_Y + slot->move->center.y);
 
 				position += 1;
 			}
@@ -543,90 +513,41 @@ void if_set(struct pawn *bf[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH])
 	battlefield = bf;
 }
 
-void if_regions(struct region reg[MAP_HEIGHT][MAP_WIDTH])
+void if_regions(struct region *restrict reg, size_t count)
 {
 	regions = reg;
-
-	struct polygon *polygon[6];
-	polygon[0] = region_create(4,
-		(struct point){768, 768},
-		(struct point){768, 500},
-		(struct point){550, 550},
-		(struct point){600, 768}
-	);
-	polygon[1] = region_create(6,
-		(struct point){600, 250},
-		(struct point){550, 550},
-		(struct point){768, 500},
-		(struct point){768, 0},
-		(struct point){384, 0},
-		(struct point){384, 150}
-	);
-	polygon[2] = region_create(5,
-		(struct point){550, 550},
-		(struct point){600, 250},
-		(struct point){384, 150},
-		(struct point){150, 250},
-		(struct point){200, 550}
-	);
-	polygon[3] = region_create(5,
-		(struct point){384, 150},
-		(struct point){384, 0},
-		(struct point){0, 0},
-		(struct point){0, 200},
-		(struct point){150, 250}
-	);
-	polygon[4] = region_create(4,
-		(struct point){200, 550},
-		(struct point){150, 250},
-		(struct point){0, 200},
-		(struct point){0, 768}
-	);
-	polygon[5] = region_create(4,
-		(struct point){600, 768},
-		(struct point){550, 550},
-		(struct point){200, 550},
-		(struct point){0, 768}
-	);
+	regions_count = count;
 
 	glBindFramebuffer(GL_FRAMEBUFFER, map_framebuffer);
 
-	if_reshape(768, 768);
 	glClear(GL_COLOR_BUFFER_BIT);
 
-	//glDrawBuffer(GL_COLOR_ATTACHMENT0);
-
 	size_t i, j;
-	for(i = 0; i < (sizeof(polygon) / sizeof(*polygon)); ++i)
+	for(i = 0; i < regions_count; ++i)
 	{
-		glColor4ubv(colors[Player + i]);
+		glColor3ub(0, 0, i);
 		glBegin(GL_POLYGON);
-		for(j = 0; j < polygon[i]->count; ++j)
-			glVertex2f(polygon[i]->points[j].x, polygon[i]->points[j].y);
+		for(j = 0; j < regions[i].location->count; ++j)
+			glVertex2f(regions[i].location->points[j].x, regions[i].location->points[j].y);
 		glEnd();
-
-		free(polygon[i]); // TODO move this somewhere else
 	}
 
 	glFlush();
-
-	glReadPixels(10, 10, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixel_color);
-	printf("%d %d %d\n", pixel_color[0], pixel_color[1], pixel_color[2]);
-	glReadPixels(650, 10, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixel_color);
-	printf("%d %d %d\n", pixel_color[0], pixel_color[1], pixel_color[2]);
-	glReadPixels(300, 300, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixel_color);
-	printf("%d %d %d\n", pixel_color[0], pixel_color[1], pixel_color[2]);
-	glReadPixels(10, 650, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixel_color);
-	printf("%d %d %d\n", pixel_color[0], pixel_color[1], pixel_color[2]);
-	glReadPixels(650, 650, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixel_color);
-	printf("%d %d %d\n", pixel_color[0], pixel_color[1], pixel_color[2]);
-	printf("\n");
-
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 void if_term(void)
 {
+	XFree(keymap);
+
+	// TODO put this somewhere
+	/*size_t i;
+	for(i = 0; i < regions_count; ++i)
+		free(regions[i].location);*/
+
+	glDeleteRenderbuffers(1, &map_renderbuffer);
+	glDeleteFramebuffers(1, &map_framebuffer);
+
 	glXDestroyWindow(display, drawable);
 	xcb_destroy_window(connection, window);
 	glXDestroyContext(display, context);
@@ -717,22 +638,37 @@ static void input_field(const xcb_button_release_event_t *restrict mouse, unsign
 
 static void input_region(const xcb_button_release_event_t *restrict mouse, unsigned x, unsigned y, const struct player *restrict players)
 {
-	x /= REGION_SIZE;
-	y /= REGION_SIZE;
+	// TODO write this function better
+
+	// Get the clicked region.
+	GLubyte pixel_color[3] = {0, 0, 0}; // TODO change this
+	glBindFramebuffer(GL_FRAMEBUFFER, map_framebuffer);
+	glReadPixels(x, 768 - y, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixel_color); // TODO don't hardcode height
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	if (mouse->detail == 1)
 	{
-		// Set current field.
-		state.x = x;
-		state.y = y;
+		if (pixel_color[0] || pixel_color[1]) state.region = -1;
+		else state.region = pixel_color[2];
 
 		state.index = -1;
 	}
 	else if (mouse->detail == 3)
 	{
-		struct region *region = regions[state.y] + state.x;
+		// TODO fix this
+		struct region *region = regions + state.region;
 		struct slot *slot;
 
+		if (pixel_color[0] || pixel_color[1]) return;
+
+		unsigned index;
+		struct region *destination = regions + pixel_color[2];
+		for(index = 0; index < 8; ++index)
+			if (region->neighbors[index] == destination)
+				goto neighbor;
+		return;
+
+neighbor:
 		if (state.index >= 0)
 		{
 			size_t position = 0;
@@ -746,15 +682,15 @@ static void input_region(const xcb_button_release_event_t *restrict mouse, unsig
 			}
 
 			// Set the move destination of the selected slot.
-			if ((state.player == slot->player) && 1) // TODO check distance
-				slot->move = regions[y] + x;
+			if (state.player == slot->player)
+				slot->move = regions + pixel_color[2];
 		}
 		else
 		{
 			// Set the move destination of all slots in the region.
 			for(slot = region->slots; slot; slot = slot->_next)
-				if ((state.player == slot->player) && 1) // TODO check distance
-					slot->move = regions[y] + x;
+				if (state.player == slot->player)
+					slot->move = regions + pixel_color[2];
 		}
 	}
 }
@@ -762,11 +698,11 @@ static void input_region(const xcb_button_release_event_t *restrict mouse, unsig
 static void input_train(const xcb_button_release_event_t *restrict mouse, unsigned x, unsigned y, const struct player *restrict players)
 {
 	if ((state.x >= MAP_WIDTH) || (state.y >= MAP_HEIGHT)) return;
-	if (state.player != regions[state.y][state.x].owner) return;
+	if (state.player != regions[state.region].owner) return;
 
 	if (mouse->detail == 1)
 	{
-		struct unit **train = regions[state.y][state.x].train;
+		struct unit **train = regions[state.region].train;
 		size_t index;
 		for(index = 0; index < TRAIN_QUEUE; ++index)
 			if (!train[index])
@@ -780,12 +716,12 @@ static void input_train(const xcb_button_release_event_t *restrict mouse, unsign
 static void input_dismiss(const xcb_button_release_event_t *restrict mouse, unsigned x, unsigned y, const struct player *restrict players)
 {
 	if ((state.x >= MAP_WIDTH) || (state.y >= MAP_HEIGHT)) return;
-	if (state.player != regions[state.y][state.x].owner) return;
+	if (state.player != regions[state.region].owner) return;
 	if ((x % (FIELD_SIZE + PAWN_MARGIN)) >= FIELD_SIZE) return;
 
 	if (mouse->detail == 1)
 	{
-		struct unit **train = regions[state.y][state.x].train;
+		struct unit **train = regions[state.region].train;
 
 		size_t index;
 		for(index = (x / (FIELD_SIZE + PAWN_MARGIN) + 1); index < TRAIN_QUEUE; ++index)
@@ -814,65 +750,19 @@ reset:
 
 int input_map(unsigned char player, const struct player *restrict players)
 {
-	/*glBindFramebuffer(GL_FRAMEBUFFER, map_framebuffer);
-	glReadPixels(10, 10, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixel_color);
-	printf("%d %d %d\n", pixel_color[0], pixel_color[1], pixel_color[2]);
-	glReadPixels(650, 10, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixel_color);
-	printf("%d %d %d\n", pixel_color[0], pixel_color[1], pixel_color[2]);
-	glReadPixels(300, 300, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixel_color);
-	printf("%d %d %d\n", pixel_color[0], pixel_color[1], pixel_color[2]);
-	glReadPixels(10, 650, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixel_color);
-	printf("%d %d %d\n", pixel_color[0], pixel_color[1], pixel_color[2]);
-	glReadPixels(650, 650, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixel_color);
-	printf("%d %d %d\n", pixel_color[0], pixel_color[1], pixel_color[2]);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	printf("\n");*/
-
 	state.player = player;
 
-	// Set current field to a field outside of the board.
-	state.x = MAP_WIDTH;
-	state.y = MAP_HEIGHT;
+	state.region = -1;
 
 	state.index = -1;
 	state.selected.slot = 0; // TODO should I use this?
 
-	/*glBindFramebuffer(GL_FRAMEBUFFER, map_framebuffer);
-	glReadPixels(10, 10, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixel_color);
-	printf("%d %d %d\n", pixel_color[0], pixel_color[1], pixel_color[2]);
-	glReadPixels(650, 10, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixel_color);
-	printf("%d %d %d\n", pixel_color[0], pixel_color[1], pixel_color[2]);
-	glReadPixels(300, 300, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixel_color);
-	printf("%d %d %d\n", pixel_color[0], pixel_color[1], pixel_color[2]);
-	glReadPixels(10, 650, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixel_color);
-	printf("%d %d %d\n", pixel_color[0], pixel_color[1], pixel_color[2]);
-	glReadPixels(650, 650, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixel_color);
-	printf("%d %d %d\n", pixel_color[0], pixel_color[1], pixel_color[2]);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	printf("\n");*/
-
 	if_map(players);
-
-	/*glBindFramebuffer(GL_FRAMEBUFFER, map_framebuffer);
-	glReadPixels(10, 10, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixel_color);
-	printf("%d %d %d\n", pixel_color[0], pixel_color[1], pixel_color[2]);
-	glReadPixels(650, 10, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixel_color);
-	printf("%d %d %d\n", pixel_color[0], pixel_color[1], pixel_color[2]);
-	glReadPixels(300, 300, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixel_color);
-	printf("%d %d %d\n", pixel_color[0], pixel_color[1], pixel_color[2]);
-	glReadPixels(10, 650, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixel_color);
-	printf("%d %d %d\n", pixel_color[0], pixel_color[1], pixel_color[2]);
-	glReadPixels(650, 650, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixel_color);
-	printf("%d %d %d\n", pixel_color[0], pixel_color[1], pixel_color[2]);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	printf("\n");*/
 
 	KeySym *input;
 
 	xcb_generic_event_t *event;
 	xcb_button_release_event_t *mouse;
-
-	// TODO cancel training
 
 	struct area areas[] = {
 		{
@@ -908,20 +798,6 @@ int input_map(unsigned char player, const struct player *restrict players)
 
 	size_t index;
 
-	/*glBindFramebuffer(GL_FRAMEBUFFER, map_framebuffer);
-	glReadPixels(10, 10, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixel_color);
-	printf("%d %d %d\n", pixel_color[0], pixel_color[1], pixel_color[2]);
-	glReadPixels(650, 10, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixel_color);
-	printf("%d %d %d\n", pixel_color[0], pixel_color[1], pixel_color[2]);
-	glReadPixels(300, 300, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixel_color);
-	printf("%d %d %d\n", pixel_color[0], pixel_color[1], pixel_color[2]);
-	glReadPixels(10, 650, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixel_color);
-	printf("%d %d %d\n", pixel_color[0], pixel_color[1], pixel_color[2]);
-	glReadPixels(650, 650, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixel_color);
-	printf("%d %d %d\n", pixel_color[0], pixel_color[1], pixel_color[2]);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	printf("\n");*/
-
 	while (1)
 	{
 		event = xcb_wait_for_event(connection);
@@ -932,16 +808,6 @@ int input_map(unsigned char player, const struct player *restrict players)
 		{
 		case XCB_BUTTON_PRESS:
 			mouse = (xcb_button_release_event_t *)event;
-
-			glBindFramebuffer(GL_FRAMEBUFFER, map_framebuffer);
-			//glReadBuffer(GL_COLOR_ATTACHMENT0);
-			//glReadPixels(mouse->event_x - MAP_X, SCREEN_HEIGHT - mouse->event_y - MAP_Y, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixel_color);
-			glReadPixels(mouse->event_x, SCREEN_HEIGHT - mouse->event_y, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixel_color);
-			printf("%d %d %d\n", pixel_color[0], pixel_color[1], pixel_color[2]);
-			glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-			//printf("%u %u\n", (unsigned)(mouse->event_x - MAP_X), (unsigned)mouse->event_y);
-
 			for(index = 0; index < areas_count; ++index)
 				if (input_in(mouse, areas + index)) areas[index].callback(mouse, mouse->event_x - areas[index].left, mouse->event_y - areas[index].top, players);
 		case XCB_EXPOSE:
@@ -954,13 +820,11 @@ int input_map(unsigned char player, const struct player *restrict players)
 			if (*input == 'q')
 			{
 				free(event);
-				XFree(keymap);
 				return -1;
 			}
 			else if (*input == 'n')
 			{
 				free(event);
-				XFree(keymap);
 				return 0;
 			}
 			break;
@@ -1016,16 +880,14 @@ int input_player(unsigned char player, const struct player *restrict players)
 
 			//printf("%d %c %c %c %c\n", (int)*input, (int)input[0], (int)input[1], (int)input[2], (int)input[3]);
 
-			if (*input == 'q')
+			/*if (*input == 'q')
 			{
 				free(event);
-				XFree(keymap);
 				return -1;
 			}
-			else if (*input == 'n')
+			else*/ if (*input == 'n')
 			{
 				free(event);
-				XFree(keymap);
 				return 0;
 			}
 			break;
