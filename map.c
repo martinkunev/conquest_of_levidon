@@ -11,7 +11,6 @@
 #define WINNER_BATTLE -2
 
 /* TODO
-shooting
 support more than 6 slots
 pawn start positions in battles
 */
@@ -172,7 +171,7 @@ void map_init(struct player *restrict players, size_t players_count)
 				slot = malloc(sizeof(*slot));
 				if (!slot) ; // TODO
 				slot->unit = region->train[0];
-				slot->count = 1; // TODO fix this
+				slot->count = 10; // TODO fix this
 				slot->player = region->owner;
 
 				slot->_prev = 0;

@@ -369,8 +369,8 @@ void if_expose(const struct player *restrict players)
 
 	// Display information about the selected field.
 	// TODO support more than 7 units on a single field
-	char buffer[16];
-	size_t length;
+	char buffer[16]; // TODO remove this
+	size_t length; // TODO remove this
 	unsigned position = 0;
 	unsigned count;
 	if ((state.x < BATTLEFIELD_WIDTH) && (state.y < BATTLEFIELD_HEIGHT) && battlefield[state.y][state.x])
@@ -381,7 +381,12 @@ void if_expose(const struct player *restrict players)
 		do
 		{
 			display_unit(p->slot->unit->index, CTRL_X + 4 + (FIELD_SIZE + 4) * (position % 7), CTRL_Y + 32, Player + p->slot->player, p->slot->count);
-			if (position == state.pawn_index) image_draw(&image_selected, CTRL_X + 4 + (FIELD_SIZE + 4) * (position % 7), CTRL_Y + 32);
+			if (position == state.pawn_index)
+			{
+				image_draw(&image_selected, CTRL_X + 4 + (FIELD_SIZE + 4) * (position % 7), CTRL_Y + 32);
+
+				printf("harm: %u\n", p->hurt);
+			}
 
 			// Show destination of each moving pawn.
 			// TODO don't draw at the same place twice

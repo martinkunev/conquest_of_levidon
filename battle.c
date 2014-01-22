@@ -20,6 +20,8 @@
 // damage depends on whether the other side is fighting (fleeing will lead to more damage received)
 // When escaping from enemy, unit speed is reduced by 1.
 
+// When shooting, each pawn receives the amount of damage of the shooting (the more pawns on the field, the more damage is dealt).
+
 // player 0 is the neutral player
 
 /*
@@ -41,6 +43,8 @@ struct encounter
 	double moment;
 	unsigned pawns[2];
 };
+
+#include <stdio.h>
 
 /*static unsigned long gcd(unsigned long a, unsigned long b)
 {
@@ -107,15 +111,26 @@ int reachable(const struct player *restrict players, struct pawn *battlefield[BA
 
 int shootable(const struct player *restrict players, struct pawn *battlefield[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH], const struct pawn *restrict pawn, unsigned char x, unsigned char y)
 {
-	// TODO implement this
-	return 1;
+	// Only ranged units can shoot.
+	if (!pawn->slot->unit->shoot) return 0;
+
+	// The pawn cannot shoot if there's an enemy on the same field.
+	unsigned char alliance = players[pawn->slot->player].alliance;
+	const struct pawn *item = battlefield[pawn->move.y[0]][pawn->move.x[0]];
+	do if (players[item->slot->player].alliance != alliance) return 0;
+	while (item = item->_next);
+
+	// Determine the euclidean distance between the two fields. Round the value to integer.
+	int dx = x - pawn->move.x[0], dy = y - pawn->move.y[0];
+	unsigned distance = round(sqrt(dx * dx + dy * dy));
+
+	return (distance <= pawn->slot->unit->range);
 }
 
 static void pawn_remove(struct pawn *battlefield[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH], struct pawn *pawn)
 {
 	if (pawn->_prev) pawn->_prev->_next = pawn->_next;
 	else battlefield[pawn->move.y[0]][pawn->move.x[0]] = pawn->_next;
-
 	if (pawn->_next) pawn->_next->_prev = pawn->_prev;
 }
 
@@ -138,6 +153,8 @@ static void pawn_move(struct pawn *battlefield[BATTLEFIELD_HEIGHT][BATTLEFIELD_W
 	// Set pawn position.
 	pawn->move.x[1] = pawn->move.x[0] = x;
 	pawn->move.y[1] = pawn->move.y[0] = y;
+	pawn->move.t[0] = 0;
+	pawn->move.t[1] = 8;
 }
 
 // Determines whether the two objects will collide. Returns the time of the collision.
@@ -271,6 +288,68 @@ static void location(const struct move *restrict o0, const struct move *restrict
 	// Find the point in the middle of (x0, y0) and (x1, y1).
 	*x = (x0 + x1) / 2;
 	*y = (y0 + y1) / 2;
+}
+
+// Calculates the position of a pawn at a given moment.
+static void position(const struct move *restrict o, double moment, double *restrict x, double *restrict y)
+{
+	int o_t = o->t[1] - o->t[0];
+	*x = ((o->x[0] * o->t[1] - o->x[1] * o->t[0]) + (o->x[1] - o->x[0]) * moment) / o_t;
+	*y = ((o->y[0] * o->t[1] - o->y[1] * o->t[0]) + (o->y[1] - o->y[0]) * moment) / o_t;
+}
+
+static void battle_fight(const struct player *restrict players, size_t players_count, const struct pawn *restrict pawn, unsigned *restrict count, unsigned *restrict damage)
+{
+	memset(count, 0, players_count * sizeof(*damage));
+	memset(damage, 0, players_count * sizeof(*damage));
+
+	while (pawn)
+	{
+		count[players[pawn->slot->player].alliance] += pawn->slot->count;
+		damage[players[pawn->slot->player].alliance] += pawn->slot->count * pawn->slot->unit->damage;
+
+		pawn = pawn->_next;
+	}
+
+	// Precalculate the sum of the values for the first n alliances in the corresponding array element.
+	size_t i;
+	for(i = 1; i < players_count; ++i)
+	{
+		count[i] += count[i - 1];
+		damage[i] += damage[i - 1];
+	}
+}
+
+static void battle_damage(struct pawn *battlefield[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH], struct pawn *restrict pawn, unsigned damage)
+{
+	unsigned health = pawn->slot->unit->health;
+
+	pawn->hurt += damage;
+
+	if (pawn->hurt >= (pawn->slot->count * health))
+	{
+		pawn->slot->count = 0;
+		pawn_remove(battlefield, pawn);
+	}
+	else
+	{
+		// TODO this is a stupid implementation. find a better one
+
+		// Deal damage by performing consecutive hits to a random unit of the pawn.
+		// Check for death after each hit.
+		unsigned char hits[SLOT_COUNT_MAX] = {0};
+		size_t index;
+		for(damage = 0; damage < pawn->hurt; ++damage)
+		{
+			index = random() % pawn->slot->count;
+			if (++hits[index] == health)
+			{
+				hits[index] = hits[--pawn->slot->count];
+				damage -= health;
+				pawn->hurt -= health;
+			}
+		}
+	}
 }
 
 static int battle_round(const struct player *restrict players, struct pawn *battlefield[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH], struct pawn *pawns, size_t pawns_count, struct heap *collisions)
@@ -448,18 +527,6 @@ static int battle_round(const struct player *restrict players, struct pawn *batt
 		free(item);
 	}
 
-	struct pawn *pawn;
-
-	// Move all unmoved pawns.
-	size_t move;
-	for(move = 0; move < pawns_count; ++move)
-	{
-		if ((pawns[move].move.x[1] == pawns[move].move.x[0]) && (pawns[move].move.y[1] == pawns[move].move.y[0]))
-			continue;
-
-		pawn_move(battlefield, pawns + move, pawns[move].move.x[1], pawns[move].move.y[1]);
-	}
-
 	return 0;
 }
 
@@ -486,60 +553,6 @@ static void battle_escape(const struct player *restrict players, size_t players_
 	{
 		count[i] += count[i - 1];
 		damage[i] += damage[i - 1];
-	}
-}
-
-static void battle_fight(const struct player *restrict players, size_t players_count, const struct pawn *restrict pawn, unsigned *restrict count, unsigned *restrict damage)
-{
-	memset(count, 0, players_count * sizeof(*damage));
-	memset(damage, 0, players_count * sizeof(*damage));
-
-	while (pawn)
-	{
-		count[players[pawn->slot->player].alliance] += pawn->slot->count;
-		damage[players[pawn->slot->player].alliance] += pawn->slot->count * pawn->slot->unit->damage;
-
-		pawn = pawn->_next;
-	}
-
-	// Precalculate the sum of the values for the first n alliances in the corresponding array element.
-	size_t i;
-	for(i = 1; i < players_count; ++i)
-	{
-		count[i] += count[i - 1];
-		damage[i] += damage[i - 1];
-	}
-}
-
-static void battle_damage(struct pawn *battlefield[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH], struct pawn *restrict pawn, unsigned damage)
-{
-	unsigned health = pawn->slot->unit->health;
-
-	pawn->hurt += damage;
-
-	if (pawn->hurt >= (pawn->slot->count * health))
-	{
-		pawn->slot->count = 0;
-		pawn_remove(battlefield, pawn);
-	}
-	else
-	{
-		// TODO this is a stupid implementation. look for a better one
-
-		// Deal damage by performing consecutive hits to a random unit of the pawn.
-		// Check for death after each hit.
-		unsigned char hits[SLOT_COUNT_MAX] = {0};
-		size_t index;
-		for(damage = 0; damage < pawn->hurt; ++damage)
-		{
-			index = random() % pawn->slot->count;
-			if (++hits[index] == health)
-			{
-				hits[index] = hits[--pawn->slot->count];
-				damage -= health;
-				pawn->hurt -= health;
-			}
-		}
 	}
 }
 
@@ -678,6 +691,12 @@ int battle(const struct player *restrict players, size_t players_count, struct r
 
 	int dx, dy;
 
+	double t;
+	unsigned target_index;
+	double targets[3] = {0.5, 0.078125, 0.046875}; // 1/2, 5/64, 3/64
+	double miss;
+	double x, y;
+
 	struct heap collisions;
 	if (!heap_init(&collisions)) return -1;
 
@@ -764,7 +783,66 @@ int battle(const struct player *restrict players, size_t players_count, struct r
 			}
 		}
 
+		// Handle pawn movement interference.
 		status = battle_round(players, battle.field, pawns, pawns_count, &collisions);
+
+		// Deal damage from the shooting pawns.
+		for(i = 0; i < pawns_count; ++i)
+		{
+			if (!pawns[i].slot->count) continue; // skip dead pawns
+
+			if ((pawns[i].shoot.x >= 0) && (pawns[i].shoot.y >= 0) && ((pawns[i].shoot.x != pawns[i].move.x[0]) || (pawns[i].shoot.y != pawns[i].move.y[0]))) // if the pawn is shooting
+			{
+				// Determine the time of the shooting.
+				dx = pawns[i].shoot.x - pawns[i].move.x[0];
+				dy = pawns[i].shoot.y - pawns[i].move.y[0];
+				t = (miss * (pawns[i].move.t[1] - pawns[i].move.t[0]));
+
+				// The accuracy of the shoting decreases with the distance.
+				// when the pawn shoots at the distance equal to its range, miss == 0.5
+				miss = sqrt(dx * dx + dy * dy) / (pawns[i].slot->unit->range * 2); // TODO can this become negative?
+
+				// Deal damage to each pawn that is close enough to the shooting target.
+				for(j = 0; j < pawns_count; ++j)
+				{
+					if (!pawns[j].slot->count) continue; // skip dead pawns
+
+					if ((pawns[j].move.x[1] == pawns[j].move.x[0]) && (pawns[j].move.y[1] == pawns[j].move.y[0]))
+					{
+						// no need to calculate the position of non-moving pawns
+						x = pawns[j].move.x[0];
+						y = pawns[j].move.y[0];
+					}
+					else position(&pawns[j].move, t, &x, &y);
+					target_index = (unsigned)(fabs(pawns[i].shoot.x - x) + 0.5) + (unsigned)(fabs(pawns[i].shoot.y - y) + 0.5);
+
+					// Damage is dealt to the target field and to its neighbors.
+					if (target_index < (sizeof(targets) / sizeof(*targets)))
+					{
+						d = pawns[i].slot->count * pawns[i].slot->unit->shoot * (1 - miss) * targets[target_index] + 0.5;
+						pawns[j].hurt += d;
+
+						// TODO deal more damage to moving pawns
+					}
+				}
+			}
+		}
+
+		// Handle pawn movement and deaths from shooting.
+		for(i = 0; i < pawns_count; ++i)
+		{
+			if (!pawns[i].slot->count) continue; // skip dead pawns
+
+			battle_damage(battle.field, pawns + i, 0);
+
+			pawns[i].shoot.x = -1;
+			pawns[i].shoot.y = -1;
+
+			if ((pawns[i].move.x[1] == pawns[i].move.x[0]) && (pawns[i].move.y[1] == pawns[i].move.y[0]))
+				continue;
+
+			pawn_move(battle.field, pawns + i, pawns[i].move.x[1], pawns[i].move.y[1]);
+		}
 
 		// Deal damage to enemy pawns located on the same field.
 		for(i = 0; i < BATTLEFIELD_HEIGHT; ++i)
