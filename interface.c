@@ -381,12 +381,7 @@ void if_expose(const struct player *restrict players)
 		do
 		{
 			display_unit(p->slot->unit->index, CTRL_X + 4 + (FIELD_SIZE + 4) * (position % 7), CTRL_Y + 32, Player + p->slot->player, p->slot->count);
-			if (position == state.pawn_index)
-			{
-				image_draw(&image_selected, CTRL_X + 4 + (FIELD_SIZE + 4) * (position % 7), CTRL_Y + 32);
-
-				printf("harm: %u\n", p->hurt);
-			}
+			if (position == state.pawn_index) image_draw(&image_selected, CTRL_X + 4 + (FIELD_SIZE + 4) * (position % 7), CTRL_Y + 32);
 
 			// Show destination of each moving pawn.
 			// TODO don't draw at the same place twice

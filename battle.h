@@ -6,8 +6,8 @@
 
 #define SLOT_COUNT_MAX 256
 
-#define BATTLEFIELD_WIDTH 8
-#define BATTLEFIELD_HEIGHT 8
+#define BATTLEFIELD_WIDTH 9
+#define BATTLEFIELD_HEIGHT 9
 
 struct pawn
 {

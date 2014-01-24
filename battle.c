@@ -320,7 +320,8 @@ static void battle_fight(const struct player *restrict players, size_t players_c
 	}
 }
 
-static void battle_damage(struct pawn *battlefield[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH], struct pawn *restrict pawn, unsigned damage)
+// Returns whether the pawn died.
+static int battle_damage(struct pawn *battlefield[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH], struct pawn *restrict pawn, unsigned damage)
 {
 	unsigned health = pawn->slot->unit->health;
 
@@ -330,6 +331,7 @@ static void battle_damage(struct pawn *battlefield[BATTLEFIELD_HEIGHT][BATTLEFIE
 	{
 		pawn->slot->count = 0;
 		pawn_remove(battlefield, pawn);
+		return 1;
 	}
 	else
 	{
@@ -350,6 +352,8 @@ static void battle_damage(struct pawn *battlefield[BATTLEFIELD_HEIGHT][BATTLEFIE
 			}
 		}
 	}
+
+	return 0;
 }
 
 static int battle_round(const struct player *restrict players, struct pawn *battlefield[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH], struct pawn *pawns, size_t pawns_count, struct heap *collisions)
@@ -598,12 +602,12 @@ static int battle_init(struct battle *restrict battle, const struct player *rest
 	return 0;
 
 error:
-	// TODO free memory
+	// TODO free vector memory
 	free(battle->player_pawns);
 	return -1;
 }
 
-// Returns winner's alliance number or -1 on error.
+// Returns winner's alliance number or -1 if there is no winner.
 static int battle_end(struct battle *restrict battle, unsigned char host)
 {
 	bool end = 1;
@@ -670,7 +674,25 @@ int battle(const struct player *restrict players, size_t players_count, struct r
 		pawns[i]._next = 0;
 		pawns[i].slot = slot;
 		pawns[i].hurt = 0;
-		pawns[i].move = (struct move){.x = {i, i}, .y = {0, 0}, .t = {0, 8}};
+
+		if (slot->location == region) // the slot stays still
+			pawns[i].move = (struct move){.x = {4, 4}, .y = {4, 4}, .t = {0, 8}};
+		else if (slot->location == region->neighbors[0])
+			pawns[i].move = (struct move){.x = {8, 8}, .y = {4, 4}, .t = {0, 8}};
+		else if (slot->location == region->neighbors[1])
+			pawns[i].move = (struct move){.x = {8, 8}, .y = {0, 0}, .t = {0, 8}};
+		else if (slot->location == region->neighbors[2])
+			pawns[i].move = (struct move){.x = {4, 4}, .y = {0, 0}, .t = {0, 8}};
+		else if (slot->location == region->neighbors[3])
+			pawns[i].move = (struct move){.x = {0, 0}, .y = {0, 0}, .t = {0, 8}};
+		else if (slot->location == region->neighbors[4])
+			pawns[i].move = (struct move){.x = {0, 0}, .y = {4, 4}, .t = {0, 8}};
+		else if (slot->location == region->neighbors[5])
+			pawns[i].move = (struct move){.x = {0, 0}, .y = {8, 8}, .t = {0, 8}};
+		else if (slot->location == region->neighbors[6])
+			pawns[i].move = (struct move){.x = {4, 4}, .y = {8, 8}, .t = {0, 8}};
+		else if (slot->location == region->neighbors[7])
+			pawns[i].move = (struct move){.x = {8, 8}, .y = {8, 8}, .t = {0, 8}};
 
 		pawns[i].shoot.x = -1;
 		pawns[i].shoot.y = -1;
@@ -679,7 +701,7 @@ int battle(const struct player *restrict players, size_t players_count, struct r
 	}
 
 	unsigned *count = 0, *damage = 0;
-	struct pawn *pawn;
+	struct pawn *pawn, *next;
 	unsigned char alliance;
 
 	int status;
@@ -749,6 +771,8 @@ int battle(const struct player *restrict players, size_t players_count, struct r
 
 				do
 				{
+					next = pawn->_next;
+
 					if ((pawn->move.x[1] == pawn->move.x[0]) && (pawn->move.y[1] == pawn->move.y[0]))
 						continue;
 
@@ -777,9 +801,7 @@ int battle(const struct player *restrict players, size_t players_count, struct r
 
 					// Deal damage and kill some of the units.
 					if (d) battle_damage(battle.field, pawn, d);
-
-					// TODO handle dead pawns
-				} while (pawn = pawn->_next);
+				} while (pawn = next);
 			}
 		}
 
@@ -833,14 +855,13 @@ int battle(const struct player *restrict players, size_t players_count, struct r
 		{
 			if (!pawns[i].slot->count) continue; // skip dead pawns
 
-			battle_damage(battle.field, pawns + i, 0);
+			if (battle_damage(battle.field, pawns + i, 0)) continue;
 
 			pawns[i].shoot.x = -1;
 			pawns[i].shoot.y = -1;
 
 			if ((pawns[i].move.x[1] == pawns[i].move.x[0]) && (pawns[i].move.y[1] == pawns[i].move.y[0]))
 				continue;
-
 			pawn_move(battle.field, pawns + i, pawns[i].move.x[1], pawns[i].move.y[1]);
 		}
 
@@ -856,6 +877,8 @@ int battle(const struct player *restrict players, size_t players_count, struct r
 
 				do
 				{
+					next = pawn->_next;
+
 					alliance = players[pawn->slot->player].alliance;
 
 					d = 0;
@@ -876,16 +899,10 @@ int battle(const struct player *restrict players, size_t players_count, struct r
 
 					// Deal damage and kill some of the units.
 					if (d) battle_damage(battle.field, pawn, d);
-
-					// TODO handle dead pawns
-				} while (pawn = pawn->_next);
+				} while (pawn = next);
 			}
 		}
-#if !TEST
 	} while ((status = battle_end(&battle, region->owner)) < 0);
-#else
-	} while (0);
-#endif
 
 	input_player(0, players); // TODO fix this
 
