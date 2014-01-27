@@ -12,12 +12,11 @@
 
 /* TODO
 support more than 6 slots
-pawn start positions in battles
 */
 
 struct unit units[] = {
-	{.index = 0, .health = 3, .damage = 1, .speed = 3, .cost = {.food = 2}},
-	{.index = 1, .health = 3, .damage = 1, .speed = 3, .cost = {.gold = 1, .food = 2}, .shoot = 1, .range = 4},
+	{.index = 0, .health = 3, .damage = 1, .speed = 3, .cost = {.wood = -1}, .expense = {.food = -2}},
+	{.index = 1, .health = 3, .damage = 1, .speed = 3, .cost = {.gold = -1, .wood = -2}, .expense = {.food = -2}, .shoot = 1, .range = 4},
 };
 size_t units_count = 2;
 
@@ -59,7 +58,7 @@ void map_init(struct player *restrict players, size_t players_count)
 		regions[index].index = index;
 		memset(regions[index].neighbors, 0, sizeof(regions[index].neighbors));
 
-		regions[index].income = (struct resources){.gold = 1, .food = 2};
+		regions[index].income = (struct resources){.gold = 1, .wood = 2, .food = 3};
 	}
 
 	regions[0].location = region_create(4,
@@ -139,6 +138,9 @@ void map_init(struct player *restrict players, size_t players_count)
 
 	if_regions(regions, regions_count, units, units_count);
 
+	struct resources *expenses = malloc(players_count * sizeof(*expenses));
+	if (!expenses) return; // TODO
+
 	struct slot *slot, *next;
 
 	unsigned char alliance;
@@ -150,6 +152,8 @@ void map_init(struct player *restrict players, size_t players_count)
 
 	while (1)
 	{
+		memset(expenses, 0, players_count * sizeof(*expenses));
+
 		// Ask each player to perform map actions.
 		for(player = 1; player < players_count; ++player) // TODO skip player 0 in a natural way
 		{
@@ -158,11 +162,16 @@ void map_init(struct player *restrict players, size_t players_count)
 			if (input_map(player, players) < 0) return;
 		}
 
+		// Perform region-specific actions.
+
 		for(index = 0; index < regions_count; ++index)
 		{
 			region = regions + index;
 
-			// The first training unit finished the training. Add it to the region.
+			for(slot = region->slots; slot; slot = slot->_next)
+				resource_change(expenses + slot->player, &slot->unit->expense);
+
+			// The first training unit finished the training. Add it to the region's slots.
 			if (region->train[0] && resource_enough(&players[region->owner].treasury, &region->train[0]->cost))
 			{
 				// Spend the money required for the unit.
@@ -291,9 +300,15 @@ void map_init(struct player *restrict players, size_t players_count)
 			}
 
 			// Add the income from each region to the owner's treasury.
-			resource_collect(&players[region->owner].treasury, &region->income);
+			resource_change(&players[region->owner].treasury, &region->income);
 		}
+
+		// Subtract each player's expenses from the treasury.
+		for(index = 0; index < players_count; ++index)
+			resource_spend(&players[index].treasury, expenses + index);
 	}
+
+	free(expenses);
 }
 
 int main(void)
@@ -303,10 +318,10 @@ int main(void)
 	if_init();
 
 	struct player players[] = {
-		{.alliance = 0, .treasury = {.gold = 1, .food = 2}},
-		{.alliance = 1, .treasury = {.gold = 1, .food = 2}},
-		{.alliance = 2, .treasury = {.gold = 1, .food = 2}},
-		{.alliance = 3, .treasury = {.gold = 1, .food = 2}}
+		{.alliance = 0, .treasury = {.gold = 1, .wood = 2, .food = 3}},
+		{.alliance = 1, .treasury = {.gold = 1, .wood = 2, .food = 3}},
+		{.alliance = 2, .treasury = {.gold = 1, .wood = 2, .food = 3}},
+		{.alliance = 3, .treasury = {.gold = 1, .wood = 2, .food = 3}}
 	};
 
 	map_init(players, sizeof(players) / sizeof(*players));

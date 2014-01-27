@@ -103,6 +103,42 @@ uint16_t format_int_length(int64_t number, uint8_t base)
 	return length;
 }
 
+char *_format_sint_nofill(char *restrict buffer, int64_t number, uint8_t base)
+{
+	if (number > 0) *buffer++ = '+';
+	else if (number < 0)
+	{
+		*buffer++ = '-';
+		number = -number;
+	}
+	_format_uint_nofill_internal(buffer, number, base);
+}
+
+// If number can't fit in length bytes, the behavior is undefined.
+char *_format_sint_fill(char *restrict buffer, int64_t number, uint8_t base, uint16_t length, char fill)
+{
+	uint64_t unumber;
+	if (number < 0) unumber = -number;
+	else unumber = number;
+
+	char *end = buffer + length, *position = end - 1;
+	_format_digits(position, unumber, base, --);
+	if (number > 0) *position-- = '+';
+	else if (number < 0) *position-- = '-';
+	while (position >= buffer) *position-- = fill;
+
+	return end;
+}
+
+uint16_t format_sint_length(int64_t number, uint8_t base)
+{
+	uint16_t length = 1;
+	length += (number != 0);
+	if (number < 0) number = -number;
+	while (number /= base) ++length;
+	return length;
+}
+
 /*#include <stdio.h>
 #include <stdlib.h>
 #include <time.h>

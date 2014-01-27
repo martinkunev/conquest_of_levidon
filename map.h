@@ -21,7 +21,7 @@ struct unit
 	unsigned char damage;
 	unsigned char speed;
 
-	struct resources cost;
+	struct resources cost, expense;
 
 	unsigned char shoot; // damage while shooting
 	unsigned char range;

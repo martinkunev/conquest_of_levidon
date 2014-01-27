@@ -402,6 +402,38 @@ void if_expose(const struct player *restrict players)
 	glXSwapBuffers(display, drawable);
 }
 
+static void display_resource(const char *restrict name, size_t name_length, int treasury, int income, int expense, unsigned y)
+{
+	char buffer[32]; // TODO make sure this is enough
+	size_t length;
+	unsigned offset;
+
+	glColor4ubv(colors[White]);
+	glRasterPos2i(PANEL_X, y);
+	length = format_uint(format_bytes(buffer, name, name_length), treasury) - buffer;
+	glString(buffer, length);
+
+	offset = length;
+
+	if (income)
+	{
+		glColor4ubv(colors[Ally]);
+		glRasterPos2i(PANEL_X + offset * 10, y);
+		length = format_sint(buffer, income) - buffer;
+		glString(buffer, length);
+
+		offset += length;
+	}
+
+	if (expense)
+	{
+		glColor4ubv(colors[Enemy]);
+		glRasterPos2i(PANEL_X + offset * 10, y);
+		length = format_sint(buffer, expense) - buffer;
+		glString(buffer, length);
+	}
+}
+
 void if_map(const struct player *restrict players) // TODO finish this
 {
 	// clear window
@@ -420,9 +452,6 @@ void if_map(const struct player *restrict players) // TODO finish this
 	size_t x, y;
 	struct pawn *p;
 
-	char buffer[16];
-	size_t length;
-
 	// Map
 
 	/*for(y = 0; y < MAP_HEIGHT; y += 1)
@@ -432,6 +461,9 @@ void if_map(const struct player *restrict players) // TODO finish this
 				rectangle(MAP_X + x * REGION_SIZE, MAP_Y + y * REGION_SIZE, REGION_SIZE, REGION_SIZE, Player + regions[y][x].owner);
 				image_draw(&image_flag, MAP_X + x * REGION_SIZE, MAP_Y + y * REGION_SIZE);
 			}*/
+
+	struct resources income = {0}, expenses = {0};
+	const struct slot *slot;
 
 	size_t i, j;
 	for(i = 0; i < regions_count; ++i)
@@ -449,6 +481,12 @@ void if_map(const struct player *restrict players) // TODO finish this
 		for(j = 0; j < regions[i].location->count; ++j)
 			glVertex2f(MAP_X + regions[i].location->points[j].x, MAP_Y + regions[i].location->points[j].y);
 		glEnd();
+
+		// Remember income and expenses.
+		if (regions[i].owner == state.player) resource_change(&income, &regions[i].income);
+		for(slot = regions[i].slots; slot; slot = slot->_next)
+			if (slot->player == state.player)
+				resource_change(&expenses, &slot->unit->expense);
 	}
 
 	if (state.region >= 0)
@@ -466,7 +504,6 @@ void if_map(const struct player *restrict players) // TODO finish this
 		{
 			// TODO make this work for more than 6 slots
 			size_t position = 0;
-			const struct slot *slot;
 			for(slot = region->slots; slot; slot = slot->_next)
 			{
 				display_unit(slot->unit->index, PANEL_X + 20 + ((FIELD_SIZE + 4) * position), PANEL_Y + 32, Player + slot->player, slot->count);
@@ -499,12 +536,23 @@ void if_map(const struct player *restrict players) // TODO finish this
 	}
 
 	// Treasury
+	display_resource(STRING("gold: "), players[state.player].treasury.gold, income.gold, expenses.gold, RESOURCE_GOLD);
+	display_resource(STRING("food: "), players[state.player].treasury.food, income.food, expenses.food, RESOURCE_FOOD);
+	display_resource(STRING("wood: "), players[state.player].treasury.wood, income.wood, expenses.wood, RESOURCE_WOOD);
+	display_resource(STRING("iron: "), players[state.player].treasury.iron, income.iron, expenses.iron, RESOURCE_IRON);
+	display_resource(STRING("rock: "), players[state.player].treasury.rock, income.rock, expenses.rock, RESOURCE_ROCK);
 
+	/*{
 	glColor4ubv(colors[White]);
-
-	length = format_uint(format_bytes(buffer, STRING("gold: ")), players[state.player].treasury.gold) - buffer;
 	glRasterPos2i(PANEL_X, RESOURCE_GOLD);
+	length = format_uint(format_bytes(buffer, STRING("gold: ")), players[state.player].treasury.gold) - buffer;
 	glString(buffer, length);
+
+	glColor4ubv(colors[Ally]);
+	glRasterPos2i(PANEL_X + length * 10, RESOURCE_GOLD);
+	length = format_uint(format_bytes(buffer, STRING(" + ")), income.gold) - buffer;
+	glString(buffer, length);
+	}
 
 	length = format_uint(format_bytes(buffer, STRING("food: ")), players[state.player].treasury.food) - buffer;
 	glRasterPos2i(PANEL_X, RESOURCE_FOOD);
@@ -520,7 +568,7 @@ void if_map(const struct player *restrict players) // TODO finish this
 
 	length = format_uint(format_bytes(buffer, STRING("rock: ")), players[state.player].treasury.rock) - buffer;
 	glRasterPos2i(PANEL_X, RESOURCE_ROCK);
-	glString(buffer, length);
+	glString(buffer, length);*/
 
 	glFlush();
 	glXSwapBuffers(display, drawable);

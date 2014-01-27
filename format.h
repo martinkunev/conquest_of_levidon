@@ -22,6 +22,11 @@ char *_format_int_nofill(char *restrict buffer, int64_t number, uint8_t base);
 // If number can't fit in length bytes, the behavior is undefined.
 char *_format_int_fill(char *restrict buffer, int64_t number, uint8_t base, uint16_t length, char fill);
 
+char *_format_sint_nofill(char *restrict buffer, int64_t number, uint8_t base);
+
+// If number can't fit in length bytes, the behavior is undefined.
+char *_format_sint_fill(char *restrict buffer, int64_t number, uint8_t base, uint16_t length, char fill);
+
 #define _VA_ARGS_EMPTY(...) (sizeof(#__VA_ARGS__) == 1)
 
 // __VA_ARGS__ +0 is used below to prevent compiler error about empty argument
@@ -45,6 +50,16 @@ uint16_t format_uint_length(uint64_t number, uint8_t base);
 )
 
 uint16_t format_int_length(int64_t number, uint8_t base);
+
+// Add 3rd argument to 2 argument calls.
+#define format_sint(buffer, number, ...) _format_sint_((buffer), (number), _VA_ARGS_EMPTY(__VA_ARGS__) ? 10 : __VA_ARGS__ +0)
+// Call function depending on whether fill length is specified.
+#define _format_sint_(buffer, number, base, ...) (_VA_ARGS_EMPTY(__VA_ARGS__) ? \
+	_format_sint_nofill(buffer, number, base) : \
+	_ARGS5(_format_sint_fill, buffer, number, base, __VA_ARGS__ +0, ' ') \
+)
+
+uint16_t format_sint_length(int64_t number, uint8_t base);
 
 static inline char *format_byte_one(char *restrict buffer, uint8_t byte) // TODO is this necessary
 {
