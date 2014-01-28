@@ -1,9 +1,14 @@
+#include <fcntl.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
 #include <time.h>
 #include <unistd.h>
 
+#include "types.h"
+#include "json.h"
 #include "battle.h"
 #include "interface.h"
 
@@ -29,6 +34,7 @@ static struct polygon *region_create(size_t count, ...)
 
 	// Allocate memory for the region and its vertices.
 	struct polygon *polygon = malloc(sizeof(struct polygon) + count * sizeof(struct point));
+	if (!polygon) return 0;
 	polygon->count = count;
 
 	// Initialize region vertices.
@@ -40,16 +46,17 @@ static struct polygon *region_create(size_t count, ...)
 	return polygon;
 }
 
-void map_init(struct player *restrict players, size_t players_count)
+void map_init(struct player *restrict players, size_t players_count, struct region *restrict regions, size_t regions_count)
 {
-	struct region regions[REGIONS_MAX];
-	size_t regions_count = 6;
-
-	struct region *region;
+	/*struct region regions[REGIONS_MAX];
+	size_t regions_count = 6;*/
 
 	unsigned char player;
+	struct region *region;
 
 	size_t index;
+
+	/*
 	for(index = 0; index < regions_count; ++index)
 	{
 		regions[index].owner = 0;
@@ -105,8 +112,8 @@ void map_init(struct player *restrict players, size_t players_count)
 		(struct point){150, 250}
 	);
 	regions[3].neighbors[0] = regions + 1;
-	regions[3].neighbors[7] = regions + 2;
 	regions[3].neighbors[6] = regions + 4;
+	regions[3].neighbors[7] = regions + 2;
 	regions[3].center = (struct point){200, 120};
 
 	regions[4].location = region_create(4,
@@ -134,7 +141,7 @@ void map_init(struct player *restrict players, size_t players_count)
 	regions[0].owner = 1;
 	regions[1].owner = 1;
 	regions[3].owner = 2;
-	regions[5].owner = 3;
+	regions[5].owner = 3;*/
 
 	if_regions(regions, regions_count, units, units_count);
 
@@ -311,19 +318,184 @@ void map_init(struct player *restrict players, size_t players_count)
 	free(expenses);
 }
 
-int main(void)
+#include <stdio.h>
+int main(int argc, char *argv[])
 {
+	if (argc < 2)
+	{
+		fprintf(stderr, "You must specify map\n");
+		return 0;
+	}
+
 	srandom(time(0));
+
+	struct stat info;
+	int fight = open(argv[1], O_RDONLY);
+	if (fight < 0) return -1;
+	if (fstat(fight, &info) < 0) return -1;
+	char *buffer = mmap(0, info.st_size, PROT_READ, MAP_SHARED, fight, 0);
+	close(fight);
+	if (buffer == MAP_FAILED) return -1;
+
+	struct string dump = string(buffer, info.st_size);
+	union json *json = json_parse(&dump);
+	munmap(buffer, info.st_size);
+
+	if (!json)
+	{
+		printf("Invalid map\n");
+		return -1;
+	}
+
+	struct string key;
+	union json *item, *node, *field, *entry;
+	union json *x, *y;
+	size_t index;
+	size_t j;
+	struct point *points;
+
+	struct player *players = 0;
+	size_t players_count;
+
+	struct region *regions = 0;
+	size_t regions_count;
+
+	if (json_type(json) != OBJECT) goto finally;
+
+	key = string("players");
+	node = dict_get(json->object, &key);
+	if (!node || (json_type(node) != ARRAY)) goto finally;
+
+	players_count = node->array_node.length;
+	players = malloc(players_count * sizeof(struct player));
+	if (!players) goto finally;
+	for(index = 0; index < players_count; ++index)
+	{
+		item = node->array_node.data[index];
+		if (json_type(item) != OBJECT) goto finally;
+
+		key = string("alliance");
+		field = dict_get(item->object, &key);
+		if (!field || (json_type(field) != INTEGER)) goto finally;
+		players[index].alliance = field->integer;
+
+		key = string("gold");
+		field = dict_get(item->object, &key);
+		if (!field || (json_type(field) != INTEGER)) goto finally;
+		players[index].treasury.gold = field->integer;
+
+		key = string("food");
+		field = dict_get(item->object, &key);
+		if (!field || (json_type(field) != INTEGER)) goto finally;
+		players[index].treasury.food = field->integer;
+
+		key = string("iron");
+		field = dict_get(item->object, &key);
+		if (!field || (json_type(field) != INTEGER)) goto finally;
+		players[index].treasury.iron = field->integer;
+
+		key = string("wood");
+		field = dict_get(item->object, &key);
+		if (!field || (json_type(field) != INTEGER)) goto finally;
+		players[index].treasury.wood = field->integer;
+
+		key = string("rock");
+		field = dict_get(item->object, &key);
+		if (!field || (json_type(field) != INTEGER)) goto finally;
+		players[index].treasury.rock = field->integer;
+
+		players[index].type = Local; // TODO set this
+	}
+
+	key = string("regions");
+	node = dict_get(json->object, &key);
+	if (!node || (json_type(node) != ARRAY)) goto finally;
+
+	regions_count = node->array_node.length;
+	regions = malloc(regions_count * sizeof(struct region));
+	if (!regions) goto finally;
+	for(index = 0; index < regions_count; ++index)
+	{
+		item = node->array_node.data[index];
+		if (json_type(item) != OBJECT) goto finally;
+
+		regions[index].index = index;
+
+		key = string("owner");
+		field = dict_get(item->object, &key);
+		if (!field || (json_type(field) != INTEGER)) goto finally;
+		regions[index].owner = field->integer;
+
+		regions[index].slots = 0; // TODO implement this
+
+		key = string("gold");
+		field = dict_get(item->object, &key);
+		if (!field || (json_type(field) != INTEGER)) goto finally;
+		regions[index].income.gold = field->integer;
+
+		key = string("food");
+		field = dict_get(item->object, &key);
+		if (!field || (json_type(field) != INTEGER)) goto finally;
+		regions[index].income.food = field->integer;
+
+		key = string("iron");
+		field = dict_get(item->object, &key);
+		if (!field || (json_type(field) != INTEGER)) goto finally;
+		regions[index].income.iron = field->integer;
+
+		key = string("wood");
+		field = dict_get(item->object, &key);
+		if (!field || (json_type(field) != INTEGER)) goto finally;
+		regions[index].income.wood = field->integer;
+
+		key = string("rock");
+		field = dict_get(item->object, &key);
+		if (!field || (json_type(field) != INTEGER)) goto finally;
+		regions[index].income.rock = field->integer;
+
+		key = string("neighbors");
+		field = dict_get(item->object, &key);
+		if (!field || (json_type(field) != ARRAY) || (field->array_node.length != NEIGHBORS_MAX)) goto finally;
+		for(j = 0; j < NEIGHBORS_MAX; ++j)
+		{
+			entry = vector_get(&field->array_node, j);
+			if (json_type(entry) != INTEGER) goto finally;
+			if ((entry->integer < 0) || (entry->integer >= regions_count)) regions[index].neighbors[j] = 0;
+			else regions[index].neighbors[j] = regions + entry->integer;
+		}
+
+		key = string("location");
+		field = dict_get(item->object, &key);
+		if (!field || (json_type(field) != ARRAY) || (field->array_node.length < 3)) goto finally;
+		regions[index].location = malloc(sizeof(struct polygon) + field->array_node.length * sizeof(struct point));
+		if (!regions[index].location) goto finally;
+		regions[index].location->count = field->array_node.length;
+		points = regions[index].location->points;
+		for(j = 0; j < field->array_node.length; ++j)
+		{
+			entry = vector_get(&field->array_node, j);
+			if ((json_type(entry) != ARRAY) || (entry->array_node.length != 2)) goto finally;
+			x = vector_get(&entry->array_node, 0);
+			y = vector_get(&entry->array_node, 1);
+			points[j] = (struct point){x->integer, y->integer}; // TODO check vector element types
+		}
+
+		key = string("center");
+		field = dict_get(item->object, &key);
+		if (!field || (json_type(field) != ARRAY) || (field->array_node.length != 2)) goto finally;
+		x = vector_get(&field->array_node, 0);
+		y = vector_get(&field->array_node, 1);
+		regions[index].center = (struct point){x->integer, y->integer}; // TODO check vector element types
+	}
 
 	if_init();
 
-	struct player players[] = {
-		{.alliance = 0, .treasury = {.gold = 1, .wood = 2, .food = 3}},
-		{.alliance = 1, .treasury = {.gold = 1, .wood = 2, .food = 3}},
-		{.alliance = 2, .treasury = {.gold = 1, .wood = 2, .food = 3}},
-		{.alliance = 3, .treasury = {.gold = 1, .wood = 2, .food = 3}}
-	};
+	map_init(players, players_count, regions, regions_count);
 
-	map_init(players, sizeof(players) / sizeof(*players));
+finally:
+	// TODO free region locations
+	free(regions);
+	free(players);
+	json_free(json);
 	return 0;
 }
