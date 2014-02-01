@@ -428,6 +428,8 @@ int main(int argc, char *argv[])
 
 		regions[index].slots = 0; // TODO implement this
 
+		memset(regions[index].train, 0, sizeof(regions[index].train)); // TODO implement this
+
 		key = string("gold");
 		field = dict_get(item->object, &key);
 		if (!field || (json_type(field) != INTEGER)) goto finally;

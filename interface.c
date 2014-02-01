@@ -434,6 +434,52 @@ static void display_resource(const char *restrict name, size_t name_length, int 
 	}
 }
 
+static void display_region(const struct polygon *restrict pol, int offset_x, int offset_y)
+{
+	size_t i, j;
+
+	struct point convex[40]; // TODO change this
+	i = 0;
+	size_t start;
+
+	int x0, y0, x1, y1;
+
+	glBegin(GL_POLYGON);
+	start = 0;
+	for(j = 0; j < pol->count; ++j)
+	{
+		if (j > 1)
+		{
+			x0 = pol[j - 2].points->x - pol[j - 1].points->x;
+			y0 = pol[j - 2].points->y - pol[j - 1].points->y;
+			x1 = pol[j].points->x - pol[j - 1].points->x;
+			y1 = pol[j].points->y - pol[j - 1].points->y;
+
+			// Check if the angle between the 3 points is reflex.
+			if ((x0 * y1 - x1 * y0) < 0)
+			{
+				glEnd();
+
+				convex[i++] = pol->points[start];
+				convex[i++] = pol->points[j - 1];
+
+				glBegin(GL_POLYGON);
+				start = j - 1;
+				glVertex2f(offset_x + pol->points[j - 1].x, offset_y + pol->points[j - 1].y);
+				glVertex2f(offset_x + pol->points[j].x, offset_y + pol->points[j].y);
+			}
+		}
+
+		glVertex2f(offset_x + pol->points[j].x, offset_y + pol->points[j].y);
+	}
+	if (i) convex[i++] = pol->points[j - 1];
+	glEnd();
+
+	glBegin(GL_POLYGON);
+	for(j = 0; j < i; ++j) glVertex2f(offset_x + convex[j].x, offset_y + convex[j].y);
+	glEnd();
+}
+
 void if_map(const struct player *restrict players) // TODO finish this
 {
 	// clear window
@@ -470,10 +516,12 @@ void if_map(const struct player *restrict players) // TODO finish this
 	{
 		// Fill each region with the color of its owner.
 		glColor4ubv(colors[Player + regions[i].owner]);
+		display_region(regions[i].location, MAP_X, MAP_Y);
+		/*glColor4ubv(colors[Player + regions[i].owner]);
 		glBegin(GL_POLYGON);
 		for(j = 0; j < regions[i].location->count; ++j)
 			glVertex2f(MAP_X + regions[i].location->points[j].x, MAP_Y + regions[i].location->points[j].y);
-		glEnd();
+		glEnd();*/
 
 		// Draw region borders.
 		glColor4ubv(colors[Black]);
@@ -535,6 +583,30 @@ void if_map(const struct player *restrict players) // TODO finish this
 		}
 	}
 
+	// TODO remove this
+	/*struct polygon *pol = malloc(sizeof(struct polygon) + 7 * sizeof(struct point));
+	i = 0;
+	pol->points[i++] = (struct point){100, 380};
+	pol->points[i++] = (struct point){80, 330};
+	pol->points[i++] = (struct point){60, 380};
+	pol->points[i++] = (struct point){40, 400};
+	pol->points[i++] = (struct point){80, 470};
+	pol->points[i++] = (struct point){100, 420};
+	pol->points[i++] = (struct point){150, 400};
+	pol->count = i;
+	display_region(pol, Player);
+
+	// TODO remove this
+	struct polygon *other = malloc(sizeof(struct polygon) + 5 * sizeof(struct point));
+	i = 0;
+	other->points[i++] = (struct point){150, 550};
+	other->points[i++] = (struct point){50, 500};
+	other->points[i++] = (struct point){70, 530};
+	other->points[i++] = (struct point){70, 570};
+	other->points[i++] = (struct point){50, 600};
+	other->count = i;
+	display_region(other, Player);*/
+
 	// Treasury
 	display_resource(STRING("gold: "), players[state.player].treasury.gold, income.gold, expenses.gold, RESOURCE_GOLD);
 	display_resource(STRING("food: "), players[state.player].treasury.food, income.food, expenses.food, RESOURCE_FOOD);
@@ -595,10 +667,11 @@ void if_regions(struct region *restrict reg, size_t count, const struct unit *u,
 	for(i = 0; i < regions_count; ++i)
 	{
 		glColor3ub(0, 0, i);
-		glBegin(GL_POLYGON);
+		display_region(regions[i].location, 0, 0);
+		/*glBegin(GL_POLYGON);
 		for(j = 0; j < regions[i].location->count; ++j)
 			glVertex2f(regions[i].location->points[j].x, regions[i].location->points[j].y);
-		glEnd();
+		glEnd();*/
 	}
 
 	glFlush();
