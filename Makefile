@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-std=c99 -g -pthread -I/usr/X11/include -D_BSD_SOURCE -DTEST=0 -Werror -Wno-parentheses -Wchar-subscripts -Wimplicit -Wsequence-point
+CFLAGS=-std=c99 -g -pthread -I/usr/X11/include -D_BSD_SOURCE -DTEST=0 -Werror -Wno-parentheses -Wno-pointer-sign -Wno-empty-body -Wno-return-type -Wchar-subscripts -Wimplicit -Wsequence-point
 LDFLAGS=-pthread -L/usr/X11/lib -lm -lpng -lGL -lX11 -lxcb -lX11-xcb -lOSMesa
 
 all: map
@@ -17,6 +17,6 @@ polygons: polygons.o
 	$(CC) $(LDFLAGS) $^ -o polygons
 
 clean:
-	rm battle.o heap.o format.o main.o resources.o map.o interface.o json.o dictionary.o vector.o
-	rm battle
-	rm x
+	rm -f battle.o heap.o format.o main.o resources.o map.o interface.o json.o dictionary.o vector.o
+	rm -f battle
+	rm -f x
