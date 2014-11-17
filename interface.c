@@ -434,51 +434,214 @@ static void display_resource(const char *restrict name, size_t name_length, int 
 	}
 }
 
-static void display_region(const struct polygon *restrict pol, int offset_x, int offset_y)
+/*struct point
 {
-	size_t i, j;
+	unsigned x, y;
+};*/
 
-	struct point convex[40]; // TODO change this
-	i = 0;
-	size_t start;
+struct vertex
+{
+	unsigned x, y;
+	int convex;
+	struct vertex *_next;
+};
+
+static inline long cross_product(int fx, int fy, int sx, int sy)
+{
+	return (fx * sy - sx * fy);
+}
+
+static int in_triangle(struct point p, struct point a, struct point b, struct point c)
+{
+	// TODO think about equality
+
+	// ab x ap
+	int sign0 = cross_product(b.x - a.x, b.y - a.y, p.x - a.x, p.y - a.y) > 0; // TODO can this overflow?
+
+	// bc x bp
+	int sign1 = cross_product(c.x - b.x, c.y - b.y, p.x - b.x, p.y - b.y) > 0; // TODO can this overflow?
+
+	// ca x cp
+	int sign2 = cross_product(a.x - c.x, a.y - c.y, p.x - c.x, p.y - c.y) > 0; // TODO can this overflow?
+
+	return ((sign0 == sign1) && (sign1 == sign2));
+}
+
+static int is_ear(const struct vertex *first, const struct vertex *next, const struct vertex *last, const struct vertex *vertices, size_t vertices_count)
+{
+	struct point p, a, b, c;
+	size_t i;
+
+	// Check vector product sign in order to find out if the angle between the 3 points is reflex.
+	long product = cross_product(first->x - next->x, first->y - next->y, last->x - next->x, last->y - next->y); // TODO can this overflow?
+	if (product < 0) return 0;
+	// TODO think about product == 0
+
+	// Check if the edges first, next last form an ear.
+	a = (struct point){.x = first->x, .y = first->y};
+	b = (struct point){.x = next->x, .y = next->y};
+	c = (struct point){.x = last->x, .y = last->y};
+	for(i = 0; i < vertices_count; ++i)
+	{
+		// Skip the edges first, next and last.
+		if (((vertices + i) == first) || ((vertices + i) == next) || ((vertices + i) == last))
+			continue;
+
+		p = (struct point){.x = vertices[i].x, .y = vertices[i].y};
+		if (in_triangle(p, a, b, c)) return 0;
+	}
+	return 1;
+}
+
+// Display a region as a polygon, using ear clipping.
+static void display_region(const struct polygon *restrict polygon, int offset_x, int offset_y)
+{
+	// assert(polygon->count > 2);
+
+	// TODO rewrite this function
+
+	size_t i;
+
+	size_t vertices_left = polygon->count;
+
+	long product;
+
+	// Initialize cyclic linked list with the polygon's vertices.
+	struct vertex *vertices = malloc(vertices_left * sizeof(*vertices));
+	if (!vertices) ; // TODO
+	for(i = 0; i < vertices_left; ++i)
+	{
+		vertices[i].x = polygon->points[i].x;
+		vertices[i].y = polygon->points[i].y;
+		vertices[i]._next = vertices + i + 1;
+	}
+	vertices[polygon->count - 1]._next = vertices;
+
+	struct vertex *prev, *first = vertices, *next, *last;
+
+	first = vertices;
+	do
+	{
+		next = first->_next;
+		last = next->_next;
+		next->convex = is_ear(first, next, last, vertices, vertices_left);
+		first = next;
+	} while (first != vertices);
+
+	while (vertices_left > 3)
+	{
+		// find a triangle to draw
+		while (1)
+		{
+			prev = first;
+			first = first->_next;
+			next = first->_next;
+			if (next->convex) break;
+		}
+		last = next->_next;
+
+		glBegin(GL_POLYGON);
+		glVertex2f(offset_x + first->x, offset_y + first->y);
+		glVertex2f(offset_x + next->x, offset_y + next->y);
+		glVertex2f(offset_x + last->x, offset_y + last->y);
+		glEnd();
+
+		// clip the triangle from the polygon (by removing the edge next)
+		first->_next = last;
+		vertices_left -= 1;
+
+		first->convex = is_ear(prev, first, last, vertices, polygon->count); // TODO this also checks already removed vertices (but it's not necessary)
+		last->convex = is_ear(first, last, last->_next, vertices, polygon->count); // TODO this also checks already removed vertices (but it's not necessary)
+	}
+
+	glBegin(GL_POLYGON);
+	glVertex2f(offset_x + first->x, offset_y + first->y);
+	glVertex2f(offset_x + first->_next->x, offset_y + first->_next->y);
+	glVertex2f(offset_x + first->_next->_next->x, offset_y + first->_next->_next->y);
+	glEnd();
+
+	free(vertices);
+}
+
+/*static void display_region_(const struct polygon *restrict polygon, int offset_x, int offset_y)
+{
+	// assert(polygon->count > 2);
+
+	struct vertex
+	{
+		unsigned x, y;
+		struct vertex *_next;
+	};
+
+	size_t i;
+
+	// Initialize cyclic linked list with the polygon's vertices.
+	struct vertex *vertices = malloc(polygon->count * sizeof(*vertices));
+	if (!vertices) ; // TODO
+	for(i = 0; i < polygon->count; ++i)
+	{
+		vertices[i].x = polygon->points[i].x;
+		vertices[i].y = polygon->points[i].y;
+		vertices[i]._next = vertices + i + 1;
+	}
+	vertices[polygon->count - 1]._next = vertices;
+
+	struct vertex *first = vertices, *next, *last;
+	size_t vertices_left = polygon->count;
 
 	int x0, y0, x1, y1;
+	long product;
 
-	glBegin(GL_POLYGON);
-	start = 0;
-	for(j = 0; j < pol->count; ++j)
+	// TODO this loops infinitely sometimes
+
+	// Use ear clipping to display concave polygons.
+	while (vertices_left > 3)
 	{
-		if (j > 1)
+		// find a triangle to draw
+		while (1)
 		{
-			x0 = pol[j - 2].points->x - pol[j - 1].points->x;
-			y0 = pol[j - 2].points->y - pol[j - 1].points->y;
-			x1 = pol[j].points->x - pol[j - 1].points->x;
-			y1 = pol[j].points->y - pol[j - 1].points->y;
+			next = first->_next;
+			last = next->_next;
 
-			// Check if the angle between the 3 points is reflex.
-			if ((x0 * y1 - x1 * y0) < 0)
+			// Check vector product sign in order to find out if the angle between the 3 points is reflex.
+			x0 = first->x - next->x;
+			y0 = first->y - next->y;
+			x1 = last->x - next->x;
+			y1 = last->y - next->y;
+			product = (x0 * y1 - x1 * y0);
+			if (product > 0) // TODO the third side must be in the polygon (to prevent infinite looping)
 			{
-				glEnd();
-
-				convex[i++] = pol->points[start];
-				convex[i++] = pol->points[j - 1];
-
 				glBegin(GL_POLYGON);
-				start = j - 1;
-				glVertex2f(offset_x + pol->points[j - 1].x, offset_y + pol->points[j - 1].y);
-				glVertex2f(offset_x + pol->points[j].x, offset_y + pol->points[j].y);
+				glVertex2f(offset_x + first->x, offset_y + first->y);
+				glVertex2f(offset_x + next->x, offset_y + next->y);
+				glVertex2f(offset_x + last->x, offset_y + last->y);
+				glEnd();
+				break;
 			}
+			else if (!product) break; // the vertices lie on a line
+
+			printf("0\n");
+
+			first = next;
 		}
 
-		glVertex2f(offset_x + pol->points[j].x, offset_y + pol->points[j].y);
+		// clip the triangle from the polygon (by removing the edge next)
+		first->_next = last;
+		vertices_left -= 1;
+
+		printf("%d %d\n", next->x, next->y);
 	}
-	if (i) convex[i++] = pol->points[j - 1];
-	glEnd();
+
+	printf("====\n");
 
 	glBegin(GL_POLYGON);
-	for(j = 0; j < i; ++j) glVertex2f(offset_x + convex[j].x, offset_y + convex[j].y);
+	glVertex2f(offset_x + first->x, offset_y + first->y);
+	glVertex2f(offset_x + first->_next->x, offset_y + first->_next->y);
+	glVertex2f(offset_x + first->_next->_next->x, offset_y + first->_next->_next->y);
 	glEnd();
-}
+
+	free(vertices);
+}*/
 
 void if_map(const struct player *restrict players) // TODO finish this
 {
