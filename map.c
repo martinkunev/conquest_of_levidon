@@ -35,7 +35,7 @@ static struct polygon *region_create(size_t count, ...)
 	// Allocate memory for the region and its vertices.
 	struct polygon *polygon = malloc(sizeof(struct polygon) + count * sizeof(struct point));
 	if (!polygon) return 0;
-	polygon->count = count;
+	polygon->vertices = count;
 
 	// Initialize region vertices.
 	va_start(vertices, count);
@@ -471,7 +471,7 @@ int main(int argc, char *argv[])
 		if (!field || (json_type(field) != ARRAY) || (field->array_node.length < 3)) goto finally;
 		regions[index].location = malloc(sizeof(struct polygon) + field->array_node.length * sizeof(struct point));
 		if (!regions[index].location) goto finally;
-		regions[index].location->count = field->array_node.length;
+		regions[index].location->vertices = field->array_node.length;
 		points = regions[index].location->points;
 		for(j = 0; j < field->array_node.length; ++j)
 		{

@@ -48,7 +48,7 @@ struct region
 	struct region *neighbors[NEIGHBORS_MAX];
 	struct polygon
 	{
-		size_t count;
+		size_t vertices;
 		struct point 
 		{ 
 			unsigned x, y;
