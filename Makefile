@@ -7,16 +7,16 @@ all: map
 test: test.o
 	$(CC) -L/usr/X11/lib -lGL -lOSMesa $^ -o test
 
-map: map.o resources.o interface.o image.o battle.o format.o heap.o json.o dictionary.o vector.o
+map: map.o resources.o interface.o display.o image.o battle.o format.o heap.o json.o dictionary.o vector.o
 	$(CC) $(LDFLAGS) $^ -o map
 
-battle: main.o interface.o image.o battle.o format.o heap.o json.o dictionary.o vector.o
+battle: main.o interface.o display.o image.o battle.o format.o heap.o json.o dictionary.o vector.o
 	$(CC) $(LDFLAGS) $^ -o battle
 
 polygons: polygons.o
 	$(CC) $(LDFLAGS) $^ -o polygons
 
 clean:
-	rm -f battle.o heap.o format.o main.o resources.o map.o interface.o json.o dictionary.o vector.o
+	rm -f battle.o heap.o format.o main.o resources.o map.o interface.o display.o json.o dictionary.o vector.o
 	rm -f battle
 	rm -f x

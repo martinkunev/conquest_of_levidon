@@ -14,6 +14,7 @@
 #include "battle.h"
 #include "image.h"
 #include "interface.h"
+#include "display.h"
 
 // http://xcb.freedesktop.org/opengl/
 // http://xcb.freedesktop.org/tutorial/events/
@@ -66,7 +67,7 @@
 #define glRenderbufferStorage(...) glRenderbufferStorageEXT(__VA_ARGS__)
 #define glFramebufferRenderbuffer(...) glFramebufferRenderbufferEXT(__VA_ARGS__)
 
-#include <stdio.h>
+//#include <stdio.h>
 
 // http://www.opengl.org/sdk/docs/man2/
 
@@ -434,121 +435,6 @@ static void display_resource(const char *restrict name, size_t name_length, int 
 	}
 }
 
-struct polygon_draw
-{
-	const struct point *point;
-	enum {Ear = 1, Straight} class;
-	struct polygon_draw *prev, *next;
-};
-
-static inline long cross_product(int fx, int fy, int sx, int sy)
-{
-	return (fx * sy - sx * fy);
-}
-
-static int in_triangle(struct point p, struct point a, struct point b, struct point c)
-{
-	// TODO think about equality
-
-	// ab x ap
-	int sign0 = cross_product(b.x - a.x, b.y - a.y, p.x - a.x, p.y - a.y) > 0; // TODO can this overflow?
-
-	// bc x bp
-	int sign1 = cross_product(c.x - b.x, c.y - b.y, p.x - b.x, p.y - b.y) > 0; // TODO can this overflow?
-
-	// ca x cp
-	int sign2 = cross_product(a.x - c.x, a.y - c.y, p.x - c.x, p.y - c.y) > 0; // TODO can this overflow?
-
-	return ((sign0 == sign1) && (sign1 == sign2));
-}
-
-static int is_ear(const struct polygon_draw *prev, const struct polygon_draw *curr, const struct polygon_draw *next)
-{
-	// Check vector product sign in order to find out if the angle between the 3 points is reflex or straight.
-	long product = cross_product(prev->point->x - curr->point->x, prev->point->y - curr->point->y, next->point->x - curr->point->x, next->point->y - curr->point->y); // TODO can this overflow?
-	if (product < 0) return 0;
-	else if (product == 0) return Straight;
-
-	// Check if there is a vertex in the triangle.
-	const struct polygon_draw *item;
-	for(item = next->next; item != prev; item = item->next)
-		if (in_triangle(*item->point, *prev->point, *curr->point, *next->point))
-			return 0;
-
-	return Ear;
-}
-
-// Display a region as a polygon, using ear clipping.
-static void display_region(const struct polygon *restrict polygon, int offset_x, int offset_y)
-{
-	// assert(polygon->vertices > 2);
-
-	size_t vertices_left = polygon->vertices;
-	size_t i;
-
-	// Initialize cyclic linked list with the polygon's vertices.
-	struct polygon_draw *draw = malloc(vertices_left * sizeof(*draw));
-	if (!draw) ; // TODO
-	draw[0].point = polygon->points;
-	draw[0].prev = draw + vertices_left - 1;
-	for(i = 1; i < vertices_left; ++i)
-	{
-		draw[i].point = polygon->points + i;
-		draw[i].prev = draw + i - 1;
-		draw[i - 1].next = draw + i;
-	}
-	draw[vertices_left - 1].next = draw;
-
-	struct polygon_draw *vertex;
-	vertex = draw;
-	do
-	{
-		vertex->class = is_ear(vertex->prev, vertex, vertex->next);
-		vertex = vertex->next;
-	} while (vertex != draw);
-
-	while (vertices_left > 3)
-	{
-		// find a triangle to draw
-		switch (vertex->class)
-		{
-		case Ear:
-			break;
-
-		case Straight:
-			vertices_left -= 1;
-			vertex->prev->next = vertex->next;
-			vertex->next->prev = vertex->prev;
-		default:
-			vertex = vertex->next;
-			continue;
-		}
-
-		glBegin(GL_POLYGON);
-		glVertex2f(offset_x + vertex->prev->point->x, offset_y + vertex->prev->point->y);
-		glVertex2f(offset_x + vertex->point->x, offset_y + vertex->point->y);
-		glVertex2f(offset_x + vertex->next->point->x, offset_y + vertex->next->point->y);
-		glEnd();
-
-		// clip the triangle from the polygon
-		vertices_left -= 1;
-		vertex->prev->next = vertex->next;
-		vertex->next->prev = vertex->prev;
-		vertex = vertex->next;
-
-		vertex->prev->class = is_ear(vertex->prev->prev, vertex->prev, vertex);
-		vertex->class = is_ear(vertex->prev, vertex, vertex->next);
-	}
-
-	glBegin(GL_POLYGON);
-	glVertex2f(offset_x + vertex->prev->point->x, offset_y + vertex->prev->point->y);
-	glVertex2f(offset_x + vertex->point->x, offset_y + vertex->point->y);
-	glVertex2f(offset_x + vertex->next->point->x, offset_y + vertex->next->point->y);
-	glEnd();
-
-	free(draw);
-}
-
 void if_map(const struct player *restrict players) // TODO finish this
 {
 	// clear window
@@ -585,30 +471,22 @@ void if_map(const struct player *restrict players) // TODO finish this
 	{
 		// Fill each region with the color of its owner.
 		glColor4ubv(colors[Player + regions[i].owner]);
-		if (i == 2)
-		{
-			i = 2;
-		}
-		printf("-- %u --\n", (unsigned)regions[i].index);
 		display_region(regions[i].location, MAP_X, MAP_Y);
-		/*glColor4ubv(colors[Player + regions[i].owner]);
-		glBegin(GL_POLYGON);
-		for(j = 0; j < regions[i].location->count; ++j)
-			glVertex2f(MAP_X + regions[i].location->points[j].x, MAP_Y + regions[i].location->points[j].y);
-		glEnd();*/
-
-		// Draw region borders.
-		glColor4ubv(colors[Black]);
-		glBegin(GL_LINE_STRIP);
-		for(j = 0; j < regions[i].location->vertices; ++j)
-			glVertex2f(MAP_X + regions[i].location->points[j].x, MAP_Y + regions[i].location->points[j].y);
-		glEnd();
 
 		// Remember income and expenses.
 		if (regions[i].owner == state.player) resource_change(&income, &regions[i].income);
 		for(slot = regions[i].slots; slot; slot = slot->_next)
 			if (slot->player == state.player)
 				resource_change(&expenses, &slot->unit->expense);
+	}
+	for(i = 0; i < regions_count; ++i)
+	{
+		// Draw region borders.
+		glColor4ubv(colors[Black]);
+		glBegin(GL_LINE_STRIP);
+		for(j = 0; j < regions[i].location->vertices; ++j)
+			glVertex2f(MAP_X + regions[i].location->points[j].x, MAP_Y + regions[i].location->points[j].y);
+		glEnd();
 	}
 
 	if (state.region >= 0)
@@ -656,30 +534,6 @@ void if_map(const struct player *restrict players) // TODO finish this
 			display_unit(1, PANEL_X + (FIELD_SIZE + 8) * 1, PANEL_Y + 192, White, 0);
 		}
 	}
-
-	// TODO remove this
-	/*struct polygon *pol = malloc(sizeof(struct polygon) + 7 * sizeof(struct point));
-	i = 0;
-	pol->points[i++] = (struct point){100, 380};
-	pol->points[i++] = (struct point){80, 330};
-	pol->points[i++] = (struct point){60, 380};
-	pol->points[i++] = (struct point){40, 400};
-	pol->points[i++] = (struct point){80, 470};
-	pol->points[i++] = (struct point){100, 420};
-	pol->points[i++] = (struct point){150, 400};
-	pol->count = i;
-	display_region(pol, Player);
-
-	// TODO remove this
-	struct polygon *other = malloc(sizeof(struct polygon) + 5 * sizeof(struct point));
-	i = 0;
-	other->points[i++] = (struct point){150, 550};
-	other->points[i++] = (struct point){50, 500};
-	other->points[i++] = (struct point){70, 530};
-	other->points[i++] = (struct point){70, 570};
-	other->points[i++] = (struct point){50, 600};
-	other->count = i;
-	display_region(other, Player);*/
 
 	// Treasury
 	display_resource(STRING("gold: "), players[state.player].treasury.gold, income.gold, expenses.gold, RESOURCE_GOLD);
@@ -742,10 +596,6 @@ void if_regions(struct region *restrict reg, size_t count, const struct unit *u,
 	{
 		glColor3ub(0, 0, i);
 		display_region(regions[i].location, 0, 0);
-		/*glBegin(GL_POLYGON);
-		for(j = 0; j < regions[i].location->count; ++j)
-			glVertex2f(regions[i].location->points[j].x, regions[i].location->points[j].y);
-		glEnd();*/
 	}
 
 	glFlush();
