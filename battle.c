@@ -6,9 +6,22 @@
 #include <unistd.h>
 
 #include "types.h"
-#include "heap.h"
 #include "battle.h"
 #include "interface.h"
+
+struct encounter
+{
+	double moment;
+	unsigned pawns[2];
+};
+
+#define heap_type struct encounter *
+#define heap_diff(a, b) ((a)->moment <= (b)->moment)
+#include "heap.t"
+#undef heap_diff
+#undef heap_type
+
+#define DIAMETER 1
 
 // Alliance number must be less than the number of players.
 
@@ -38,13 +51,7 @@ f(x) where:
     x > 2n  f"(x) > 0
 */
 
-#define DIAMETER 1
-
-struct encounter
-{
-	double moment;
-	unsigned pawns[2];
-};
+// TODO think about preventing endless battles (e.g. units doing 0 damage); maybe cancel the battle after a certain number of turns without damage?
 
 #include <stdio.h>
 
@@ -142,7 +149,7 @@ static void pawn_move(struct pawn *battlefield[BATTLEFIELD_HEIGHT][BATTLEFIELD_W
 {
 	printf("MOVE: ");
 	pawn_remove(battlefield, pawn);
-	printf("PUT (%u,%u)", (unsigned)x, (unsigned)y);
+	printf("PUT (%u,%u)\n", (unsigned)x, (unsigned)y);
 
 	pawn->_prev = 0;
 	pawn->_next = 0;
@@ -272,7 +279,7 @@ static double battle_encounter(const struct move *restrict o0, const struct move
 }
 
 // TODO support different start times
-static void location(const struct move *restrict o0, const struct move *restrict o1, double moment, double *restrict x, double *restrict y)
+static void collision_location(const struct move *restrict o0, const struct move *restrict o1, double moment, double *restrict x, double *restrict y)
 {
 	// Calculate time differences.
 	int o0_t = o0->t[1] - o0->t[0], o1_t = o1->t[1] - o1->t[0];
@@ -390,7 +397,7 @@ static int battle_round(const struct player *restrict players, struct pawn *batt
 				encounter->moment = moment;
 				encounter->pawns[0] = i;
 				encounter->pawns[1] = j;
-				if (!heap_push(collisions, (double *)encounter)) return -1;
+				if (!heap_push(collisions, encounter)) return -1;
 			}
 		}
 	}
@@ -399,6 +406,8 @@ static int battle_round(const struct player *restrict players, struct pawn *batt
 	double real_x, real_y;
 
 	unsigned *index;
+
+	// TODO strange behavior when more than 2 pawns collide (use (8, 8)->(8, 5) and (8, 7)->(8, 8) to test)
 
 	// Process each encounter in chronological order.
 	// Look if the encounter prevents a later encounter or causes another encounter.
@@ -409,7 +418,7 @@ static int battle_round(const struct player *restrict players, struct pawn *batt
 
 		index = item->pawns;
 
-		location(&pawns[index[0]].move, &pawns[index[1]].move, item->moment, &real_x, &real_y);
+		collision_location(&pawns[index[0]].move, &pawns[index[1]].move, item->moment, &real_x, &real_y);
 
 		// Use the closest field for location of the encounter.
 		// If the real location is in the middle of two fields, choose one randomly.
@@ -437,7 +446,7 @@ static int battle_round(const struct player *restrict players, struct pawn *batt
 				{
 					if (item->moment >= pawns[i].move.t[1]) continue; // i is not moving
 
-					// Ignore encounters if the two pawns are not enemies to each other.
+					// Ignore encounters if the two pawns are not enemies of each other.
 					if (players[pawns[i].slot->player].alliance != players[pawns[index[0]].slot->player].alliance)
 					{
 						moment = battle_encounter(&pawns[i].move, &pawns[index[0]].move);
@@ -449,7 +458,7 @@ static int battle_round(const struct player *restrict players, struct pawn *batt
 							encounter->moment = moment;
 							encounter->pawns[0] = i;
 							encounter->pawns[1] = index[0];
-							if (!heap_push(collisions, (double *)encounter)) return -1;
+							if (!heap_push(collisions, encounter)) return -1;
 						}
 					}
 					else if (players[pawns[i].slot->player].alliance != players[pawns[index[1]].slot->player].alliance)
@@ -463,7 +472,7 @@ static int battle_round(const struct player *restrict players, struct pawn *batt
 							encounter->moment = moment;
 							encounter->pawns[0] = i;
 							encounter->pawns[1] = index[1];
-							if (!heap_push(collisions, (double *)encounter)) return -1;
+							if (!heap_push(collisions, encounter)) return -1;
 						}
 					}
 				}
@@ -495,7 +504,7 @@ static int battle_round(const struct player *restrict players, struct pawn *batt
 							encounter->moment = moment;
 							encounter->pawns[0] = i;
 							encounter->pawns[1] = index[0];
-							if (!heap_push(collisions, (double *)encounter)) return -1;
+							if (!heap_push(collisions, encounter)) return -1;
 						}
 					}
 				}
@@ -528,7 +537,7 @@ static int battle_round(const struct player *restrict players, struct pawn *batt
 						encounter->moment = moment;
 						encounter->pawns[0] = i;
 						encounter->pawns[1] = index[1];
-						if (!heap_push(collisions, (double *)encounter)) return -1;
+						if (!heap_push(collisions, encounter)) return -1;
 					}
 				}
 			}
@@ -809,7 +818,7 @@ int battle(const struct player *restrict players, size_t players_count, struct r
 					// Deal damage and kill some of the units.
 					if (d)
 					{
-						printf("DAMAGE (escape) %u (%u,%u)\n", (unsigned)pawn->slot->unit->index, (unsigned)pawn->move.x[0], (unsigned)pawn->move.y[0]);
+						printf("DAMAGE %u (escape) %u (%u,%u)\n", (unsigned)d, (unsigned)pawn->slot->unit->index, (unsigned)pawn->move.x[0], (unsigned)pawn->move.y[0]);
 						battle_damage(battle.field, pawn, d);
 					}
 				} while (pawn = next);
@@ -820,7 +829,7 @@ int battle(const struct player *restrict players, size_t players_count, struct r
 		status = battle_round(players, battle.field, pawns, pawns_count, &collisions);
 
 		// Deal damage from the shooting pawns.
-		for(i = 0; i < pawns_count; ++i)
+		for(i = 0; i < pawns_count; ++i) // foreach shooter
 		{
 			if (!pawns[i].slot->count) continue; // skip dead pawns
 
@@ -836,7 +845,7 @@ int battle(const struct player *restrict players, size_t players_count, struct r
 				miss = sqrt(dx * dx + dy * dy) / (pawns[i].slot->unit->range * 2); // TODO can this become negative?
 
 				// Deal damage to each pawn that is close enough to the shooting target.
-				for(j = 0; j < pawns_count; ++j)
+				for(j = 0; j < pawns_count; ++j) // foreach target
 				{
 					if (!pawns[j].slot->count) continue; // skip dead pawns
 
@@ -847,26 +856,26 @@ int battle(const struct player *restrict players, size_t players_count, struct r
 						y = pawns[j].move.y[0];
 					}
 					else position(&pawns[j].move, t, &x, &y);
-					target_index = (unsigned)(fabs(pawns[i].shoot.x - x) + 0.5) + (unsigned)(fabs(pawns[i].shoot.y - y) + 0.5);
+					target_index = abs(pawns[i].shoot.x - x) * 3 / 2 + abs(pawns[i].shoot.y - y) * 3 / 2;
 
 					// Damage is dealt to the target field and to its neighbors.
 					if (target_index < (sizeof(targets) / sizeof(*targets)))
 					{
 						d = pawns[i].slot->count * pawns[i].slot->unit->shoot * (1 - miss) * targets[target_index] + 0.5;
+						printf("DAMAGE %u (shoot) %u (%u,%u)\n", (unsigned)d, (unsigned)pawns[j].slot->unit->index, (unsigned)pawns[j].move.x[0], (unsigned)pawns[j].move.y[0]);
 						pawns[j].hurt += d;
 
-						// TODO deal more damage to moving pawns
+						// TODO ?deal more damage to moving pawns
 					}
 				}
 			}
 		}
 
-		// Handle pawn movement and clearn the corpses from shooting.
+		// Handle pawn movement and clean the corpses from shooting.
 		for(i = 0; i < pawns_count; ++i)
 		{
 			if (!pawns[i].slot->count) continue; // skip dead pawns
 
-			printf("DAMAGE (shoot) %u (%u,%u)\n", (unsigned)pawns[i].slot->unit->index, (unsigned)pawns[i].move.x[0], (unsigned)pawns[i].move.y[0]);
 			if (battle_damage(battle.field, pawns + i, 0)) continue;
 
 			pawns[i].shoot.x = -1;
@@ -910,8 +919,11 @@ int battle(const struct player *restrict players, size_t players_count, struct r
 					// d = ...;
 
 					// Deal damage and kill some of the units.
-					printf("DAMAGE (hit) %u (%u,%u)\n", (unsigned)pawn->slot->unit->index, (unsigned)pawn->move.x[0], (unsigned)pawn->move.y[0]);
-					if (d) battle_damage(battle.field, pawn, d);
+					if (d)
+					{
+						printf("DAMAGE %u (hit) %u (%u,%u)\n", (unsigned)d, (unsigned)pawn->slot->unit->index, (unsigned)pawn->move.x[0], (unsigned)pawn->move.y[0]);
+						battle_damage(battle.field, pawn, d);
+					}
 				} while (pawn = next);
 			}
 		}

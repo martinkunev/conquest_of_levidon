@@ -594,8 +594,7 @@ void if_regions(struct region *restrict reg, size_t count, const struct unit *u,
 	size_t i, j;
 	for(i = 0; i < regions_count; ++i)
 	{
-		// TODO BUG non-region pixels must be colored accordingly
-		glColor3ub(0, 0, i);
+		glColor3ub(255, 255, i);
 		display_region(regions[i].location, 0, 0);
 	}
 
@@ -740,14 +739,14 @@ static void input_region(const xcb_button_release_event_t *restrict mouse, unsig
 	// TODO write this function better
 
 	// Get the clicked region.
-	GLubyte pixel_color[3] = {0, 0, 0}; // TODO change this // TODO BUG why is this initialized
+	GLubyte pixel_color[3];
 	glBindFramebuffer(GL_FRAMEBUFFER, map_framebuffer);
 	glReadPixels(x, 768 - y, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixel_color); // TODO don't hardcode height
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	if (mouse->detail == 1)
 	{
-		if (pixel_color[0] || pixel_color[1]) state.region = -1;
+		if (!pixel_color[0]) state.region = -1;
 		else state.region = pixel_color[2];
 
 		state.index = -1;
@@ -757,7 +756,7 @@ static void input_region(const xcb_button_release_event_t *restrict mouse, unsig
 		struct region *region = regions + state.region;
 		struct slot *slot;
 
-		if (pixel_color[0] || pixel_color[1]) return;
+		if (!pixel_color[0]) return;
 
 		unsigned index;
 		struct region *destination = regions + pixel_color[2];
