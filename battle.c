@@ -335,7 +335,7 @@ static int battle_damage(struct pawn *battlefield[BATTLEFIELD_HEIGHT][BATTLEFIEL
 	}
 	else
 	{
-		// TODO this is a stupid implementation. find a better one
+		// TODO this is a stupid implementation. make a better one
 
 		// Deal damage by performing consecutive hits to a random unit of the pawn.
 		// Check for death after each hit.
