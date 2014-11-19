@@ -37,6 +37,11 @@ struct slot
 	struct region *location, *move; // TODO change this to *location[2]
 };
 
+struct point 
+{ 
+	unsigned x, y;
+};
+
 struct region
 {
 	unsigned char owner;
@@ -49,10 +54,7 @@ struct region
 	struct polygon
 	{
 		size_t vertices;
-		struct point 
-		{ 
-			unsigned x, y;
-		} points[];
+		struct point points[];
 	} *location;
 
 	struct point center;

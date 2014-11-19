@@ -33,7 +33,9 @@ f(x) where:
 	f(2n) = 0.5
 	lim(x->oo) f(x) = 0
 	f'(n) = 0
-	f"(2n) = 0
+	x < 2n  f"(x) < 0
+    f"(2n) = 0
+    x > 2n  f"(x) > 0
 */
 
 #define DIAMETER 1
@@ -129,6 +131,8 @@ int shootable(const struct player *restrict players, struct pawn *battlefield[BA
 
 static void pawn_remove(struct pawn *battlefield[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH], struct pawn *pawn)
 {
+	printf("REMOVE %u (%u,%u)\n", (unsigned)pawn->slot->unit->index, (unsigned)pawn->move.x[0], (unsigned)pawn->move.y[0]);
+
 	if (pawn->_prev) pawn->_prev->_next = pawn->_next;
 	else battlefield[pawn->move.y[0]][pawn->move.x[0]] = pawn->_next;
 	if (pawn->_next) pawn->_next->_prev = pawn->_prev;
@@ -136,7 +140,9 @@ static void pawn_remove(struct pawn *battlefield[BATTLEFIELD_HEIGHT][BATTLEFIELD
 
 static void pawn_move(struct pawn *battlefield[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH], struct pawn *pawn, unsigned char x, unsigned char y)
 {
+	printf("MOVE: ");
 	pawn_remove(battlefield, pawn);
+	printf("PUT (%u,%u)", (unsigned)x, (unsigned)y);
 
 	pawn->_prev = 0;
 	pawn->_next = 0;
@@ -320,7 +326,7 @@ static void battle_fight(const struct player *restrict players, size_t players_c
 	}
 }
 
-// Returns whether the pawn died.
+// Deals damage to a pawn. Returns whether the pawn died.
 static int battle_damage(struct pawn *battlefield[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH], struct pawn *restrict pawn, unsigned damage)
 {
 	unsigned health = pawn->slot->unit->health;
@@ -773,6 +779,7 @@ int battle(const struct player *restrict players, size_t players_count, struct r
 				{
 					next = pawn->_next;
 
+					// skip immobile pawns
 					if ((pawn->move.x[1] == pawn->move.x[0]) && (pawn->move.y[1] == pawn->move.y[0]))
 						continue;
 
@@ -800,7 +807,11 @@ int battle(const struct player *restrict players, size_t players_count, struct r
 					d *= sqrt((pawn->move.t[1] - pawn->move.t[0]) / sqrt(dx * dx + dy * dy));
 
 					// Deal damage and kill some of the units.
-					if (d) battle_damage(battle.field, pawn, d);
+					if (d)
+					{
+						printf("DAMAGE (escape) %u (%u,%u)\n", (unsigned)pawn->slot->unit->index, (unsigned)pawn->move.x[0], (unsigned)pawn->move.y[0]);
+						battle_damage(battle.field, pawn, d);
+					}
 				} while (pawn = next);
 			}
 		}
@@ -850,11 +861,12 @@ int battle(const struct player *restrict players, size_t players_count, struct r
 			}
 		}
 
-		// Handle pawn movement and deaths from shooting.
+		// Handle pawn movement and clearn the corpses from shooting.
 		for(i = 0; i < pawns_count; ++i)
 		{
 			if (!pawns[i].slot->count) continue; // skip dead pawns
 
+			printf("DAMAGE (shoot) %u (%u,%u)\n", (unsigned)pawns[i].slot->unit->index, (unsigned)pawns[i].move.x[0], (unsigned)pawns[i].move.y[0]);
 			if (battle_damage(battle.field, pawns + i, 0)) continue;
 
 			pawns[i].shoot.x = -1;
@@ -898,6 +910,7 @@ int battle(const struct player *restrict players, size_t players_count, struct r
 					// d = ...;
 
 					// Deal damage and kill some of the units.
+					printf("DAMAGE (hit) %u (%u,%u)\n", (unsigned)pawn->slot->unit->index, (unsigned)pawn->move.x[0], (unsigned)pawn->move.y[0]);
 					if (d) battle_damage(battle.field, pawn, d);
 				} while (pawn = next);
 			}
