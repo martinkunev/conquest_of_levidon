@@ -6,7 +6,29 @@
 #include <GL/glx.h>
 #include <GL/glext.h>
 
-#include "map.h"
+#include "display.h"
+
+unsigned char display_colors[][4] = {
+	[White] = {192, 192, 192, 255},
+	[Gray] = {128, 128, 128, 255},
+	[Black] = {0, 0, 0, 255},
+	[B0] = {96, 96, 96, 255},
+	[Progress] = {128, 128, 128, 128},
+	[Select] = {255, 255, 255, 96},
+	[Self] = {0, 192, 0, 255},
+	[Ally] = {0, 0, 255, 255},
+	[Enemy] = {255, 0, 0, 255},
+	[Player + 0] = {192, 192, 192, 255},
+	[Player + 1] = {255, 255, 0, 255},
+	[Player + 2] = {128, 128, 0, 255},
+	[Player + 3] = {0, 255, 0, 255},
+	[Player + 4] = {0, 255, 255, 255},
+	[Player + 5] = {0, 128, 128, 255},
+	[Player + 6] = {0, 0, 128, 255},
+	[Player + 7] = {255, 0, 255, 255},
+	[Player + 8] = {128, 0, 128, 255},
+	[Player + 9] = {192, 0, 0, 255},
+};
 
 struct polygon_draw
 {
@@ -52,8 +74,22 @@ static int is_ear(const struct polygon_draw *prev, const struct polygon_draw *cu
 	return Ear;
 }
 
+void display_rectangle(unsigned x, unsigned y, unsigned width, unsigned height, enum color color)
+{
+	// http://stackoverflow.com/questions/10040961/opengl-pixel-perfect-2d-drawing
+
+	glColor4ubv(display_colors[color]);
+
+	glBegin(GL_QUADS);
+	glVertex2i(x + width, y + height);
+	glVertex2i(x + width, y);
+	glVertex2i(x, y);
+	glVertex2i(x, y + height);
+	glEnd();
+}
+
 // Display a region as a polygon, using ear clipping.
-void display_region(const struct polygon *restrict polygon, int offset_x, int offset_y)
+void display_polygon(const struct polygon *restrict polygon, int offset_x, int offset_y)
 {
 	// assert(polygon->vertices > 2);
 

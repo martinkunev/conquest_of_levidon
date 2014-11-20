@@ -5,6 +5,7 @@
 #define TRAIN_QUEUE 4
 
 #include "resources.h"
+#include "display.h"
 
 struct player
 {
@@ -37,11 +38,6 @@ struct slot
 	struct region *location, *move; // TODO change this to *location[2]
 };
 
-struct point 
-{ 
-	unsigned x, y;
-};
-
 struct region
 {
 	unsigned char owner;
@@ -51,11 +47,7 @@ struct region
 
 	size_t index;
 	struct region *neighbors[NEIGHBORS_MAX];
-	struct polygon
-	{
-		size_t vertices;
-		struct point points[];
-	} *location;
+	struct polygon *location;
 
 	struct point center;
 };
