@@ -427,6 +427,12 @@ static int battle_round(const struct player *restrict players, struct pawn *batt
 		if (fabs(real_y - floor(real_y) - 0.5) >= APPROX_ERROR) y = (int)(real_y + 0.5);
 		else y = real_y + ((random() % 2) ? 0.5 : 0);
 
+		// TODO remove this
+		if ((x < 0) || (x > 8) || (y < 0) || (y > 8))
+		{
+			x = 0;
+		}
+
 		if (item->moment < pawns[index[0]].move.t[1]) // index[0] is still moving
 		{
 			if (item->moment < pawns[index[1]].move.t[1]) // index[1] is still moving

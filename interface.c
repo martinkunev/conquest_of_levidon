@@ -14,7 +14,6 @@
 #include "battle.h"
 #include "image.h"
 #include "interface.h"
-#include "display.h"
 
 // http://xcb.freedesktop.org/opengl/
 // http://xcb.freedesktop.org/tutorial/events/
@@ -111,30 +110,7 @@ struct area
 	void (*callback)(const xcb_button_release_event_t *restrict, unsigned, unsigned, const struct player *restrict);
 };
 
-// Create a struct that stores all the information about the battle (battlefield, players, etc.)
-
-enum {White, Gray, Black, B0, Progress, Select, Self, Ally, Enemy, Player};
-static unsigned char colors[][4] = {
-	[White] = {192, 192, 192, 255},
-	[Gray] = {128, 128, 128, 255},
-	[Black] = {0, 0, 0, 255},
-	[B0] = {96, 96, 96, 255},
-	[Progress] = {128, 128, 128, 128},
-	[Select] = {255, 255, 255, 96},
-	[Self] = {0, 192, 0, 255},
-	[Ally] = {0, 0, 255, 255},
-	[Enemy] = {255, 0, 0, 255},
-	[Player + 0] = {192, 192, 192, 255},
-	[Player + 1] = {255, 255, 0, 255},
-	[Player + 2] = {128, 128, 0, 255},
-	[Player + 3] = {0, 255, 0, 255},
-	[Player + 4] = {0, 255, 255, 255},
-	[Player + 5] = {0, 128, 128, 255},
-	[Player + 6] = {0, 0, 128, 255},
-	[Player + 7] = {255, 0, 255, 255},
-	[Player + 8] = {128, 0, 128, 255},
-	[Player + 9] = {192, 0, 0, 255},
-};
+// Create a struct that stores all the information about the battle (battlefield, players, etc.) (is this a TODO?)
 
 struct font
 {
@@ -169,20 +145,6 @@ static int font_init(Display *dpy, struct font *restrict font)
 
 	glXUseXFont(font->info->fid, first, last - first + 1, font->base + first);
 	return 0;
-}
-
-static void rectangle(unsigned x, unsigned y, unsigned width, unsigned height, int color)
-{
-	// http://stackoverflow.com/questions/10040961/opengl-pixel-perfect-2d-drawing
-
-	glColor4ubv(colors[color]);
-
-	glBegin(GL_QUADS);
-	glVertex2i(x + width, y + height);
-	glVertex2i(x + width, y);
-	glVertex2i(x, y);
-	glVertex2i(x, y + height);
-	glEnd();
 }
 
 static void if_reshape(int width, int height)
@@ -316,16 +278,16 @@ error:
 	XCloseDisplay(display);
 }
 
-static void display_unit(size_t unit, unsigned x, unsigned y, int color, unsigned count)
+static void display_unit(size_t unit, unsigned x, unsigned y, enum color color, unsigned count)
 {
-	rectangle(x, y, FIELD_SIZE, FIELD_SIZE, color);
+	display_rectangle(x, y, FIELD_SIZE, FIELD_SIZE, color);
 	image_draw(&image_units[unit], x, y);
 
 	if (count)
 	{
 		char buffer[16];
 		size_t length = format_uint(buffer, count) - buffer;
-		glColor4ubv(colors[White]);
+		glColor4ubv(display_colors[White]);
 		glRasterPos2i(x + (FIELD_SIZE - (length * 10)) / 2, y + FIELD_SIZE + 18);
 		glString(buffer, length);
 	}
@@ -338,10 +300,10 @@ void if_expose(const struct player *restrict players)
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	// show the right panel in gray
-	rectangle(768, 0, 256, 768, Gray);
+	display_rectangle(768, 0, 256, 768, Gray);
 
 	// draw rectangle with current player's color
-	rectangle(768, 0, 256, 16, Player + state.player);
+	display_rectangle(768, 0, 256, 16, Player + state.player);
 
 	size_t x, y;
 	struct pawn *p;
@@ -351,8 +313,8 @@ void if_expose(const struct player *restrict players)
 	// color every other field in white
 	/*for(y = 0; y < BATTLEFIELD_HEIGHT; y += 1)
 		for(x = y % 2; x < BATTLEFIELD_WIDTH; x += 2)
-			rectangle(x * FIELD_SIZE, y * FIELD_SIZE, FIELD_SIZE, FIELD_SIZE, White);*/
-	rectangle(0, 0, BATTLEFIELD_WIDTH * FIELD_SIZE, BATTLEFIELD_HEIGHT * FIELD_SIZE, B0);
+			display_rectangle(x * FIELD_SIZE, y * FIELD_SIZE, FIELD_SIZE, FIELD_SIZE, White);*/
+	display_rectangle(0, 0, BATTLEFIELD_WIDTH * FIELD_SIZE, BATTLEFIELD_HEIGHT * FIELD_SIZE, B0);
 
 	// display pawns
 	for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
@@ -363,7 +325,7 @@ void if_expose(const struct player *restrict players)
 				p = battlefield[y][x];
 				do
 				{
-					rectangle(x * FIELD_SIZE + 2 + (p->slot->player % 3) * 10, y * FIELD_SIZE + 2 + (p->slot->player / 3) * 10, 8, 8, Player + p->slot->player);
+					display_rectangle(x * FIELD_SIZE + 2 + (p->slot->player % 3) * 10, y * FIELD_SIZE + 2 + (p->slot->player / 3) * 10, 8, 8, Player + p->slot->player);
 				} while (p = p->_next);
 			}
 		}
@@ -409,7 +371,7 @@ static void display_resource(const char *restrict name, size_t name_length, int 
 	size_t length;
 	unsigned offset;
 
-	glColor4ubv(colors[White]);
+	glColor4ubv(display_colors[White]);
 	glRasterPos2i(PANEL_X, y);
 	length = format_uint(format_bytes(buffer, name, name_length), treasury) - buffer;
 	glString(buffer, length);
@@ -418,7 +380,7 @@ static void display_resource(const char *restrict name, size_t name_length, int 
 
 	if (income)
 	{
-		glColor4ubv(colors[Ally]);
+		glColor4ubv(display_colors[Ally]);
 		glRasterPos2i(PANEL_X + offset * 10, y);
 		length = format_sint(buffer, income) - buffer;
 		glString(buffer, length);
@@ -428,7 +390,7 @@ static void display_resource(const char *restrict name, size_t name_length, int 
 
 	if (expense)
 	{
-		glColor4ubv(colors[Enemy]);
+		glColor4ubv(display_colors[Enemy]);
 		glRasterPos2i(PANEL_X + offset * 10, y);
 		length = format_sint(buffer, expense) - buffer;
 		glString(buffer, length);
@@ -442,13 +404,13 @@ void if_map(const struct player *restrict players) // TODO finish this
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	// display current player's color as background
-	rectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, Player + state.player);
+	display_rectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, Player + state.player);
 
 	// show the panel in black
-	rectangle(PANEL_X, PANEL_Y, PANEL_WIDTH, PANEL_HEIGHT, Black);
+	display_rectangle(PANEL_X, PANEL_Y, PANEL_WIDTH, PANEL_HEIGHT, Black);
 
 	// show map in black
-	rectangle(MAP_X, MAP_Y, MAP_WIDTH * REGION_SIZE, MAP_WIDTH * REGION_SIZE, Black);
+	display_rectangle(MAP_X, MAP_Y, MAP_WIDTH * REGION_SIZE, MAP_WIDTH * REGION_SIZE, Black);
 
 	size_t x, y;
 	struct pawn *p;
@@ -459,7 +421,7 @@ void if_map(const struct player *restrict players) // TODO finish this
 		for(x = 0; x < MAP_WIDTH; x += 1)
 			if (regions[y][x].owner)
 			{
-				rectangle(MAP_X + x * REGION_SIZE, MAP_Y + y * REGION_SIZE, REGION_SIZE, REGION_SIZE, Player + regions[y][x].owner);
+				display_rectangle(MAP_X + x * REGION_SIZE, MAP_Y + y * REGION_SIZE, REGION_SIZE, REGION_SIZE, Player + regions[y][x].owner);
 				image_draw(&image_flag, MAP_X + x * REGION_SIZE, MAP_Y + y * REGION_SIZE);
 			}*/
 
@@ -470,8 +432,8 @@ void if_map(const struct player *restrict players) // TODO finish this
 	for(i = 0; i < regions_count; ++i)
 	{
 		// Fill each region with the color of its owner.
-		glColor4ubv(colors[Player + regions[i].owner]);
-		display_region(regions[i].location, MAP_X, MAP_Y);
+		glColor4ubv(display_colors[Player + regions[i].owner]);
+		display_polygon(regions[i].location, MAP_X, MAP_Y);
 
 		// Remember income and expenses.
 		if (regions[i].owner == state.player) resource_change(&income, &regions[i].income);
@@ -482,7 +444,7 @@ void if_map(const struct player *restrict players) // TODO finish this
 	for(i = 0; i < regions_count; ++i)
 	{
 		// Draw region borders.
-		glColor4ubv(colors[Black]);
+		glColor4ubv(display_colors[Black]);
 		glBegin(GL_LINE_STRIP);
 		for(j = 0; j < regions[i].location->vertices; ++j)
 			glVertex2f(MAP_X + regions[i].location->points[j].x, MAP_Y + regions[i].location->points[j].y);
@@ -493,11 +455,11 @@ void if_map(const struct player *restrict players) // TODO finish this
 	{
 		const struct region *region = regions + state.region;
 
-		glColor4ubv(colors[White]);
+		glColor4ubv(display_colors[White]);
 		glStringPos(PANEL_X, PANEL_Y);
 		glString(STRING("owner:"));
 
-		rectangle(PANEL_X + 7 * font.width, PANEL_Y + ((int)font.height - 16) / 2, 16, 16, Player + region->owner);
+		display_rectangle(PANEL_X + 7 * font.width, PANEL_Y + ((int)font.height - 16) / 2, 16, 16, Player + region->owner);
 
 		// Display the slots at the current region.
 		if (players[state.player].alliance == players[region->owner].alliance)
@@ -525,7 +487,7 @@ void if_map(const struct player *restrict players) // TODO finish this
 				if (region->train[index])
 				{
 					display_unit(region->train[index]->index, PANEL_X + ((FIELD_SIZE + PAWN_MARGIN) * index), PANEL_Y + 128, White, 0);
-					rectangle(PANEL_X + ((FIELD_SIZE + PAWN_MARGIN) * index), PANEL_Y + 128, FIELD_SIZE, FIELD_SIZE, Progress);
+					display_rectangle(PANEL_X + ((FIELD_SIZE + PAWN_MARGIN) * index), PANEL_Y + 128, FIELD_SIZE, FIELD_SIZE, Progress);
 				}
 				else break;
 
@@ -543,12 +505,12 @@ void if_map(const struct player *restrict players) // TODO finish this
 	display_resource(STRING("rock: "), players[state.player].treasury.rock, income.rock, expenses.rock, RESOURCE_ROCK);
 
 	/*{
-	glColor4ubv(colors[White]);
+	glColor4ubv(display_colors[White]);
 	glRasterPos2i(PANEL_X, RESOURCE_GOLD);
 	length = format_uint(format_bytes(buffer, STRING("gold: ")), players[state.player].treasury.gold) - buffer;
 	glString(buffer, length);
 
-	glColor4ubv(colors[Ally]);
+	glColor4ubv(display_colors[Ally]);
 	glRasterPos2i(PANEL_X + length * 10, RESOURCE_GOLD);
 	length = format_uint(format_bytes(buffer, STRING(" + ")), income.gold) - buffer;
 	glString(buffer, length);
@@ -595,7 +557,7 @@ void if_regions(struct region *restrict reg, size_t count, const struct unit *u,
 	for(i = 0; i < regions_count; ++i)
 	{
 		glColor3ub(255, 255, i);
-		display_region(regions[i].location, 0, 0);
+		display_polygon(regions[i].location, 0, 0);
 	}
 
 	glFlush();
