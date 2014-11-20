@@ -282,7 +282,7 @@ static double battle_encounter(const struct move *restrict o0, const struct move
 static void collision_location(const struct move *restrict o0, const struct move *restrict o1, double moment, double *restrict x, double *restrict y)
 {
 	// Calculate time differences.
-	int o0_t = o0->t[1] - o0->t[0], o1_t = o1->t[1] - o1->t[0];
+	double o0_t = o0->t[1] - o0->t[0], o1_t = o1->t[1] - o1->t[0];
 
 	// Calculate the positions of the objects when they are closest to each other.
 	// Use the parametric equations of the lines of the two movements for the calculation.
@@ -426,12 +426,6 @@ static int battle_round(const struct player *restrict players, struct pawn *batt
 		else x = real_x + ((random() % 2) ? 0.5 : 0);
 		if (fabs(real_y - floor(real_y) - 0.5) >= APPROX_ERROR) y = (int)(real_y + 0.5);
 		else y = real_y + ((random() % 2) ? 0.5 : 0);
-
-		// TODO remove this
-		if ((x < 0) || (x > 8) || (y < 0) || (y > 8))
-		{
-			x = 0;
-		}
 
 		if (item->moment < pawns[index[0]].move.t[1]) // index[0] is still moving
 		{
