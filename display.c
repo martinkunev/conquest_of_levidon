@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <math.h>
 
 #define GL_GLEXT_PROTOTYPES
 
@@ -158,4 +159,34 @@ void display_polygon(const struct polygon *restrict polygon, int offset_x, int o
 	glEnd();
 
 	free(draw);
+}
+
+#define BACK_RADIUS 2 /* width of the back of the arrow */
+#define FRONT_RADIUS 2 /* radius of the front of the arrow (behind the head) */
+#define HEAD_RADIUS 5 /* radius of the head of the arrow */
+#define HEAD_LENGTH 10 /* length of the head of the arrow */
+
+// TODO rewrite this?
+void display_arrow(struct point from, struct point to, int offset_x, int offset_y, enum color color)
+{
+	int dx = to.x - from.x, dy = to.y - from.y;
+	double l = sqrt(dx * dx + dy * dy);
+
+	double angle_y = dy / l, angle_x = dx / l;
+
+	double hx, hy;
+	hx = to.x - HEAD_LENGTH * angle_x;
+	hy = to.y - HEAD_LENGTH * angle_y;
+
+	glColor4ubv(display_colors[color]);
+
+	glBegin(GL_POLYGON);
+	glVertex2f(hx + FRONT_RADIUS * angle_y + offset_x, hy - FRONT_RADIUS * angle_x + offset_y);
+	glVertex2f(hx + HEAD_RADIUS * angle_y + offset_x, hy - HEAD_RADIUS * angle_x + offset_y);
+	glVertex2f(to.x + offset_x, to.y + offset_y);
+	glVertex2f(hx - HEAD_RADIUS * angle_y + offset_x, hy + HEAD_RADIUS * angle_x + offset_y);
+	glVertex2f(hx - FRONT_RADIUS * angle_y + offset_x, hy + FRONT_RADIUS * angle_x + offset_y);
+	glVertex2f(from.x - BACK_RADIUS * angle_y + offset_x, from.y + BACK_RADIUS * angle_x + offset_y);
+	glVertex2f(from.x + BACK_RADIUS * angle_y + offset_x, from.y - BACK_RADIUS * angle_x + offset_y);
+	glEnd();
 }

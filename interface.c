@@ -49,7 +49,7 @@
 #define MAP_X 256
 #define MAP_Y 0
 
-#define BATTLE_X 256
+#define BATTLE_X 0
 #define BATTLE_Y 0
 
 // TODO rename these
@@ -352,7 +352,12 @@ void if_expose(const struct player *restrict players)
 				if (p->slot->player == state.player)
 				{
 					if ((p->move.x[1] != p->move.x[0]) || (p->move.y[1] != p->move.y[0]))
-						image_draw(&image_move_destination, p->move.x[1] * FIELD_SIZE, p->move.y[1] * FIELD_SIZE);
+					{
+						struct point from = {p->move.x[0] * FIELD_SIZE + FIELD_SIZE / 2, p->move.y[0] * FIELD_SIZE + FIELD_SIZE / 2};
+						struct point to = {p->move.x[1] * FIELD_SIZE + FIELD_SIZE / 2, p->move.y[1] * FIELD_SIZE + FIELD_SIZE / 2};
+						display_arrow(from, to, BATTLE_X, BATTLE_Y, Self);
+						//image_draw(&image_move_destination, p->move.x[1] * FIELD_SIZE, p->move.y[1] * FIELD_SIZE);
+					}
 					else if ((p->shoot.x >= 0) && (p->shoot.y >= 0) && ((p->shoot.x != p->move.x[0]) || (p->shoot.y != p->move.y[0])))
 						image_draw(&image_shoot_destination, p->shoot.x * FIELD_SIZE, p->shoot.y * FIELD_SIZE);
 				}

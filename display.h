@@ -14,3 +14,5 @@ extern unsigned char display_colors[][4]; // TODO remove this
 
 void display_rectangle(unsigned x, unsigned y, unsigned width, unsigned height, enum color color);
 void display_polygon(const struct polygon *restrict polygon, int offset_x, int offset_y);
+
+void display_arrow(struct point from, struct point to, int offset_x, int offset_y, enum color color);
