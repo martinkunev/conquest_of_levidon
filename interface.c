@@ -52,11 +52,6 @@
 #define BATTLE_X 0
 #define BATTLE_Y 0
 
-// TODO deprecated; use display_string instead
-//#define glString_(s, l, ...) glCallLists((l), GL_UNSIGNED_BYTE, (s));
-//#define glString(...) glString_(__VA_ARGS__, sizeof(__VA_ARGS__) - 1)
-//#define glStringPos(x, y) glRasterPos2i((x) - font.info->min_bounds.lbearing, (y) + font.info->max_bounds.ascent)
-
 // TODO compatibility with OpenGL 2.1 (used in MacOS X)
 #define glGenFramebuffers(...) glGenFramebuffersEXT(__VA_ARGS__)
 #define glGenRenderbuffers(...) glGenRenderbuffersEXT(__VA_ARGS__)
@@ -258,10 +253,7 @@ static void display_unit(size_t unit, unsigned x, unsigned y, enum color color, 
 	{
 		char buffer[16];
 		size_t length = format_uint(buffer, count) - buffer;
-		display_string(buffer, length, x + (FIELD_SIZE - (length * 10)) / 2, y + FIELD_SIZE + 18, White);
-		/*glColor4ubv(display_colors[White]);
-		glRasterPos2i(x + (FIELD_SIZE - (length * 10)) / 2, y + FIELD_SIZE + 18);
-		glString(buffer, length);*/
+		display_string(buffer, length, x + (FIELD_SIZE - (length * 10)) / 2, y + FIELD_SIZE, White);
 	}
 }
 
@@ -278,7 +270,7 @@ void if_expose(const struct player *restrict players)
 	display_rectangle(768, 0, 256, 16, Player + state.player);
 
 	size_t x, y;
-	struct pawn *p;
+	const struct pawn *p;
 
 	// Battlefield
 
@@ -292,20 +284,53 @@ void if_expose(const struct player *restrict players)
 	for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
 		for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
 		{
-			if (battlefield[y][x])
+			if (p = battlefield[y][x])
 			{
-				p = battlefield[y][x];
+				size_t unit_index = 0, unit_index_current;
+				enum color color = Enemy;
+				int show_ally = 0, show_enemy = 0;
+
+				// Determine what to display on the field.
 				do
 				{
-					// Display Self/Ally/Enemy color on the field where the pawn is located.
+					unit_index_current = p->slot->unit->index;
+
 					if (p->slot->player == state.player)
-						display_rectangle(x * FIELD_SIZE + 2, y * FIELD_SIZE + 2, 28, 8, Self);
+					{
+						if (color != Self)
+						{
+							unit_index = unit_index_current;
+							color = Self;
+						}
+						else if (unit_index_current > unit_index) unit_index = unit_index_current;
+					}
 					else if (players[p->slot->player].alliance == players[state.player].alliance)
-						display_rectangle(x * FIELD_SIZE + 2, y * FIELD_SIZE + 2 + 10, 28, 8, Ally);
+					{
+						show_ally = 1;
+						if (color != Self)
+						{
+							if (color != Ally)
+							{
+								unit_index = unit_index_current;
+								color = Ally;
+							}
+							else if (unit_index_current > unit_index) unit_index = unit_index_current;
+						}
+					}
 					else
-						display_rectangle(x * FIELD_SIZE + 2, y * FIELD_SIZE + 2 + 20, 28, 8, Enemy);
-					// TODO remove this: display_rectangle(x * FIELD_SIZE + 2 + (p->slot->player % 3) * 10, y * FIELD_SIZE + 2 + (p->slot->player / 3) * 10, 8, 8, Player + p->slot->player);
+					{
+						show_enemy = 1;
+						if ((color == Enemy) && (unit_index_current > unit_index)) unit_index = unit_index_current;
+					}
 				} while (p = p->_next);
+
+				display_rectangle(x * FIELD_SIZE, y * FIELD_SIZE, FIELD_SIZE, FIELD_SIZE, color);
+				image_draw(&image_units[unit_index], x * FIELD_SIZE, y * FIELD_SIZE);
+
+				if (show_ally && (color != Ally))
+					display_rectangle(x * FIELD_SIZE + 26, y * FIELD_SIZE, 6, 6, Ally);
+				if (show_enemy && (color != Enemy))
+					display_rectangle(x * FIELD_SIZE + 26, y * FIELD_SIZE + 26, 6, 6, Enemy);
 			}
 		}
 
@@ -357,18 +382,12 @@ static void show_resource(const char *restrict name, size_t name_length, int tre
 
 	length = format_uint(format_bytes(buffer, name, name_length), treasury) - buffer;
 	display_string(buffer, length, PANEL_X, y, White);
-	/*glColor4ubv(display_colors[White]);
-	glRasterPos2i(PANEL_X, y);
-	glString(buffer, length);*/
 	offset = length;
 
 	if (income)
 	{
 		length = format_sint(buffer, income) - buffer;
 		display_string(buffer, length, PANEL_X + offset * 10, y, Ally);
-		/*glColor4ubv(display_colors[Ally]);
-		glRasterPos2i(PANEL_X + offset * 10, y);
-		glString(buffer, length);*/
 		offset += length;
 	}
 
@@ -376,9 +395,6 @@ static void show_resource(const char *restrict name, size_t name_length, int tre
 	{
 		length = format_sint(buffer, expense) - buffer;
 		display_string(buffer, length, PANEL_X + offset * 10, y, Enemy);
-		/*glColor4ubv(display_colors[Enemy]);
-		glRasterPos2i(PANEL_X + offset * 10, y);
-		glString(buffer, length);*/
 		// offset += length;
 	}
 }
