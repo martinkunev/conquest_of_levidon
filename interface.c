@@ -2,13 +2,13 @@
 
 #define GL_GLEXT_PROTOTYPES
 
-#include <GL/gl.h>
+//#include <GL/gl.h>
 #include <GL/glx.h>
 #include <GL/glext.h>
 
 #include <xcb/xcb.h>
 
-#include <X11/Xlib-xcb.h>
+//#include <X11/Xlib-xcb.h>
 
 #include "format.h"
 #include "battle.h"
@@ -52,11 +52,10 @@
 #define BATTLE_X 0
 #define BATTLE_Y 0
 
-// TODO rename these
-#define glFont glListBase
-#define glString_(s, l, ...) glCallLists((l), GL_UNSIGNED_BYTE, (s));
-#define glString(...) glString_(__VA_ARGS__, sizeof(__VA_ARGS__) - 1)
-#define glStringPos(x, y) glRasterPos2i((x) - font.info->min_bounds.lbearing, (y) + font.info->max_bounds.ascent)
+// TODO deprecated; use display_string instead
+//#define glString_(s, l, ...) glCallLists((l), GL_UNSIGNED_BYTE, (s));
+//#define glString(...) glString_(__VA_ARGS__, sizeof(__VA_ARGS__) - 1)
+//#define glStringPos(x, y) glRasterPos2i((x) - font.info->min_bounds.lbearing, (y) + font.info->max_bounds.ascent)
 
 // TODO compatibility with OpenGL 2.1 (used in MacOS X)
 #define glGenFramebuffers(...) glGenFramebuffersEXT(__VA_ARGS__)
@@ -78,6 +77,7 @@ static xcb_window_t window;
 static GLXDrawable drawable;
 static GLXContext context;
 
+// TODO Create a struct that stores all the information about the battle (battlefield, players, etc.)
 static struct pawn *(*battlefield)[BATTLEFIELD_WIDTH];
 
 static const struct unit *units;
@@ -110,42 +110,13 @@ struct area
 	void (*callback)(const xcb_button_release_event_t *restrict, unsigned, unsigned, const struct player *restrict);
 };
 
-// Create a struct that stores all the information about the battle (battlefield, players, etc.) (is this a TODO?)
-
-struct font
-{
-	XFontStruct *info;
-	unsigned width, height;
-	GLuint base;
-};
-
 static GLuint map_framebuffer, map_renderbuffer;
 
-static struct font font;
+struct font font;
 
 static int keysyms_per_keycode;
 static int keycode_min, keycode_max;
 static KeySym *keymap;
-
-static int font_init(Display *dpy, struct font *restrict font)
-{
-	unsigned int first, last;
-
-	font->info = XLoadQueryFont(dpy, "-misc-dejavu sans mono-medium-r-normal--0-0-0-0-m-0-ascii-0");
-	if (!font->info) return -1;
-
-	first = font->info->min_char_or_byte2;
-	last = font->info->max_char_or_byte2;
-
-	font->width = font->info->max_bounds.rbearing - font->info->min_bounds.lbearing;
-	font->height = font->info->max_bounds.ascent + font->info->max_bounds.descent;
-
-	font->base = glGenLists(last + 1);
-	if (!font->base) return -1;
-
-	glXUseXFont(font->info->fid, first, last - first + 1, font->base + first);
-	return 0;
-}
 
 static void if_reshape(int width, int height)
 {
@@ -287,9 +258,10 @@ static void display_unit(size_t unit, unsigned x, unsigned y, enum color color, 
 	{
 		char buffer[16];
 		size_t length = format_uint(buffer, count) - buffer;
-		glColor4ubv(display_colors[White]);
+		display_string(buffer, length, x + (FIELD_SIZE - (length * 10)) / 2, y + FIELD_SIZE + 18, White);
+		/*glColor4ubv(display_colors[White]);
 		glRasterPos2i(x + (FIELD_SIZE - (length * 10)) / 2, y + FIELD_SIZE + 18);
-		glString(buffer, length);
+		glString(buffer, length);*/
 	}
 }
 
@@ -325,7 +297,14 @@ void if_expose(const struct player *restrict players)
 				p = battlefield[y][x];
 				do
 				{
-					display_rectangle(x * FIELD_SIZE + 2 + (p->slot->player % 3) * 10, y * FIELD_SIZE + 2 + (p->slot->player / 3) * 10, 8, 8, Player + p->slot->player);
+					// Display Self/Ally/Enemy color on the field where the pawn is located.
+					if (p->slot->player == state.player)
+						display_rectangle(x * FIELD_SIZE + 2, y * FIELD_SIZE + 2, 28, 8, Self);
+					else if (players[p->slot->player].alliance == players[state.player].alliance)
+						display_rectangle(x * FIELD_SIZE + 2, y * FIELD_SIZE + 2 + 10, 28, 8, Ally);
+					else
+						display_rectangle(x * FIELD_SIZE + 2, y * FIELD_SIZE + 2 + 20, 28, 8, Enemy);
+					// TODO remove this: display_rectangle(x * FIELD_SIZE + 2 + (p->slot->player % 3) * 10, y * FIELD_SIZE + 2 + (p->slot->player / 3) * 10, 8, 8, Player + p->slot->player);
 				} while (p = p->_next);
 			}
 		}
@@ -370,35 +349,37 @@ void if_expose(const struct player *restrict players)
 	glXSwapBuffers(display, drawable);
 }
 
-static void display_resource(const char *restrict name, size_t name_length, int treasury, int income, int expense, unsigned y)
+static void show_resource(const char *restrict name, size_t name_length, int treasury, int income, int expense, unsigned y)
 {
 	char buffer[32]; // TODO make sure this is enough
 	size_t length;
 	unsigned offset;
 
-	glColor4ubv(display_colors[White]);
-	glRasterPos2i(PANEL_X, y);
 	length = format_uint(format_bytes(buffer, name, name_length), treasury) - buffer;
-	glString(buffer, length);
-
+	display_string(buffer, length, PANEL_X, y, White);
+	/*glColor4ubv(display_colors[White]);
+	glRasterPos2i(PANEL_X, y);
+	glString(buffer, length);*/
 	offset = length;
 
 	if (income)
 	{
-		glColor4ubv(display_colors[Ally]);
-		glRasterPos2i(PANEL_X + offset * 10, y);
 		length = format_sint(buffer, income) - buffer;
-		glString(buffer, length);
-
+		display_string(buffer, length, PANEL_X + offset * 10, y, Ally);
+		/*glColor4ubv(display_colors[Ally]);
+		glRasterPos2i(PANEL_X + offset * 10, y);
+		glString(buffer, length);*/
 		offset += length;
 	}
 
 	if (expense)
 	{
-		glColor4ubv(display_colors[Enemy]);
-		glRasterPos2i(PANEL_X + offset * 10, y);
 		length = format_sint(buffer, expense) - buffer;
-		glString(buffer, length);
+		display_string(buffer, length, PANEL_X + offset * 10, y, Enemy);
+		/*glColor4ubv(display_colors[Enemy]);
+		glRasterPos2i(PANEL_X + offset * 10, y);
+		glString(buffer, length);*/
+		// offset += length;
 	}
 }
 
@@ -460,9 +441,7 @@ void if_map(const struct player *restrict players) // TODO finish this
 	{
 		const struct region *region = regions + state.region;
 
-		glColor4ubv(display_colors[White]);
-		glStringPos(PANEL_X, PANEL_Y);
-		glString(STRING("owner:"));
+		display_string(STRING("owner:"), PANEL_X, PANEL_Y, White);
 
 		display_rectangle(PANEL_X + 7 * font.width, PANEL_Y + ((int)font.height - 16) / 2, 16, 16, Player + region->owner);
 
@@ -503,39 +482,11 @@ void if_map(const struct player *restrict players) // TODO finish this
 	}
 
 	// Treasury
-	display_resource(STRING("gold: "), players[state.player].treasury.gold, income.gold, expenses.gold, RESOURCE_GOLD);
-	display_resource(STRING("food: "), players[state.player].treasury.food, income.food, expenses.food, RESOURCE_FOOD);
-	display_resource(STRING("wood: "), players[state.player].treasury.wood, income.wood, expenses.wood, RESOURCE_WOOD);
-	display_resource(STRING("iron: "), players[state.player].treasury.iron, income.iron, expenses.iron, RESOURCE_IRON);
-	display_resource(STRING("rock: "), players[state.player].treasury.rock, income.rock, expenses.rock, RESOURCE_ROCK);
-
-	/*{
-	glColor4ubv(display_colors[White]);
-	glRasterPos2i(PANEL_X, RESOURCE_GOLD);
-	length = format_uint(format_bytes(buffer, STRING("gold: ")), players[state.player].treasury.gold) - buffer;
-	glString(buffer, length);
-
-	glColor4ubv(display_colors[Ally]);
-	glRasterPos2i(PANEL_X + length * 10, RESOURCE_GOLD);
-	length = format_uint(format_bytes(buffer, STRING(" + ")), income.gold) - buffer;
-	glString(buffer, length);
-	}
-
-	length = format_uint(format_bytes(buffer, STRING("food: ")), players[state.player].treasury.food) - buffer;
-	glRasterPos2i(PANEL_X, RESOURCE_FOOD);
-	glString(buffer, length);
-
-	length = format_uint(format_bytes(buffer, STRING("wood: ")), players[state.player].treasury.wood) - buffer;
-	glRasterPos2i(PANEL_X, RESOURCE_WOOD);
-	glString(buffer, length);
-
-	length = format_uint(format_bytes(buffer, STRING("iron: ")), players[state.player].treasury.iron) - buffer;
-	glRasterPos2i(PANEL_X, RESOURCE_IRON);
-	glString(buffer, length);
-
-	length = format_uint(format_bytes(buffer, STRING("rock: ")), players[state.player].treasury.rock) - buffer;
-	glRasterPos2i(PANEL_X, RESOURCE_ROCK);
-	glString(buffer, length);*/
+	show_resource(STRING("gold: "), players[state.player].treasury.gold, income.gold, expenses.gold, RESOURCE_GOLD);
+	show_resource(STRING("food: "), players[state.player].treasury.food, income.food, expenses.food, RESOURCE_FOOD);
+	show_resource(STRING("wood: "), players[state.player].treasury.wood, income.wood, expenses.wood, RESOURCE_WOOD);
+	show_resource(STRING("iron: "), players[state.player].treasury.iron, income.iron, expenses.iron, RESOURCE_IRON);
+	show_resource(STRING("rock: "), players[state.player].treasury.rock, income.rock, expenses.rock, RESOURCE_ROCK);
 
 	glFlush();
 	glXSwapBuffers(display, drawable);

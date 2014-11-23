@@ -3,11 +3,24 @@
 
 #define GL_GLEXT_PROTOTYPES
 
-#include <GL/gl.h>
+//#include <GL/gl.h>
 #include <GL/glx.h>
 #include <GL/glext.h>
 
+#include <xcb/xcb.h>
+
+//#include <X11/Xlib-xcb.h>
+
 #include "display.h"
+
+struct polygon_draw
+{
+	const struct point *point;
+	enum {Wait, Ear, Straight} class;
+	struct polygon_draw *prev, *next;
+};
+
+extern struct font font;
 
 unsigned char display_colors[][4] = {
 	[White] = {192, 192, 192, 255},
@@ -29,13 +42,6 @@ unsigned char display_colors[][4] = {
 	[Player + 7] = {255, 0, 255, 255},
 	[Player + 8] = {128, 0, 128, 255},
 	[Player + 9] = {192, 0, 0, 255},
-};
-
-struct polygon_draw
-{
-	const struct point *point;
-	enum {Wait, Ear, Straight} class;
-	struct polygon_draw *prev, *next;
 };
 
 static inline long cross_product(int fx, int fy, int sx, int sy)
@@ -189,4 +195,31 @@ void display_arrow(struct point from, struct point to, int offset_x, int offset_
 	glVertex2f(from.x - BACK_RADIUS * angle_y + offset_x, from.y + BACK_RADIUS * angle_x + offset_y);
 	glVertex2f(from.x + BACK_RADIUS * angle_y + offset_x, from.y - BACK_RADIUS * angle_x + offset_y);
 	glEnd();
+}
+
+int font_init(Display *restrict dpy, struct font *restrict font)
+{
+	unsigned first, last;
+
+	font->info = XLoadQueryFont(dpy, "-misc-dejavu sans mono-medium-r-normal--0-0-0-0-m-0-ascii-0");
+	if (!font->info) return -1;
+
+	first = font->info->min_char_or_byte2;
+	last = font->info->max_char_or_byte2;
+
+	font->width = font->info->max_bounds.rbearing - font->info->min_bounds.lbearing;
+	font->height = font->info->max_bounds.ascent + font->info->max_bounds.descent;
+
+	font->base = glGenLists(last + 1);
+	if (!font->base) return -1;
+
+	glXUseXFont(font->info->fid, first, last - first + 1, font->base + first);
+	return 0;
+}
+
+void display_string(const char *string, size_t length, unsigned x, unsigned y, enum color color)
+{
+	glColor4ubv(display_colors[color]);
+	glRasterPos2i(x - font.info->min_bounds.lbearing, y + font.info->max_bounds.ascent);
+	glCallLists(length, GL_UNSIGNED_BYTE, string);
 }
