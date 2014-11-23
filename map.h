@@ -1,6 +1,3 @@
-#define MAP_WIDTH 16
-#define MAP_HEIGHT 16
-
 #define NEIGHBORS_MAX 8
 #define TRAIN_QUEUE 4
 

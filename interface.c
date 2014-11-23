@@ -20,11 +20,11 @@
 // http://techpubs.sgi.com/library/dynaweb_docs/0640/SGI_Developer/books/OpenGL_Porting/sgi_html/ch04.html
 // http://tronche.com/gui/x/xlib/graphics/font-metrics/
 // http://open.gl
+// http://www.opengl.org/sdk/docs/man2/
 
 #define SCREEN_WIDTH 1024
 #define SCREEN_HEIGHT 768
 
-#define REGION_SIZE 48
 #define FIELD_SIZE 32
 
 #define CTRL_X 768
@@ -48,6 +48,8 @@
 
 #define MAP_X 256
 #define MAP_Y 0
+#define MAP_WIDTH 768
+#define MAP_HEIGHT 768
 
 #define BATTLE_X 0
 #define BATTLE_Y 0
@@ -59,12 +61,6 @@
 #define glBindRenderbuffer(...) glBindRenderbufferEXT(__VA_ARGS__)
 #define glRenderbufferStorage(...) glRenderbufferStorageEXT(__VA_ARGS__)
 #define glFramebufferRenderbuffer(...) glFramebufferRenderbufferEXT(__VA_ARGS__)
-
-//#include <stdio.h>
-
-// http://www.opengl.org/sdk/docs/man2/
-
-// TODO add checks like the one in input_train() to make sure a player can only act on its own regions
 
 static Display *display;
 static xcb_connection_t *connection;
@@ -232,7 +228,7 @@ void if_init(void)
 	glBindFramebuffer(GL_FRAMEBUFFER, map_framebuffer);
 	glBindRenderbuffer(GL_RENDERBUFFER, map_renderbuffer);
 
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_RGB8, 768, 768); // TODO this must be map size
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_RGB8, MAP_WIDTH, MAP_HEIGHT);
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, map_renderbuffer);
 
 	glBindRenderbuffer(GL_RENDERBUFFER, 0);
@@ -335,9 +331,7 @@ void if_expose(const struct player *restrict players)
 		}
 
 	// Display information about the selected field.
-	// TODO support more than 7 units on a single field
-	char buffer[16]; // TODO remove this
-	size_t length; // TODO remove this
+	// TODO support more than 7 pawns on a field
 	unsigned position = 0;
 	unsigned count;
 	if ((state.x < BATTLEFIELD_WIDTH) && (state.y < BATTLEFIELD_HEIGHT) && battlefield[state.y][state.x])
@@ -412,20 +406,12 @@ void if_map(const struct player *restrict players) // TODO finish this
 	display_rectangle(PANEL_X, PANEL_Y, PANEL_WIDTH, PANEL_HEIGHT, Black);
 
 	// show map in black
-	display_rectangle(MAP_X, MAP_Y, MAP_WIDTH * REGION_SIZE, MAP_WIDTH * REGION_SIZE, Black);
+	display_rectangle(MAP_X, MAP_Y, MAP_WIDTH, MAP_HEIGHT, Black);
 
 	size_t x, y;
 	struct pawn *p;
 
 	// Map
-
-	/*for(y = 0; y < MAP_HEIGHT; y += 1)
-		for(x = 0; x < MAP_WIDTH; x += 1)
-			if (regions[y][x].owner)
-			{
-				display_rectangle(MAP_X + x * REGION_SIZE, MAP_Y + y * REGION_SIZE, REGION_SIZE, REGION_SIZE, Player + regions[y][x].owner);
-				image_draw(&image_flag, MAP_X + x * REGION_SIZE, MAP_Y + y * REGION_SIZE);
-			}*/
 
 	struct resources income = {0}, expenses = {0};
 	const struct slot *slot;
@@ -472,7 +458,7 @@ void if_map(const struct player *restrict players) // TODO finish this
 				if (position == state.index) image_draw(&image_selected, PANEL_X + 20 + ((FIELD_SIZE + 4) * position), PANEL_Y + 32);
 
 				// Draw the destination of each moving slot.
-				if ((region->owner == state.player) && ((state.index < 0) || (state.index == position)) && (slot->move->index != state.region))
+				if ((slot->player == state.player) && ((state.index < 0) || (state.index == position)) && (slot->move->index != state.region))
 					image_draw(&image_move_destination, MAP_X + slot->move->center.x, MAP_Y + slot->move->center.y);
 
 				position += 1;
@@ -675,7 +661,7 @@ static void input_region(const xcb_button_release_event_t *restrict mouse, unsig
 	// Get the clicked region.
 	GLubyte pixel_color[3];
 	glBindFramebuffer(GL_FRAMEBUFFER, map_framebuffer);
-	glReadPixels(x, 768 - y, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixel_color); // TODO don't hardcode height
+	glReadPixels(x, MAP_HEIGHT - y, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixel_color);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	if (mouse->detail == 1)
@@ -729,7 +715,6 @@ valid:
 
 static void input_train(const xcb_button_release_event_t *restrict mouse, unsigned x, unsigned y, const struct player *restrict players)
 {
-	if ((state.x >= MAP_WIDTH) || (state.y >= MAP_HEIGHT)) return;
 	if (state.player != regions[state.region].owner) return;
 	if ((x % (FIELD_SIZE + PAWN_MARGIN)) >= FIELD_SIZE) return;
 
@@ -751,7 +736,6 @@ static void input_train(const xcb_button_release_event_t *restrict mouse, unsign
 
 static void input_dismiss(const xcb_button_release_event_t *restrict mouse, unsigned x, unsigned y, const struct player *restrict players)
 {
-	if ((state.x >= MAP_WIDTH) || (state.y >= MAP_HEIGHT)) return;
 	if (state.player != regions[state.region].owner) return;
 	if ((x % (FIELD_SIZE + PAWN_MARGIN)) >= FIELD_SIZE) return;
 
@@ -768,8 +752,6 @@ static void input_dismiss(const xcb_button_release_event_t *restrict mouse, unsi
 
 static void input_slot(const xcb_button_release_event_t *restrict mouse, unsigned x, unsigned y, const struct player *restrict players)
 {
-	if ((state.x >= MAP_WIDTH) || (state.y >= MAP_HEIGHT)) return;
-
 	if (mouse->detail == 1)
 	{
 		if ((x % (FIELD_SIZE + PAWN_MARGIN)) >= FIELD_SIZE) goto reset;
@@ -804,9 +786,9 @@ int input_map(unsigned char player, const struct player *restrict players)
 	struct area areas[] = {
 		{
 			.left = MAP_X,
-			.right = MAP_X + MAP_WIDTH * REGION_SIZE - 1,
+			.right = MAP_X + MAP_WIDTH - 1,
 			.top = MAP_Y,
-			.bottom = MAP_Y + MAP_HEIGHT * REGION_SIZE - 1,
+			.bottom = MAP_Y + MAP_HEIGHT - 1,
 			.callback = input_region
 		},
 		{
