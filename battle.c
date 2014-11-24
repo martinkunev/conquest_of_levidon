@@ -407,8 +407,6 @@ static int battle_round(const struct player *restrict players, struct pawn *batt
 
 	unsigned *index;
 
-	// TODO strange behavior when more than 2 pawns collide (use (8, 8)->(8, 5) and (8, 7)->(8, 8) to test)
-
 	// Process each encounter in chronological order.
 	// Look if the encounter prevents a later encounter or causes another encounter.
 	while (collisions->count)
@@ -728,11 +726,11 @@ int battle(const struct player *restrict players, size_t players_count, struct r
 
 	int dx, dy;
 
-	double t;
 	unsigned target_index;
-	double targets[3] = {0.5, 0.078125, 0.046875}; // 1/2, 5/64, 3/64
-	double miss;
+	double targets[3][2] = {{1, 0.5}, {0, 0.078125}, {0, 0.046875}}; // 1/2, 5/64, 3/64
+	double distance, miss, on_target;
 	double x, y;
+	double t;
 
 	struct heap collisions;
 	if (!heap_init(&collisions)) return -1;
@@ -835,16 +833,17 @@ int battle(const struct player *restrict players, size_t players_count, struct r
 
 			if ((pawns[i].shoot.x >= 0) && (pawns[i].shoot.y >= 0) && ((pawns[i].shoot.x != pawns[i].move.x[0]) || (pawns[i].shoot.y != pawns[i].move.y[0]))) // if the pawn is shooting
 			{
-				// Determine the time of the shooting.
+				// The shooters have chance to hit a field adjacent to the target, depending on the distance.
 				dx = pawns[i].shoot.x - pawns[i].move.x[0];
 				dy = pawns[i].shoot.y - pawns[i].move.y[0];
-				t = (miss * (pawns[i].move.t[1] - pawns[i].move.t[0]));
+				distance = sqrt(dx * dx + dy * dy);
+				miss = distance / pawns[i].slot->unit->range;
 
-				// The accuracy of the shoting decreases with the distance.
-				// when the pawn shoots at the distance equal to its range, miss == 0.5
-				miss = sqrt(dx * dx + dy * dy) / (pawns[i].slot->unit->range * 2); // TODO can this become negative?
+				// Determine the time of the shooting.
+				t = (distance * (pawns[i].move.t[1] - pawns[i].move.t[0]) / pawns[i].slot->unit->range);
 
-				// Deal damage to each pawn that is close enough to the shooting target.
+				// Deal damage to the pawns close to the shooting target.
+				// All the damage of the shooter is dealt to each pawn (it's not divided).
 				for(j = 0; j < pawns_count; ++j) // foreach target
 				{
 					if (!pawns[j].slot->count) continue; // skip dead pawns
@@ -861,8 +860,9 @@ int battle(const struct player *restrict players, size_t players_count, struct r
 					// Damage is dealt to the target field and to its neighbors.
 					if (target_index < (sizeof(targets) / sizeof(*targets)))
 					{
-						d = pawns[i].slot->count * pawns[i].slot->unit->shoot * (1 - miss) * targets[target_index] + 0.5;
-						printf("DAMAGE %u (shoot) %u (%u,%u)\n", (unsigned)d, (unsigned)pawns[j].slot->unit->index, (unsigned)pawns[j].move.x[0], (unsigned)pawns[j].move.y[0]);
+						on_target = targets[target_index][0] * (1 - miss) + targets[target_index][1] * miss;
+						d = pawns[i].slot->count * pawns[i].slot->unit->shoot * on_target + 0.5;
+						printf("DAMAGE %u (shoot) %u (%u,%u)\n", (unsigned)d, (unsigned)pawns[j].slot->player, (unsigned)pawns[j].move.x[0], (unsigned)pawns[j].move.y[0]);
 						pawns[j].hurt += d;
 
 						// TODO ?deal more damage to moving pawns

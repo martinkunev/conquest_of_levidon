@@ -187,7 +187,7 @@ void map_init(struct player *restrict players, size_t players_count, struct regi
 				slot = malloc(sizeof(*slot));
 				if (!slot) ; // TODO
 				slot->unit = region->train[0];
-				slot->count = 10; // TODO fix this
+				slot->count = 16; // TODO fix this
 				slot->player = region->owner;
 
 				slot->_prev = 0;
