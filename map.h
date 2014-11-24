@@ -1,5 +1,7 @@
-#define NEIGHBORS_MAX 8
+#define NEIGHBORS_LIMIT 8
 #define TRAIN_QUEUE 4
+
+#define PLAYERS_LIMIT 10 /* TODO change to 16 */
 
 #include "resources.h"
 #include "display.h"
@@ -43,7 +45,7 @@ struct region
 	struct resources income;
 
 	size_t index;
-	struct region *neighbors[NEIGHBORS_MAX];
+	struct region *neighbors[NEIGHBORS_LIMIT];
 	struct polygon *location;
 
 	struct point center;

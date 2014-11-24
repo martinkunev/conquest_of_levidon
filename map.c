@@ -364,7 +364,7 @@ int main(int argc, char *argv[])
 
 	key = string("players");
 	node = dict_get(json->object, &key);
-	if (!node || (json_type(node) != ARRAY)) goto finally;
+	if (!node || (json_type(node) != ARRAY) || (node->array_node.length < 1) || (node->array_node.length > PLAYERS_LIMIT)) goto finally;
 
 	players_count = node->array_node.length;
 	players = malloc(players_count * sizeof(struct player));
@@ -457,8 +457,8 @@ int main(int argc, char *argv[])
 
 		key = string("neighbors");
 		field = dict_get(item->object, &key);
-		if (!field || (json_type(field) != ARRAY) || (field->array_node.length != NEIGHBORS_MAX)) goto finally;
-		for(j = 0; j < NEIGHBORS_MAX; ++j)
+		if (!field || (json_type(field) != ARRAY) || (field->array_node.length != NEIGHBORS_LIMIT)) goto finally;
+		for(j = 0; j < NEIGHBORS_LIMIT; ++j)
 		{
 			entry = vector_get(&field->array_node, j);
 			if (json_type(entry) != INTEGER) goto finally;

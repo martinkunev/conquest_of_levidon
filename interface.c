@@ -28,7 +28,7 @@
 #define FIELD_SIZE 32
 
 #define CTRL_X 768
-#define CTRL_Y 0
+#define CTRL_Y 32
 
 #define PAWN_MARGIN 4
 
@@ -249,11 +249,11 @@ static void display_unit(size_t unit, unsigned x, unsigned y, enum color color, 
 	{
 		char buffer[16];
 		size_t length = format_uint(buffer, count) - buffer;
-		display_string(buffer, length, x + (FIELD_SIZE - (length * 10)) / 2, y + FIELD_SIZE, White);
+		display_string(buffer, length, x + (FIELD_SIZE - (length * 10)) / 2, y + FIELD_SIZE, Black);
 	}
 }
 
-void if_expose(const struct player *restrict players)
+void if_battle(const struct player *restrict players)
 {
 	// clear window
 	glClearColor(0.0, 0.0, 0.0, 0.0);
@@ -330,19 +330,59 @@ void if_expose(const struct player *restrict players)
 			}
 		}
 
+	unsigned row, column;
+
 	// Display information about the selected field.
-	// TODO support more than 7 pawns on a field
+	// Show each player's units on a separate line. Order: Self, Ally, Enemy.
+	signed char positions[PLAYERS_LIMIT];
+	unsigned char indexes[PLAYERS_LIMIT] = {0};
+	unsigned self_count = 0, allies_count = 0, enemies_count = 0;
 	unsigned position = 0;
-	unsigned count;
 	if ((state.x < BATTLEFIELD_WIDTH) && (state.y < BATTLEFIELD_HEIGHT) && battlefield[state.y][state.x])
 	{
 		image_draw(&image_selected, state.x * FIELD_SIZE, state.y * FIELD_SIZE);
 
+		memset(positions, -1, sizeof(positions) * sizeof(*positions));
+
+		// Count the number of players in each category (Self, Ally, Enemy).
+		// Initialize their display positions.
 		p = battlefield[state.y][state.x];
 		do
 		{
-			display_unit(p->slot->unit->index, CTRL_X + 4 + (FIELD_SIZE + 4) * (position % 7), CTRL_Y + 32, Player + p->slot->player, p->slot->count);
-			if (position == state.pawn_index) image_draw(&image_selected, CTRL_X + 4 + (FIELD_SIZE + 4) * (position % 7), CTRL_Y + 32);
+			if (p->slot->player == state.player)
+			{
+				positions[p->slot->player] = 0;
+				self_count = 1;
+			}
+			else if (players[p->slot->player].alliance == players[state.player].alliance)
+			{
+				if (positions[p->slot->player] < 0)
+					positions[p->slot->player] = allies_count++;
+			}
+			else
+			{
+				if (positions[p->slot->player] < 0)
+					positions[p->slot->player] = enemies_count++;
+			}
+		} while (p = p->_next);
+
+		if (self_count) display_rectangle(CTRL_X, CTRL_Y, (FIELD_SIZE + 4) * 7 + 4, FIELD_SIZE + 4 + 16, Self);
+		if (allies_count) display_rectangle(CTRL_X, CTRL_Y + self_count * (FIELD_SIZE + 4 + 16), (FIELD_SIZE + 4) * 7 + 4, allies_count * (FIELD_SIZE + 4 + 16), Ally);
+		if (enemies_count) display_rectangle(CTRL_X, CTRL_Y + (self_count + allies_count) * (FIELD_SIZE + 4 + 16), (FIELD_SIZE + 4) * 7 + 4, enemies_count * (FIELD_SIZE + 4 + 16), Enemy);
+
+		// Display the pawns on the selected field.
+		p = battlefield[state.y][state.x];
+		do
+		{
+			// TODO support more than 7 pawns on a row
+			row = ((p->slot->player != state.player) ? self_count : 0) + ((players[p->slot->player].alliance != players[state.player].alliance) ? allies_count : 0) + positions[p->slot->player];
+			column = indexes[p->slot->player]++;
+
+			x = CTRL_X + 4 + column * (FIELD_SIZE + 4);
+			y = CTRL_Y + 2 + row * (FIELD_SIZE + 4 + 16);
+
+			display_unit(p->slot->unit->index, x, y, Player + p->slot->player, p->slot->count);
+			if (position == state.pawn_index) image_draw(&image_selected, x, y);
 
 			// Show destination of each moving pawn.
 			// TODO don't draw at the same place twice
@@ -354,7 +394,6 @@ void if_expose(const struct player *restrict players)
 						struct point from = {p->move.x[0] * FIELD_SIZE + FIELD_SIZE / 2, p->move.y[0] * FIELD_SIZE + FIELD_SIZE / 2};
 						struct point to = {p->move.x[1] * FIELD_SIZE + FIELD_SIZE / 2, p->move.y[1] * FIELD_SIZE + FIELD_SIZE / 2};
 						display_arrow(from, to, BATTLE_X, BATTLE_Y, Self);
-						//image_draw(&image_move_destination, p->move.x[1] * FIELD_SIZE, p->move.y[1] * FIELD_SIZE);
 					}
 					else if ((p->shoot.x >= 0) && (p->shoot.y >= 0) && ((p->shoot.x != p->move.x[0]) || (p->shoot.y != p->move.y[0])))
 						image_draw(&image_shoot_destination, p->shoot.x * FIELD_SIZE, p->shoot.y * FIELD_SIZE);
@@ -869,7 +908,7 @@ int input_player(unsigned char player, const struct player *restrict players)
 	state.pawn_index = -1;
 	state.pawn = 0;
 
-	if_expose(players);
+	if_battle(players);
 
 	KeySym *input;
 
@@ -887,8 +926,8 @@ int input_player(unsigned char player, const struct player *restrict players)
 		{
 			.left = CTRL_X + 4,
 			.right = CTRL_X + 4 + 7 * (FIELD_SIZE + 4) - 5,
-			.top = CTRL_Y + 32,
-			.bottom = CTRL_Y + 32 + FIELD_SIZE - 1,
+			.top = CTRL_Y,
+			.bottom = CTRL_Y + FIELD_SIZE - 1,
 			.callback = input_pawn
 		},
 	};
@@ -909,7 +948,7 @@ int input_player(unsigned char player, const struct player *restrict players)
 			for(index = 0; index < areas_count; ++index)
 				if (input_in(mouse, areas + index)) areas[index].callback(mouse, mouse->event_x - areas[index].left, mouse->event_y - areas[index].top, players);
 		case XCB_EXPOSE:
-			if_expose(players);
+			if_battle(players);
 			break;
 
 		case XCB_KEY_PRESS:

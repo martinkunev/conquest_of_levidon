@@ -3,7 +3,7 @@
 		{"alliance": 0, "gold": 0, "food": 0, "wood": 0, "iron": 0, "rock": 0},
 		{"alliance": 1, "gold": 1, "food": 3, "wood": 2, "iron": 0, "rock": 0},
 		{"alliance": 2, "gold": 1, "food": 3, "wood": 2, "iron": 0, "rock": 0},
-		{"alliance": 3, "gold": 1, "food": 3, "wood": 2, "iron": 0, "rock": 0}
+		{"alliance": 1, "gold": 1, "food": 3, "wood": 2, "iron": 0, "rock": 0}
 	],
 	"regions": [
 		{
@@ -35,7 +35,7 @@
 		{
 			"comment": "1",
 			"name": "attica",
-			"owner": 1,
+			"owner": 0,
 			"gold": 1,
 			"food": 3,
 			"wood": 2,
@@ -62,7 +62,7 @@
 		{
 			"comment": "2",
 			"name": "thessaly",
-			"owner": 0,
+			"owner": 1,
 			"gold": 1,
 			"food": 3,
 			"wood": 2,
@@ -151,7 +151,7 @@
 		{
 			"comment": "6",
 			"name": "thrace",
-			"owner": 0,
+			"owner": 3,
 			"gold": 1,
 			"food": 3,
 			"wood": 2,
