@@ -85,7 +85,6 @@ static struct
 	unsigned char player; // current player
 	unsigned char x, y; // current field
 	struct pawn *pawn;
-	signed char pawn_index;
 	union
 	{
 		struct slot *slot;
@@ -337,7 +336,6 @@ void if_battle(const struct player *restrict players)
 	signed char positions[PLAYERS_LIMIT];
 	unsigned char indexes[PLAYERS_LIMIT] = {0};
 	unsigned self_count = 0, allies_count = 0, enemies_count = 0;
-	unsigned position = 0;
 	if ((state.x < BATTLEFIELD_WIDTH) && (state.y < BATTLEFIELD_HEIGHT) && battlefield[state.y][state.x])
 	{
 		image_draw(&image_selected, state.x * FIELD_SIZE, state.y * FIELD_SIZE);
@@ -382,11 +380,11 @@ void if_battle(const struct player *restrict players)
 			y = CTRL_Y + 2 + row * (FIELD_SIZE + 4 + 16);
 
 			display_unit(p->slot->unit->index, x, y, Player + p->slot->player, p->slot->count);
-			if (position == state.pawn_index) image_draw(&image_selected, x, y);
+			if (p == state.pawn) image_draw(&image_selected, x, y);
 
 			// Show destination of each moving pawn.
 			// TODO don't draw at the same place twice
-			if ((state.pawn_index < 0) || (position == state.pawn_index))
+			if (!state.pawn || (p == state.pawn))
 				if (p->slot->player == state.player)
 				{
 					if ((p->move.x[1] != p->move.x[0]) || (p->move.y[1] != p->move.y[0]))
@@ -398,8 +396,6 @@ void if_battle(const struct player *restrict players)
 					else if ((p->shoot.x >= 0) && (p->shoot.y >= 0) && ((p->shoot.x != p->move.x[0]) || (p->shoot.y != p->move.y[0])))
 						image_draw(&image_shoot_destination, p->shoot.x * FIELD_SIZE, p->shoot.y * FIELD_SIZE);
 				}
-
-			position += 1;
 		} while (p = p->_next);
 	}
 
@@ -586,30 +582,26 @@ static int input_in(xcb_button_release_event_t *restrict mouse, const struct are
 
 static void input_pawn(const xcb_button_release_event_t *restrict mouse, unsigned x, unsigned y, const struct player *restrict players)
 {
-	if (!state.pawn) return;
+	if ((state.x == BATTLEFIELD_WIDTH) || (state.y = BATTLEFIELD_HEIGHT)) return;
+	struct pawn *first = battlefield[state.y][state.x];
+	if (!first) return; // no field selected
 
 	if (mouse->detail == 1)
 	{
 		if ((x % (FIELD_SIZE + PAWN_MARGIN)) >= FIELD_SIZE) goto reset;
 
 		// Select the clicked pawn.
-		int position = x / (FIELD_SIZE + PAWN_MARGIN);
-		int diff;
-		if (state.pawn_index < 0) state.pawn_index = 0;
-		while (diff = position - state.pawn_index)
+		int offset = x / (FIELD_SIZE + PAWN_MARGIN);
+		struct pawn *current = first;
+		do
 		{
-			if (diff > 0)
+			while (current->slot->player != state.player)
 			{
-				if (!state.pawn->_next) goto reset;
-				state.pawn = state.pawn->_next;
-				state.pawn_index += 1;
+				current = current->_next;
+				if (current == first) goto reset;
 			}
-			else
-			{
-				state.pawn = state.pawn->_prev;
-				state.pawn_index -= 1;
-			}
-		}
+		} while (offset--);
+		state.pawn = current;
 	}
 
 	return;
@@ -617,8 +609,7 @@ static void input_pawn(const xcb_button_release_event_t *restrict mouse, unsigne
 reset:
 
 	// Make sure no pawn is selected.
-	state.pawn_index = -1;
-	while (state.pawn->_prev) state.pawn = state.pawn->_prev;
+	state.pawn = 0;
 }
 
 // Sets move destination of a pawn. Returns -1 if the current player is not allowed to move the pawn at the destination.
@@ -668,15 +659,14 @@ static void input_field(const xcb_button_release_event_t *restrict mouse, unsign
 		// Set current field.
 		state.x = x;
 		state.y = y;
-		state.pawn_index = -1;
-		state.pawn = battlefield[state.y][state.x];
+		state.pawn = 0;
 	}
 	else if (mouse->detail == 3)
 	{
 		// shoot if CONTROL is pressed; move otherwise
 		// If there is a pawn selected, apply the command just to it.
 		// Otherwise apply the command to each pawn on the current field.
-		if (state.pawn_index >= 0)
+		if (state.pawn >= 0)
 		{
 			if (mouse->state & XCB_MOD_MASK_CONTROL) pawn_shoot(players, state.pawn, x, y);
 			else pawn_move(players, state.pawn, x, y);
@@ -684,7 +674,7 @@ static void input_field(const xcb_button_release_event_t *restrict mouse, unsign
 		else
 		{
 			struct pawn *pawn;
-			for(pawn = state.pawn; pawn; pawn = pawn->_next)
+			for(pawn = battlefield[state.y][state.x]; pawn; pawn = pawn->_next)
 			{
 				if (mouse->state & XCB_MOD_MASK_CONTROL) pawn_shoot(players, pawn, x, y);
 				else pawn_move(players, pawn, x, y);
@@ -905,7 +895,6 @@ int input_player(unsigned char player, const struct player *restrict players)
 	state.x = BATTLEFIELD_WIDTH;
 	state.y = BATTLEFIELD_HEIGHT;
 
-	state.pawn_index = -1;
 	state.pawn = 0;
 
 	if_battle(players);
@@ -925,9 +914,9 @@ int input_player(unsigned char player, const struct player *restrict players)
 		},
 		{
 			.left = CTRL_X + 4,
-			.right = CTRL_X + 4 + 7 * (FIELD_SIZE + 4) - 5,
-			.top = CTRL_Y,
-			.bottom = CTRL_Y + FIELD_SIZE - 1,
+			.right = CTRL_X + 4 + 7 * (FIELD_SIZE + 4) - 4 - 1, // TODO change this 7
+			.top = CTRL_Y + 2,
+			.bottom = CTRL_Y + 2 + FIELD_SIZE - 1,
 			.callback = input_pawn
 		},
 	};
