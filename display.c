@@ -23,7 +23,7 @@ struct polygon_draw
 extern struct font font;
 
 unsigned char display_colors[][4] = {
-	[White] = {192, 192, 192, 255},
+	[White] = {255, 255, 255, 255},
 	[Gray] = {128, 128, 128, 255},
 	[Black] = {0, 0, 0, 255},
 	[B0] = {96, 96, 96, 255},
@@ -88,6 +88,20 @@ void display_rectangle(unsigned x, unsigned y, unsigned width, unsigned height, 
 	glColor4ubv(display_colors[color]);
 
 	glBegin(GL_QUADS);
+	glVertex2i(x + width, y + height);
+	glVertex2i(x + width, y);
+	glVertex2i(x, y);
+	glVertex2i(x, y + height);
+	glEnd();
+}
+
+void draw_rectangle(unsigned x, unsigned y, unsigned width, unsigned height, enum color color)
+{
+	// http://stackoverflow.com/questions/10040961/opengl-pixel-perfect-2d-drawing
+
+	glColor4ubv(display_colors[color]);
+
+	glBegin(GL_LINE_LOOP);
 	glVertex2i(x + width, y + height);
 	glVertex2i(x + width, y);
 	glVertex2i(x, y);

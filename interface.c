@@ -380,7 +380,7 @@ void if_battle(const struct player *restrict players)
 			y = CTRL_Y + 2 + row * (FIELD_SIZE + 4 + 16);
 
 			display_unit(p->slot->unit->index, x, y, Player + p->slot->player, p->slot->count);
-			if (p == state.pawn) image_draw(&image_selected, x, y);
+			if (p == state.pawn) draw_rectangle(x - 1, y - 1, FIELD_SIZE + 2, FIELD_SIZE + 2, White);
 
 			// Show destination of each moving pawn.
 			// TODO don't draw at the same place twice
@@ -582,9 +582,9 @@ static int input_in(xcb_button_release_event_t *restrict mouse, const struct are
 
 static void input_pawn(const xcb_button_release_event_t *restrict mouse, unsigned x, unsigned y, const struct player *restrict players)
 {
-	if ((state.x == BATTLEFIELD_WIDTH) || (state.y = BATTLEFIELD_HEIGHT)) return;
-	struct pawn *first = battlefield[state.y][state.x];
-	if (!first) return; // no field selected
+	if ((state.x == BATTLEFIELD_WIDTH) || (state.y == BATTLEFIELD_HEIGHT)) return;
+	struct pawn *pawn = battlefield[state.y][state.x];
+	if (!pawn) return; // no field selected
 
 	if (mouse->detail == 1)
 	{
@@ -592,22 +592,24 @@ static void input_pawn(const xcb_button_release_event_t *restrict mouse, unsigne
 
 		// Select the clicked pawn.
 		int offset = x / (FIELD_SIZE + PAWN_MARGIN);
-		struct pawn *current = first;
-		do
+		int found;
+		while (1)
 		{
-			while (current->slot->player != state.player)
+			found = (pawn->slot->player == state.player);
+			if (!found || offset)
 			{
-				current = current->_next;
-				if (current == first) goto reset;
+				pawn = pawn->_next;
+				if (!pawn) goto reset;
+				if (found) offset -= 1;
 			}
-		} while (offset--);
-		state.pawn = current;
+			else if (found) break;
+		}
+		state.pawn = pawn;
 	}
 
 	return;
 
 reset:
-
 	// Make sure no pawn is selected.
 	state.pawn = 0;
 }
@@ -666,7 +668,7 @@ static void input_field(const xcb_button_release_event_t *restrict mouse, unsign
 		// shoot if CONTROL is pressed; move otherwise
 		// If there is a pawn selected, apply the command just to it.
 		// Otherwise apply the command to each pawn on the current field.
-		if (state.pawn >= 0)
+		if (state.pawn)
 		{
 			if (mouse->state & XCB_MOD_MASK_CONTROL) pawn_shoot(players, state.pawn, x, y);
 			else pawn_move(players, state.pawn, x, y);
