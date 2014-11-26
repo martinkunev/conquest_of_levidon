@@ -765,7 +765,7 @@ int battle(const struct player *restrict players, size_t players_count, struct r
 		for(player = 1; player < players_count; ++player) // TODO skip player 0 in a natural way
 		{
 			if (!battle.player_pawns[player].length) continue; // skip dead players
-			if (input_player(player, players) < 0)
+			if (input_battle(player, players) < 0)
 			{
 				status = -1;
 				goto finally;
@@ -929,7 +929,7 @@ int battle(const struct player *restrict players, size_t players_count, struct r
 		}
 	} while ((status = battle_end(&battle, region->owner)) < 0);
 
-	input_player(0, players); // TODO fix this
+	input_battle(0, players); // TODO fix this
 
 finally:
 

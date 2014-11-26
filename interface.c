@@ -34,8 +34,8 @@
 
 #define STRING(s) (s), sizeof(s) - 1
 
-#define PANEL_X 4
-#define PANEL_Y 4
+#define PANEL_X 0
+#define PANEL_Y 32
 
 #define PANEL_WIDTH 248
 #define PANEL_HEIGHT 760
@@ -84,12 +84,11 @@ static struct
 {
 	unsigned char player; // current player
 	unsigned char x, y; // current field
-	struct pawn *pawn;
+	struct pawn *pawn; // TODO put this in the union
 	union
 	{
 		struct slot *slot;
 	} selected;
-	int index;
 
 	int region;
 } state;
@@ -434,8 +433,8 @@ void if_map(const struct player *restrict players) // TODO finish this
 	glClearColor(0.0, 0.0, 0.0, 0.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	// display current player's color as background
-	display_rectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, Player + state.player);
+	// display current player's color
+	display_rectangle(0, 0, 256, 16, Player + state.player);
 
 	// show the panel in black
 	display_rectangle(PANEL_X, PANEL_Y, PANEL_WIDTH, PANEL_HEIGHT, Black);
@@ -478,25 +477,50 @@ void if_map(const struct player *restrict players) // TODO finish this
 	{
 		const struct region *region = regions + state.region;
 
-		display_string(STRING("owner:"), PANEL_X, PANEL_Y, White);
-
-		display_rectangle(PANEL_X + 7 * font.width, PANEL_Y + ((int)font.height - 16) / 2, 16, 16, Player + region->owner);
+		display_string(STRING("owner:"), PANEL_X, PANEL_Y - 16, White);
+		display_rectangle(PANEL_X + 7 * font.width, PANEL_Y - 16 + ((int)font.height - 16) / 2, 16, 16, Player + region->owner);
 
 		// Display the slots at the current region.
 		if (players[state.player].alliance == players[region->owner].alliance)
 		{
-			// TODO make this work for more than 6 slots
-			size_t position = 0;
+			unsigned char position_x[PLAYERS_LIMIT] = {0}, position_y[PLAYERS_LIMIT] = {0};
+			unsigned self_count = 0, allies_count = 0;
 			for(slot = region->slots; slot; slot = slot->_next)
 			{
-				display_unit(slot->unit->index, PANEL_X + 20 + ((FIELD_SIZE + 4) * position), PANEL_Y + 32, Player + slot->player, slot->count);
-				if (position == state.index) image_draw(&image_selected, PANEL_X + 20 + ((FIELD_SIZE + 4) * position), PANEL_Y + 32);
+				if (slot->player == state.player)
+				{
+					if (!self_count)
+					{
+						self_count = 1;
+						display_rectangle(PANEL_X, PANEL_Y, 7 * (FIELD_SIZE + 4) + 4, FIELD_SIZE + 4 + 16, Self);
+					}
+				}
+				else
+				{
+					if (!position_y[slot->player])
+					{
+						allies_count += 1;
+						display_rectangle(PANEL_X, PANEL_Y + allies_count * (FIELD_SIZE + 4 + 16), 7 * (FIELD_SIZE + 4) + 4, FIELD_SIZE + 4 + 16, Ally);
+						position_y[slot->player] = allies_count;
+					}
+				}
+
+				// TODO make this work for more than 6 slots
+
+				x = PANEL_X + 4 + position_x[slot->player] * (FIELD_SIZE + 4);
+				y = PANEL_Y + 2 + position_y[slot->player] * (FIELD_SIZE + 4 + 16);
+				position_x[slot->player] += 1;
+
+				display_unit(slot->unit->index, x, y, Player + slot->player, slot->count);
+				if (slot == state.selected.slot) draw_rectangle(x - 1, y - 1, FIELD_SIZE + 2, FIELD_SIZE + 2, White);
 
 				// Draw the destination of each moving slot.
-				if ((slot->player == state.player) && ((state.index < 0) || (state.index == position)) && (slot->move->index != state.region))
-					image_draw(&image_move_destination, MAP_X + slot->move->center.x, MAP_Y + slot->move->center.y);
-
-				position += 1;
+				if ((slot->player == state.player) && (!state.selected.slot || (slot == state.selected.slot)) && (slot->move->index != state.region))
+				{
+					struct point from = {slot->location->center.x, slot->location->center.y};
+					struct point to = {slot->move->center.x, slot->move->center.y};
+					display_arrow(from, to, MAP_X, MAP_Y, Self);
+				}
 			}
 		}
 
@@ -507,14 +531,14 @@ void if_map(const struct player *restrict players) // TODO finish this
 			for(index = 0; index < TRAIN_QUEUE; ++index)
 				if (region->train[index])
 				{
-					display_unit(region->train[index]->index, PANEL_X + ((FIELD_SIZE + PAWN_MARGIN) * index), PANEL_Y + 128, White, 0);
-					display_rectangle(PANEL_X + ((FIELD_SIZE + PAWN_MARGIN) * index), PANEL_Y + 128, FIELD_SIZE, FIELD_SIZE, Progress);
+					display_unit(region->train[index]->index, PANEL_X + ((FIELD_SIZE + PAWN_MARGIN) * index), PANEL_Y + 196, White, 0);
+					display_rectangle(PANEL_X + ((FIELD_SIZE + PAWN_MARGIN) * index), PANEL_Y + 196, FIELD_SIZE, FIELD_SIZE, Progress);
 				}
 				else break;
 
 			// Display units available for training.
-			display_unit(0, PANEL_X + (FIELD_SIZE + 8) * 0, PANEL_Y + 192, White, 0);
-			display_unit(1, PANEL_X + (FIELD_SIZE + 8) * 1, PANEL_Y + 192, White, 0);
+			display_unit(0, PANEL_X + (FIELD_SIZE + 8) * 0, PANEL_Y + 260, White, 0);
+			display_unit(1, PANEL_X + (FIELD_SIZE + 8) * 1, PANEL_Y + 260, White, 0);
 		}
 	}
 
@@ -578,6 +602,217 @@ void if_term(void)
 static int input_in(xcb_button_release_event_t *restrict mouse, const struct area *restrict area)
 {
 	return ((area->left <= mouse->event_x) && (mouse->event_x <= area->right) && (area->top <= mouse->event_y) && (mouse->event_y <= area->bottom));
+}
+
+static void input_region(const xcb_button_release_event_t *restrict mouse, unsigned x, unsigned y, const struct player *restrict players)
+{
+	// TODO write this function better
+
+	// Get the clicked region.
+	GLubyte pixel_color[3];
+	glBindFramebuffer(GL_FRAMEBUFFER, map_framebuffer);
+	glReadPixels(x, MAP_HEIGHT - y, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixel_color);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	if (mouse->detail == 1)
+	{
+		if (!pixel_color[0]) state.region = -1;
+		else state.region = pixel_color[2];
+
+		state.selected.slot = 0;
+	}
+	else if (mouse->detail == 3)
+	{
+		struct region *region = regions + state.region;
+		struct slot *slot;
+
+		if (!pixel_color[0]) return;
+
+		unsigned index;
+		struct region *destination = regions + pixel_color[2];
+		if (destination == region) goto valid;
+		for(index = 0; index < 8; ++index)
+			if (destination == region->neighbors[index])
+				goto valid;
+		return;
+
+valid:
+		if (state.selected.slot)
+		{
+			// Set the move destination of the selected slot.
+			slot = state.selected.slot;
+			if (state.player == slot->player)
+				slot->move = regions + pixel_color[2];
+		}
+		else
+		{
+			// Set the move destination of all slots in the region.
+			for(slot = region->slots; slot; slot = slot->_next)
+				if (state.player == slot->player)
+					slot->move = regions + pixel_color[2];
+		}
+	}
+}
+
+static void input_train(const xcb_button_release_event_t *restrict mouse, unsigned x, unsigned y, const struct player *restrict players)
+{
+	if (state.player != regions[state.region].owner) return;
+	if ((x % (FIELD_SIZE + PAWN_MARGIN)) >= FIELD_SIZE) return;
+
+	if (mouse->detail == 1)
+	{
+		size_t unit = x / (FIELD_SIZE + PAWN_MARGIN);
+		if (unit >= units_count) return;
+
+		struct unit **train = regions[state.region].train;
+		size_t index;
+		for(index = 0; index < TRAIN_QUEUE; ++index)
+			if (!train[index])
+			{
+				train[index] = (struct unit *)(units + unit); // TODO fix this cast
+				break;
+			}
+	}
+}
+
+static void input_dismiss(const xcb_button_release_event_t *restrict mouse, unsigned x, unsigned y, const struct player *restrict players)
+{
+	if (state.player != regions[state.region].owner) return;
+	if ((x % (FIELD_SIZE + PAWN_MARGIN)) >= FIELD_SIZE) return;
+
+	if (mouse->detail == 1)
+	{
+		struct unit **train = regions[state.region].train;
+
+		size_t index;
+		for(index = (x / (FIELD_SIZE + PAWN_MARGIN) + 1); index < TRAIN_QUEUE; ++index)
+			train[index - 1] = train[index];
+		train[TRAIN_QUEUE - 1] = 0;
+	}
+}
+
+static void input_slot(const xcb_button_release_event_t *restrict mouse, unsigned x, unsigned y, const struct player *restrict players)
+{
+	if (state.region < 0) return;
+	struct slot *slot = regions[state.region].slots;
+	if (!slot) return; // no field selected
+
+	if (mouse->detail == 1)
+	{
+		if ((x % (FIELD_SIZE + PAWN_MARGIN)) >= FIELD_SIZE) goto reset;
+
+		// Select the clicked pawn.
+		int offset = x / (FIELD_SIZE + PAWN_MARGIN);
+		int found;
+		while (1)
+		{
+			found = (slot->player == state.player);
+			if (!found || offset)
+			{
+				slot = slot->_next;
+				if (!slot) goto reset;
+				if (found) offset -= 1;
+			}
+			else if (found) break;
+		}
+		state.selected.slot = slot;
+	}
+
+	return;
+
+reset:
+	// Make sure no slot is selected.
+	state.selected.slot = 0;
+}
+
+int input_map(unsigned char player, const struct player *restrict players)
+{
+	state.player = player;
+
+	state.region = -1;
+	state.selected.slot = 0;
+
+	if_map(players);
+
+	KeySym *input;
+
+	xcb_generic_event_t *event;
+	xcb_button_release_event_t *mouse;
+	xcb_key_press_event_t *keyboard;
+
+	struct area areas[] = {
+		{
+			.left = MAP_X,
+			.right = MAP_X + MAP_WIDTH - 1,
+			.top = MAP_Y,
+			.bottom = MAP_Y + MAP_HEIGHT - 1,
+			.callback = input_region
+		},
+		{
+			.left = PANEL_X,
+			.right = PANEL_X + (FIELD_SIZE + 8) * units_count - 1,
+			.top = PANEL_Y + 260,
+			.bottom = PANEL_Y + 260 + FIELD_SIZE - 1,
+			.callback = input_train
+		},
+		{
+			.left = PANEL_X,
+			.right = PANEL_X + TRAIN_QUEUE * (FIELD_SIZE + PAWN_MARGIN) - 1,
+			.top = PANEL_Y + 196,
+			.bottom = PANEL_Y + 196 + FIELD_SIZE - 1,
+			.callback = input_dismiss
+		},
+		{
+			.left = PANEL_X + 4,
+			.right = PANEL_X + 4 + 7 * (FIELD_SIZE + PAWN_MARGIN) - PAWN_MARGIN - 1,
+			.top = PANEL_Y,
+			.bottom = PANEL_Y + FIELD_SIZE - 1,
+			.callback = input_slot,
+		}
+	};
+	size_t areas_count = sizeof(areas) / sizeof(*areas);
+
+	size_t index;
+
+	while (1)
+	{
+		event = xcb_wait_for_event(connection);
+		// TODO consider using xcb_poll_for_event()
+		if (!event) return -1;
+
+		switch (event->response_type & ~0x80)
+		{
+		case XCB_BUTTON_PRESS:
+			mouse = (xcb_button_release_event_t *)event;
+			for(index = 0; index < areas_count; ++index)
+				if (input_in(mouse, areas + index)) areas[index].callback(mouse, mouse->event_x - areas[index].left, mouse->event_y - areas[index].top, players);
+		case XCB_EXPOSE:
+			if_map(players);
+			break;
+
+		case XCB_KEY_PRESS:
+			keyboard = (xcb_key_press_event_t *)event;
+			input = keymap + (keyboard->detail - keycode_min) * keysyms_per_keycode;
+
+			if (*input == 'q')
+			{
+				free(event);
+				return -1;
+			}
+			else if (*input == 'n')
+			{
+				free(event);
+				return 0;
+			}
+			break;
+
+		case XCB_BUTTON_RELEASE:
+			//printf("release: %d\n", (int)((xcb_button_release_event_t *)event)->detail);
+			break;
+		}
+
+		free(event);
+	}
 }
 
 static void input_pawn(const xcb_button_release_event_t *restrict mouse, unsigned x, unsigned y, const struct player *restrict players)
@@ -685,211 +920,7 @@ static void input_field(const xcb_button_release_event_t *restrict mouse, unsign
 	}
 }
 
-static void input_region(const xcb_button_release_event_t *restrict mouse, unsigned x, unsigned y, const struct player *restrict players)
-{
-	// TODO write this function better
-
-	// Get the clicked region.
-	GLubyte pixel_color[3];
-	glBindFramebuffer(GL_FRAMEBUFFER, map_framebuffer);
-	glReadPixels(x, MAP_HEIGHT - y, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixel_color);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-	if (mouse->detail == 1)
-	{
-		if (!pixel_color[0]) state.region = -1;
-		else state.region = pixel_color[2];
-
-		state.index = -1;
-	}
-	else if (mouse->detail == 3)
-	{
-		struct region *region = regions + state.region;
-		struct slot *slot;
-
-		if (!pixel_color[0]) return;
-
-		unsigned index;
-		struct region *destination = regions + pixel_color[2];
-		if (destination == region) goto valid;
-		for(index = 0; index < 8; ++index)
-			if (destination == region->neighbors[index])
-				goto valid;
-		return;
-
-valid:
-		if (state.index >= 0)
-		{
-			size_t position = 0;
-			slot = region->slots;
-			while (position < state.index)
-			{
-				if (!slot) return;
-
-				slot = slot->_next;
-				position += 1;
-			}
-
-			// Set the move destination of the selected slot.
-			if (state.player == slot->player)
-				slot->move = regions + pixel_color[2];
-		}
-		else
-		{
-			// Set the move destination of all slots in the region.
-			for(slot = region->slots; slot; slot = slot->_next)
-				if (state.player == slot->player)
-					slot->move = regions + pixel_color[2];
-		}
-	}
-}
-
-static void input_train(const xcb_button_release_event_t *restrict mouse, unsigned x, unsigned y, const struct player *restrict players)
-{
-	if (state.player != regions[state.region].owner) return;
-	if ((x % (FIELD_SIZE + PAWN_MARGIN)) >= FIELD_SIZE) return;
-
-	if (mouse->detail == 1)
-	{
-		size_t unit = x / (FIELD_SIZE + PAWN_MARGIN);
-		if (unit >= units_count) return;
-
-		struct unit **train = regions[state.region].train;
-		size_t index;
-		for(index = 0; index < TRAIN_QUEUE; ++index)
-			if (!train[index])
-			{
-				train[index] = (struct unit *)(units + unit); // TODO fix this cast
-				break;
-			}
-	}
-}
-
-static void input_dismiss(const xcb_button_release_event_t *restrict mouse, unsigned x, unsigned y, const struct player *restrict players)
-{
-	if (state.player != regions[state.region].owner) return;
-	if ((x % (FIELD_SIZE + PAWN_MARGIN)) >= FIELD_SIZE) return;
-
-	if (mouse->detail == 1)
-	{
-		struct unit **train = regions[state.region].train;
-
-		size_t index;
-		for(index = (x / (FIELD_SIZE + PAWN_MARGIN) + 1); index < TRAIN_QUEUE; ++index)
-			train[index - 1] = train[index];
-		train[TRAIN_QUEUE - 1] = 0;
-	}
-}
-
-static void input_slot(const xcb_button_release_event_t *restrict mouse, unsigned x, unsigned y, const struct player *restrict players)
-{
-	if (mouse->detail == 1)
-	{
-		if ((x % (FIELD_SIZE + PAWN_MARGIN)) >= FIELD_SIZE) goto reset;
-
-		state.index = x / (FIELD_SIZE + PAWN_MARGIN);
-	}
-
-	return;
-
-reset:
-	state.index = -1;
-	return;
-}
-
-int input_map(unsigned char player, const struct player *restrict players)
-{
-	state.player = player;
-
-	state.region = -1;
-
-	state.index = -1;
-	state.selected.slot = 0; // TODO should I use this?
-
-	if_map(players);
-
-	KeySym *input;
-
-	xcb_generic_event_t *event;
-	xcb_button_release_event_t *mouse;
-	xcb_key_press_event_t *keyboard;
-
-	struct area areas[] = {
-		{
-			.left = MAP_X,
-			.right = MAP_X + MAP_WIDTH - 1,
-			.top = MAP_Y,
-			.bottom = MAP_Y + MAP_HEIGHT - 1,
-			.callback = input_region
-		},
-		{
-			.left = PANEL_X,
-			.right = PANEL_X + (FIELD_SIZE + 8) * units_count - 1,
-			.top = PANEL_Y + 192,
-			.bottom = PANEL_Y + 192 + FIELD_SIZE - 1,
-			.callback = input_train
-		},
-		{
-			.left = PANEL_X,
-			.right = PANEL_X + ((FIELD_SIZE + PAWN_MARGIN) * TRAIN_QUEUE) - 1,
-			.top = PANEL_Y + 128,
-			.bottom = PANEL_Y + 128 + FIELD_SIZE - 1,
-			.callback = input_dismiss
-		},
-		{
-			.left = PANEL_X + 20,
-			.right = PANEL_X + 20 + (FIELD_SIZE + PAWN_MARGIN) * 6 - PAWN_MARGIN - 1,
-			.top = PANEL_Y + 32,
-			.bottom = PANEL_Y + 32 + FIELD_SIZE - 1,
-			.callback = input_slot,
-		}
-	};
-	size_t areas_count = sizeof(areas) / sizeof(*areas);
-
-	size_t index;
-
-	while (1)
-	{
-		event = xcb_wait_for_event(connection);
-		// TODO consider using xcb_poll_for_event()
-		if (!event) return -1;
-
-		switch (event->response_type & ~0x80)
-		{
-		case XCB_BUTTON_PRESS:
-			mouse = (xcb_button_release_event_t *)event;
-			for(index = 0; index < areas_count; ++index)
-				if (input_in(mouse, areas + index)) areas[index].callback(mouse, mouse->event_x - areas[index].left, mouse->event_y - areas[index].top, players);
-		case XCB_EXPOSE:
-			if_map(players);
-			break;
-
-		case XCB_KEY_PRESS:
-			keyboard = (xcb_key_press_event_t *)event;
-			input = keymap + (keyboard->detail - keycode_min) * keysyms_per_keycode;
-
-			if (*input == 'q')
-			{
-				free(event);
-				return -1;
-			}
-			else if (*input == 'n')
-			{
-				free(event);
-				return 0;
-			}
-			break;
-
-		case XCB_BUTTON_RELEASE:
-			//printf("release: %d\n", (int)((xcb_button_release_event_t *)event)->detail);
-			break;
-		}
-
-		free(event);
-	}
-}
-
-int input_player(unsigned char player, const struct player *restrict players)
+int input_battle(unsigned char player, const struct player *restrict players)
 {
 	state.player = player;
 

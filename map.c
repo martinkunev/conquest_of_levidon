@@ -25,8 +25,6 @@ struct unit units[] = {
 };
 size_t units_count = 2;
 
-#define REGIONS_MAX 256
-
 static struct polygon *region_create(size_t count, ...)
 {
 	size_t index;
@@ -48,100 +46,10 @@ static struct polygon *region_create(size_t count, ...)
 
 void map_init(struct player *restrict players, size_t players_count, struct region *restrict regions, size_t regions_count)
 {
-	/*struct region regions[REGIONS_MAX];
-	size_t regions_count = 6;*/
-
 	unsigned char player;
 	struct region *region;
 
 	size_t index;
-
-	/*
-	for(index = 0; index < regions_count; ++index)
-	{
-		regions[index].owner = 0;
-		regions[index].slots = 0;
-
-		regions[index].index = index;
-		memset(regions[index].neighbors, 0, sizeof(regions[index].neighbors));
-
-		regions[index].income = (struct resources){.gold = 1, .wood = 2, .food = 3};
-	}
-
-	regions[0].location = region_create(4,
-		(struct point){768, 768},
-		(struct point){768, 500},
-		(struct point){550, 550},
-		(struct point){600, 768}
-	);
-	regions[0].neighbors[2] = regions + 1;
-	regions[0].neighbors[4] = regions + 5;
-	regions[0].center = (struct point){600, 650};
-
-	regions[1].location = region_create(6,
-		(struct point){600, 250},
-		(struct point){550, 550},
-		(struct point){768, 500},
-		(struct point){768, 0},
-		(struct point){384, 0},
-		(struct point){384, 150}
-	);
-	regions[1].neighbors[4] = regions + 3;
-	regions[1].neighbors[5] = regions + 2;
-	regions[1].neighbors[6] = regions + 0;
-	regions[1].center = (struct point){650, 200};
-
-	regions[2].location = region_create(5,
-		(struct point){550, 550},
-		(struct point){600, 250},
-		(struct point){384, 150},
-		(struct point){150, 250},
-		(struct point){200, 550}
-	);
-	regions[2].neighbors[1] = regions + 1;
-	regions[2].neighbors[3] = regions + 3;
-	regions[2].neighbors[4] = regions + 4;
-	regions[2].neighbors[6] = regions + 5;
-	regions[2].center = (struct point){384, 384};
-
-	regions[3].location = region_create(5,
-		(struct point){384, 150},
-		(struct point){384, 0},
-		(struct point){0, 0},
-		(struct point){0, 200},
-		(struct point){150, 250}
-	);
-	regions[3].neighbors[0] = regions + 1;
-	regions[3].neighbors[6] = regions + 4;
-	regions[3].neighbors[7] = regions + 2;
-	regions[3].center = (struct point){200, 120};
-
-	regions[4].location = region_create(4,
-		(struct point){200, 550},
-		(struct point){150, 250},
-		(struct point){0, 200},
-		(struct point){0, 768}
-	);
-	regions[4].neighbors[0] = regions + 2;
-	regions[4].neighbors[2] = regions + 3;
-	regions[4].neighbors[7] = regions + 5;
-	regions[4].center = (struct point){100, 450};
-
-	regions[5].location = region_create(4,
-		(struct point){600, 768},
-		(struct point){550, 550},
-		(struct point){200, 550},
-		(struct point){0, 768}
-	);
-	regions[5].neighbors[0] = regions + 0;
-	regions[5].neighbors[2] = regions + 2;
-	regions[5].neighbors[3] = regions + 4;
-	regions[5].center = (struct point){450, 650};
-
-	regions[0].owner = 1;
-	regions[1].owner = 1;
-	regions[3].owner = 2;
-	regions[5].owner = 3;*/
 
 	if_regions(regions, regions_count, units, units_count);
 
@@ -409,7 +317,7 @@ int main(int argc, char *argv[])
 
 	key = string("regions");
 	node = dict_get(json->object, &key);
-	if (!node || (json_type(node) != ARRAY)) goto finally;
+	if (!node || (json_type(node) != ARRAY) || (node->array_node.length < 1) || (node->array_node.length > REGIONS_LIMIT)) goto finally;
 
 	regions_count = node->array_node.length;
 	regions = malloc(regions_count * sizeof(struct region));
