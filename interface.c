@@ -10,7 +10,10 @@
 
 //#include <X11/Xlib-xcb.h>
 
+#include "types.h"
+#include "json.h"
 #include "format.h"
+#include "map.h"
 #include "battle.h"
 #include "image.h"
 #include "interface.h"
@@ -32,7 +35,7 @@
 
 #define PAWN_MARGIN 4
 
-#define STRING(s) (s), sizeof(s) - 1
+#define S(s) (s), sizeof(s) - 1
 
 #define PANEL_X 0
 #define PANEL_Y 32
@@ -477,7 +480,7 @@ void if_map(const struct player *restrict players) // TODO finish this
 	{
 		const struct region *region = regions + state.region;
 
-		display_string(STRING("owner:"), PANEL_X, PANEL_Y - 16, White);
+		display_string(S("owner:"), PANEL_X, PANEL_Y - 16, White);
 		display_rectangle(PANEL_X + 7 * font.width, PANEL_Y - 16 + ((int)font.height - 16) / 2, 16, 16, Player + region->owner);
 
 		// Display the slots at the current region.
@@ -543,11 +546,11 @@ void if_map(const struct player *restrict players) // TODO finish this
 	}
 
 	// Treasury
-	show_resource(STRING("gold: "), players[state.player].treasury.gold, income.gold, expenses.gold, RESOURCE_GOLD);
-	show_resource(STRING("food: "), players[state.player].treasury.food, income.food, expenses.food, RESOURCE_FOOD);
-	show_resource(STRING("wood: "), players[state.player].treasury.wood, income.wood, expenses.wood, RESOURCE_WOOD);
-	show_resource(STRING("iron: "), players[state.player].treasury.iron, income.iron, expenses.iron, RESOURCE_IRON);
-	show_resource(STRING("rock: "), players[state.player].treasury.rock, income.rock, expenses.rock, RESOURCE_ROCK);
+	show_resource(S("gold: "), players[state.player].treasury.gold, income.gold, expenses.gold, RESOURCE_GOLD);
+	show_resource(S("food: "), players[state.player].treasury.food, income.food, expenses.food, RESOURCE_FOOD);
+	show_resource(S("wood: "), players[state.player].treasury.wood, income.wood, expenses.wood, RESOURCE_WOOD);
+	show_resource(S("iron: "), players[state.player].treasury.iron, income.iron, expenses.iron, RESOURCE_IRON);
+	show_resource(S("rock: "), players[state.player].treasury.rock, income.rock, expenses.rock, RESOURCE_ROCK);
 
 	glFlush();
 	glXSwapBuffers(display, drawable);
@@ -785,7 +788,8 @@ int input_map(unsigned char player, const struct player *restrict players)
 		case XCB_BUTTON_PRESS:
 			mouse = (xcb_button_release_event_t *)event;
 			for(index = 0; index < areas_count; ++index)
-				if (input_in(mouse, areas + index)) areas[index].callback(mouse, mouse->event_x - areas[index].left, mouse->event_y - areas[index].top, players);
+				if (input_in(mouse, areas + index))
+					areas[index].callback(mouse, mouse->event_x - areas[index].left, mouse->event_y - areas[index].top, players);
 		case XCB_EXPOSE:
 			if_map(players);
 			break;
@@ -968,7 +972,8 @@ int input_battle(unsigned char player, const struct player *restrict players)
 		case XCB_BUTTON_PRESS:
 			mouse = (xcb_button_release_event_t *)event;
 			for(index = 0; index < areas_count; ++index)
-				if (input_in(mouse, areas + index)) areas[index].callback(mouse, mouse->event_x - areas[index].left, mouse->event_y - areas[index].top, players);
+				if (input_in(mouse, areas + index))
+					areas[index].callback(mouse, mouse->event_x - areas[index].left, mouse->event_y - areas[index].top, players);
 		case XCB_EXPOSE:
 			if_battle(players);
 			break;

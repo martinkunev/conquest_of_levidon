@@ -6,6 +6,8 @@
 #include <unistd.h>
 
 #include "types.h"
+#include "json.h"
+#include "map.h"
 #include "battle.h"
 #include "interface.h"
 

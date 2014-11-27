@@ -2,8 +2,6 @@
 
 //#define DEBUG
 
-#include "map.h"
-
 #define SLOT_COUNT_MAX 256
 
 #define BATTLEFIELD_WIDTH 9
