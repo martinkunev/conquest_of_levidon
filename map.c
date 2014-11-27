@@ -45,7 +45,7 @@ static struct polygon *region_create(size_t count, ...)
 	return polygon;
 }
 
-int map_init(const union json *restrict json, struct player *restrict players, size_t players_count, struct region *restrict regions, size_t regions_count)
+int map_init(const union json *restrict json, struct game *restrict game)
 {
 	struct string key;
 	const union json *item, *node, *field, *entry;
@@ -54,8 +54,8 @@ int map_init(const union json *restrict json, struct player *restrict players, s
 	size_t j;
 	struct point *points;
 
-	players = 0;
-	regions = 0;
+	game->players = 0;
+	game->regions = 0;
 
 	if (json_type(json) != OBJECT) goto error;
 
@@ -63,10 +63,10 @@ int map_init(const union json *restrict json, struct player *restrict players, s
 	node = dict_get(json->object, &key);
 	if (!node || (json_type(node) != ARRAY) || (node->array_node.length < 1) || (node->array_node.length > PLAYERS_LIMIT)) goto error;
 
-	players_count = node->array_node.length;
-	players = malloc(players_count * sizeof(struct player));
-	if (!players) goto error;
-	for(index = 0; index < players_count; ++index)
+	game->players_count = node->array_node.length;
+	game->players = malloc(game->players_count * sizeof(struct player));
+	if (!game->players) goto error;
+	for(index = 0; index < game->players_count; ++index)
 	{
 		item = node->array_node.data[index];
 		if (json_type(item) != OBJECT) goto error;
@@ -74,83 +74,83 @@ int map_init(const union json *restrict json, struct player *restrict players, s
 		key = string("alliance");
 		field = dict_get(item->object, &key);
 		if (!field || (json_type(field) != INTEGER)) goto error;
-		players[index].alliance = field->integer;
+		game->players[index].alliance = field->integer;
 
 		key = string("gold");
 		field = dict_get(item->object, &key);
 		if (!field || (json_type(field) != INTEGER)) goto error;
-		players[index].treasury.gold = field->integer;
+		game->players[index].treasury.gold = field->integer;
 
 		key = string("food");
 		field = dict_get(item->object, &key);
 		if (!field || (json_type(field) != INTEGER)) goto error;
-		players[index].treasury.food = field->integer;
+		game->players[index].treasury.food = field->integer;
 
 		key = string("iron");
 		field = dict_get(item->object, &key);
 		if (!field || (json_type(field) != INTEGER)) goto error;
-		players[index].treasury.iron = field->integer;
+		game->players[index].treasury.iron = field->integer;
 
 		key = string("wood");
 		field = dict_get(item->object, &key);
 		if (!field || (json_type(field) != INTEGER)) goto error;
-		players[index].treasury.wood = field->integer;
+		game->players[index].treasury.wood = field->integer;
 
 		key = string("rock");
 		field = dict_get(item->object, &key);
 		if (!field || (json_type(field) != INTEGER)) goto error;
-		players[index].treasury.rock = field->integer;
+		game->players[index].treasury.rock = field->integer;
 
-		players[index].type = Local; // TODO set this
+		game->players[index].type = Local; // TODO set this
 	}
 
 	key = string("regions");
 	node = dict_get(json->object, &key);
 	if (!node || (json_type(node) != ARRAY) || (node->array_node.length < 1) || (node->array_node.length > REGIONS_LIMIT)) goto error;
 
-	regions_count = node->array_node.length;
-	regions = malloc(regions_count * sizeof(struct region));
-	if (!regions) goto error;
-	for(index = 0; index < regions_count; ++index)
+	game->regions_count = node->array_node.length;
+	game->regions = malloc(game->regions_count * sizeof(struct region));
+	if (!game->regions) goto error;
+	for(index = 0; index < game->regions_count; ++index)
 	{
 		item = node->array_node.data[index];
 		if (json_type(item) != OBJECT) goto error;
 
-		regions[index].index = index;
+		game->regions[index].index = index;
 
 		key = string("owner");
 		field = dict_get(item->object, &key);
 		if (!field || (json_type(field) != INTEGER)) goto error;
-		regions[index].owner = field->integer;
+		game->regions[index].owner = field->integer;
 
-		regions[index].slots = 0; // TODO implement this
+		game->regions[index].slots = 0; // TODO implement this
 
-		memset(regions[index].train, 0, sizeof(regions[index].train)); // TODO implement this
+		memset(game->regions[index].train, 0, sizeof(game->regions[index].train)); // TODO implement this
 
 		key = string("gold");
 		field = dict_get(item->object, &key);
 		if (!field || (json_type(field) != INTEGER)) goto error;
-		regions[index].income.gold = field->integer;
+		game->regions[index].income.gold = field->integer;
 
 		key = string("food");
 		field = dict_get(item->object, &key);
 		if (!field || (json_type(field) != INTEGER)) goto error;
-		regions[index].income.food = field->integer;
+		game->regions[index].income.food = field->integer;
 
 		key = string("iron");
 		field = dict_get(item->object, &key);
 		if (!field || (json_type(field) != INTEGER)) goto error;
-		regions[index].income.iron = field->integer;
+		game->regions[index].income.iron = field->integer;
 
 		key = string("wood");
 		field = dict_get(item->object, &key);
 		if (!field || (json_type(field) != INTEGER)) goto error;
-		regions[index].income.wood = field->integer;
+		game->regions[index].income.wood = field->integer;
 
 		key = string("rock");
 		field = dict_get(item->object, &key);
 		if (!field || (json_type(field) != INTEGER)) goto error;
-		regions[index].income.rock = field->integer;
+		game->regions[index].income.rock = field->integer;
 
 		key = string("neighbors");
 		field = dict_get(item->object, &key);
@@ -159,17 +159,17 @@ int map_init(const union json *restrict json, struct player *restrict players, s
 		{
 			entry = vector_get(&field->array_node, j);
 			if (json_type(entry) != INTEGER) goto error;
-			if ((entry->integer < 0) || (entry->integer >= regions_count)) regions[index].neighbors[j] = 0;
-			else regions[index].neighbors[j] = regions + entry->integer;
+			if ((entry->integer < 0) || (entry->integer >= game->regions_count)) game->regions[index].neighbors[j] = 0;
+			else game->regions[index].neighbors[j] = game->regions + entry->integer;
 		}
 
 		key = string("location");
 		field = dict_get(item->object, &key);
 		if (!field || (json_type(field) != ARRAY) || (field->array_node.length < 3)) goto error;
-		regions[index].location = malloc(sizeof(struct polygon) + field->array_node.length * sizeof(struct point));
-		if (!regions[index].location) goto error;
-		regions[index].location->vertices = field->array_node.length;
-		points = regions[index].location->points;
+		game->regions[index].location = malloc(sizeof(struct polygon) + field->array_node.length * sizeof(struct point));
+		if (!game->regions[index].location) goto error;
+		game->regions[index].location->vertices = field->array_node.length;
+		points = game->regions[index].location->points;
 		for(j = 0; j < field->array_node.length; ++j)
 		{
 			entry = vector_get(&field->array_node, j);
@@ -184,13 +184,13 @@ int map_init(const union json *restrict json, struct player *restrict players, s
 		if (!field || (json_type(field) != ARRAY) || (field->array_node.length != 2)) goto error;
 		x = vector_get(&field->array_node, 0);
 		y = vector_get(&field->array_node, 1);
-		regions[index].center = (struct point){x->integer, y->integer}; // TODO check vector element types
+		game->regions[index].center = (struct point){x->integer, y->integer}; // TODO check vector element types
 	}
 
 	return 0;
 
 error:
-	map_term(players, players_count, regions, regions_count);
+	map_term(game->players, game->players_count, game->regions, game->regions_count);
 	return -1;
 }
 

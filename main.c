@@ -16,16 +16,12 @@
 int main(int argc, char *argv[])
 {
 	struct stat info;
-	int game;
+	int file;
 	char *buffer;
 	struct string dump;
 	union json *json;
 
-	struct player players;
-	size_t players_count;
-
-	struct region regions;
-	size_t regions_count;
+	struct game game;
 
 	if (argc < 2)
 	{
@@ -33,15 +29,15 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 
-	game = open(argv[1], O_RDONLY);
-	if (game < 0) return -1;
-	if (fstat(game, &info) < 0)
+	file = open(argv[1], O_RDONLY);
+	if (file < 0) return -1;
+	if (fstat(file, &info) < 0)
 	{
-		close(game);
+		close(file);
 		return -1;
 	}
-	buffer = mmap(0, info.st_size, PROT_READ, MAP_SHARED, game, 0);
-	close(game);
+	buffer = mmap(0, info.st_size, PROT_READ, MAP_SHARED, file, 0);
+	close(file);
 	if (buffer == MAP_FAILED) return -1;
 
 	dump = string(buffer, info.st_size);
@@ -53,20 +49,20 @@ int main(int argc, char *argv[])
 		write(2, S("Invalid map format\n"));
 		return -1;
 	}
-	json_free(json);
-
-	if (map_init(json, &players, players_count, &regions, regions_count))
+	if (map_init(json, &game))
 	{
+		json_free(json);
 		write(2, S("Invalid map data\n"));
 		return -1;
 	}
+	json_free(json);
 
 	srandom(time(0));
 	if_init();
 
-	map_play(&players, players_count, &regions, regions_count);
+	map_play(game.players, game.players_count, game.regions, game.regions_count);
 
-	map_term(&players, players_count, &regions, regions_count);
+	map_term(game.players, game.players_count, game.regions, game.regions_count);
 
 	return 0;
 }
