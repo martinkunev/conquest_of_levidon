@@ -64,5 +64,4 @@ struct game
 // neighbors (in order): east, north-east, north, north-west, west, south-west, south, south-east
 
 int map_init(const union json *restrict json, struct game *restrict game);
-void map_play(struct player *restrict players, size_t players_count, struct region *restrict regions, size_t regions_count);
 void map_term(struct player *restrict players, size_t players_count, struct region *restrict regions, size_t regions_count);
