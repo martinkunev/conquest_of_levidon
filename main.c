@@ -11,6 +11,7 @@
 #include "map.h"
 #include "battle.h"
 #include "interface.h"
+#include "input.h"
 
 #define S(s) s, sizeof(s) - 1
 
@@ -207,6 +208,7 @@ static int play(struct player *restrict players, size_t players_count, struct re
 		}
 
 		// Perform player-specific actions.
+		alliances = 0;
 		for(player = 0; player < players_count; ++player)
 		{
 			if (players[player].type == Neutral) continue;
@@ -224,7 +226,7 @@ static int play(struct player *restrict players, size_t players_count, struct re
 		}
 	} while (alliances & (alliances - 1)); // while there is more than 1 alliance
 
-	return alliances;
+	return alliances; // TODO convert this to alliance number
 }
 
 int main(int argc, char *argv[])

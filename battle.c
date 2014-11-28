@@ -9,6 +9,7 @@
 #include "json.h"
 #include "map.h"
 #include "battle.h"
+#include "input.h"
 #include "interface.h"
 
 struct encounter
