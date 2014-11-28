@@ -27,20 +27,14 @@ extern GLuint map_framebuffer;
 struct area
 {
 	unsigned left, right, top, bottom;
-	int (*callback)(int, unsigned, unsigned, uint16_t, const struct player *restrict);
+	int (*callback)(int, unsigned, unsigned, uint16_t, const struct game *restrict);
 };
-
-extern const struct unit *units;
-extern size_t units_count;
-
-extern struct region *restrict regions;
-extern size_t regions_count;
 
 extern struct pawn *(*battlefield)[BATTLEFIELD_WIDTH];
 
 static struct state state;
 
-static int input_local(void (*display)(const struct player *restrict, const struct state *restrict), const struct area *restrict areas, size_t areas_count, const struct player *restrict players)
+static int input_local(void (*display)(const struct player *restrict, const struct state *restrict), const struct area *restrict areas, size_t areas_count, const struct game *restrict game)
 {
 	xcb_generic_event_t *event;
 	xcb_button_release_event_t *mouse;
@@ -53,7 +47,7 @@ static int input_local(void (*display)(const struct player *restrict, const stru
 	size_t index;
 	int status;
 
-	display(players, &state);
+	display(game->players, &state);
 
 	while (1)
 	{
@@ -64,7 +58,7 @@ static int input_local(void (*display)(const struct player *restrict, const stru
 		switch (event->response_type & ~0x80)
 		{
 		case XCB_EXPOSE:
-			display(players, &state);
+			display(game->players, &state);
 			continue;
 
 		case XCB_BUTTON_PRESS:
@@ -98,18 +92,18 @@ static int input_local(void (*display)(const struct player *restrict, const stru
 		{
 			if ((areas[index].left <= x) && (x <= areas[index].right) && (areas[index].top <= y) && (y <= areas[index].bottom))
 			{
-				status = areas[index].callback(code, x - areas[index].left, y - areas[index].top, modifiers, players);
+				status = areas[index].callback(code, x - areas[index].left, y - areas[index].top, modifiers, game);
 				if (status == INPUT_TERMINATE) return -1;
 				else if (status == INPUT_DONE) return 0;
 				else if (status == INPUT_NOTME) continue;
 				else break;
 			}
 		} while (index--);
-		display(players, &state);
+		display(game->players, &state);
 	}
 }
 
-static int input_turn(int code, unsigned x, unsigned y, uint16_t modifiers, const struct player *restrict players)
+static int input_turn(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game)
 {
 	switch (code)
 	{
@@ -124,7 +118,7 @@ static int input_turn(int code, unsigned x, unsigned y, uint16_t modifiers, cons
 	}
 }
 
-static int input_region(int code, unsigned x, unsigned y, uint16_t modifiers, const struct player *restrict players)
+static int input_region(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game)
 {
 	if (code >= 0) return INPUT_NOTME;
 
@@ -145,13 +139,13 @@ static int input_region(int code, unsigned x, unsigned y, uint16_t modifiers, co
 	}
 	else if (code == -3)
 	{
-		struct region *region = regions + state.region;
+		struct region *region = game->regions + state.region;
 		struct slot *slot;
 
 		if (!pixel_color[0]) return 0;
 
 		unsigned index;
-		struct region *destination = regions + pixel_color[2];
+		struct region *destination = game->regions + pixel_color[2];
 		if (destination == region) goto valid;
 		for(index = 0; index < 8; ++index)
 			if (destination == region->neighbors[index])
@@ -164,38 +158,38 @@ valid:
 			// Set the move destination of the selected slot.
 			slot = state.selected.slot;
 			if (state.player == slot->player)
-				slot->move = regions + pixel_color[2];
+				slot->move = game->regions + pixel_color[2];
 		}
 		else
 		{
 			// Set the move destination of all slots in the region.
 			for(slot = region->slots; slot; slot = slot->_next)
 				if (state.player == slot->player)
-					slot->move = regions + pixel_color[2];
+					slot->move = game->regions + pixel_color[2];
 		}
 	}
 
 	return 0;
 }
 
-static int input_train(int code, unsigned x, unsigned y, uint16_t modifiers, const struct player *restrict players)
+static int input_train(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game)
 {
 	if (code >= 0) return INPUT_NOTME;
 
-	if (state.player != regions[state.region].owner) return 0;
+	if (state.player != game->regions[state.region].owner) return 0;
 	if ((x % (FIELD_SIZE + PAWN_MARGIN)) >= FIELD_SIZE) return 0;
 
 	if (code == -1)
 	{
 		size_t unit = x / (FIELD_SIZE + PAWN_MARGIN);
-		if (unit >= units_count) return 0;
+		if (unit >= game->units_count) return 0;
 
-		struct unit **train = regions[state.region].train;
+		struct unit **train = game->regions[state.region].train;
 		size_t index;
 		for(index = 0; index < TRAIN_QUEUE; ++index)
 			if (!train[index])
 			{
-				train[index] = (struct unit *)(units + unit); // TODO fix this cast
+				train[index] = (struct unit *)(game->units + unit); // TODO fix this cast
 				break;
 			}
 	}
@@ -203,16 +197,16 @@ static int input_train(int code, unsigned x, unsigned y, uint16_t modifiers, con
 	return 0;
 }
 
-static int input_dismiss(int code, unsigned x, unsigned y, uint16_t modifiers, const struct player *restrict players)
+static int input_dismiss(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game)
 {
 	if (code >= 0) return INPUT_NOTME;
 
-	if (state.player != regions[state.region].owner) return 0;
+	if (state.player != game->regions[state.region].owner) return 0;
 	if ((x % (FIELD_SIZE + PAWN_MARGIN)) >= FIELD_SIZE) return 0;
 
 	if (code == -1)
 	{
-		struct unit **train = regions[state.region].train;
+		struct unit **train = game->regions[state.region].train;
 
 		size_t index;
 		for(index = (x / (FIELD_SIZE + PAWN_MARGIN) + 1); index < TRAIN_QUEUE; ++index)
@@ -223,12 +217,12 @@ static int input_dismiss(int code, unsigned x, unsigned y, uint16_t modifiers, c
 	return 0;
 }
 
-static int input_slot(int code, unsigned x, unsigned y, uint16_t modifiers, const struct player *restrict players)
+static int input_slot(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game)
 {
 	if (code >= 0) return INPUT_NOTME;
 
 	if (state.region < 0) return 0;
-	struct slot *slot = regions[state.region].slots;
+	struct slot *slot = game->regions[state.region].slots;
 	if (!slot) return 0; // no field selected
 
 	if (code == -1)
@@ -260,7 +254,7 @@ reset:
 	return 0;
 }
 
-int input_map(unsigned char player, const struct player *restrict players)
+int input_map(const struct game *restrict game, unsigned char player)
 {
 	struct area areas[] = {
 		{
@@ -279,7 +273,7 @@ int input_map(unsigned char player, const struct player *restrict players)
 		},
 		{
 			.left = PANEL_X,
-			.right = PANEL_X + (FIELD_SIZE + 8) * units_count - 1,
+			.right = PANEL_X + (FIELD_SIZE + 8) * game->units_count - 1,
 			.top = PANEL_Y + 260,
 			.bottom = PANEL_Y + 260 + FIELD_SIZE - 1,
 			.callback = input_train
@@ -305,7 +299,7 @@ int input_map(unsigned char player, const struct player *restrict players)
 	state.region = -1;
 	state.selected.slot = 0;
 
-	return input_local(if_map, areas, sizeof(areas) / sizeof(*areas), players);
+	return input_local(if_map, areas, sizeof(areas) / sizeof(*areas), game);
 }
 
 // Sets move destination of a pawn. Returns -1 if the current player is not allowed to move the pawn at the destination.
@@ -343,12 +337,12 @@ static int pawn_shoot(const struct player *restrict players, struct pawn *restri
 	else return -1;
 }
 
-static int input_round(int code, unsigned x, unsigned y, uint16_t modifiers, const struct player *restrict players)
+static int input_round(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game)
 {
 	return ((code == 'n') ? INPUT_DONE : 0);
 }
 
-static int input_pawn(int code, unsigned x, unsigned y, uint16_t modifiers, const struct player *restrict players)
+static int input_pawn(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game)
 {
 	if (code >= 0) return INPUT_NOTME;
 
@@ -385,7 +379,7 @@ reset:
 	return 0;
 }
 
-static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, const struct player *restrict players)
+static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game)
 {
 	if (code >= 0) return INPUT_NOTME;
 
@@ -408,16 +402,16 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 		// Otherwise apply the command to each pawn on the current field.
 		if (state.pawn)
 		{
-			if (modifiers & XCB_MOD_MASK_CONTROL) pawn_shoot(players, state.pawn, x, y);
-			else pawn_move(players, state.pawn, x, y);
+			if (modifiers & XCB_MOD_MASK_CONTROL) pawn_shoot(game->players, state.pawn, x, y);
+			else pawn_move(game->players, state.pawn, x, y);
 		}
 		else
 		{
 			struct pawn *pawn;
 			for(pawn = battlefield[state.y][state.x]; pawn; pawn = pawn->_next)
 			{
-				if (modifiers & XCB_MOD_MASK_CONTROL) pawn_shoot(players, pawn, x, y);
-				else pawn_move(players, pawn, x, y);
+				if (modifiers & XCB_MOD_MASK_CONTROL) pawn_shoot(game->players, pawn, x, y);
+				else pawn_move(game->players, pawn, x, y);
 			}
 		}
 	}
@@ -425,7 +419,7 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 	return 0;
 }
 
-int input_battle(unsigned char player, const struct player *restrict players)
+int input_battle(const struct game *restrict game, unsigned char player)
 {
 	struct area areas[] = {
 		{
@@ -459,5 +453,5 @@ int input_battle(unsigned char player, const struct player *restrict players)
 
 	state.pawn = 0;
 
-	return input_local(if_battle, areas, sizeof(areas) / sizeof(*areas), players);
+	return input_local(if_battle, areas, sizeof(areas) / sizeof(*areas), game);
 }

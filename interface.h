@@ -29,4 +29,4 @@ void if_set(struct pawn *bf[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH]);
 void if_map(const struct player *restrict players, const struct state *restrict state);
 void if_battle(const struct player *restrict players, const struct state *restrict state);
 
-void if_regions(struct region *restrict reg, size_t count, const struct unit *u, size_t u_count);
+void if_regions(struct game *restrict game);

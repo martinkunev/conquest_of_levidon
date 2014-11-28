@@ -11,5 +11,5 @@ struct state
 	int region;
 };
 
-int input_map(unsigned char player, const struct player *restrict players);
-int input_battle(unsigned char player, const struct player *restrict players);
+int input_map(const struct game *restrict game, unsigned char player);
+int input_battle(const struct game *restrict game, unsigned char player);

@@ -11,6 +11,12 @@
 
 // TODO support more than 7 slots
 
+struct unit units[] = {
+	{.index = 0, .health = 3, .damage = 1, .speed = 3, .cost = {.wood = -1}, .expense = {.food = -2}},
+	{.index = 1, .health = 3, .damage = 1, .speed = 3, .cost = {.gold = -1, .wood = -2}, .expense = {.food = -2}, .shoot = 1, .range = 4},
+};
+size_t units_count = 2;
+
 static struct polygon *region_create(size_t count, ...)
 {
 	size_t index;
@@ -175,18 +181,21 @@ int map_init(const union json *restrict json, struct game *restrict game)
 		game->regions[index].center = (struct point){x->integer, y->integer}; // TODO check vector element types
 	}
 
+	game->units = units;
+	game->units_count = units_count;
+
 	return 0;
 
 error:
-	map_term(game->players, game->players_count, game->regions, game->regions_count);
+	map_term(game);
 	return -1;
 }
 
-void map_term(struct player *restrict players, size_t players_count, struct region *restrict regions, size_t regions_count)
+void map_term(struct game *restrict game)
 {
 	size_t index;
-	for(index = 0; index < regions_count; ++index)
-		free(regions[index].location);
-	free(regions);
-	free(players);
+	for(index = 0; index < game->regions_count; ++index)
+		free(game->regions[index].location);
+	free(game->regions);
+	free(game->players);
 }

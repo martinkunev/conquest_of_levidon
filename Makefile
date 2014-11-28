@@ -13,10 +13,9 @@ map: main.o map.o resources.o interface.o input.o display.o image.o battle.o for
 #battle: main.o interface.o display.o image.o battle.o format.o json.o dictionary.o vector.o
 #	$(CC) $(LDFLAGS) $^ -o battle
 
-polygons: polygons.o
-	$(CC) $(LDFLAGS) $^ -o polygons
+#polygons: polygons.o
+#	$(CC) $(LDFLAGS) $^ -o polygons
 
 clean:
 	rm -f battle.o format.o main.o resources.o map.o interface.o input.o display.o json.o dictionary.o vector.o
 	rm -f battle
-	rm -f x

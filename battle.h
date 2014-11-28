@@ -38,4 +38,4 @@ struct battle
 int reachable(const struct player *restrict players, struct pawn *battlefield[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH], const struct pawn *restrict pawn, unsigned char x, unsigned char y);
 int shootable(const struct player *restrict players, struct pawn *battlefield[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH], const struct pawn *restrict pawn, unsigned char x, unsigned char y);
 
-int battle(const struct player *restrict players, size_t players_count, struct region *restrict region);
+int battle(const struct game *restrict game, struct region *restrict region);

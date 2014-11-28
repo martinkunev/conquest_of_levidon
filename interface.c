@@ -56,9 +56,6 @@ GLuint map_framebuffer;
 // TODO Create a struct that stores all the information about the battle (battlefield, players, etc.)
 struct pawn *(*battlefield)[BATTLEFIELD_WIDTH];
 
-const struct unit *units;
-size_t units_count;
-
 struct region *restrict regions;
 size_t regions_count;
 
@@ -520,13 +517,10 @@ void if_set(struct pawn *bf[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH])
 	battlefield = bf;
 }
 
-void if_regions(struct region *restrict reg, size_t count, const struct unit *u, size_t u_count)
+void if_regions(struct game *restrict game)
 {
-	regions = reg;
-	regions_count = count;
-
-	units = u;
-	units_count = u_count;
+	regions = game->regions;
+	regions_count = game->regions_count;
 
 	glBindFramebuffer(GL_FRAMEBUFFER, map_framebuffer);
 

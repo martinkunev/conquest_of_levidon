@@ -670,7 +670,7 @@ static int battle_end(struct battle *restrict battle, unsigned char host)
 	else return -1;
 }
 
-int battle(const struct player *restrict players, size_t players_count, struct region *restrict region)
+int battle(const struct game *restrict game, struct region *restrict region)
 {
 	struct slot *slot;
 	struct pawn *pawns;
@@ -739,7 +739,7 @@ int battle(const struct player *restrict players, size_t players_count, struct r
 	if (!heap_init(&collisions)) return -1;
 
 	struct battle battle;
-	if (battle_init(&battle, players, players_count, pawns, pawns_count) < 0)
+	if (battle_init(&battle, game->players, game->players_count, pawns, pawns_count) < 0)
 	{
 		heap_term(&collisions);
 		return -1;
@@ -747,14 +747,14 @@ int battle(const struct player *restrict players, size_t players_count, struct r
 
 	if_set(battle.field);
 
-	count = malloc(players_count * sizeof(*count));
+	count = malloc(game->players_count * sizeof(*count));
 	if (!count)
 	{
 		status = -1;
 		goto finally;
 	}
 
-	damage = malloc(players_count * sizeof(*damage));
+	damage = malloc(game->players_count * sizeof(*damage));
 	if (!damage)
 	{
 		free(count);
@@ -765,10 +765,10 @@ int battle(const struct player *restrict players, size_t players_count, struct r
 	do
 	{
 		// Ask each player to perform battle actions.
-		for(player = 1; player < players_count; ++player) // TODO skip player 0 in a natural way
+		for(player = 1; player < game->players_count; ++player) // TODO skip player 0 in a natural way
 		{
 			if (!battle.player_pawns[player].length) continue; // skip dead players
-			if (input_battle(player, players) < 0)
+			if (input_battle(game, player) < 0)
 			{
 				status = -1;
 				goto finally;
@@ -783,7 +783,7 @@ int battle(const struct player *restrict players, size_t players_count, struct r
 				if (!battle.field[i][j]) continue;
 				pawn = battle.field[i][j];
 
-				battle_escape(players, players_count, pawn, count, damage);
+				battle_escape(game->players, game->players_count, pawn, count, damage);
 
 				do
 				{
@@ -793,17 +793,17 @@ int battle(const struct player *restrict players, size_t players_count, struct r
 					if ((pawn->move.x[1] == pawn->move.x[0]) && (pawn->move.y[1] == pawn->move.y[0]))
 						continue;
 
-					alliance = players[pawn->slot->player].alliance;
+					alliance = game->players[pawn->slot->player].alliance;
 
 					d = 0;
 
 					// Each alliance deals damage equally to each enemy unit.
-					for(a = 0; a < players_count; ++a)
+					for(a = 0; a < game->players_count; ++a)
 					{
 						if (a == alliance) continue;
 
 						// Calculate the number of enemy units for a.
-						c = count[players_count - 1] - (count[a] - (a ? count[a - 1] : 0));
+						c = count[game->players_count - 1] - (count[a] - (a ? count[a - 1] : 0));
 
 						d += (double)((damage[a] - (a ? damage[a - 1] : 0)) * pawn->slot->count) / c + 0.5;
 					}
@@ -827,7 +827,7 @@ int battle(const struct player *restrict players, size_t players_count, struct r
 		}
 
 		// Handle pawn movement interference.
-		status = battle_round(players, battle.field, pawns, pawns_count, &collisions);
+		status = battle_round(game->players, battle.field, pawns, pawns_count, &collisions);
 
 		// Deal damage from the shooting pawns.
 		for(i = 0; i < pawns_count; ++i) // foreach shooter
@@ -897,23 +897,23 @@ int battle(const struct player *restrict players, size_t players_count, struct r
 				if (!battle.field[i][j]) continue;
 				pawn = battle.field[i][j];
 
-				battle_fight(players, players_count, pawn, count, damage);
+				battle_fight(game->players, game->players_count, pawn, count, damage);
 
 				do
 				{
 					next = pawn->_next;
 
-					alliance = players[pawn->slot->player].alliance;
+					alliance = game->players[pawn->slot->player].alliance;
 
 					d = 0;
 
 					// Each alliance deals damage equally to each enemy unit.
-					for(a = 0; a < players_count; ++a)
+					for(a = 0; a < game->players_count; ++a)
 					{
 						if (a == alliance) continue;
 
 						// Calculate the number of enemy units for a.
-						c = count[players_count - 1] - (count[a] - (a ? count[a - 1] : 0));
+						c = count[game->players_count - 1] - (count[a] - (a ? count[a - 1] : 0));
 
 						d += (double)((damage[a] - (a ? damage[a - 1] : 0)) * pawn->slot->count) / c + 0.5;
 					}
@@ -932,7 +932,7 @@ int battle(const struct player *restrict players, size_t players_count, struct r
 		}
 	} while ((status = battle_end(&battle, region->owner)) < 0);
 
-	input_battle(0, players); // TODO fix this
+	input_battle(game, 0); // TODO fix this
 
 finally:
 

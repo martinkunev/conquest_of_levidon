@@ -10,21 +10,15 @@
 #include "json.h"
 #include "map.h"
 #include "battle.h"
-#include "interface.h"
 #include "input.h"
+#include "interface.h"
 
 #define S(s) s, sizeof(s) - 1
 
 #define WINNER_NOBODY -1
 #define WINNER_BATTLE -2
 
-struct unit units[] = {
-	{.index = 0, .health = 3, .damage = 1, .speed = 3, .cost = {.wood = -1}, .expense = {.food = -2}},
-	{.index = 1, .health = 3, .damage = 1, .speed = 3, .cost = {.gold = -1, .wood = -2}, .expense = {.food = -2}, .shoot = 1, .range = 4},
-};
-size_t units_count = 2;
-
-static int play(struct player *restrict players, size_t players_count, struct region *restrict regions, size_t regions_count)
+static int play(struct game *restrict game)
 {
 	unsigned char player;
 	struct region *region;
@@ -43,7 +37,7 @@ static int play(struct player *restrict players, size_t players_count, struct re
 	struct resources expenses[PLAYERS_LIMIT];
 	unsigned char alive[PLAYERS_LIMIT];
 
-	if_regions(regions, regions_count, units, units_count);
+	if_regions(game);
 
 	do
 	{
@@ -52,31 +46,31 @@ static int play(struct player *restrict players, size_t players_count, struct re
 
 		// Ask each player to perform map actions.
 		// TODO implement Computer and Remote
-		for(player = 0; player < players_count; ++player)
-			switch (players[player].type)
+		for(player = 0; player < game->players_count; ++player)
+			switch (game->players[player].type)
 			{
 			case Neutral:
 				continue;
 
 			case Local:
-				if (input_map(player, players) < 0) return WINNER_NOBODY; // TODO
+				if (input_map(game, player) < 0) return WINNER_NOBODY; // TODO
 				break;
 			}
 
 		// Perform region-specific actions.
 
-		for(index = 0; index < regions_count; ++index)
+		for(index = 0; index < game->regions_count; ++index)
 		{
-			region = regions + index;
+			region = game->regions + index;
 
 			for(slot = region->slots; slot; slot = slot->_next)
 				resource_change(expenses + slot->player, &slot->unit->expense);
 
 			// The first training unit finished the training. Add it to the region's slots.
-			if (region->train[0] && resource_enough(&players[region->owner].treasury, &region->train[0]->cost))
+			if (region->train[0] && resource_enough(&game->players[region->owner].treasury, &region->train[0]->cost))
 			{
 				// Spend the money required for the unit.
-				resource_spend(&players[region->owner].treasury, &region->train[0]->cost);
+				resource_spend(&game->players[region->owner].treasury, &region->train[0]->cost);
 
 				slot = malloc(sizeof(*slot));
 				if (!slot) ; // TODO
@@ -117,9 +111,9 @@ static int play(struct player *restrict players, size_t players_count, struct re
 			}
 		}
 
-		for(index = 0; index < regions_count; ++index)
+		for(index = 0; index < game->regions_count; ++index)
 		{
-			region = regions + index;
+			region = game->regions + index;
 
 			winner = WINNER_NOBODY;
 
@@ -127,7 +121,7 @@ static int play(struct player *restrict players, size_t players_count, struct re
 			slots = 0;
 			for(slot = region->slots; slot; slot = slot->_next)
 			{
-				alliance = players[slot->player].alliance;
+				alliance = game->players[slot->player].alliance;
 
 				if (winner == WINNER_NOBODY) winner = alliance;
 				else if (winner != alliance) winner = WINNER_BATTLE;
@@ -135,7 +129,7 @@ static int play(struct player *restrict players, size_t players_count, struct re
 				slots += 1;
 			}
 
-			if (winner == WINNER_BATTLE) winner = battle(players, players_count, region);
+			if (winner == WINNER_BATTLE) winner = battle(game, region);
 
 			// winner - the number of the region's new owner
 
@@ -160,7 +154,7 @@ static int play(struct player *restrict players, size_t players_count, struct re
 					continue;
 				}
 
-				if (players[slot->player].alliance == winner)
+				if (game->players[slot->player].alliance == winner)
 				{
 					slot->location = region;
 					slots += 1;
@@ -182,7 +176,7 @@ static int play(struct player *restrict players, size_t players_count, struct re
 
 			if (winner != WINNER_NOBODY)
 			{
-				if (players[region->owner].alliance != winner)
+				if (game->players[region->owner].alliance != winner)
 				{
 					// assert(slots);
 					owner_slot = random() % slots;
@@ -201,7 +195,7 @@ static int play(struct player *restrict players, size_t players_count, struct re
 			}
 
 			// Add the income from each region to the owner's treasury.
-			resource_change(&players[region->owner].treasury, &region->income);
+			resource_change(&game->players[region->owner].treasury, &region->income);
 
 			// Each player that controls a region is alive.
 			alive[region->owner] = 1;
@@ -209,20 +203,20 @@ static int play(struct player *restrict players, size_t players_count, struct re
 
 		// Perform player-specific actions.
 		alliances = 0;
-		for(player = 0; player < players_count; ++player)
+		for(player = 0; player < game->players_count; ++player)
 		{
-			if (players[player].type == Neutral) continue;
+			if (game->players[player].type == Neutral) continue;
 
 			// Set player as dead, if not marked as alive.
 			if (alive[player])
 			{
 				// Mark the alliance of each alive player as alive.
-				alliances |= (1 << players[player].alliance);
+				alliances |= (1 << game->players[player].alliance);
 			}
-			else players[player].type = Neutral;
+			else game->players[player].type = Neutral;
 
 			// Subtract the player's expenses from the treasury.
-			resource_spend(&players[player].treasury, expenses + player);
+			resource_spend(&game->players[player].treasury, expenses + player);
 		}
 	} while (alliances & (alliances - 1)); // while there is more than 1 alliance
 
@@ -278,12 +272,12 @@ int main(int argc, char *argv[])
 	srandom(time(0));
 	if_init();
 
-	winner = play(game.players, game.players_count, game.regions, game.regions_count);
+	winner = play(&game);
 
 	// TODO display game end message
 	write(2, S("game finished\n"));
 
-	map_term(game.players, game.players_count, game.regions, game.regions_count);
+	map_term(&game);
 
 	return 0;
 }
