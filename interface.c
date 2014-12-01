@@ -34,6 +34,8 @@
 #define RESOURCE_IRON 720
 #define RESOURCE_ROCK 740
 
+#define MARGIN 4
+
 // TODO compatibility with OpenGL 2.1 (used in MacOS X)
 #define glGenFramebuffers(...) glGenFramebuffersEXT(__VA_ARGS__)
 #define glGenRenderbuffers(...) glGenRenderbuffersEXT(__VA_ARGS__)
@@ -338,11 +340,11 @@ void if_battle(const struct player *restrict players, const struct state *restri
 			y = CTRL_Y + 2 + row * (FIELD_SIZE + 4 + 16);
 
 			display_unit(p->slot->unit->index, x, y, Player + p->slot->player, p->slot->count);
-			if (p == state->pawn) draw_rectangle(x - 1, y - 1, FIELD_SIZE + 2, FIELD_SIZE + 2, White);
+			if (p == state->selected.pawn) draw_rectangle(x - 1, y - 1, FIELD_SIZE + 2, FIELD_SIZE + 2, White);
 
 			// Show destination of each moving pawn.
 			// TODO don't draw at the same place twice
-			if (!state->pawn || (p == state->pawn))
+			if (!state->selected.pawn || (p == state->selected.pawn))
 				if (p->slot->player == state->player)
 				{
 					if ((p->move.x[1] != p->move.x[0]) || (p->move.y[1] != p->move.y[0]))
@@ -393,8 +395,12 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	// display current player's color
-	display_rectangle(0, 0, 256, 16, Player + state->player);
+	draw_rectangle(PANEL_X - 4, PANEL_Y - 4, PANEL_WIDTH + 8, PANEL_HEIGHT + 8, Player + state->player);
+	draw_rectangle(PANEL_X - 3, PANEL_Y - 3, PANEL_WIDTH + 6, PANEL_HEIGHT + 6, Player + state->player);
+	draw_rectangle(PANEL_X - 2, PANEL_Y - 2, PANEL_WIDTH + 4, PANEL_HEIGHT + 4, Player + state->player);
+	//display_rectangle(0, 0, 256, 16, Player + state->player);
 
+	// TODO display background pattern instead of black
 	// show the panel in black
 	display_rectangle(PANEL_X, PANEL_Y, PANEL_WIDTH, PANEL_HEIGHT, Black);
 
@@ -402,6 +408,7 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 	display_rectangle(MAP_X, MAP_Y, MAP_WIDTH, MAP_HEIGHT, Black);
 
 	size_t x, y;
+	size_t slots_y;
 	struct pawn *p;
 
 	// Map
@@ -436,8 +443,14 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 	{
 		const struct region *region = regions + state->region;
 
-		display_string(S("owner:"), PANEL_X, PANEL_Y - 16, White);
-		display_rectangle(PANEL_X + 7 * font.width, PANEL_Y - 16 + ((int)font.height - 16) / 2, 16, 16, Player + region->owner);
+		// Display flag of the region owner and name of the region.
+		display_rectangle(PANEL_X, PANEL_Y, image_flag.width, image_flag.height, Player + region->owner);
+		image_draw(&image_flag, PANEL_X, PANEL_Y);
+		display_string(region->name, region->name_length, PANEL_X + image_flag.width + MARGIN, PANEL_Y, White);
+		//display_string(S("owner:"), PANEL_X, PANEL_Y - 16, White);
+		//display_rectangle(PANEL_X + 7 * font.width, PANEL_Y - 16 + ((int)font.height - 16) / 2, 16, 16, Player + region->owner);
+
+		slots_y = PANEL_Y + image_flag.height + MARGIN;
 
 		// Display the slots at the current region.
 		if (players[state->player].alliance == players[region->owner].alliance)
@@ -451,7 +464,7 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 					if (!self_count)
 					{
 						self_count = 1;
-						display_rectangle(PANEL_X, PANEL_Y, 7 * (FIELD_SIZE + 4) + 4, FIELD_SIZE + 4 + 16, Self);
+						display_rectangle(PANEL_X, slots_y, PANEL_WIDTH, FIELD_SIZE + MARGIN + 16, Self);
 					}
 				}
 				else
@@ -459,15 +472,15 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 					if (!position_y[slot->player])
 					{
 						allies_count += 1;
-						display_rectangle(PANEL_X, PANEL_Y + allies_count * (FIELD_SIZE + 4 + 16), 7 * (FIELD_SIZE + 4) + 4, FIELD_SIZE + 4 + 16, Ally);
+						display_rectangle(PANEL_X, slots_y + allies_count * (FIELD_SIZE + MARGIN + 16), PANEL_WIDTH, FIELD_SIZE + MARGIN + 16, Ally);
 						position_y[slot->player] = allies_count;
 					}
 				}
 
 				// TODO make this work for more than 6 slots
 
-				x = PANEL_X + 4 + position_x[slot->player] * (FIELD_SIZE + 4);
-				y = PANEL_Y + 2 + position_y[slot->player] * (FIELD_SIZE + 4 + 16);
+				x = PANEL_X + 2 + position_x[slot->player] * (FIELD_SIZE + 3) - 2; // TODO this will not work for the leftmost slot
+				y = slots_y + 2 + position_y[slot->player] * (FIELD_SIZE + 4 + 16);
 				position_x[slot->player] += 1;
 
 				display_unit(slot->unit->index, x, y, Player + slot->player, slot->count);
@@ -485,19 +498,27 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 
 		if (state->player == region->owner)
 		{
+			display_rectangle(PANEL_X, PANEL_Y + 200, PANEL_WIDTH, 76, Black);
+
+			display_string(S("train:"), PANEL_X + 2, PANEL_Y + 200, White); // TODO fix y coordinate
+
 			// Display train queue.
 			size_t index;
 			for(index = 0; index < TRAIN_QUEUE; ++index)
 				if (region->train[index])
 				{
-					display_unit(region->train[index]->index, PANEL_X + ((FIELD_SIZE + PAWN_MARGIN) * index), PANEL_Y + 196, White, 0);
-					display_rectangle(PANEL_X + ((FIELD_SIZE + PAWN_MARGIN) * index), PANEL_Y + 196, FIELD_SIZE, FIELD_SIZE, Progress);
+					// TODO fix x coordinate
+					display_unit(region->train[index]->index, PANEL_X + 120 + ((FIELD_SIZE + MARGIN) * index), PANEL_Y + 203, White, 0);
+					display_rectangle(PANEL_X + 120 + ((FIELD_SIZE + MARGIN) * index), PANEL_Y + 203, FIELD_SIZE, FIELD_SIZE, Progress); // TODO this should show train progress
 				}
 				else break;
 
 			// Display units available for training.
-			display_unit(0, PANEL_X + (FIELD_SIZE + 8) * 0, PANEL_Y + 260, White, 0);
-			display_unit(1, PANEL_X + (FIELD_SIZE + 8) * 1, PANEL_Y + 260, White, 0);
+			//display_unit(0, PANEL_X + (FIELD_SIZE + 8) * 0, PANEL_Y + 260, White, 0);
+			//display_unit(1, PANEL_X + (FIELD_SIZE + 8) * 1, PANEL_Y + 260, White, 0);
+			display_unit(0, PANEL_X + 2 + 1 + (FIELD_SIZE + 3) * 0, PANEL_Y + 41, Player, 0);
+			display_unit(1, PANEL_X + 2 + 1 + (FIELD_SIZE + 3) * 1, PANEL_Y + 41, Player, 0);
+			display_unit(2, PANEL_X + 2 + 1 + (FIELD_SIZE + 3) * 2, PANEL_Y + 41, Player, 0);
 		}
 	}
 

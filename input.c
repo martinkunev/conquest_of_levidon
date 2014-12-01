@@ -368,14 +368,14 @@ static int input_pawn(int code, unsigned x, unsigned y, uint16_t modifiers, cons
 			}
 			else if (found) break;
 		}
-		state.pawn = pawn;
+		state.selected.pawn = pawn;
 	}
 
 	return 0;
 
 reset:
 	// Make sure no pawn is selected.
-	state.pawn = 0;
+	state.selected.pawn = 0;
 	return 0;
 }
 
@@ -393,17 +393,17 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 		// Set current field.
 		state.x = x;
 		state.y = y;
-		state.pawn = 0;
+		state.selected.pawn = 0;
 	}
 	else if (code == -3)
 	{
 		// shoot if CONTROL is pressed; move otherwise
 		// If there is a pawn selected, apply the command just to it.
 		// Otherwise apply the command to each pawn on the current field.
-		if (state.pawn)
+		if (state.selected.pawn)
 		{
-			if (modifiers & XCB_MOD_MASK_CONTROL) pawn_shoot(game->players, state.pawn, x, y);
-			else pawn_move(game->players, state.pawn, x, y);
+			if (modifiers & XCB_MOD_MASK_CONTROL) pawn_shoot(game->players, state.selected.pawn, x, y);
+			else pawn_move(game->players, state.selected.pawn, x, y);
 		}
 		else
 		{
@@ -451,7 +451,7 @@ int input_battle(const struct game *restrict game, unsigned char player)
 	state.x = BATTLEFIELD_WIDTH;
 	state.y = BATTLEFIELD_HEIGHT;
 
-	state.pawn = 0;
+	state.selected.pawn = 0;
 
 	return input_local(if_battle, areas, sizeof(areas) / sizeof(*areas), game);
 }

@@ -8,7 +8,7 @@
 	"regions": [
 		{
 			"comment": "0",
-			"name": "peloponnese",
+			"name": "Peloponnese",
 			"owner": 1,
 			"gold": 1,
 			"food": 3,
@@ -34,7 +34,7 @@
 		},
 		{
 			"comment": "1",
-			"name": "attica",
+			"name": "Attica",
 			"owner": 0,
 			"gold": 1,
 			"food": 3,
@@ -61,7 +61,7 @@
 		},
 		{
 			"comment": "2",
-			"name": "thessaly",
+			"name": "Thessaly",
 			"owner": 1,
 			"gold": 1,
 			"food": 3,
@@ -90,7 +90,7 @@
 		},
 		{
 			"comment": "3",
-			"name": "epirus",
+			"name": "Epirus",
 			"owner": 0,
 			"gold": 1,
 			"food": 3,
@@ -110,7 +110,7 @@
 		},
 		{
 			"comment": "4",
-			"name": "dyrrachium",
+			"name": "Dyrrachium",
 			"owner": 2,
 			"gold": 1,
 			"food": 3,
@@ -130,7 +130,7 @@
 		},
 		{
 			"comment": "5",
-			"name": "macedonia",
+			"name": "Macedonia",
 			"owner": 2,
 			"gold": 1,
 			"food": 3,
@@ -150,7 +150,7 @@
 		},
 		{
 			"comment": "6",
-			"name": "thrace",
+			"name": "Thrace",
 			"owner": 3,
 			"gold": 1,
 			"food": 3,
@@ -171,7 +171,7 @@
 		},
 		{
 			"comment": "7",
-			"name": "byzantium",
+			"name": "Byzantium",
 			"owner": 3,
 			"gold": 1,
 			"food": 3,
@@ -194,7 +194,7 @@
 		},
 		{
 			"comment": "8",
-			"name": "zagore",
+			"name": "Zagore",
 			"owner": 0,
 			"gold": 1,
 			"food": 3,
@@ -215,7 +215,7 @@
 		},
 		{
 			"comment": "9",
-			"name": "dobruja",
+			"name": "Dobruja",
 			"owner": 0,
 			"gold": 1,
 			"food": 3,
@@ -241,7 +241,7 @@
 		},
 		{
 			"comment": "10",
-			"name": "moesia",
+			"name": "Moesia",
 			"owner": 0,
 			"gold": 1,
 			"food": 3,
@@ -261,7 +261,7 @@
 		},
 		{
 			"comment": "11",
-			"name": "serdika",
+			"name": "Serdika",
 			"owner": 0,
 			"gold": 1,
 			"food": 3,

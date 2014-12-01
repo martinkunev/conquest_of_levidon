@@ -3,6 +3,8 @@
 
 #define PLAYERS_LIMIT 10 /* TODO change to 16 */
 
+#define REGION_NAME_LIMIT 32
+
 #define REGIONS_LIMIT 256
 
 #include "resources.h"
@@ -51,6 +53,9 @@ struct region
 	struct polygon *location;
 
 	struct point center;
+
+	char name[REGION_NAME_LIMIT];
+	size_t name_length;
 };
 
 struct game

@@ -14,6 +14,7 @@
 struct unit units[] = {
 	{.index = 0, .health = 3, .damage = 1, .speed = 3, .cost = {.wood = -1}, .expense = {.food = -2}},
 	{.index = 1, .health = 3, .damage = 1, .speed = 3, .cost = {.gold = -1, .wood = -2}, .expense = {.food = -2}, .shoot = 1, .range = 4},
+	{.index = 2, .health = 8, .damage = 2, .speed = 8, .cost = {.gold = -2, .wood = -2}, .expense = {.food = -5}},
 };
 size_t units_count = 2;
 
@@ -179,6 +180,12 @@ int map_init(const union json *restrict json, struct game *restrict game)
 		x = vector_get(&field->array_node, 0);
 		y = vector_get(&field->array_node, 1);
 		game->regions[index].center = (struct point){x->integer, y->integer}; // TODO check vector element types
+
+		key = string("name");
+		field = dict_get(item->object, &key);
+		if (!field || (json_type(field) != STRING) || (field->string_node.length > REGION_NAME_LIMIT)) goto error;
+		memcpy(game->regions[index].name, field->string_node.data, field->string_node.length);
+		game->regions[index].name_length = field->string_node.length;
 	}
 
 	game->units = units;
@@ -187,6 +194,7 @@ int map_init(const union json *restrict json, struct game *restrict game)
 	return 0;
 
 error:
+	// TODO segmentation fault on partial initialization? (because of non-zeroed pointers)
 	map_term(game);
 	return -1;
 }

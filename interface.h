@@ -12,8 +12,8 @@
 #define CTRL_X 768
 #define CTRL_Y 32
 
-#define PANEL_X 0
-#define PANEL_Y 32
+#define PANEL_X 4
+#define PANEL_Y 4
 
 #define PANEL_WIDTH 248
 #define PANEL_HEIGHT 760
