@@ -274,8 +274,8 @@ int input_map(const struct game *restrict game, unsigned char player)
 		{
 			.left = PANEL_X,
 			.right = PANEL_X + (FIELD_SIZE + 8) * game->units_count - 1,
-			.top = PANEL_Y + 260,
-			.bottom = PANEL_Y + 260 + FIELD_SIZE - 1,
+			.top = PANEL_Y + 241,
+			.bottom = PANEL_Y + 241 + FIELD_SIZE - 1,
 			.callback = input_train
 		},
 		{
@@ -286,10 +286,10 @@ int input_map(const struct game *restrict game, unsigned char player)
 			.callback = input_dismiss
 		},
 		{
-			.left = PANEL_X + 4,
-			.right = PANEL_X + 4 + 7 * (FIELD_SIZE + PAWN_MARGIN) - PAWN_MARGIN - 1,
-			.top = PANEL_Y,
-			.bottom = PANEL_Y + FIELD_SIZE - 1,
+			.left = PANEL_X + 2,
+			.right = PANEL_X + 2 + 7 * (FIELD_SIZE + PAWN_MARGIN) - PAWN_MARGIN - 1,
+			.top = PANEL_Y + 38,
+			.bottom = PANEL_Y + 38 + FIELD_SIZE - 1,
 			.callback = input_slot,
 		}
 	};

@@ -5,5 +5,8 @@ struct image
 };
 
 int image_load_png(struct image *restrict image, const char *restrict filename);
+
 void image_draw(const struct image *restrict image, unsigned x, unsigned y);
+void display_image(const struct image *restrict image, unsigned x, unsigned y, unsigned width, unsigned height);
+
 void image_unload(struct image *restrict image);

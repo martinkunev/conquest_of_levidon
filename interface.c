@@ -36,6 +36,9 @@
 
 #define MARGIN 4
 
+#define SLOT_X(x) (PANEL_X + 2 + 1 + (x) * (FIELD_SIZE + 3))
+#define SLOT_Y(y) (PANEL_Y + 32 + MARGIN + 2 + 1 + (y) * (FIELD_SIZE + 18 + 2))
+
 // TODO compatibility with OpenGL 2.1 (used in MacOS X)
 #define glGenFramebuffers(...) glGenFramebuffersEXT(__VA_ARGS__)
 #define glGenRenderbuffers(...) glGenRenderbuffersEXT(__VA_ARGS__)
@@ -61,8 +64,8 @@ struct pawn *(*battlefield)[BATTLEFIELD_WIDTH];
 struct region *restrict regions;
 size_t regions_count;
 
-static struct image image_move_destination, image_shoot_destination, image_selected, image_flag;
-static struct image image_units[2]; // TODO the array must be enough to hold units_count units
+static struct image image_move_destination, image_shoot_destination, image_selected, image_flag, image_panel;
+static struct image image_units[3]; // TODO the array must be enough to hold units_count units
 
 static GLuint map_renderbuffer;
 
@@ -168,9 +171,11 @@ void if_init(void)
 	image_load_png(&image_shoot_destination, "img/shoot_destination.png");
 	image_load_png(&image_selected, "img/selected.png");
 	image_load_png(&image_flag, "img/flag.png");
+	image_load_png(&image_panel, "img/panel.png");
 
 	image_load_png(&image_units[0], "img/peasant.png");
 	image_load_png(&image_units[1], "img/archer.png");
+	image_load_png(&image_units[2], "img/horse_rider.png");
 
 	// TODO handle modifier keys
 	// TODO handle dead keys
@@ -400,9 +405,9 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 	draw_rectangle(PANEL_X - 2, PANEL_Y - 2, PANEL_WIDTH + 4, PANEL_HEIGHT + 4, Player + state->player);
 	//display_rectangle(0, 0, 256, 16, Player + state->player);
 
-	// TODO display background pattern instead of black
-	// show the panel in black
-	display_rectangle(PANEL_X, PANEL_Y, PANEL_WIDTH, PANEL_HEIGHT, Black);
+	// Display panel background pattern.
+	glColor4ubv(display_colors[Gray]); // TODO check why is this necessary
+	display_image(&image_panel, PANEL_X, PANEL_Y, PANEL_WIDTH, PANEL_HEIGHT);
 
 	// show map in black
 	display_rectangle(MAP_X, MAP_Y, MAP_WIDTH, MAP_HEIGHT, Black);
@@ -447,8 +452,6 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 		display_rectangle(PANEL_X, PANEL_Y, image_flag.width, image_flag.height, Player + region->owner);
 		image_draw(&image_flag, PANEL_X, PANEL_Y);
 		display_string(region->name, region->name_length, PANEL_X + image_flag.width + MARGIN, PANEL_Y, White);
-		//display_string(S("owner:"), PANEL_X, PANEL_Y - 16, White);
-		//display_rectangle(PANEL_X + 7 * font.width, PANEL_Y - 16 + ((int)font.height - 16) / 2, 16, 16, Player + region->owner);
 
 		slots_y = PANEL_Y + image_flag.height + MARGIN;
 
@@ -479,8 +482,8 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 
 				// TODO make this work for more than 6 slots
 
-				x = PANEL_X + 2 + position_x[slot->player] * (FIELD_SIZE + 3) - 2; // TODO this will not work for the leftmost slot
-				y = slots_y + 2 + position_y[slot->player] * (FIELD_SIZE + 4 + 16);
+				x = SLOT_X(position_x[slot->player]);
+				y = SLOT_Y(position_y[slot->player]);
 				position_x[slot->player] += 1;
 
 				display_unit(slot->unit->index, x, y, Player + slot->player, slot->count);
@@ -502,6 +505,8 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 
 			display_string(S("train:"), PANEL_X + 2, PANEL_Y + 200, White); // TODO fix y coordinate
 
+			//font.height
+
 			// Display train queue.
 			size_t index;
 			for(index = 0; index < TRAIN_QUEUE; ++index)
@@ -514,11 +519,9 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 				else break;
 
 			// Display units available for training.
-			//display_unit(0, PANEL_X + (FIELD_SIZE + 8) * 0, PANEL_Y + 260, White, 0);
-			//display_unit(1, PANEL_X + (FIELD_SIZE + 8) * 1, PANEL_Y + 260, White, 0);
-			display_unit(0, PANEL_X + 2 + 1 + (FIELD_SIZE + 3) * 0, PANEL_Y + 41, Player, 0);
-			display_unit(1, PANEL_X + 2 + 1 + (FIELD_SIZE + 3) * 1, PANEL_Y + 41, Player, 0);
-			display_unit(2, PANEL_X + 2 + 1 + (FIELD_SIZE + 3) * 2, PANEL_Y + 41, Player, 0);
+			display_unit(0, PANEL_X + 2 + 1 + (FIELD_SIZE + 3) * 0, PANEL_Y + 241, Player, 0);
+			display_unit(1, PANEL_X + 2 + 1 + (FIELD_SIZE + 3) * 1, PANEL_Y + 241, Player, 0);
+			display_unit(2, PANEL_X + 2 + 1 + (FIELD_SIZE + 3) * 2, PANEL_Y + 241, Player, 0);
 		}
 	}
 

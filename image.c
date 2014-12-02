@@ -158,6 +158,29 @@ void image_draw(const struct image *restrict image, unsigned x, unsigned y)
 	glDisable(GL_TEXTURE_2D);
 }
 
+void display_image(const struct image *restrict image, unsigned x, unsigned y, unsigned width, unsigned height)
+{
+	glBindTexture(GL_TEXTURE_2D, image->texture);
+
+	glEnable(GL_TEXTURE_2D);
+	glBegin(GL_QUADS);
+
+	glTexCoord2d(width / image->width, 0);
+	glVertex2f(x + width, y + height);
+
+	glTexCoord2d(0, 0);
+	glVertex2f(x, y + height);
+
+	glTexCoord2d(0, height / image->height);
+	glVertex2f(x, y);
+
+	glTexCoord2d(width / image->width, height / image->height);
+	glVertex2f(x + width, y);
+
+	glEnd();
+	glDisable(GL_TEXTURE_2D);
+}
+
 void image_unload(struct image *restrict image)
 {
 	glDeleteTextures(1, &image->texture);

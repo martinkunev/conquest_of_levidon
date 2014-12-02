@@ -102,10 +102,10 @@ void draw_rectangle(unsigned x, unsigned y, unsigned width, unsigned height, enu
 	glColor4ubv(display_colors[color]);
 
 	glBegin(GL_LINE_LOOP);
-	glVertex2i(x + width, y + height);
-	glVertex2i(x + width, y);
-	glVertex2i(x, y);
-	glVertex2i(x, y + height);
+	glVertex2f(x + width - 0.5, y + height - 0.5);
+	glVertex2f(x + width - 0.5, y + 0.5);
+	glVertex2f(x + 0.5, y + 0.5);
+	glVertex2f(x + 0.5, y + height - 0.5);
 	glEnd();
 }
 
