@@ -279,10 +279,10 @@ int input_map(const struct game *restrict game, unsigned char player)
 			.callback = input_train
 		},
 		{
-			.left = PANEL_X,
-			.right = PANEL_X + TRAIN_QUEUE * (FIELD_SIZE + PAWN_MARGIN) - 1,
-			.top = PANEL_Y + 196,
-			.bottom = PANEL_Y + 196 + FIELD_SIZE - 1,
+			.left = PANEL_X + 100,
+			.right = PANEL_X + 100 + TRAIN_QUEUE * (FIELD_SIZE + PAWN_MARGIN) - 1,
+			.top = PANEL_Y + 203,
+			.bottom = PANEL_Y + 203 + FIELD_SIZE - 1,
 			.callback = input_dismiss
 		},
 		{

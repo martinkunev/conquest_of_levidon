@@ -512,13 +512,15 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 			for(index = 0; index < TRAIN_QUEUE; ++index)
 				if (region->train[index])
 				{
-					// TODO fix x coordinate
-					display_unit(region->train[index]->index, PANEL_X + 120 + ((FIELD_SIZE + MARGIN) * index), PANEL_Y + 203, White, 0);
-					display_rectangle(PANEL_X + 120 + ((FIELD_SIZE + MARGIN) * index), PANEL_Y + 203, FIELD_SIZE, FIELD_SIZE, Progress); // TODO this should show train progress
+					// TODO fix coordinates; fix input detection
+					display_unit(region->train[index]->index, PANEL_X + 100 + ((FIELD_SIZE + MARGIN) * index), PANEL_Y + 203, White, 0);
+					display_rectangle(PANEL_X + 100 + ((FIELD_SIZE + MARGIN) * index), PANEL_Y + 203, FIELD_SIZE, FIELD_SIZE, Progress); // TODO this should show train progress
 				}
 				else break;
 
 			// Display units available for training.
+			// TODO use game->units_count
+			// TODO fix input detection
 			display_unit(0, PANEL_X + 2 + 1 + (FIELD_SIZE + 3) * 0, PANEL_Y + 241, Player, 0);
 			display_unit(1, PANEL_X + 2 + 1 + (FIELD_SIZE + 3) * 1, PANEL_Y + 241, Player, 0);
 			display_unit(2, PANEL_X + 2 + 1 + (FIELD_SIZE + 3) * 2, PANEL_Y + 241, Player, 0);

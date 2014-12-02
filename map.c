@@ -16,7 +16,7 @@ struct unit units[] = {
 	{.index = 1, .health = 3, .damage = 1, .speed = 3, .cost = {.gold = -1, .wood = -2}, .expense = {.food = -2}, .shoot = 1, .range = 4},
 	{.index = 2, .health = 8, .damage = 2, .speed = 8, .cost = {.gold = -2, .wood = -2}, .expense = {.food = -5}},
 };
-size_t units_count = 2;
+size_t units_count = 3;
 
 static struct polygon *region_create(size_t count, ...)
 {
