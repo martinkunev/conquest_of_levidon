@@ -7,6 +7,8 @@
 #define BATTLEFIELD_WIDTH 9
 #define BATTLEFIELD_HEIGHT 9
 
+#define ROUND_DURATION 8
+
 struct pawn
 {
 	struct pawn *_prev, *_next;

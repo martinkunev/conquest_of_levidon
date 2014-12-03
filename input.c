@@ -49,6 +49,8 @@ static int input_local(void (*display)(const struct player *restrict, const stru
 
 	display(game->players, &state);
 
+	// TODO clear queued events (previously pressed keys, etc.)
+
 	while (1)
 	{
 		// TODO consider using xcb_poll_for_event()
@@ -183,12 +185,16 @@ static int input_train(int code, unsigned x, unsigned y, uint16_t modifiers, con
 	{
 		size_t unit = x / (FIELD_SIZE + 1);
 		if (unit >= game->units_count) return 0;
+		if (!resource_enough(&game->players[state.player].treasury, &game->units[unit].cost)) return 0;
 
 		struct unit **train = game->regions[state.region].train;
 		size_t index;
 		for(index = 0; index < TRAIN_QUEUE; ++index)
 			if (!train[index])
 			{
+				// Spend the money required for the units.
+				resource_subtract(&game->players[state.player].treasury, &game->units[unit].cost);
+
 				train[index] = (struct unit *)(game->units + unit); // TODO fix this cast
 				break;
 			}
@@ -207,9 +213,18 @@ static int input_dismiss(int code, unsigned x, unsigned y, uint16_t modifiers, c
 	if (code == -1)
 	{
 		struct unit **train = game->regions[state.region].train;
+		size_t index = (x / (FIELD_SIZE + 1));
 
-		size_t index;
-		for(index = (x / (FIELD_SIZE + 1) + 1); index < TRAIN_QUEUE; ++index)
+		if (!train[index]) return 0;
+
+		// If the unit is not yet trained, return the spent resources.
+		// Else, reset training information.
+		if (index || !game->regions[state.region].train_time)
+			resource_add(&game->players[state.player].treasury, &train[index]->cost);
+		else
+			game->regions[state.region].train_time = 0;
+
+		for(index += 1; index < TRAIN_QUEUE; ++index)
 			train[index - 1] = train[index];
 		train[TRAIN_QUEUE - 1] = 0;
 	}

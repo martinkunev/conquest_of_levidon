@@ -26,8 +26,9 @@ struct unit
 	unsigned char speed;
 
 	struct resources cost, expense;
+	unsigned char time;
 
-	unsigned char shoot; // damage while shooting
+	unsigned char shoot; // damage when shooting
 	unsigned char range;
 };
 
@@ -44,8 +45,11 @@ struct slot
 struct region
 {
 	unsigned char owner;
-	struct slot *slots;
+
+	unsigned char train_time;
 	struct unit *train[TRAIN_QUEUE];
+
+	struct slot *slots;
 	struct resources income;
 
 	size_t index;

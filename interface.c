@@ -229,10 +229,6 @@ void if_battle(const struct player *restrict players, const struct state *restri
 
 	// Battlefield
 
-	// color every other field in white
-	/*for(y = 0; y < BATTLEFIELD_HEIGHT; y += 1)
-		for(x = y % 2; x < BATTLEFIELD_WIDTH; x += 2)
-			display_rectangle(x * FIELD_SIZE, y * FIELD_SIZE, FIELD_SIZE, FIELD_SIZE, White);*/
 	display_rectangle(0, 0, BATTLEFIELD_WIDTH * FIELD_SIZE, BATTLEFIELD_HEIGHT * FIELD_SIZE, B0);
 
 	// display pawns
@@ -363,6 +359,51 @@ void if_battle(const struct player *restrict players, const struct state *restri
 	glXSwapBuffers(display, drawable);
 }
 
+double animation_timer;
+int if_battle_animation(void)
+{
+	size_t x, y;
+	const struct pawn *p;
+	int moving = 0;
+
+	// clear window
+	glClearColor(0.0, 0.0, 0.0, 0.0);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	// Battlefield
+
+	display_rectangle(0, 0, BATTLEFIELD_WIDTH * FIELD_SIZE, BATTLEFIELD_HEIGHT * FIELD_SIZE, B0);
+
+	// display pawns
+	for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
+		for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
+		{
+			if (p = battlefield[y][x])
+			{
+				double px, py;
+				double t;
+
+				do
+				{
+					t = animation_timer / (p->move.t[1] - p->move.t[0]);
+					if (t > 1) t = 1;
+					else if ((p->move.x[1] != p->move.x[0]) || (p->move.y[1] != p->move.y[0])) moving = 1;
+
+					px = p->move.x[1] * t + p->move.x[0] * (1 - t);
+					py = p->move.y[1] * t + p->move.y[0] * (1 - t);
+
+					display_rectangle(px * FIELD_SIZE, py * FIELD_SIZE, FIELD_SIZE, FIELD_SIZE, Player + p->slot->player);
+					image_draw(&image_units[p->slot->unit->index], px * FIELD_SIZE, py * FIELD_SIZE);
+				} while (p = p->_next);
+			}
+		}
+
+	glFlush();
+	glXSwapBuffers(display, drawable);
+
+	return moving;
+}
+
 static void show_resource(const char *restrict name, size_t name_length, int treasury, int income, int expense, unsigned y)
 {
 	char buffer[32]; // TODO make sure this is enough
@@ -370,7 +411,7 @@ static void show_resource(const char *restrict name, size_t name_length, int tre
 	unsigned offset;
 
 	length = format_uint(format_bytes(buffer, name, name_length), treasury) - buffer;
-	display_string(buffer, length, PANEL_X, y, White);
+	display_string(buffer, length, PANEL_X, y, Black);
 	offset = length;
 
 	if (income)
@@ -401,7 +442,7 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 	//display_rectangle(0, 0, 256, 16, Player + state->player);
 
 	// Display panel background pattern.
-	glColor4ubv(display_colors[Gray]); // TODO check why is this necessary
+	glColor4ubv(display_colors[White]); // TODO check why is this necessary
 	display_image(&image_panel, PANEL_X, PANEL_Y, PANEL_WIDTH, PANEL_HEIGHT);
 
 	// show map in black
@@ -423,10 +464,10 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 		display_polygon(regions[i].location, MAP_X, MAP_Y);
 
 		// Remember income and expenses.
-		if (regions[i].owner == state->player) resource_change(&income, &regions[i].income);
+		if (regions[i].owner == state->player) resource_add(&income, &regions[i].income);
 		for(slot = regions[i].slots; slot; slot = slot->_next)
 			if (slot->player == state->player)
-				resource_change(&expenses, &slot->unit->expense);
+				resource_add(&expenses, &slot->unit->expense);
 	}
 	for(i = 0; i < regions_count; ++i)
 	{
@@ -443,7 +484,7 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 		const struct region *region = regions + state->region;
 
 		// Display flag of the region owner and name of the region.
-		display_rectangle(PANEL_X, PANEL_Y, image_flag.width, image_flag.height, Player + region->owner); // TODO this should not spill out of the flag
+		display_rectangle(PANEL_X + 4, PANEL_Y + 4, 24, 12, Player + region->owner);
 		image_draw(&image_flag, PANEL_X, PANEL_Y);
 		display_string(region->name, region->name_length, PANEL_X + image_flag.width + MARGIN, PANEL_Y, Black);
 
@@ -493,17 +534,18 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 
 		if (state->player == region->owner)
 		{
-			//display_rectangle(PANEL_X, PANEL_Y + 200, PANEL_WIDTH, 76, Black);
-
 			display_string(S("train:"), PANEL_X + 2, PANEL_Y + 200, Black); // TODO fix y coordinate
 
 			// Display train queue.
 			size_t index;
+			unsigned progress;
 			for(index = 0; index < TRAIN_QUEUE; ++index)
 				if (region->train[index])
 				{
+					if (index) progress = 0;
+					else progress = ((double)region->train_time / region->train[index]->time) * FIELD_SIZE;
 					display_unit(region->train[index]->index, TRAIN_X(index), TRAIN_Y, White, 0);
-					display_rectangle(TRAIN_X(index), TRAIN_Y, FIELD_SIZE, FIELD_SIZE, Progress); // TODO this should show train progress
+					display_rectangle(TRAIN_X(index), TRAIN_Y, FIELD_SIZE, FIELD_SIZE - progress, Progress); // TODO this should show train progress
 				}
 				else display_rectangle(TRAIN_X(index), TRAIN_Y, FIELD_SIZE, FIELD_SIZE, Black);
 

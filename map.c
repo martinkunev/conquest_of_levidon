@@ -11,10 +11,11 @@
 
 // TODO support more than 7 slots
 
-struct unit units[] = {
-	{.index = 0, .health = 3, .damage = 1, .speed = 3, .cost = {.wood = -1}, .expense = {.food = -2}},
-	{.index = 1, .health = 3, .damage = 1, .speed = 3, .cost = {.gold = -1, .wood = -2}, .expense = {.food = -2}, .shoot = 1, .range = 4},
-	{.index = 2, .health = 8, .damage = 2, .speed = 8, .cost = {.gold = -2, .wood = -2}, .expense = {.food = -5}},
+struct unit units[] =
+{
+	{.index = 0, .health = 3, .damage = 1, .speed = 3, .cost = {.wood = 1}, .expense = {.food = 2}, .time = 1},
+	{.index = 1, .health = 3, .damage = 1, .speed = 3, .cost = {.gold = 1, .wood = 2}, .expense = {.food = 2}, .shoot = 1, .range = 4, .time = 1},
+	{.index = 2, .health = 8, .damage = 2, .speed = 8, .cost = {.gold = 2, .wood = 2}, .expense = {.food = 5}, .time = 2},
 };
 size_t units_count = 3;
 
@@ -118,9 +119,10 @@ int map_init(const union json *restrict json, struct game *restrict game)
 		if (!field || (json_type(field) != INTEGER)) goto error;
 		game->regions[index].owner = field->integer;
 
-		game->regions[index].slots = 0; // TODO implement this
-
+		game->regions[index].train_time = 0;
 		memset(game->regions[index].train, 0, sizeof(game->regions[index].train)); // TODO implement this
+
+		game->regions[index].slots = 0; // TODO implement this
 
 		key = string("gold");
 		field = dict_get(item->object, &key);

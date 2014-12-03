@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/time.h>
 #include <unistd.h>
 
 #include "types.h"
@@ -170,7 +171,7 @@ static void pawn_move(struct pawn *battlefield[BATTLEFIELD_HEIGHT][BATTLEFIELD_W
 	pawn->move.x[1] = pawn->move.x[0] = x;
 	pawn->move.y[1] = pawn->move.y[0] = y;
 	pawn->move.t[0] = 0;
-	pawn->move.t[1] = 8;
+	pawn->move.t[1] = ROUND_DURATION;
 }
 
 // Determines whether the two objects will collide. Returns the time of the collision.
@@ -872,6 +873,16 @@ int battle(const struct game *restrict game, struct region *restrict region)
 					}
 				}
 			}
+		}
+
+		extern double animation_timer;
+		struct timeval start, now;
+		animation_timer = 0;
+		gettimeofday(&start, 0);
+		while (if_battle_animation())
+		{
+			gettimeofday(&now, 0);
+			animation_timer = (now.tv_sec * 1000000 + now.tv_usec - start.tv_sec * 1000000 - start.tv_usec) / 500000.0;
 		}
 
 		// Handle pawn movement and clean the corpses from shooting.

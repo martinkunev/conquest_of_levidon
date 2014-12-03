@@ -64,14 +64,11 @@ static int play(struct game *restrict game)
 			region = game->regions + index;
 
 			for(slot = region->slots; slot; slot = slot->_next)
-				resource_change(expenses + slot->player, &slot->unit->expense);
+				resource_add(expenses + slot->player, &slot->unit->expense);
 
-			// The first training unit finished the training. Add it to the region's slots.
-			if (region->train[0] && resource_enough(&game->players[region->owner].treasury, &region->train[0]->cost))
+			// Update training time and check if there are trained units.
+			if (region->train[0] && (++region->train_time == region->train[0]->time))
 			{
-				// Spend the money required for the unit.
-				resource_spend(&game->players[region->owner].treasury, &region->train[0]->cost);
-
 				slot = malloc(sizeof(*slot));
 				if (!slot) ; // TODO
 				slot->unit = region->train[0];
@@ -84,6 +81,7 @@ static int play(struct game *restrict game)
 				region->slots = slot;
 				slot->move = slot->location = region;
 
+				region->train_time = 0;
 				for(i = 1; i < TRAIN_QUEUE; ++i)
 					region->train[i - 1] = region->train[i];
 				region->train[TRAIN_QUEUE - 1] = 0;
@@ -195,7 +193,7 @@ static int play(struct game *restrict game)
 			}
 
 			// Add the income from each region to the owner's treasury.
-			resource_change(&game->players[region->owner].treasury, &region->income);
+			resource_add(&game->players[region->owner].treasury, &region->income);
 
 			// Each player that controls a region is alive.
 			alive[region->owner] = 1;
