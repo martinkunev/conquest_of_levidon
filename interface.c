@@ -34,11 +34,6 @@
 #define RESOURCE_IRON 720
 #define RESOURCE_ROCK 740
 
-#define MARGIN 4
-
-#define SLOT_X(x) (PANEL_X + 2 + 1 + (x) * (FIELD_SIZE + 3))
-#define SLOT_Y(y) (PANEL_Y + 32 + MARGIN + 2 + 1 + (y) * (FIELD_SIZE + 18 + 2))
-
 // TODO compatibility with OpenGL 2.1 (used in MacOS X)
 #define glGenFramebuffers(...) glGenFramebuffersEXT(__VA_ARGS__)
 #define glGenRenderbuffers(...) glGenRenderbuffersEXT(__VA_ARGS__)
@@ -449,9 +444,9 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 		const struct region *region = regions + state->region;
 
 		// Display flag of the region owner and name of the region.
-		display_rectangle(PANEL_X, PANEL_Y, image_flag.width, image_flag.height, Player + region->owner);
+		display_rectangle(PANEL_X, PANEL_Y, image_flag.width, image_flag.height, Player + region->owner); // TODO this should not spill out of the flag
 		image_draw(&image_flag, PANEL_X, PANEL_Y);
-		display_string(region->name, region->name_length, PANEL_X + image_flag.width + MARGIN, PANEL_Y, White);
+		display_string(region->name, region->name_length, PANEL_X + image_flag.width + MARGIN, PANEL_Y, Black);
 
 		slots_y = PANEL_Y + image_flag.height + MARGIN;
 
@@ -501,29 +496,27 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 
 		if (state->player == region->owner)
 		{
-			display_rectangle(PANEL_X, PANEL_Y + 200, PANEL_WIDTH, 76, Black);
+			//display_rectangle(PANEL_X, PANEL_Y + 200, PANEL_WIDTH, 76, Black);
 
-			display_string(S("train:"), PANEL_X + 2, PANEL_Y + 200, White); // TODO fix y coordinate
-
-			//font.height
+			display_string(S("train:"), PANEL_X + 2, PANEL_Y + 200, Black); // TODO fix y coordinate
 
 			// Display train queue.
 			size_t index;
 			for(index = 0; index < TRAIN_QUEUE; ++index)
 				if (region->train[index])
 				{
-					// TODO fix coordinates; fix input detection
-					display_unit(region->train[index]->index, PANEL_X + 100 + ((FIELD_SIZE + MARGIN) * index), PANEL_Y + 203, White, 0);
-					display_rectangle(PANEL_X + 100 + ((FIELD_SIZE + MARGIN) * index), PANEL_Y + 203, FIELD_SIZE, FIELD_SIZE, Progress); // TODO this should show train progress
+					// TODO fix input detection
+					display_unit(region->train[index]->index, TRAIN_X(index), TRAIN_Y, White, 0);
+					display_rectangle(TRAIN_X(index), TRAIN_Y, FIELD_SIZE, Progress); // TODO this should show train progress
 				}
-				else break;
+				else display_rectangle(TRAIN_X(index), TRAIN_Y, FIELD_SIZE, FIELD_SIZE, Black);
 
 			// Display units available for training.
 			// TODO use game->units_count
 			// TODO fix input detection
-			display_unit(0, PANEL_X + 2 + 1 + (FIELD_SIZE + 3) * 0, PANEL_Y + 241, Player, 0);
-			display_unit(1, PANEL_X + 2 + 1 + (FIELD_SIZE + 3) * 1, PANEL_Y + 241, Player, 0);
-			display_unit(2, PANEL_X + 2 + 1 + (FIELD_SIZE + 3) * 2, PANEL_Y + 241, Player, 0);
+			display_unit(0, INVENTORY_X(0), INVENTORY_Y, Player, 0);
+			display_unit(1, INVENTORY_X(1), INVENTORY_Y, Player, 0);
+			display_unit(2, INVENTORY_X(2), INVENTORY_Y, Player, 0);
 		}
 	}
 

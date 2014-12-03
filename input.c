@@ -177,11 +177,11 @@ static int input_train(int code, unsigned x, unsigned y, uint16_t modifiers, con
 	if (code >= 0) return INPUT_NOTME;
 
 	if (state.player != game->regions[state.region].owner) return 0;
-	if ((x % (FIELD_SIZE + PAWN_MARGIN)) >= FIELD_SIZE) return 0;
+	if ((x % (FIELD_SIZE + 1)) >= FIELD_SIZE) return 0;
 
 	if (code == -1)
 	{
-		size_t unit = x / (FIELD_SIZE + PAWN_MARGIN);
+		size_t unit = x / (FIELD_SIZE + 1);
 		if (unit >= game->units_count) return 0;
 
 		struct unit **train = game->regions[state.region].train;
@@ -202,14 +202,14 @@ static int input_dismiss(int code, unsigned x, unsigned y, uint16_t modifiers, c
 	if (code >= 0) return INPUT_NOTME;
 
 	if (state.player != game->regions[state.region].owner) return 0;
-	if ((x % (FIELD_SIZE + PAWN_MARGIN)) >= FIELD_SIZE) return 0;
+	if ((x % (FIELD_SIZE + 1)) >= FIELD_SIZE) return 0;
 
 	if (code == -1)
 	{
 		struct unit **train = game->regions[state.region].train;
 
 		size_t index;
-		for(index = (x / (FIELD_SIZE + PAWN_MARGIN) + 1); index < TRAIN_QUEUE; ++index)
+		for(index = (x / (FIELD_SIZE + 1) + 1); index < TRAIN_QUEUE; ++index)
 			train[index - 1] = train[index];
 		train[TRAIN_QUEUE - 1] = 0;
 	}
@@ -272,17 +272,17 @@ int input_map(const struct game *restrict game, unsigned char player)
 			.callback = input_region
 		},
 		{
-			.left = PANEL_X,
-			.right = PANEL_X + (FIELD_SIZE + 8) * game->units_count - 1,
-			.top = PANEL_Y + 241,
-			.bottom = PANEL_Y + 241 + FIELD_SIZE - 1,
+			.left = INVENTORY_X(0),
+			.right = INVENTORY_X(0) + game->units_count * (FIELD_SIZE + 1) - 1 - 1,
+			.top = INVENTORY_Y,
+			.bottom = INVENTORY_Y + FIELD_SIZE - 1,
 			.callback = input_train
 		},
 		{
-			.left = PANEL_X + 100,
-			.right = PANEL_X + 100 + TRAIN_QUEUE * (FIELD_SIZE + PAWN_MARGIN) - 1,
-			.top = PANEL_Y + 203,
-			.bottom = PANEL_Y + 203 + FIELD_SIZE - 1,
+			.left = TRAIN_X(0),
+			.right = TRAIN_X(0) + TRAIN_QUEUE * (FIELD_SIZE + 1) - 1 - 1,
+			.top = TRAIN_Y,
+			.bottom = TRAIN_Y + FIELD_SIZE - 1,
 			.callback = input_dismiss
 		},
 		{
