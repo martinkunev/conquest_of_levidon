@@ -408,7 +408,6 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 	display_rectangle(MAP_X, MAP_Y, MAP_WIDTH, MAP_HEIGHT, Black);
 
 	size_t x, y;
-	size_t slots_y;
 	struct pawn *p;
 
 	// Map
@@ -448,8 +447,6 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 		image_draw(&image_flag, PANEL_X, PANEL_Y);
 		display_string(region->name, region->name_length, PANEL_X + image_flag.width + MARGIN, PANEL_Y, Black);
 
-		slots_y = PANEL_Y + image_flag.height + MARGIN;
-
 		// Display the slots at the current region.
 		if (players[state->player].alliance == players[region->owner].alliance)
 		{
@@ -462,7 +459,7 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 					if (!self_count)
 					{
 						self_count = 1;
-						display_rectangle(PANEL_X, slots_y, PANEL_WIDTH, FIELD_SIZE + MARGIN + 16, Self);
+						display_rectangle(PANEL_X, SLOT_Y(0) - 3, PANEL_WIDTH, FIELD_SIZE + MARGIN + 16, Self);
 					}
 				}
 				else
@@ -470,7 +467,7 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 					if (!position_y[slot->player])
 					{
 						allies_count += 1;
-						display_rectangle(PANEL_X, slots_y + allies_count * (FIELD_SIZE + MARGIN + 16), PANEL_WIDTH, FIELD_SIZE + MARGIN + 16, Ally);
+						display_rectangle(PANEL_X, SLOT_Y(allies_count) - 3, PANEL_WIDTH, FIELD_SIZE + MARGIN + 16, Ally);
 						position_y[slot->player] = allies_count;
 					}
 				}
@@ -505,15 +502,13 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 			for(index = 0; index < TRAIN_QUEUE; ++index)
 				if (region->train[index])
 				{
-					// TODO fix input detection
 					display_unit(region->train[index]->index, TRAIN_X(index), TRAIN_Y, White, 0);
-					display_rectangle(TRAIN_X(index), TRAIN_Y, FIELD_SIZE, Progress); // TODO this should show train progress
+					display_rectangle(TRAIN_X(index), TRAIN_Y, FIELD_SIZE, FIELD_SIZE, Progress); // TODO this should show train progress
 				}
 				else display_rectangle(TRAIN_X(index), TRAIN_Y, FIELD_SIZE, FIELD_SIZE, Black);
 
 			// Display units available for training.
 			// TODO use game->units_count
-			// TODO fix input detection
 			display_unit(0, INVENTORY_X(0), INVENTORY_Y, Player, 0);
 			display_unit(1, INVENTORY_X(1), INVENTORY_Y, Player, 0);
 			display_unit(2, INVENTORY_X(2), INVENTORY_Y, Player, 0);

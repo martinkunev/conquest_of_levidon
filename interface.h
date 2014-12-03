@@ -33,7 +33,7 @@
 #define TRAIN_Y (PANEL_Y + 200)
 
 #define INVENTORY_X(x) (PANEL_X + (x) * (FIELD_SIZE + 1))
-#define INVENTORY_Y (TRAIN_Y + FIELD_SIZE + 1 + MARGIN + 1)
+#define INVENTORY_Y (TRAIN_Y + FIELD_SIZE + MARGIN)
 
 void if_init(void);
 

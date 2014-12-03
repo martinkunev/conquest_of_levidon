@@ -286,10 +286,10 @@ int input_map(const struct game *restrict game, unsigned char player)
 			.callback = input_dismiss
 		},
 		{
-			.left = PANEL_X + 2,
-			.right = PANEL_X + 2 + 7 * (FIELD_SIZE + PAWN_MARGIN) - PAWN_MARGIN - 1,
-			.top = PANEL_Y + 38,
-			.bottom = PANEL_Y + 38 + FIELD_SIZE - 1,
+			.left = SLOT_X(0),
+			.right = SLOT_X(0) + 7 * (FIELD_SIZE + MARGIN) - MARGIN - 1,
+			.top = SLOT_Y(0),
+			.bottom = SLOT_Y(0) + FIELD_SIZE - 1,
 			.callback = input_slot,
 		}
 	};
