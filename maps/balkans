@@ -1,9 +1,9 @@
 {
 	"players": [
-		{"alliance": 0, "gold": 0, "food": 0, "wood": 0, "iron": 0, "rock": 0},
-		{"alliance": 1, "gold": 1, "food": 3, "wood": 2, "iron": 0, "rock": 0},
-		{"alliance": 2, "gold": 1, "food": 3, "wood": 2, "iron": 0, "rock": 0},
-		{"alliance": 1, "gold": 1, "food": 3, "wood": 2, "iron": 0, "rock": 0}
+		{"alliance": 0, "gold": 0, "food": 0, "wood": 0, "iron": 0, "stone": 0},
+		{"alliance": 1, "gold": 1, "food": 3, "wood": 2, "iron": 0, "stone": 0},
+		{"alliance": 2, "gold": 1, "food": 3, "wood": 2, "iron": 0, "stone": 0},
+		{"alliance": 1, "gold": 1, "food": 3, "wood": 2, "iron": 0, "stone": 0}
 	],
 	"regions": [
 		{
@@ -14,7 +14,7 @@
 			"food": 3,
 			"wood": 2,
 			"iron": 0,
-			"rock": 0,
+			"stone": 0,
 			"neighbors": [-1, 1, -1, -1, -1, -1, -1, -1],
 			"location": [
 				[309, 580],
@@ -40,7 +40,7 @@
 			"food": 3,
 			"wood": 2,
 			"iron": 0,
-			"rock": 0,
+			"stone": 0,
 			"neighbors": [-1, -1, 2, 3, -1, -1, 0, -1],
 			"location": [
 				[367, 586],
@@ -67,7 +67,7 @@
 			"food": 3,
 			"wood": 2,
 			"iron": 0,
-			"rock": 0,
+			"stone": 0,
 			"neighbors": [-1, 6, 5, -1, 3, -1, 1, -1],
 			"location": [
 				[392, 463],
@@ -96,7 +96,7 @@
 			"food": 3,
 			"wood": 2,
 			"iron": 0,
-			"rock": 0,
+			"stone": 0,
 			"neighbors": [2, 5, 4, -1, -1, -1, -1, 1],
 			"location": [
 				[262, 544],
@@ -116,7 +116,7 @@
 			"food": 3,
 			"wood": 2,
 			"iron": 0,
-			"rock": 0,
+			"stone": 0,
 			"neighbors": [5, -1, -1, -1, -1, -1, 3, -1],
 			"location": [
 				[207, 377],
@@ -136,7 +136,7 @@
 			"food": 3,
 			"wood": 2,
 			"iron": 0,
-			"rock": 0,
+			"stone": 0,
 			"neighbors": [6, 11, -1, -1, 4, 3, 2, -1],
 			"location": [
 				[305, 439],
@@ -156,7 +156,7 @@
 			"food": 3,
 			"wood": 2,
 			"iron": 0,
-			"rock": 0,
+			"stone": 0,
 			"neighbors": [7, 8, -1, 11, 5, 2, -1, -1],
 			"location": [
 				[382, 434],
@@ -177,7 +177,7 @@
 			"food": 3,
 			"wood": 2,
 			"iron": 0,
-			"rock": 0,
+			"stone": 0,
 			"neighbors": [-1, -1, -1, 8, 6, -1, -1, -1],
 			"location": [
 				[516, 391],
@@ -200,7 +200,7 @@
 			"food": 3,
 			"wood": 2,
 			"iron": 0,
-			"rock": 0,
+			"stone": 0,
 			"neighbors": [-1, 9, 10, -1, 11, 6, -1, 7],
 			"location": [
 				[516, 391],
@@ -221,7 +221,7 @@
 			"food": 3,
 			"wood": 2,
 			"iron": 0,
-			"rock": 0,
+			"stone": 0,
 			"neighbors": [-1, -1, -1, -1, -1, 10, 8, -1],
 			"location": [
 				[581, 284],
@@ -247,7 +247,7 @@
 			"food": 3,
 			"wood": 2,
 			"iron": 0,
-			"rock": 0,
+			"stone": 0,
 			"neighbors": [-1, 9, -1, -1, -1, 11, 8, -1],
 			"location": [
 				[433, 314],
@@ -267,7 +267,7 @@
 			"food": 3,
 			"wood": 2,
 			"iron": 0,
-			"rock": 0,
+			"stone": 0,
 			"neighbors": [8, 10, -1, -1, -1, -1, 5, 6],
 			"location": [
 				[433, 314],

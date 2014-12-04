@@ -562,7 +562,7 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 	show_resource(S("food: "), players[state->player].treasury.food, income.food, expenses.food, RESOURCE_FOOD);
 	show_resource(S("wood: "), players[state->player].treasury.wood, income.wood, expenses.wood, RESOURCE_WOOD);
 	show_resource(S("iron: "), players[state->player].treasury.iron, income.iron, expenses.iron, RESOURCE_IRON);
-	show_resource(S("rock: "), players[state->player].treasury.rock, income.rock, expenses.rock, RESOURCE_ROCK);
+	show_resource(S("stone: "), players[state->player].treasury.stone, income.stone, expenses.stone, RESOURCE_ROCK);
 
 	glFlush();
 	glXSwapBuffers(display, drawable);

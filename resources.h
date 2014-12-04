@@ -4,7 +4,7 @@ struct resources
 	int food;
 	int wood;
 	int iron;
-	int rock;
+	int stone;
 };
 
 int resource_enough(const struct resources *restrict total, const struct resources *restrict required);

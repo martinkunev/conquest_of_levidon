@@ -89,10 +89,10 @@ int map_init(const union json *restrict json, struct game *restrict game)
 		if (!field || (json_type(field) != INTEGER)) goto error;
 		game->players[index].treasury.wood = field->integer;
 
-		key = string("rock");
+		key = string("stone");
 		field = dict_get(item->object, &key);
 		if (!field || (json_type(field) != INTEGER)) goto error;
-		game->players[index].treasury.rock = field->integer;
+		game->players[index].treasury.stone = field->integer;
 
 		game->players[index].type = Local; // TODO set this
 	}
@@ -144,10 +144,10 @@ int map_init(const union json *restrict json, struct game *restrict game)
 		if (!field || (json_type(field) != INTEGER)) goto error;
 		game->regions[index].income.wood = field->integer;
 
-		key = string("rock");
+		key = string("stone");
 		field = dict_get(item->object, &key);
 		if (!field || (json_type(field) != INTEGER)) goto error;
-		game->regions[index].income.rock = field->integer;
+		game->regions[index].income.stone = field->integer;
 
 		key = string("neighbors");
 		field = dict_get(item->object, &key);
