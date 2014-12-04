@@ -19,6 +19,12 @@ struct unit units[] =
 };
 size_t units_count = 3;
 
+struct building buildings[] =
+{
+	//
+};
+size_t buildings_count = 3;
+
 static struct polygon *region_create(size_t count, ...)
 {
 	size_t index;
@@ -36,6 +42,32 @@ static struct polygon *region_create(size_t count, ...)
 	va_end(vertices);
 
 	return polygon;
+}
+
+static int map_build(uint32_t *restrict buildings, const struct vector *restrict list)
+{
+	size_t i;
+	const union json *entry;
+
+	#define EQ(data, size, name) (((size) == (sizeof(name) - 1)) && !memcmp((data), (name), sizeof(name) - 1))
+
+	for(i = 0; i < list->length; ++i)
+	{
+		entry = vector_get(list, i);
+		if (json_type(entry) != STRING) return -1;
+
+		if (EQ(entry->string_node.data, entry->string_node.length, "irrigation"))
+			*buildings |= BUILDING_IRRIGATION;
+		else if (EQ(entry->string_node.data, entry->string_node.length, "lumbermill"))
+			*buildings |= BUILDING_LUMBERMILL;
+		else if (EQ(entry->string_node.data, entry->string_node.length, "mine"))
+			*buildings |= BUILDING_MINE;
+		// TODO else show log message
+	}
+
+	#undef EQ
+
+	return 0;
 }
 
 int map_init(const union json *restrict json, struct game *restrict game)
@@ -148,6 +180,16 @@ int map_init(const union json *restrict json, struct game *restrict game)
 		field = dict_get(item->object, &key);
 		if (!field || (json_type(field) != INTEGER)) goto error;
 		game->regions[index].income.stone = field->integer;
+
+		game->regions[index].buildings = 0;
+		game->regions[index].construct = 0;
+		key = string("built");
+		field = dict_get(item->object, &key);
+		if (field)
+		{
+			if (json_type(field) != ARRAY) goto error;
+			if (map_build(&game->regions[index].buildings, &field->array_node)) goto error;
+		}
 
 		key = string("neighbors");
 		field = dict_get(item->object, &key);

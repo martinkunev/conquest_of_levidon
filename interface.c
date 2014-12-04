@@ -61,6 +61,7 @@ size_t regions_count;
 
 static struct image image_move_destination, image_shoot_destination, image_selected, image_flag, image_panel;
 static struct image image_units[3]; // TODO the array must be enough to hold units_count units
+static struct image image_buildings[3]; // TODO the array must be big enough to hold buildings_count elements
 
 static GLuint map_renderbuffer;
 
@@ -171,6 +172,10 @@ void if_init(void)
 	image_load_png(&image_units[0], "img/peasant.png");
 	image_load_png(&image_units[1], "img/archer.png");
 	image_load_png(&image_units[2], "img/horse_rider.png");
+
+	image_load_png(&image_buildings[0], "img/irrigation.png");
+	image_load_png(&image_buildings[1], "img/lumbermill.png");
+	image_load_png(&image_buildings[2], "img/mine.png");
 
 	// TODO handle modifier keys
 	// TODO handle dead keys
@@ -423,7 +428,7 @@ static void show_resource(const char *restrict name, size_t name_length, int tre
 
 	if (expense)
 	{
-		length = format_sint(buffer, expense) - buffer;
+		length = format_sint(buffer, -expense) - buffer;
 		display_string(buffer, length, PANEL_X + offset * 10, y, Enemy);
 		// offset += length;
 	}
@@ -530,6 +535,11 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 					display_arrow(from, to, MAP_X, MAP_Y, Self);
 				}
 			}
+
+			display_rectangle(BUILDING_X(0), BUILDING_Y, 98, 32, White);
+			if (region->buildings & BUILDING_IRRIGATION) image_draw(image_buildings + 0, BUILDING_X(0), BUILDING_Y);
+			if (region->buildings & BUILDING_LUMBERMILL) image_draw(image_buildings + 1, BUILDING_X(1), BUILDING_Y);
+			if (region->buildings & BUILDING_MINE) image_draw(image_buildings + 2, BUILDING_X(2), BUILDING_Y);
 		}
 
 		if (state->player == region->owner)
@@ -558,6 +568,7 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 	}
 
 	// Treasury
+	// TODO income is no longer properly calculated
 	show_resource(S("gold: "), players[state->player].treasury.gold, income.gold, expenses.gold, RESOURCE_GOLD);
 	show_resource(S("food: "), players[state->player].treasury.food, income.food, expenses.food, RESOURCE_FOOD);
 	show_resource(S("wood: "), players[state->player].treasury.wood, income.wood, expenses.wood, RESOURCE_WOOD);

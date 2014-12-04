@@ -7,6 +7,12 @@
 
 #define REGIONS_LIMIT 256
 
+#define BUILDING_NAME_LIMIT 32
+
+#define BUILDING_IRRIGATION		0x1
+#define BUILDING_LUMBERMILL		0x2
+#define BUILDING_MINE			0x4
+
 #include "resources.h"
 #include "display.h"
 
@@ -30,6 +36,12 @@ struct unit
 
 	unsigned char shoot; // damage when shooting
 	unsigned char range;
+};
+
+struct building
+{
+	char name[BUILDING_NAME_LIMIT];
+	size_t name_length;
 };
 
 struct slot
@@ -60,6 +72,8 @@ struct region
 
 	char name[REGION_NAME_LIMIT];
 	size_t name_length;
+
+	uint32_t buildings, construct;
 };
 
 struct game

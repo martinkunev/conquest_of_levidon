@@ -35,6 +35,9 @@
 #define INVENTORY_X(x) (PANEL_X + (x) * (FIELD_SIZE + 1))
 #define INVENTORY_Y (TRAIN_Y + FIELD_SIZE + MARGIN)
 
+#define BUILDING_X(x) (PANEL_X + (x) * (FIELD_SIZE + 1))
+#define BUILDING_Y (PANEL_Y + 300)
+
 void if_init(void);
 
 void if_set(struct pawn *bf[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH]);

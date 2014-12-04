@@ -18,4 +18,4 @@ map: main.o map.o resources.o interface.o input.o display.o image.o battle.o for
 
 clean:
 	rm -f battle.o format.o main.o resources.o map.o interface.o input.o display.o json.o dictionary.o vector.o
-	rm -f battle
+	rm -f battle map
