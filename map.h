@@ -42,6 +42,11 @@ struct building
 {
 	char name[BUILDING_NAME_LIMIT];
 	size_t name_length;
+
+	struct resources cost, income;
+	unsigned char time;
+
+	// TODO requirements
 };
 
 struct slot
@@ -62,7 +67,6 @@ struct region
 	struct unit *train[TRAIN_QUEUE];
 
 	struct slot *slots;
-	struct resources income;
 
 	size_t index;
 	struct region *neighbors[NEIGHBORS_LIMIT];
@@ -73,7 +77,9 @@ struct region
 	char name[REGION_NAME_LIMIT];
 	size_t name_length;
 
-	uint32_t buildings, construct;
+	uint32_t built;
+	signed char construct; // -1 == no construction
+	unsigned char construct_time;
 };
 
 struct game
@@ -90,5 +96,10 @@ struct game
 
 // neighbors (in order): east, north-east, north, north-west, west, south-west, south, south-east
 
+extern struct building buildings[];
+extern size_t buildings_count;
+
 int map_init(const union json *restrict json, struct game *restrict game);
 void map_term(struct game *restrict game);
+
+void region_income(const struct region* restrict region, struct resources *restrict income);

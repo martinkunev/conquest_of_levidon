@@ -469,7 +469,7 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 		display_polygon(regions[i].location, MAP_X, MAP_Y);
 
 		// Remember income and expenses.
-		if (regions[i].owner == state->player) resource_add(&income, &regions[i].income);
+		if (regions[i].owner == state->player) region_income(regions + i, &income);
 		for(slot = regions[i].slots; slot; slot = slot->_next)
 			if (slot->player == state->player)
 				resource_add(&expenses, &slot->unit->expense);
@@ -537,9 +537,15 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 			}
 
 			display_rectangle(BUILDING_X(0), BUILDING_Y, 98, 32, White);
-			if (region->buildings & BUILDING_IRRIGATION) image_draw(image_buildings + 0, BUILDING_X(0), BUILDING_Y);
-			if (region->buildings & BUILDING_LUMBERMILL) image_draw(image_buildings + 1, BUILDING_X(1), BUILDING_Y);
-			if (region->buildings & BUILDING_MINE) image_draw(image_buildings + 2, BUILDING_X(2), BUILDING_Y);
+			for(i = 1; i <= buildings_count; ++i)
+			{
+				if (region->built & (1 << i))
+					image_draw(image_buildings + i - 1, BUILDING_X(i - 1), BUILDING_Y);
+				else
+				{
+					// TODO display image showing the non-built building
+				}
+			}
 		}
 
 		if (state->player == region->owner)
@@ -568,7 +574,6 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 	}
 
 	// Treasury
-	// TODO income is no longer properly calculated
 	show_resource(S("gold: "), players[state->player].treasury.gold, income.gold, expenses.gold, RESOURCE_GOLD);
 	show_resource(S("food: "), players[state->player].treasury.food, income.food, expenses.food, RESOURCE_FOOD);
 	show_resource(S("wood: "), players[state->player].treasury.wood, income.wood, expenses.wood, RESOURCE_WOOD);

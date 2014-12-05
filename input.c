@@ -269,6 +269,43 @@ reset:
 	return 0;
 }
 
+static int input_build(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game)
+{
+	if (code >= 0) return INPUT_NOTME;
+
+	if (state.player != game->regions[state.region].owner) return 0;
+	if ((x % (FIELD_SIZE + 1)) >= FIELD_SIZE) return 0;
+
+	if (code == -1)
+	{
+		signed char *construct;
+		size_t index = x / (FIELD_SIZE + 1);
+		if (index >= buildings_count) return 0;
+		if (!resource_enough(&game->players[state.player].treasury, &buildings[index].cost)) return 0;
+
+		construct = &game->regions[state.region].construct;
+		if (*construct >= 0) // there is a construction in process
+		{
+			// If the building clicked is the one under construction, cancel the construction.
+			if (*construct == index)
+			{
+				if (game->regions[state.region].construct_time)
+					game->regions[state.region].construct_time = 0;
+				else
+					resource_add(&game->players[state.player].treasury, &buildings[index].cost);
+				*construct = -1;
+			}
+		}
+		else
+		{
+			*construct = index;
+			resource_subtract(&game->players[state.player].treasury, &buildings[index].cost);
+		}
+	}
+
+	return 0;
+}
+
 int input_map(const struct game *restrict game, unsigned char player)
 {
 	struct area areas[] = {
@@ -306,7 +343,14 @@ int input_map(const struct game *restrict game, unsigned char player)
 			.top = SLOT_Y(0),
 			.bottom = SLOT_Y(0) + FIELD_SIZE - 1,
 			.callback = input_slot,
-		}
+		},
+		{
+			.left = BUILDING_X(0),
+			.right = BUILDING_X(0) + 3 * (FIELD_SIZE + 1) - 1 - 1,
+			.top = BUILDING_Y,
+			.bottom = BUILDING_Y + FIELD_SIZE - 1,
+			.callback = input_build,
+		},
 	};
 
 	state.player = player;

@@ -21,7 +21,9 @@ size_t units_count = 3;
 
 struct building buildings[] =
 {
-	//
+	{.name = "irrigation", .name_length = 10, .cost = {.gold = 4}, .income = {.food = 1}, .time = 1},
+	{.name = "lumbermill", .name_length = 10, .cost = {.gold = 6}, .income = {.wood = 2}, .time = 1},
+	{.name = "mine", .name_length = 4, .cost = {.gold = 10, .wood = 4}, .income = {.stone = 2}, .time = 2},
 };
 size_t buildings_count = 3;
 
@@ -44,9 +46,9 @@ static struct polygon *region_create(size_t count, ...)
 	return polygon;
 }
 
-static int map_build(uint32_t *restrict buildings, const struct vector *restrict list)
+static int map_build(uint32_t *restrict built, const struct vector *restrict list)
 {
-	size_t i;
+	size_t i, j;
 	const union json *entry;
 
 	#define EQ(data, size, name) (((size) == (sizeof(name) - 1)) && !memcmp((data), (name), sizeof(name) - 1))
@@ -56,12 +58,13 @@ static int map_build(uint32_t *restrict buildings, const struct vector *restrict
 		entry = vector_get(list, i);
 		if (json_type(entry) != STRING) return -1;
 
-		if (EQ(entry->string_node.data, entry->string_node.length, "irrigation"))
-			*buildings |= BUILDING_IRRIGATION;
-		else if (EQ(entry->string_node.data, entry->string_node.length, "lumbermill"))
-			*buildings |= BUILDING_LUMBERMILL;
-		else if (EQ(entry->string_node.data, entry->string_node.length, "mine"))
-			*buildings |= BUILDING_MINE;
+		// TODO maybe use hash table here
+		for(j = 0; j < buildings_count; ++j)
+		{
+			if ((entry->string_node.length == buildings[j].name_length) && !memcmp(entry->string_node.data, buildings[j].name, buildings[j].name_length))
+				*built |= 1 << (j + 1);
+
+		}
 		// TODO else show log message
 	}
 
@@ -156,7 +159,7 @@ int map_init(const union json *restrict json, struct game *restrict game)
 
 		game->regions[index].slots = 0; // TODO implement this
 
-		key = string("gold");
+		/*key = string("gold");
 		field = dict_get(item->object, &key);
 		if (!field || (json_type(field) != INTEGER)) goto error;
 		game->regions[index].income.gold = field->integer;
@@ -179,16 +182,17 @@ int map_init(const union json *restrict json, struct game *restrict game)
 		key = string("stone");
 		field = dict_get(item->object, &key);
 		if (!field || (json_type(field) != INTEGER)) goto error;
-		game->regions[index].income.stone = field->integer;
+		game->regions[index].income.stone = field->integer;*/
 
-		game->regions[index].buildings = 0;
-		game->regions[index].construct = 0;
+		game->regions[index].built = 0;
+		game->regions[index].construct = -1;
+		game->regions[index].construct_time = 0;
 		key = string("built");
 		field = dict_get(item->object, &key);
 		if (field)
 		{
 			if (json_type(field) != ARRAY) goto error;
-			if (map_build(&game->regions[index].buildings, &field->array_node)) goto error;
+			if (map_build(&game->regions[index].built, &field->array_node)) goto error;
 		}
 
 		key = string("neighbors");

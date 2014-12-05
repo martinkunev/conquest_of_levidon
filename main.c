@@ -18,15 +18,18 @@
 #define WINNER_NOBODY -1
 #define WINNER_BATTLE -2
 
-static void buildings_run(uint32_t buildings, struct resources *restrict resources)
+void region_income(const struct region* restrict region, struct resources *restrict income)
 {
-	struct resources income = {.gold = 1, .food = 1, .wood = 0, .iron = 0, .stone = 0};
+	size_t i;
 
-	if (buildings & BUILDING_IRRIGATION) income.food += 1;
-	if (buildings & BUILDING_LUMBERMILL) income.wood += 1;
-	if (buildings & BUILDING_MINE) income.stone += 1;
+	income->gold = 1;
+	income->food = 1;
+	income->wood = 0;
+	income->iron = 0;
+	income->stone = 0;
 
-	resource_add(resources, &income);
+	for(i = 0; i < buildings_count; ++i)
+		resource_add(income, &buildings[i].income);
 }
 
 static int play(struct game *restrict game)
@@ -45,6 +48,7 @@ static int play(struct game *restrict game)
 
 	unsigned char slots, owner_slot;
 
+	struct resources income;
 	struct resources expenses[PLAYERS_LIMIT];
 	unsigned char alive[PLAYERS_LIMIT];
 
@@ -98,10 +102,12 @@ static int play(struct game *restrict game)
 				region->train[TRAIN_QUEUE - 1] = 0;
 			}
 
-			if (region->construct)
+			// Update construction time and check if the building is finished.
+			if ((region->construct >= 0) && (++region->construct_time == buildings[region->construct].time))
 			{
-				region->buildings |= region->construct;
-				region->construct = 0;
+				region->built |= (1 << region->construct);
+				region->construct = -1;
+				region->construct_time = 0;
 			}
 
 			// Move each unit for which movement is specified.
@@ -210,7 +216,8 @@ static int play(struct game *restrict game)
 			}
 
 			// Add the income from each region to the owner's treasury.
-			buildings_run(region->buildings, &game->players[region->owner].treasury);
+			region_income(region, &income);
+			resource_add(&game->players[region->owner].treasury, &income);
 
 			// Each player that controls a region is alive.
 			alive[region->owner] = 1;
