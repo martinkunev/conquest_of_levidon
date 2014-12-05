@@ -9,10 +9,6 @@
 
 #define BUILDING_NAME_LIMIT 32
 
-#define BUILDING_IRRIGATION		0x1
-#define BUILDING_LUMBERMILL		0x2
-#define BUILDING_MINE			0x4
-
 #include "resources.h"
 #include "display.h"
 
