@@ -9,6 +9,8 @@
 
 #define BUILDING_NAME_LIMIT 32
 
+#define SLOT_UNITS 20
+
 #include "resources.h"
 #include "display.h"
 

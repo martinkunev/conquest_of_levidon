@@ -13,17 +13,17 @@
 
 struct unit units[] =
 {
-	{.index = 0, .health = 3, .damage = 1, .speed = 3, .cost = {.wood = 1}, .expense = {.food = 2}, .time = 1},
-	{.index = 1, .health = 3, .damage = 1, .speed = 3, .cost = {.gold = 1, .wood = 2}, .expense = {.food = 2}, .shoot = 1, .range = 4, .time = 1},
-	{.index = 2, .health = 8, .damage = 2, .speed = 8, .cost = {.gold = 2, .wood = 2}, .expense = {.food = 5}, .time = 2},
+	{.index = 0, .health = 3, .damage = 1, .speed = 3, .cost = {.gold = 1}, .expense = {.food = 1}, .time = 1},
+	{.index = 1, .health = 3, .damage = 1, .speed = 3, .cost = {.gold = 1, .wood = 1}, .expense = {.food = 1}, .shoot = 1, .range = 4, .time = 1},
+	{.index = 2, .health = 8, .damage = 2, .speed = 8, .cost = {.gold = 3, .iron = 1}, .expense = {.food = 3}, .time = 2},
 };
 size_t units_count = 3;
 
 struct building buildings[] =
 {
-	{.name = "irrigation", .name_length = 10, .cost = {.gold = 4}, .income = {.food = 1}, .time = 1},
-	{.name = "lumbermill", .name_length = 10, .cost = {.gold = 6}, .income = {.wood = 2}, .time = 1},
-	{.name = "mine", .name_length = 4, .cost = {.gold = 10, .wood = 4}, .income = {.stone = 2}, .time = 2},
+	{.name = "irrigation", .name_length = 10, .cost = {.gold = 4}, .income = {.food = 2}, .time = 2},
+	{.name = "lumbermill", .name_length = 10, .cost = {.gold = 6}, .income = {.wood = 2}, .time = 3},
+	{.name = "mine", .name_length = 4, .cost = {.gold = 10, .wood = 4}, .income = {.stone = 2}, .time = 4},
 };
 size_t buildings_count = 3;
 
@@ -155,31 +155,6 @@ int map_init(const union json *restrict json, struct game *restrict game)
 		memset(game->regions[index].train, 0, sizeof(game->regions[index].train)); // TODO implement this
 
 		game->regions[index].slots = 0; // TODO implement this
-
-		/*key = string("gold");
-		field = dict_get(item->object, &key);
-		if (!field || (json_type(field) != INTEGER)) goto error;
-		game->regions[index].income.gold = field->integer;
-
-		key = string("food");
-		field = dict_get(item->object, &key);
-		if (!field || (json_type(field) != INTEGER)) goto error;
-		game->regions[index].income.food = field->integer;
-
-		key = string("iron");
-		field = dict_get(item->object, &key);
-		if (!field || (json_type(field) != INTEGER)) goto error;
-		game->regions[index].income.iron = field->integer;
-
-		key = string("wood");
-		field = dict_get(item->object, &key);
-		if (!field || (json_type(field) != INTEGER)) goto error;
-		game->regions[index].income.wood = field->integer;
-
-		key = string("stone");
-		field = dict_get(item->object, &key);
-		if (!field || (json_type(field) != INTEGER)) goto error;
-		game->regions[index].income.stone = field->integer;*/
 
 		game->regions[index].built = 0;
 		game->regions[index].construct = -1;

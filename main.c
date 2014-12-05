@@ -85,7 +85,7 @@ static int play(struct game *restrict game)
 				slot = malloc(sizeof(*slot));
 				if (!slot) ; // TODO
 				slot->unit = region->train[0];
-				slot->count = 16; // TODO fix this
+				slot->count = SLOT_UNITS;
 				slot->player = region->owner;
 
 				slot->_prev = 0;

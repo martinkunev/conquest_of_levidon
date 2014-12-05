@@ -242,10 +242,10 @@ static int input_slot(int code, unsigned x, unsigned y, uint16_t modifiers, cons
 
 	if (code == -1)
 	{
-		if ((x % (FIELD_SIZE + PAWN_MARGIN)) >= FIELD_SIZE) goto reset;
+		if ((x % (FIELD_SIZE + 3)) >= FIELD_SIZE) goto reset;
 
-		// Select the clicked pawn.
-		int offset = x / (FIELD_SIZE + PAWN_MARGIN);
+		// Select the clicked slot.
+		int offset = x / (FIELD_SIZE + 3);
 		int found;
 		while (1)
 		{
@@ -259,6 +259,49 @@ static int input_slot(int code, unsigned x, unsigned y, uint16_t modifiers, cons
 			else if (found) break;
 		}
 		state.selected.slot = slot;
+	}
+	else if (code == -3)
+	{
+		if ((x % (FIELD_SIZE + 3)) >= FIELD_SIZE) return 0;
+		if (!state.selected.slot) return 0;
+
+		// Find the clicked slot.
+		int offset = x / (FIELD_SIZE + 3);
+		int found;
+		while (1)
+		{
+			found = (slot->player == state.player);
+			if (!found || offset)
+			{
+				slot = slot->_next;
+				if (!slot) goto reset;
+				if (found) offset -= 1;
+			}
+			else if (found) break;
+		}
+
+		if (slot == state.selected.slot) return 0;
+
+		// Transfer units from the selected slot to the clicked slot.
+		unsigned transfer_count = (SLOT_UNITS - slot->count);
+		if (state.selected.slot->count > transfer_count)
+		{
+			state.selected.slot->count -= transfer_count;
+			slot->count += transfer_count;
+		}
+		else
+		{
+			slot->count += state.selected.slot->count;
+
+			// Remove the selected slot because all units were transfered to the clicked slot.
+			slot = state.selected.slot;
+			if (slot->_prev) slot->_prev->_next = slot->_next;
+			else game->regions[state.region].slots = slot->_next;
+			if (slot->_next) slot->_next->_prev = slot->_prev;
+			free(slot);
+
+			goto reset;
+		}
 	}
 
 	return 0;
