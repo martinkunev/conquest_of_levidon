@@ -16,7 +16,9 @@
 
 // TODO fix image transparency problem that appears on the map
 
-int image_load_png(struct image *restrict image, const char *restrict filename)
+#include <stdio.h>
+
+int image_load_png(struct image *restrict image, const char *restrict filename, int grayscale)
 {
 	int img;
 	struct stat info;
@@ -86,9 +88,11 @@ int image_load_png(struct image *restrict image, const char *restrict filename)
 	case PNG_COLOR_TYPE_RGB:
 		format = GL_RGB;
 		break;
+
 	case PNG_COLOR_TYPE_RGB_ALPHA:
 		format = GL_RGBA;
 		break;
+
 	default:
 		fclose(img_stream);
 		png_destroy_read_struct(&png_ptr, &info_ptr, &end_ptr);
@@ -123,6 +127,23 @@ int image_load_png(struct image *restrict image, const char *restrict filename)
 	png_destroy_read_struct(&png_ptr, &info_ptr, &end_ptr);
 	close(img);
 
+	// TODO implement this better
+	if (grayscale)
+	{
+		size_t x, y;
+		unsigned n;
+		for(y = 0; y < image->height; ++y)
+		{
+			for(x = 0; x < image->width; ++x)
+			{
+				n = (rows[y][x * 4] + rows[y][x * 4 + 1] + rows[y][x * 4 + 2]) / 3;
+				rows[y][x * 4] = n;
+				rows[y][x * 4 + 1] = n;
+				rows[y][x * 4 + 2] = n;
+			}
+		}
+	}
+
 	// Generate the OpenGL texture object.
 	glGenTextures(1, &image->texture);
 	glBindTexture(GL_TEXTURE_2D, image->texture);
@@ -137,6 +158,7 @@ int image_load_png(struct image *restrict image, const char *restrict filename)
 
 void image_draw(const struct image *restrict image, unsigned x, unsigned y)
 {
+	glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 	glBindTexture(GL_TEXTURE_2D, image->texture);
 
 	glEnable(GL_TEXTURE_2D);
@@ -160,6 +182,7 @@ void image_draw(const struct image *restrict image, unsigned x, unsigned y)
 
 void display_image(const struct image *restrict image, unsigned x, unsigned y, unsigned width, unsigned height)
 {
+	glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 	glBindTexture(GL_TEXTURE_2D, image->texture);
 
 	glEnable(GL_TEXTURE_2D);

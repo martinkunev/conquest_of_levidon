@@ -59,9 +59,10 @@ struct pawn *(*battlefield)[BATTLEFIELD_WIDTH];
 struct region *restrict regions;
 size_t regions_count;
 
-static struct image image_move_destination, image_shoot_destination, image_selected, image_flag, image_panel;
+static struct image image_move_destination, image_shoot_destination, image_selected, image_flag, image_panel, image_construction;
 static struct image image_units[3]; // TODO the array must be enough to hold units_count units
 static struct image image_buildings[3]; // TODO the array must be big enough to hold buildings_count elements
+static struct image image_buildings_gray[3]; // TODO the array must be big enough to hold buildings_count elements
 
 static GLuint map_renderbuffer;
 
@@ -163,19 +164,24 @@ void if_init(void)
 
 	if_reshape(SCREEN_WIDTH, SCREEN_HEIGHT); // TODO call this after resize
 
-	image_load_png(&image_move_destination, "img/move_destination.png");
-	image_load_png(&image_shoot_destination, "img/shoot_destination.png");
-	image_load_png(&image_selected, "img/selected.png");
-	image_load_png(&image_flag, "img/flag.png");
-	image_load_png(&image_panel, "img/panel.png");
+	image_load_png(&image_move_destination, "img/move_destination.png", 0);
+	image_load_png(&image_shoot_destination, "img/shoot_destination.png", 0);
+	image_load_png(&image_selected, "img/selected.png", 0);
+	image_load_png(&image_flag, "img/flag.png", 0);
+	image_load_png(&image_panel, "img/panel.png", 0);
+	image_load_png(&image_construction, "img/construction.png", 0);
 
-	image_load_png(&image_units[0], "img/peasant.png");
-	image_load_png(&image_units[1], "img/archer.png");
-	image_load_png(&image_units[2], "img/horse_rider.png");
+	image_load_png(&image_units[0], "img/peasant.png", 0);
+	image_load_png(&image_units[1], "img/archer.png", 0);
+	image_load_png(&image_units[2], "img/horse_rider.png", 0);
 
-	image_load_png(&image_buildings[0], "img/irrigation.png");
-	image_load_png(&image_buildings[1], "img/lumbermill.png");
-	image_load_png(&image_buildings[2], "img/mine.png");
+	image_load_png(&image_buildings[0], "img/irrigation.png", 0);
+	image_load_png(&image_buildings[1], "img/lumbermill.png", 0);
+	image_load_png(&image_buildings[2], "img/mine.png", 0);
+
+	image_load_png(&image_buildings_gray[0], "img/irrigation.png", 1);
+	image_load_png(&image_buildings_gray[1], "img/lumbermill.png", 1);
+	image_load_png(&image_buildings_gray[2], "img/mine.png", 1);
 
 	// TODO handle modifier keys
 	// TODO handle dead keys
@@ -434,7 +440,7 @@ static void show_resource(const char *restrict name, size_t name_length, int tre
 	}
 }
 
-void if_map(const struct player *restrict players, const struct state *restrict state) // TODO finish this
+void if_map(const struct player *restrict players, const struct state *restrict state)
 {
 	// clear window
 	glClearColor(0.0, 0.0, 0.0, 0.0);
@@ -444,10 +450,8 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 	draw_rectangle(PANEL_X - 4, PANEL_Y - 4, PANEL_WIDTH + 8, PANEL_HEIGHT + 8, Player + state->player);
 	draw_rectangle(PANEL_X - 3, PANEL_Y - 3, PANEL_WIDTH + 6, PANEL_HEIGHT + 6, Player + state->player);
 	draw_rectangle(PANEL_X - 2, PANEL_Y - 2, PANEL_WIDTH + 4, PANEL_HEIGHT + 4, Player + state->player);
-	//display_rectangle(0, 0, 256, 16, Player + state->player);
 
 	// Display panel background pattern.
-	glColor4ubv(display_colors[White]); // TODO check why is this necessary
 	display_image(&image_panel, PANEL_X, PANEL_Y, PANEL_WIDTH, PANEL_HEIGHT);
 
 	// show map in black
@@ -487,6 +491,7 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 	if (state->region >= 0)
 	{
 		const struct region *region = regions + state->region;
+		unsigned progress;
 
 		// Display flag of the region owner and name of the region.
 		display_rectangle(PANEL_X + 4, PANEL_Y + 4, 24, 12, Player + region->owner);
@@ -536,15 +541,16 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 				}
 			}
 
-			display_rectangle(BUILDING_X(0), BUILDING_Y, 98, 32, White);
-			for(i = 1; i <= buildings_count; ++i)
+			for(i = 0; i < buildings_count; ++i)
 			{
-				if (region->built & (1 << i))
-					image_draw(image_buildings + i - 1, BUILDING_X(i - 1), BUILDING_Y);
-				else
-				{
-					// TODO display image showing the non-built building
-				}
+				if (region->built & (1 << i)) image_draw(image_buildings + i, BUILDING_X(i), BUILDING_Y);
+				else image_draw(image_buildings_gray + i, BUILDING_X(i), BUILDING_Y);
+			}
+			if (region->construct >= 0)
+			{
+				// TODO show progress
+				//progress = ((double)region->construct_time / buildings[region->construct].time) * FIELD_SIZE;
+				image_draw(&image_construction, BUILDING_X(region->construct), BUILDING_Y);
 			}
 		}
 
@@ -554,14 +560,13 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 
 			// Display train queue.
 			size_t index;
-			unsigned progress;
 			for(index = 0; index < TRAIN_QUEUE; ++index)
 				if (region->train[index])
 				{
 					if (index) progress = 0;
 					else progress = ((double)region->train_time / region->train[index]->time) * FIELD_SIZE;
 					display_unit(region->train[index]->index, TRAIN_X(index), TRAIN_Y, White, 0);
-					display_rectangle(TRAIN_X(index), TRAIN_Y, FIELD_SIZE, FIELD_SIZE - progress, Progress); // TODO this should show train progress
+					display_rectangle(TRAIN_X(index), TRAIN_Y, FIELD_SIZE, FIELD_SIZE - progress, Progress);
 				}
 				else display_rectangle(TRAIN_X(index), TRAIN_Y, FIELD_SIZE, FIELD_SIZE, Black);
 

@@ -60,11 +60,8 @@ static int map_build(uint32_t *restrict built, const struct vector *restrict lis
 
 		// TODO maybe use hash table here
 		for(j = 0; j < buildings_count; ++j)
-		{
 			if ((entry->string_node.length == buildings[j].name_length) && !memcmp(entry->string_node.data, buildings[j].name, buildings[j].name_length))
-				*built |= 1 << (j + 1);
-
-		}
+				*built |= (1 << j);
 		// TODO else show log message
 	}
 

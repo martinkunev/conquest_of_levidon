@@ -281,7 +281,6 @@ static int input_build(int code, unsigned x, unsigned y, uint16_t modifiers, con
 		signed char *construct;
 		size_t index = x / (FIELD_SIZE + 1);
 		if (index >= buildings_count) return 0;
-		if (!resource_enough(&game->players[state.player].treasury, &buildings[index].cost)) return 0;
 
 		construct = &game->regions[state.region].construct;
 		if (*construct >= 0) // there is a construction in process
@@ -296,8 +295,9 @@ static int input_build(int code, unsigned x, unsigned y, uint16_t modifiers, con
 				*construct = -1;
 			}
 		}
-		else
+		else if (!(game->regions[state.region].built & (1 << index)))
 		{
+			if (!resource_enough(&game->players[state.player].treasury, &buildings[index].cost)) return 0;
 			*construct = index;
 			resource_subtract(&game->players[state.player].treasury, &buildings[index].cost);
 		}

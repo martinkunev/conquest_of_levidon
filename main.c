@@ -22,14 +22,12 @@ void region_income(const struct region* restrict region, struct resources *restr
 {
 	size_t i;
 
-	income->gold = 1;
-	income->food = 1;
-	income->wood = 0;
-	income->iron = 0;
-	income->stone = 0;
+	income->gold += 1;
+	income->food += 1;
 
 	for(i = 0; i < buildings_count; ++i)
-		resource_add(income, &buildings[i].income);
+		if (region->built & (1 << i))
+			resource_add(income, &buildings[i].income);
 }
 
 static int play(struct game *restrict game)
@@ -216,6 +214,7 @@ static int play(struct game *restrict game)
 			}
 
 			// Add the income from each region to the owner's treasury.
+			memset(&income, 0, sizeof(income));
 			region_income(region, &income);
 			resource_add(&game->players[region->owner].treasury, &income);
 
