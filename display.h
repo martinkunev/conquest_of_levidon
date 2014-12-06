@@ -2,6 +2,8 @@
 
 #include <X11/Xlib-xcb.h>
 
+#define POINT(x, y) (struct point){(x), (y)}
+
 struct point 
 { 
 	unsigned x, y;
@@ -30,9 +32,6 @@ void display_polygon(const struct polygon *restrict polygon, int offset_x, int o
 
 void display_arrow(struct point from, struct point to, int offset_x, int offset_y, enum color color);
 
-int font_init(Display *restrict dpy, struct font *restrict font);
+int font_init(Display *restrict display, struct font *restrict font, const char *restrict name);
 
-// TODO rename this
-#define glFont glListBase
-
-void display_string(const char *string, size_t length, unsigned x, unsigned y, enum color color);
+void display_string(const char *string, size_t length, unsigned x, unsigned y, struct font *restrict font, enum color color);

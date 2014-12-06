@@ -29,14 +29,18 @@
 #define SLOT_X(x) (PANEL_X + 2 + 1 + (x) * (FIELD_SIZE + 3))
 #define SLOT_Y(y) (PANEL_Y + 32 + MARGIN + 2 + 1 + (y) * (FIELD_SIZE + 18 + 2))
 
-#define TRAIN_X(x) (PANEL_X + 100 + (x) * (FIELD_SIZE + 1))
+#define TRAIN_X(x) (PANEL_X + 80 + (x) * (FIELD_SIZE + 1))
 #define TRAIN_Y (PANEL_Y + 200)
 
-#define INVENTORY_X(x) (PANEL_X + (x) * (FIELD_SIZE + 1))
+#define INVENTORY_X(x) (PANEL_X + 2 + 1 + (x) * (FIELD_SIZE + 1))
 #define INVENTORY_Y (TRAIN_Y + FIELD_SIZE + MARGIN)
 
-#define BUILDING_X(x) (PANEL_X + (x) * (FIELD_SIZE + 1))
+#define BUILDING_X(x) (PANEL_X + 2 + 1 + (x) * (FIELD_SIZE + 1))
 #define BUILDING_Y (PANEL_Y + 300)
+
+// TODO fix these values
+#define TOOLTIP_X 256
+#define TOOLTIP_Y 730
 
 void if_init(void);
 

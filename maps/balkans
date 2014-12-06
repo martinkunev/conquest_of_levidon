@@ -4,7 +4,6 @@
 		{"alliance": 1, "gold": 5, "food": 3, "wood": 0, "iron": 0, "stone": 0},
 		{"alliance": 2, "gold": 5, "food": 3, "wood": 0, "iron": 0, "stone": 0},
 		{"alliance": 1, "gold": 5, "food": 3, "wood": 0, "iron": 1, "stone": 0},
-		{"alliance": 2, "gold": 5, "food": 3, "wood": 0, "iron": 0, "stone": 0}
 	],
 	"regions": [
 		{
@@ -33,7 +32,7 @@
 			"comment": "1",
 			"name": "Attica",
 			"owner": 1,
-			"built": ["mine"],
+			"built": ["Mine"],
 			"neighbors": [-1, -1, 2, 3, -1, -1, 0, -1],
 			"location": [
 				[367, 586],
@@ -129,7 +128,7 @@
 			"comment": "6",
 			"name": "Thrace",
 			"owner": 0,
-			"built": ["irrigation"],
+			"built": ["Irrigation"],
 			"neighbors": [7, 8, -1, 11, 5, 2, -1, -1],
 			"location": [
 				[382, 434],
@@ -146,7 +145,7 @@
 			"comment": "7",
 			"name": "Byzantium",
 			"owner": 3,
-			"built": ["lumbermill", "irrigation", "barracks"],
+			"built": ["Lumber mill", "Irrigation", "Barracks"],
 			"neighbors": [-1, -1, -1, 8, 6, -1, -1, -1],
 			"location": [
 				[516, 391],
@@ -220,7 +219,7 @@
 			"comment": "11",
 			"name": "Serdika",
 			"owner": 4,
-			"built": ["lumbermill"],
+			"built": ["Lumbermill"],
 			"neighbors": [8, 10, -1, -1, 12, -1, 5, 6],
 			"location": [
 				[433, 314],
@@ -296,7 +295,7 @@
 			"comment": "15",
 			"name": "Dalmatia",
 			"owner": 2,
-			"built": ["archery_range"],
+			"built": ["Archery range"],
 			"neighbors": [14, -1, 16, -1, -1, -1, -1, 13],
 			"location": [
 				[136, 321],

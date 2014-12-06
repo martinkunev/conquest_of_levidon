@@ -13,10 +13,13 @@
 #include "battle.h"
 #include "input.h"
 #include "interface.h"
+#include "region.h"
 
 #define INPUT_NOTME 1
 #define INPUT_DONE 2
 #define INPUT_TERMINATE 3
+
+#define EVENT_MOTION -127
 
 extern xcb_connection_t *connection;
 extern KeySym *keymap;
@@ -39,6 +42,7 @@ static int input_local(void (*display)(const struct player *restrict, const stru
 	xcb_generic_event_t *event;
 	xcb_button_release_event_t *mouse;
 	xcb_key_press_event_t *keyboard;
+	xcb_motion_notify_event_t *motion;
 
 	int code; // TODO this is oversimplification
 	unsigned x, y;
@@ -82,6 +86,14 @@ static int input_local(void (*display)(const struct player *restrict, const stru
 			//KeySym *input = keymap + (keyboard->detail - keycode_min) * keysyms_per_keycode;
 			//printf("%d %c %c %c %c\n", (int)*input, (int)input[0], (int)input[1], (int)input[2], (int)input[3]);
 
+		case XCB_MOTION_NOTIFY:
+			motion = (xcb_motion_notify_event_t *)event;
+			code = EVENT_MOTION;
+			x = motion->event_x;
+			y = motion->event_y;
+			modifiers = motion->state;
+			break;
+
 		default:
 			continue;
 		}
@@ -115,6 +127,9 @@ static int input_turn(int code, unsigned x, unsigned y, uint16_t modifiers, cons
 	case 'n':
 		return INPUT_DONE;
 
+	case EVENT_MOTION:
+		state.pointed.building = -1;
+		state.pointed.unit = -1;
 	default:
 		return 0;
 	}
@@ -122,6 +137,7 @@ static int input_turn(int code, unsigned x, unsigned y, uint16_t modifiers, cons
 
 static int input_region(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game)
 {
+	if (code == EVENT_MOTION) return INPUT_NOTME;
 	if (code >= 0) return INPUT_NOTME;
 
 	// TODO write this function better
@@ -176,38 +192,54 @@ valid:
 
 static int input_train(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game)
 {
-	if (code >= 0) return INPUT_NOTME;
+	size_t unit;
+	struct region *region;
 
-	if (state.region < 0) return 0;
-	if (state.player != game->regions[state.region].owner) return 0;
-	if ((x % (FIELD_SIZE + 1)) >= FIELD_SIZE) return 0;
+	if (code >= 0) return INPUT_NOTME; // ignore keyboard events
+
+	if (state.region < 0) goto reset; // no region selected
+	region = game->regions + state.region;
+	if (state.player != region->owner) goto reset; // player does not control the region
+
+	// Find which unit was clicked.
+	if ((x % (FIELD_SIZE + 1)) >= FIELD_SIZE) goto reset; // no unit clicked
+	unit = x / (FIELD_SIZE + 1);
+	if (unit >= game->units_count) goto reset; // no unit clicked
+
+	if (!region_order_available(region, game->units[unit].requires)) goto reset;
 
 	if (code == -1)
 	{
-		size_t unit = x / (FIELD_SIZE + 1);
-		if (unit >= game->units_count) return 0;
+		size_t index;
 
 		if (!resource_enough(&game->players[state.player].treasury, &game->units[unit].cost)) return 0;
-		if ((game->regions[state.region].built & game->units[unit].requires) != game->units[unit].requires) return 0;
 
-		struct unit **train = game->regions[state.region].train;
-		size_t index;
 		for(index = 0; index < TRAIN_QUEUE; ++index)
-			if (!train[index])
+			if (!region->train[index])
 			{
 				// Spend the money required for the units.
 				resource_subtract(&game->players[state.player].treasury, &game->units[unit].cost);
 
-				train[index] = (struct unit *)(game->units + unit); // TODO fix this cast
+				region->train[index] = (struct unit *)(game->units + unit); // TODO fix this cast
 				break;
 			}
 	}
+	else if (code == EVENT_MOTION)
+	{
+		state.pointed.building = -1;
+		state.pointed.unit = unit;
+	}
 
+	return 0;
+
+reset:
+	state.pointed.unit = -1;
 	return 0;
 }
 
 static int input_dismiss(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game)
 {
+	if (code == EVENT_MOTION) return INPUT_NOTME;
 	if (code >= 0) return INPUT_NOTME;
 
 	if (state.region < 0) return 0;
@@ -238,53 +270,39 @@ static int input_dismiss(int code, unsigned x, unsigned y, uint16_t modifiers, c
 
 static int input_slot(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game)
 {
-	if (code >= 0) return INPUT_NOTME;
+	struct slot *slot;
+	size_t offset;
+	int found;
 
-	if (state.region < 0) return 0;
-	struct slot *slot = game->regions[state.region].slots;
-	if (!slot) return 0; // no field selected
+	if (code >= 0) return INPUT_NOTME; // ignore keyboard events
 
-	if (code == -1)
+	if (state.region < 0) goto reset; // no region selected
+	slot = game->regions[state.region].slots;
+	if (!slot) goto reset; // no slots in this region
+
+	// Find which slot was clicked.
+	if ((x % (FIELD_SIZE + 3)) >= FIELD_SIZE) goto reset; // no slot clicked
+	offset = x / (FIELD_SIZE + 3);
+	if (offset >= buildings_count) goto reset; // no slot clicked
+
+	// Find the clicked slot.
+	while (1)
 	{
-		if ((x % (FIELD_SIZE + 3)) >= FIELD_SIZE) goto reset;
-
-		// Select the clicked slot.
-		int offset = x / (FIELD_SIZE + 3);
-		int found;
-		while (1)
+		found = (slot->player == state.player);
+		if (!found || offset)
 		{
-			found = (slot->player == state.player);
-			if (!found || offset)
-			{
-				slot = slot->_next;
-				if (!slot) goto reset;
-				if (found) offset -= 1;
-			}
-			else if (found) break;
+			slot = slot->_next;
+			if (!slot) goto reset; // no slot clicked
+			if (found) offset -= 1;
 		}
-		state.selected.slot = slot;
+		else if (found) break;
 	}
+
+	if (code == -1) state.selected.slot = slot;
 	else if (code == -3)
 	{
-		if ((x % (FIELD_SIZE + 3)) >= FIELD_SIZE) return 0;
-		if (!state.selected.slot) return 0;
-
-		// Find the clicked slot.
-		int offset = x / (FIELD_SIZE + 3);
-		int found;
-		while (1)
-		{
-			found = (slot->player == state.player);
-			if (!found || offset)
-			{
-				slot = slot->_next;
-				if (!slot) goto reset;
-				if (found) offset -= 1;
-			}
-			else if (found) break;
-		}
-
-		if (slot == state.selected.slot) return 0;
+		if (!state.selected.slot) return 0; // no slot selected
+		if (slot == state.selected.slot) return 0; // the clicked and the selected slot are the same
 
 		// Transfer units from the selected slot to the clicked slot.
 		unsigned transfer_count = (SLOT_UNITS - slot->count);
@@ -318,21 +336,26 @@ reset:
 
 static int input_build(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game)
 {
-	if (code >= 0) return INPUT_NOTME;
+	size_t index;
+	struct region *region;
 
-	if (state.region < 0) return 0;
-	if (state.player != game->regions[state.region].owner) return 0;
-	if ((x % (FIELD_SIZE + 1)) >= FIELD_SIZE) return 0;
+	if (code >= 0) return INPUT_NOTME; // ignore keyboard events
+
+	if (state.region < 0) goto reset; // no region selected
+	region = game->regions + state.region;
+	if (state.player != region->owner) goto reset; // player does not control the region
+
+	// Find which building was clicked.
+	if ((x % (FIELD_SIZE + 1)) >= FIELD_SIZE) goto reset; // no building clicked
+	index = x / (FIELD_SIZE + 1);
+	if (index >= buildings_count) goto reset; // no building clicked
+
+	if (!region_order_available(region, buildings[index].requires)) goto reset;
 
 	if (code == -1)
 	{
-		signed char *construct;
-		size_t index = x / (FIELD_SIZE + 1);
-		if (index >= buildings_count) return 0;
+		signed char *construct = &region->construct;
 
-		struct region *region = game->regions + state.region;
-
-		construct = &region->construct;
 		if (*construct >= 0) // there is a construction in process
 		{
 			// If the building clicked is the one under construction, cancel the construction.
@@ -347,15 +370,21 @@ static int input_build(int code, unsigned x, unsigned y, uint16_t modifiers, con
 		}
 		else if (!(region->built & (1 << index)))
 		{
-			// Make sure the player has enough resources and the required buildings.
 			if (!resource_enough(&game->players[state.player].treasury, &buildings[index].cost)) return 0;
-			if ((region->built & buildings[index].requires) != buildings[index].requires) return 0;
-
 			*construct = index;
 			resource_subtract(&game->players[state.player].treasury, &buildings[index].cost);
 		}
 	}
+	else if (code == EVENT_MOTION)
+	{
+		state.pointed.building = index;
+		state.pointed.unit = -1;
+	}
 
+	return 0;
+
+reset:
+	state.pointed.building = -1;
 	return 0;
 }
 
@@ -411,6 +440,9 @@ int input_map(const struct game *restrict game, unsigned char player)
 	state.region = -1;
 	state.selected.slot = 0;
 
+	state.pointed.building = -1;
+	state.pointed.unit = -1;
+
 	return input_local(if_map, areas, sizeof(areas) / sizeof(*areas), game);
 }
 
@@ -456,6 +488,7 @@ static int input_round(int code, unsigned x, unsigned y, uint16_t modifiers, con
 
 static int input_pawn(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game)
 {
+	if (code == EVENT_MOTION) return INPUT_NOTME;
 	if (code >= 0) return INPUT_NOTME;
 
 	if ((state.x == BATTLEFIELD_WIDTH) || (state.y == BATTLEFIELD_HEIGHT)) return 0;
@@ -493,6 +526,7 @@ reset:
 
 static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game)
 {
+	if (code == EVENT_MOTION) return INPUT_NOTME;
 	if (code >= 0) return INPUT_NOTME;
 
 	x /= FIELD_SIZE;

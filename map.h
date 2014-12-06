@@ -3,6 +3,8 @@
 
 #define PLAYERS_LIMIT 10 /* TODO change to 16 */
 
+#define UNIT_NAME_LIMIT 32
+
 #define REGION_NAME_LIMIT 32
 
 #define REGIONS_LIMIT 256
@@ -23,6 +25,8 @@ struct player
 
 struct unit
 {
+	char name[UNIT_NAME_LIMIT];
+	size_t name_length;
 	size_t index;
 
 	unsigned char health;

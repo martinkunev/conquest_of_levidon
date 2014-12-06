@@ -7,6 +7,11 @@ struct state
 		struct slot *slot;
 		struct pawn *pawn;
 	} selected;
+	struct
+	{
+		signed char building;
+		signed char unit;
+	} pointed;
 
 	int region;
 };

@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <math.h>
 
 #define GL_GLEXT_PROTOTYPES
 
@@ -26,13 +27,16 @@
 // http://open.gl
 // http://www.opengl.org/sdk/docs/man2/
 
+// Use xlsfonts to list the available fonts.
+// "-misc-dejavu sans mono-bold-r-normal--12-0-0-0-m-0-ascii-0"
+
 #define S(s) (s), sizeof(s) - 1
 
 #define RESOURCE_GOLD 660
 #define RESOURCE_FOOD 680
 #define RESOURCE_WOOD 700
 #define RESOURCE_IRON 720
-#define RESOURCE_ROCK 740
+#define RESOURCE_STONE 740
 
 // TODO compatibility with OpenGL 2.1 (used in MacOS X)
 #define glGenFramebuffers(...) glGenFramebuffersEXT(__VA_ARGS__)
@@ -60,13 +64,14 @@ struct region *restrict regions;
 size_t regions_count;
 
 static struct image image_move_destination, image_shoot_destination, image_selected, image_flag, image_panel, image_construction;
+static struct image image_gold, image_food, image_wood, image_stone, image_iron;
 static struct image image_units[4]; // TODO the array must be enough to hold units_count units
 static struct image image_buildings[7]; // TODO the array must be big enough to hold buildings_count elements
 static struct image image_buildings_gray[7]; // TODO the array must be big enough to hold buildings_count elements
 
 static GLuint map_renderbuffer;
 
-struct font font;
+struct font font12;
 
 static void if_reshape(int width, int height)
 {
@@ -124,7 +129,7 @@ void if_init(void)
 
 	xcb_create_colormap(connection, XCB_COLORMAP_ALLOC_NONE, colormap, screen->root, visualID);
 
-	uint32_t eventmask = XCB_EVENT_MASK_EXPOSURE | XCB_EVENT_MASK_KEY_PRESS | XCB_EVENT_MASK_KEY_RELEASE | XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_BUTTON_RELEASE;
+	uint32_t eventmask = XCB_EVENT_MASK_EXPOSURE | XCB_EVENT_MASK_KEY_PRESS | XCB_EVENT_MASK_KEY_RELEASE | XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_BUTTON_RELEASE | XCB_EVENT_MASK_POINTER_MOTION;
 	uint32_t valuelist[] = {eventmask, colormap, 0};
 	uint32_t valuemask = XCB_CW_EVENT_MASK | XCB_CW_COLORMAP;
 
@@ -151,8 +156,12 @@ void if_init(void)
 		goto error;
 	}
 
-	font_init(display, &font); // TODO error check
-	glFont(font.base);
+	if (font_init(display, &font12, "-misc-dejavu sans-bold-r-normal--12-0-0-0-p-0-ascii-0") < 0)
+	{
+		xcb_destroy_window(connection, window);
+		glXDestroyContext(display, context);
+		goto error;
+	}
 
 	// enable transparency
 	glEnable(GL_BLEND);
@@ -170,6 +179,12 @@ void if_init(void)
 	image_load_png(&image_flag, "img/flag.png", 0);
 	image_load_png(&image_panel, "img/panel.png", 0);
 	image_load_png(&image_construction, "img/construction.png", 0);
+
+	image_load_png(&image_gold, "img/gold.png", 0);
+	image_load_png(&image_food, "img/food.png", 0);
+	image_load_png(&image_wood, "img/wood.png", 0);
+	image_load_png(&image_stone, "img/stone.png", 0);
+	image_load_png(&image_iron, "img/iron.png", 0);
 
 	image_load_png(&image_units[0], "img/peasant.png", 0);
 	image_load_png(&image_units[1], "img/archer.png", 0);
@@ -228,8 +243,67 @@ static void display_unit(size_t unit, unsigned x, unsigned y, enum color color, 
 	{
 		char buffer[16];
 		size_t length = format_uint(buffer, count) - buffer;
-		display_string(buffer, length, x + (FIELD_SIZE - (length * 10)) / 2, y + FIELD_SIZE, Black);
+		display_string(buffer, length, x + (FIELD_SIZE - (length * 10)) / 2, y + FIELD_SIZE, &font12, Black);
 	}
+}
+
+static void show_progress(unsigned current, unsigned total, unsigned x, unsigned y, unsigned width, unsigned height)
+{
+	// Progress is visualized as a sector with length proportional to the remaining time.
+
+	if (current)
+	{
+		double progress = (double)current / total;
+		double angle = progress * 2 * M_PI;
+
+		double cx = x + width / 2, cy = y + height / 2;
+
+		glColor4ubv(display_colors[Progress]);
+
+		glBegin(GL_POLYGON);
+
+		glVertex2f(x + width / 2, y + height / 2);
+		switch ((unsigned)(progress * 8))
+		{
+		case 0:
+		case 7:
+			glVertex2f(x + width, y + (1 - sin(angle)) * height / 2);
+			break;
+
+		case 1:
+		case 2:
+			glVertex2f(x + (1 + cos(angle)) * width / 2, y);
+			break;
+
+		case 3:
+		case 4:
+			glVertex2f(x, y + (1 - sin(angle)) * height / 2);
+			break;
+
+		case 5:
+		case 6:
+			glVertex2f(x + (1 + cos(angle)) * width / 2, y + height);
+			break;
+		}
+		switch ((unsigned)(progress * 8))
+		{
+		case 0:
+			glVertex2f(x + width, y);
+		case 1:
+		case 2:
+			glVertex2f(x, y);
+		case 3:
+		case 4:
+			glVertex2f(x, y + height);
+		case 5:
+		case 6:
+			glVertex2f(x + width, y + height);
+		}
+		glVertex2f(x + width, y + height / 2);
+
+		glEnd();
+	}
+	else display_rectangle(x, y, width, height, Progress);
 }
 
 void if_battle(const struct player *restrict players, const struct state *restrict state, const struct game *restrict game)
@@ -424,28 +498,80 @@ int if_battle_animation(void)
 	return moving;
 }
 
-static void show_resource(const char *restrict name, size_t name_length, int treasury, int income, int expense, unsigned y)
+static void show_resource(const struct image *restrict image, int treasury, int income, int expense, unsigned y)
 {
-	char buffer[32]; // TODO make sure this is enough
-	size_t length;
-	unsigned offset;
+	char buffer[32], *end; // TODO make sure this is enough
 
-	length = format_uint(format_bytes(buffer, name, name_length), treasury) - buffer;
-	display_string(buffer, length, PANEL_X, y, Black);
-	offset = length;
+	image_draw(image, PANEL_X, y);
+	end = format_uint(buffer, treasury);
 
 	if (income)
 	{
-		length = format_sint(buffer, income) - buffer;
-		display_string(buffer, length, PANEL_X + offset * 10, y, Ally);
-		offset += length;
+		*end++ = ' ';
+		end = format_sint(end, income);
 	}
-
 	if (expense)
 	{
-		length = format_sint(buffer, -expense) - buffer;
-		display_string(buffer, length, PANEL_X + offset * 10, y, Enemy);
-		// offset += length;
+		*end++ = ' ';
+		end = format_sint(end, -expense);
+	}
+
+	display_string(buffer, end - buffer, PANEL_X + 16, y, &font12, Black);
+}
+
+static void show_cost(const char *restrict name, size_t name_length, const struct resources *restrict cost)
+{
+	char buffer[16];
+	size_t length;
+
+	unsigned offset = 120;
+
+	display_string(name, name_length, TOOLTIP_X, TOOLTIP_Y, &font12, White);
+
+	if (cost->gold)
+	{
+		image_draw(&image_gold, TOOLTIP_X + offset, TOOLTIP_Y);
+		offset += 16;
+
+		length = format_uint(buffer, cost->gold) - buffer;
+		display_string(buffer, length, TOOLTIP_X + offset, TOOLTIP_Y, &font12, White);
+		offset += 40;
+	}
+	if (cost->food)
+	{
+		image_draw(&image_food, TOOLTIP_X + offset, TOOLTIP_Y);
+		offset += 16;
+
+		length = format_uint(buffer, cost->food) - buffer;
+		display_string(buffer, length, TOOLTIP_X + offset, TOOLTIP_Y, &font12, White);
+		offset += 40;
+	}
+	if (cost->wood)
+	{
+		image_draw(&image_wood, TOOLTIP_X + offset, TOOLTIP_Y);
+		offset += 16;
+
+		length = format_uint(buffer, cost->wood) - buffer;
+		display_string(buffer, length, TOOLTIP_X + offset, TOOLTIP_Y, &font12, White);
+		offset += 40;
+	}
+	if (cost->stone)
+	{
+		image_draw(&image_stone, TOOLTIP_X + offset, TOOLTIP_Y);
+		offset += 16;
+
+		length = format_uint(buffer, cost->stone) - buffer;
+		display_string(buffer, length, TOOLTIP_X + offset, TOOLTIP_Y, &font12, White);
+		offset += 40;
+	}
+	if (cost->iron)
+	{
+		image_draw(&image_iron, TOOLTIP_X + offset, TOOLTIP_Y);
+		offset += 16;
+
+		length = format_uint(buffer, cost->iron) - buffer;
+		display_string(buffer, length, TOOLTIP_X + offset, TOOLTIP_Y, &font12, White);
+		offset += 40;
 	}
 }
 
@@ -505,7 +631,7 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 		// Display flag of the region owner and name of the region.
 		display_rectangle(PANEL_X + 4, PANEL_Y + 4, 24, 12, Player + region->owner);
 		image_draw(&image_flag, PANEL_X, PANEL_Y);
-		display_string(region->name, region->name_length, PANEL_X + image_flag.width + MARGIN, PANEL_Y, Black);
+		display_string(region->name, region->name_length, PANEL_X + image_flag.width + MARGIN, PANEL_Y + (image_flag.height - font12.height) / 2, &font12, Black);
 
 		// Display the slots at the current region.
 		if (players[state->player].alliance == players[region->owner].alliance)
@@ -560,25 +686,22 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 			}
 			if (region->construct >= 0)
 			{
-				// TODO show progress
-				//progress = ((double)region->construct_time / buildings[region->construct].time) * FIELD_SIZE;
+				show_progress(region->construct_time, buildings[region->construct].time, BUILDING_X(region->construct), BUILDING_Y, FIELD_SIZE, FIELD_SIZE);
 				image_draw(&image_construction, BUILDING_X(region->construct), BUILDING_Y);
 			}
 		}
 
 		if (state->player == region->owner)
 		{
-			display_string(S("train:"), PANEL_X + 2, PANEL_Y + 200, Black); // TODO fix y coordinate
+			display_string(S("train:"), PANEL_X + 2, PANEL_Y + 200 + (FIELD_SIZE - font12.height) / 2, &font12, Black); // TODO fix y coordinate
 
 			// Display train queue.
 			size_t index;
 			for(index = 0; index < TRAIN_QUEUE; ++index)
 				if (region->train[index])
 				{
-					if (index) progress = 0;
-					else progress = ((double)region->train_time / region->train[index]->time) * FIELD_SIZE;
 					display_unit(region->train[index]->index, TRAIN_X(index), TRAIN_Y, White, 0);
-					display_rectangle(TRAIN_X(index), TRAIN_Y, FIELD_SIZE, FIELD_SIZE - progress, Progress);
+					show_progress((index ? 0 : region->train_time), region->train[0]->time, TRAIN_X(index), TRAIN_Y, FIELD_SIZE, FIELD_SIZE);
 				}
 				else display_rectangle(TRAIN_X(index), TRAIN_Y, FIELD_SIZE, FIELD_SIZE, Black);
 
@@ -590,15 +713,27 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 
 				display_unit(index, INVENTORY_X(index), INVENTORY_Y, Player, 0);
 			}
+
+			// Display tooltip for the hovered object.
+			if (state->pointed.building >= 0)
+			{
+				const struct building *building = buildings + state->pointed.building;
+				show_cost(building->name, building->name_length, &building->cost);
+			}
+			if (state->pointed.unit >= 0)
+			{
+				const struct unit *unit = game->units + state->pointed.unit;
+				show_cost(unit->name, unit->name_length, &unit->cost);
+			}
 		}
 	}
 
 	// Treasury
-	show_resource(S("gold: "), players[state->player].treasury.gold, income.gold, expenses.gold, RESOURCE_GOLD);
-	show_resource(S("food: "), players[state->player].treasury.food, income.food, expenses.food, RESOURCE_FOOD);
-	show_resource(S("wood: "), players[state->player].treasury.wood, income.wood, expenses.wood, RESOURCE_WOOD);
-	show_resource(S("iron: "), players[state->player].treasury.iron, income.iron, expenses.iron, RESOURCE_IRON);
-	show_resource(S("stone: "), players[state->player].treasury.stone, income.stone, expenses.stone, RESOURCE_ROCK);
+	show_resource(&image_gold, players[state->player].treasury.gold, income.gold, expenses.gold, RESOURCE_GOLD);
+	show_resource(&image_food, players[state->player].treasury.food, income.food, expenses.food, RESOURCE_FOOD);
+	show_resource(&image_wood, players[state->player].treasury.wood, income.wood, expenses.wood, RESOURCE_WOOD);
+	show_resource(&image_stone, players[state->player].treasury.stone, income.stone, expenses.stone, RESOURCE_STONE);
+	show_resource(&image_iron, players[state->player].treasury.iron, income.iron, expenses.iron, RESOURCE_IRON);
 
 	glFlush();
 	glXSwapBuffers(display, drawable);

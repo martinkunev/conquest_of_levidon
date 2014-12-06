@@ -11,26 +11,30 @@
 
 // TODO support more than 7 slots
 
+#define NAME(s) .name = (s), .name_length = sizeof(s) - 1
+
 const struct unit units[] =
 {
-	{.index = 0, .health = 3, .damage = 1, .speed = 3, .cost = {.gold = 1}, .expense = {.food = 1}, .time = 1},
-	{.index = 1, .health = 3, .damage = 1, .speed = 3, .cost = {.gold = 1, .wood = 1}, .expense = {.food = 1}, .shoot = 1, .range = 4, .time = 1, .requires = (1 << 5)},
-	{.index = 2, .health = 5, .damage = 2, .speed = 4, .cost = {.gold = 1, .iron = 1}, .expense = {.food = 1}, .time = 1, .requires = (1 << 4)},
-	{.index = 3, .health = 8, .damage = 2, .speed = 8, .cost = {.gold = 3, .iron = 1}, .expense = {.food = 3}, .time = 2, .requires = (1 << 6)},
+	{NAME("Peasant"), .index = 0, .health = 3, .damage = 1, .speed = 3, .cost = {.gold = 1}, .expense = {.food = 1}, .time = 1},
+	{NAME("Archer"), .index = 1, .health = 3, .damage = 1, .speed = 3, .cost = {.gold = 1, .wood = 1}, .expense = {.food = 1}, .shoot = 1, .range = 4, .time = 1, .requires = (1 << 5)},
+	{NAME("Pikeman"), .index = 2, .health = 5, .damage = 2, .speed = 4, .cost = {.gold = 1, .iron = 1}, .expense = {.food = 1}, .time = 1, .requires = (1 << 4)},
+	{NAME("Horse rider"), .index = 3, .health = 8, .damage = 2, .speed = 8, .cost = {.gold = 3, .iron = 1}, .expense = {.food = 3}, .time = 2, .requires = (1 << 6)},
 };
 const size_t units_count = sizeof(units) / sizeof(*units);
 
 const struct building buildings[] =
 {
-	{.name = "irrigation", .name_length = 10, .cost = {.gold = 4}, .income = {.food = 2}, .time = 2},
-	{.name = "lumbermill", .name_length = 10, .cost = {.gold = 6}, .income = {.wood = 2}, .time = 3},
-	{.name = "mine", .name_length = 4, .cost = {.gold = 10, .wood = 4}, .income = {.stone = 2}, .time = 4},
-	{.name = "blast_furnace", .name_length = 13, .cost = {.gold = 10, .stone = 12}, .income = {.iron = 1, .stone = -1}, .time = 5, .requires = (1 << 2)},
-	{.name = "barracks", .name_length = 8, .cost = {.gold = 10, .stone = 8}, .time = 4},
-	{.name = "archery_range", .name_length = 13, .cost = {.gold = 5, .wood = 5}, .time = 2},
-	{.name = "stables", .name_length = 7, .cost = {.gold = 10, .food = 10, .wood = 10}, .time = 3, .requires = (1 << 4)},
+	{NAME("Irrigation"), .cost = {.gold = 4}, .income = {.food = 2}, .time = 2},
+	{NAME("Lumber mill"), .cost = {.gold = 6}, .income = {.wood = 2}, .time = 3},
+	{NAME("Mine"), .cost = {.gold = 10, .wood = 4}, .income = {.stone = 2}, .time = 4},
+	{NAME("Blast furnace"), .cost = {.gold = 10, .stone = 12}, .income = {.iron = 1, .stone = -1}, .time = 5, .requires = (1 << 2)},
+	{NAME("Barracks"), .cost = {.gold = 10, .stone = 8}, .time = 4},
+	{NAME("Archery range"), .cost = {.gold = 5, .wood = 5}, .time = 2},
+	{NAME("Stables"), .cost = {.gold = 10, .food = 10, .wood = 10}, .time = 3, .requires = (1 << 4)},
 };
 const size_t buildings_count = sizeof(buildings) / sizeof(*buildings);
+
+#undef NAME
 
 static struct polygon *region_create(size_t count, ...)
 {

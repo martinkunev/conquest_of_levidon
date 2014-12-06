@@ -27,21 +27,25 @@ unsigned char display_colors[][4] = {
 	[Gray] = {128, 128, 128, 255},
 	[Black] = {0, 0, 0, 255},
 	[B0] = {96, 96, 96, 255},
-	[Progress] = {128, 128, 128, 192},
+	[Progress] = {128, 128, 128, 160},
 	[Select] = {255, 255, 255, 96},
+
 	[Self] = {0, 192, 0, 255},
 	[Ally] = {0, 0, 255, 255},
 	[Enemy] = {255, 0, 0, 255},
+
 	[Player + 0] = {192, 192, 192, 255},
-	[Player + 1] = {255, 255, 0, 255},
-	[Player + 2] = {128, 128, 0, 255},
-	[Player + 3] = {0, 255, 0, 255},
-	[Player + 4] = {0, 255, 255, 255},
-	[Player + 5] = {0, 128, 128, 255},
-	[Player + 6] = {0, 0, 128, 255},
-	[Player + 7] = {255, 0, 255, 255},
-	[Player + 8] = {128, 0, 128, 255},
-	[Player + 9] = {192, 0, 0, 255},
+	[Player + 1] = {0, 96, 0, 255},
+	[Player + 2] = {128, 0, 0, 255},
+	[Player + 3] = {0, 255, 255, 255},
+	[Player + 4] = {255, 255, 0, 255},
+	[Player + 5] = {0, 192, 255, 255},
+	[Player + 6] = {160, 0, 160, 255},
+	[Player + 7] = {160, 128, 0, 255},
+	[Player + 8] = {0, 160, 160, 255},
+	[Player + 9] = {128, 0, 224, 255},
+	[Player + 10] = {255, 64, 160, 255},
+	[Player + 11] = {160, 160, 255, 255},
 };
 
 static inline long cross_product(int fx, int fy, int sx, int sy)
@@ -211,11 +215,11 @@ void display_arrow(struct point from, struct point to, int offset_x, int offset_
 	glEnd();
 }
 
-int font_init(Display *restrict dpy, struct font *restrict font)
+int font_init(Display *restrict display, struct font *restrict font, const char *restrict name)
 {
 	unsigned first, last;
 
-	font->info = XLoadQueryFont(dpy, "-misc-dejavu sans mono-medium-r-normal--0-0-0-0-m-0-ascii-0");
+	font->info = XLoadQueryFont(display, name);
 	if (!font->info) return -1;
 
 	first = font->info->min_char_or_byte2;
@@ -231,9 +235,12 @@ int font_init(Display *restrict dpy, struct font *restrict font)
 	return 0;
 }
 
-void display_string(const char *string, size_t length, unsigned x, unsigned y, enum color color)
+void display_string(const char *string, size_t length, unsigned x, unsigned y, struct font *restrict font, enum color color)
 {
+	glListBase(font->base);
 	glColor4ubv(display_colors[color]);
-	glRasterPos2i(x - font.info->min_bounds.lbearing, y + font.info->max_bounds.ascent);
+	glRasterPos2i(x - font->info->min_bounds.lbearing, y + font->info->max_bounds.ascent);
 	glCallLists(length, GL_UNSIGNED_BYTE, string);
+
+	// TODO return the height of the written text
 }
