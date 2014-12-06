@@ -31,6 +31,7 @@ struct unit
 
 	struct resources cost, expense;
 	unsigned char time;
+	uint32_t requires;
 
 	unsigned char shoot; // damage when shooting
 	unsigned char range;
@@ -43,8 +44,7 @@ struct building
 
 	struct resources cost, income;
 	unsigned char time;
-
-	// TODO requirements
+	uint32_t requires;
 };
 
 struct slot

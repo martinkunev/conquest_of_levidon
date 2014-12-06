@@ -34,7 +34,7 @@ extern struct pawn *(*battlefield)[BATTLEFIELD_WIDTH];
 
 static struct state state;
 
-static int input_local(void (*display)(const struct player *restrict, const struct state *restrict), const struct area *restrict areas, size_t areas_count, const struct game *restrict game)
+static int input_local(void (*display)(const struct player *restrict, const struct state *restrict, const struct game *restrict), const struct area *restrict areas, size_t areas_count, const struct game *restrict game)
 {
 	xcb_generic_event_t *event;
 	xcb_button_release_event_t *mouse;
@@ -47,7 +47,7 @@ static int input_local(void (*display)(const struct player *restrict, const stru
 	size_t index;
 	int status;
 
-	display(game->players, &state);
+	display(game->players, &state, game);
 
 	// TODO clear queued events (previously pressed keys, etc.)
 
@@ -60,7 +60,7 @@ static int input_local(void (*display)(const struct player *restrict, const stru
 		switch (event->response_type & ~0x80)
 		{
 		case XCB_EXPOSE:
-			display(game->players, &state);
+			display(game->players, &state, game);
 			continue;
 
 		case XCB_BUTTON_PRESS:
@@ -101,7 +101,7 @@ static int input_local(void (*display)(const struct player *restrict, const stru
 				else break;
 			}
 		} while (index--);
-		display(game->players, &state);
+		display(game->players, &state, game);
 	}
 }
 
@@ -178,6 +178,7 @@ static int input_train(int code, unsigned x, unsigned y, uint16_t modifiers, con
 {
 	if (code >= 0) return INPUT_NOTME;
 
+	if (state.region < 0) return 0;
 	if (state.player != game->regions[state.region].owner) return 0;
 	if ((x % (FIELD_SIZE + 1)) >= FIELD_SIZE) return 0;
 
@@ -185,7 +186,9 @@ static int input_train(int code, unsigned x, unsigned y, uint16_t modifiers, con
 	{
 		size_t unit = x / (FIELD_SIZE + 1);
 		if (unit >= game->units_count) return 0;
+
 		if (!resource_enough(&game->players[state.player].treasury, &game->units[unit].cost)) return 0;
+		if ((game->regions[state.region].built & game->units[unit].requires) != game->units[unit].requires) return 0;
 
 		struct unit **train = game->regions[state.region].train;
 		size_t index;
@@ -207,6 +210,7 @@ static int input_dismiss(int code, unsigned x, unsigned y, uint16_t modifiers, c
 {
 	if (code >= 0) return INPUT_NOTME;
 
+	if (state.region < 0) return 0;
 	if (state.player != game->regions[state.region].owner) return 0;
 	if ((x % (FIELD_SIZE + 1)) >= FIELD_SIZE) return 0;
 
@@ -316,6 +320,7 @@ static int input_build(int code, unsigned x, unsigned y, uint16_t modifiers, con
 {
 	if (code >= 0) return INPUT_NOTME;
 
+	if (state.region < 0) return 0;
 	if (state.player != game->regions[state.region].owner) return 0;
 	if ((x % (FIELD_SIZE + 1)) >= FIELD_SIZE) return 0;
 
@@ -325,22 +330,27 @@ static int input_build(int code, unsigned x, unsigned y, uint16_t modifiers, con
 		size_t index = x / (FIELD_SIZE + 1);
 		if (index >= buildings_count) return 0;
 
-		construct = &game->regions[state.region].construct;
+		struct region *region = game->regions + state.region;
+
+		construct = &region->construct;
 		if (*construct >= 0) // there is a construction in process
 		{
 			// If the building clicked is the one under construction, cancel the construction.
 			if (*construct == index)
 			{
-				if (game->regions[state.region].construct_time)
-					game->regions[state.region].construct_time = 0;
+				if (region->construct_time)
+					region->construct_time = 0;
 				else
 					resource_add(&game->players[state.player].treasury, &buildings[index].cost);
 				*construct = -1;
 			}
 		}
-		else if (!(game->regions[state.region].built & (1 << index)))
+		else if (!(region->built & (1 << index)))
 		{
+			// Make sure the player has enough resources and the required buildings.
 			if (!resource_enough(&game->players[state.player].treasury, &buildings[index].cost)) return 0;
+			if ((region->built & buildings[index].requires) != buildings[index].requires) return 0;
+
 			*construct = index;
 			resource_subtract(&game->players[state.player].treasury, &buildings[index].cost);
 		}
@@ -389,7 +399,7 @@ int input_map(const struct game *restrict game, unsigned char player)
 		},
 		{
 			.left = BUILDING_X(0),
-			.right = BUILDING_X(0) + 3 * (FIELD_SIZE + 1) - 1 - 1,
+			.right = BUILDING_X(0) + buildings_count * (FIELD_SIZE + 1) - 1 - 1,
 			.top = BUILDING_Y,
 			.bottom = BUILDING_Y + FIELD_SIZE - 1,
 			.callback = input_build,

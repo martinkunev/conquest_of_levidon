@@ -1,7 +1,7 @@
 {
 	"players": [
 		{"alliance": 0, "gold": 0, "food": 0, "wood": 0, "iron": 0, "stone": 0},
-		{"alliance": 1, "gold": 5, "food": 3, "wood": 0, "iron": 1, "stone": 0},
+		{"alliance": 1, "gold": 95, "food": 93, "wood": 90, "iron": 91, "stone": 90},
 		{"alliance": 2, "gold": 6, "food": 4, "wood": 1, "iron": 1, "stone": 0},
 		{"alliance": 1, "gold": 5, "food": 3, "wood": 0, "iron": 1, "stone": 0}
 	],

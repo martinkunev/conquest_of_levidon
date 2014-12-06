@@ -60,9 +60,9 @@ struct region *restrict regions;
 size_t regions_count;
 
 static struct image image_move_destination, image_shoot_destination, image_selected, image_flag, image_panel, image_construction;
-static struct image image_units[3]; // TODO the array must be enough to hold units_count units
-static struct image image_buildings[3]; // TODO the array must be big enough to hold buildings_count elements
-static struct image image_buildings_gray[3]; // TODO the array must be big enough to hold buildings_count elements
+static struct image image_units[4]; // TODO the array must be enough to hold units_count units
+static struct image image_buildings[7]; // TODO the array must be big enough to hold buildings_count elements
+static struct image image_buildings_gray[7]; // TODO the array must be big enough to hold buildings_count elements
 
 static GLuint map_renderbuffer;
 
@@ -173,15 +173,24 @@ void if_init(void)
 
 	image_load_png(&image_units[0], "img/peasant.png", 0);
 	image_load_png(&image_units[1], "img/archer.png", 0);
-	image_load_png(&image_units[2], "img/horse_rider.png", 0);
+	image_load_png(&image_units[2], "img/pikeman.png", 0);
+	image_load_png(&image_units[3], "img/horse_rider.png", 0);
 
 	image_load_png(&image_buildings[0], "img/irrigation.png", 0);
 	image_load_png(&image_buildings[1], "img/lumbermill.png", 0);
 	image_load_png(&image_buildings[2], "img/mine.png", 0);
+	image_load_png(&image_buildings[3], "img/blast_furnace.png", 0);
+	image_load_png(&image_buildings[4], "img/barracks.png", 0);
+	image_load_png(&image_buildings[5], "img/archery_range.png", 0);
+	image_load_png(&image_buildings[6], "img/stables.png", 0);
 
 	image_load_png(&image_buildings_gray[0], "img/irrigation.png", 1);
 	image_load_png(&image_buildings_gray[1], "img/lumbermill.png", 1);
 	image_load_png(&image_buildings_gray[2], "img/mine.png", 1);
+	image_load_png(&image_buildings_gray[3], "img/blast_furnace.png", 1);
+	image_load_png(&image_buildings_gray[4], "img/barracks.png", 1);
+	image_load_png(&image_buildings_gray[5], "img/archery_range.png", 1);
+	image_load_png(&image_buildings_gray[6], "img/stables.png", 1);
 
 	// TODO handle modifier keys
 	// TODO handle dead keys
@@ -223,7 +232,7 @@ static void display_unit(size_t unit, unsigned x, unsigned y, enum color color, 
 	}
 }
 
-void if_battle(const struct player *restrict players, const struct state *restrict state)
+void if_battle(const struct player *restrict players, const struct state *restrict state, const struct game *restrict game)
 {
 	// clear window
 	glClearColor(0.0, 0.0, 0.0, 0.0);
@@ -440,7 +449,7 @@ static void show_resource(const char *restrict name, size_t name_length, int tre
 	}
 }
 
-void if_map(const struct player *restrict players, const struct state *restrict state)
+void if_map(const struct player *restrict players, const struct state *restrict state, const struct game *restrict game)
 {
 	// clear window
 	glClearColor(0.0, 0.0, 0.0, 0.0);
@@ -543,6 +552,9 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 
 			for(i = 0; i < buildings_count; ++i)
 			{
+				// Don't display the building if its requirements are not satisfied.
+				if ((region->built & buildings[i].requires) != buildings[i].requires) continue;
+
 				if (region->built & (1 << i)) image_draw(image_buildings + i, BUILDING_X(i), BUILDING_Y);
 				else image_draw(image_buildings_gray + i, BUILDING_X(i), BUILDING_Y);
 			}
@@ -571,10 +583,13 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 				else display_rectangle(TRAIN_X(index), TRAIN_Y, FIELD_SIZE, FIELD_SIZE, Black);
 
 			// Display units available for training.
-			// TODO use game->units_count
-			display_unit(0, INVENTORY_X(0), INVENTORY_Y, Player, 0);
-			display_unit(1, INVENTORY_X(1), INVENTORY_Y, Player, 0);
-			display_unit(2, INVENTORY_X(2), INVENTORY_Y, Player, 0);
+			for(index = 0; index < game->units_count; ++index)
+			{
+				// Don't display the unit if its requirements are not satisfied.
+				if ((region->built & game->units[index].requires) != game->units[index].requires) continue;
+
+				display_unit(index, INVENTORY_X(index), INVENTORY_Y, Player, 0);
+			}
 		}
 	}
 
