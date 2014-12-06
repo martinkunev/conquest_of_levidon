@@ -3,7 +3,7 @@
 		{"alliance": 0, "gold": 0, "food": 0, "wood": 0, "iron": 0, "stone": 0},
 		{"alliance": 1, "gold": 5, "food": 3, "wood": 0, "iron": 0, "stone": 0},
 		{"alliance": 2, "gold": 5, "food": 3, "wood": 0, "iron": 0, "stone": 0},
-		{"alliance": 1, "gold": 5, "food": 3, "wood": 0, "iron": 1, "stone": 0},
+		{"alliance": 1, "gold": 5, "food": 3, "wood": 0, "iron": 1, "stone": 0}
 	],
 	"regions": [
 		{
