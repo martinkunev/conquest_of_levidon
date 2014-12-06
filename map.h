@@ -94,8 +94,8 @@ struct game
 
 // neighbors (in order): east, north-east, north, north-west, west, south-west, south, south-east
 
-extern struct building buildings[];
-extern size_t buildings_count;
+extern const struct building buildings[];
+extern const size_t buildings_count;
 
 int map_init(const union json *restrict json, struct game *restrict game);
 void map_term(struct game *restrict game);

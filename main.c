@@ -18,6 +18,8 @@
 #define WINNER_NOBODY -1
 #define WINNER_BATTLE -2
 
+#define MAP_DEFAULT "maps/balkans"
+
 void region_income(const struct region* restrict region, struct resources *restrict income)
 {
 	size_t i;
@@ -210,6 +212,12 @@ static int play(struct game *restrict game)
 						}
 						slots += 1;
 					}
+
+					// Cancel all constructions and trainings.
+					region->construct = -1;
+					region->construct_time = 0;
+					for(i = 0; i < TRAIN_QUEUE; ++i) region->train[i] = 0;
+					region->train_time = 0;
 				}
 			}
 
@@ -256,11 +264,7 @@ int main(int argc, char *argv[])
 	struct game game;
 	int winner;
 
-	if (argc < 2)
-	{
-		write(2, S("You must specify map\n"));
-		return 0;
-	}
+	if (argc < 2) argv[1] = MAP_DEFAULT;
 
 	file = open(argv[1], O_RDONLY);
 	if (file < 0) return -1;

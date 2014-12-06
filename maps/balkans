@@ -1,9 +1,10 @@
 {
 	"players": [
 		{"alliance": 0, "gold": 0, "food": 0, "wood": 0, "iron": 0, "stone": 0},
-		{"alliance": 1, "gold": 95, "food": 93, "wood": 90, "iron": 91, "stone": 90},
-		{"alliance": 2, "gold": 6, "food": 4, "wood": 1, "iron": 1, "stone": 0},
-		{"alliance": 1, "gold": 5, "food": 3, "wood": 0, "iron": 1, "stone": 0}
+		{"alliance": 1, "gold": 5, "food": 3, "wood": 0, "iron": 0, "stone": 0},
+		{"alliance": 2, "gold": 5, "food": 3, "wood": 0, "iron": 0, "stone": 0},
+		{"alliance": 1, "gold": 5, "food": 3, "wood": 0, "iron": 1, "stone": 0},
+		{"alliance": 2, "gold": 5, "food": 3, "wood": 0, "iron": 0, "stone": 0}
 	],
 	"regions": [
 		{
@@ -55,7 +56,7 @@
 			"comment": "2",
 			"name": "Thessaly",
 			"owner": 0,
-			"built": ["lumbermill", "irrigation"],
+			"built": [],
 			"neighbors": [-1, 6, 5, -1, 3, -1, 1, -1],
 			"location": [
 				[392, 463],
@@ -95,8 +96,8 @@
 		{
 			"comment": "4",
 			"name": "Dyrrachium",
-			"owner": 2,
-			"built": ["lumbermill"],
+			"owner": 0,
+			"built": [],
 			"neighbors": [5, 12, -1, 13, -1, -1, 3, -1],
 			"location": [
 				[207, 377],
@@ -111,8 +112,8 @@
 		{
 			"comment": "5",
 			"name": "Macedonia",
-			"owner": 2,
-			"built": ["lumbermill", "irrigation"],
+			"owner": 0,
+			"built": [],
 			"neighbors": [6, 11, 12, -1, 4, 3, 2, -1],
 			"location": [
 				[305, 439],
@@ -145,7 +146,7 @@
 			"comment": "7",
 			"name": "Byzantium",
 			"owner": 3,
-			"built": ["lumbermill", "irrigation", "mine"],
+			"built": ["lumbermill", "irrigation", "barracks"],
 			"neighbors": [-1, -1, -1, 8, 6, -1, -1, -1],
 			"location": [
 				[516, 391],
@@ -164,7 +165,7 @@
 			"comment": "8",
 			"name": "Zagore",
 			"owner": 0,
-			"built": ["irrigation"],
+			"built": [],
 			"neighbors": [-1, 9, 10, -1, 11, 6, -1, 7],
 			"location": [
 				[516, 391],
@@ -181,7 +182,7 @@
 			"comment": "9",
 			"name": "Dobruja",
 			"owner": 0,
-			"built": ["irrigation"],
+			"built": [],
 			"neighbors": [-1, -1, -1, -1, -1, 10, 8, -1],
 			"location": [
 				[581, 284],
@@ -202,8 +203,8 @@
 		{
 			"comment": "10",
 			"name": "Moesia",
-			"owner": 0,
-			"built": ["lumbermill"],
+			"owner": 4,
+			"built": [],
 			"neighbors": [-1, 9, -1, -1, -1, 11, 8, -1],
 			"location": [
 				[433, 314],
@@ -218,8 +219,8 @@
 		{
 			"comment": "11",
 			"name": "Serdika",
-			"owner": 0,
-			"built": ["mine"],
+			"owner": 4,
+			"built": ["lumbermill"],
 			"neighbors": [8, 10, -1, -1, 12, -1, 5, 6],
 			"location": [
 				[433, 314],
@@ -260,7 +261,7 @@
 		{
 			"comment": "13",
 			"name": "Doclea",
-			"owner": 0,
+			"owner": 2,
 			"built": [],
 			"neighbors": [12, 14, -1, 15, -1, -1, -1, 4],
 			"location": [
@@ -294,8 +295,8 @@
 		{
 			"comment": "15",
 			"name": "Dalmatia",
-			"owner": 0,
-			"built": [],
+			"owner": 2,
+			"built": ["archery_range"],
 			"neighbors": [14, -1, 16, -1, -1, -1, -1, 13],
 			"location": [
 				[136, 321],

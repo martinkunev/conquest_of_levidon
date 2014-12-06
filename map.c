@@ -11,16 +11,16 @@
 
 // TODO support more than 7 slots
 
-struct unit units[] =
+const struct unit units[] =
 {
 	{.index = 0, .health = 3, .damage = 1, .speed = 3, .cost = {.gold = 1}, .expense = {.food = 1}, .time = 1},
 	{.index = 1, .health = 3, .damage = 1, .speed = 3, .cost = {.gold = 1, .wood = 1}, .expense = {.food = 1}, .shoot = 1, .range = 4, .time = 1, .requires = (1 << 5)},
-	{.index = 2, .health = 4, .damage = 2, .speed = 4, .cost = {.gold = 1, .iron = 1}, .expense = {.food = 1}, .time = 1, .requires = (1 << 4)},
+	{.index = 2, .health = 5, .damage = 2, .speed = 4, .cost = {.gold = 1, .iron = 1}, .expense = {.food = 1}, .time = 1, .requires = (1 << 4)},
 	{.index = 3, .health = 8, .damage = 2, .speed = 8, .cost = {.gold = 3, .iron = 1}, .expense = {.food = 3}, .time = 2, .requires = (1 << 6)},
 };
-size_t units_count = sizeof(units) / sizeof(*units);
+const size_t units_count = sizeof(units) / sizeof(*units);
 
-struct building buildings[] =
+const struct building buildings[] =
 {
 	{.name = "irrigation", .name_length = 10, .cost = {.gold = 4}, .income = {.food = 2}, .time = 2},
 	{.name = "lumbermill", .name_length = 10, .cost = {.gold = 6}, .income = {.wood = 2}, .time = 3},
@@ -30,7 +30,7 @@ struct building buildings[] =
 	{.name = "archery_range", .name_length = 13, .cost = {.gold = 5, .wood = 5}, .time = 2},
 	{.name = "stables", .name_length = 7, .cost = {.gold = 10, .food = 10, .wood = 10}, .time = 3, .requires = (1 << 4)},
 };
-size_t buildings_count = sizeof(buildings) / sizeof(*buildings);
+const size_t buildings_count = sizeof(buildings) / sizeof(*buildings);
 
 static struct polygon *region_create(size_t count, ...)
 {

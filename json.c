@@ -1405,15 +1405,23 @@ void json_free(union json *restrict json)
 }
 
 // TODO: decide how to distinguish parse error from internal server error
+#include <stdio.h>
 union json *json_parse(const struct string *json)
 {
 	struct json_context context = {.length = 0};
 	struct JSON_parser_struct *jc = new_JSON_parser(&token_add, &context); // TODO: memory error
 	size_t i;
 
+	unsigned line = 1;
 	for(i = 0; i < json->length; ++i)
+	{
 		if (!JSON_parser_char(jc, (unsigned char)json->data[i])) // TODO: memory or parse error
+		{
+			fprintf(stderr, "Parse error on line %u\n", line);
 			goto error;
+		}
+		if (json->data[i] == '\n') line += 1;
+	}
 
 	if (!JSON_parser_done(jc)) goto error; // TODO: parse error
 
