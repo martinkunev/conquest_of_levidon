@@ -715,7 +715,7 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 			}
 
 			// Display tooltip for the hovered object.
-			if (state->pointed.building >= 0)
+			if ((state->pointed.building >= 0) && !(region->built & (1 << state->pointed.building)))
 			{
 				const struct building *building = buildings + state->pointed.building;
 				show_cost(building->name, building->name_length, &building->cost);

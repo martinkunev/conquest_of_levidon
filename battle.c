@@ -51,8 +51,8 @@ f(x) where:
 	lim(x->oo) f(x) = 0
 	f'(n) = 0
 	x < 2n  f"(x) < 0
-    f"(2n) = 0
-    x > 2n  f"(x) > 0
+	f"(2n) = 0
+	x > 2n  f"(x) > 0
 */
 
 // TODO think about preventing endless battles (e.g. units doing 0 damage); maybe cancel the battle after a certain number of turns without damage?
@@ -684,6 +684,7 @@ int battle(const struct game *restrict game, struct region *restrict region)
 	pawns = malloc(pawns_count * sizeof(*pawns));
 	if (!pawns) return -1;
 
+	// Put the pawns at their initial positions.
 	i = 0;
 	for(slot = region->slots; slot; slot = slot->_next)
 	{
@@ -717,7 +718,7 @@ int battle(const struct game *restrict game, struct region *restrict region)
 		i += 1;
 	}
 
-	unsigned *count = 0, *damage = 0;
+	unsigned *pawns_defend = 0, *pawns_damage = 0;
 	struct pawn *pawn, *next;
 	unsigned char alliance;
 
@@ -726,7 +727,7 @@ int battle(const struct game *restrict game, struct region *restrict region)
 	unsigned char player;
 
 	unsigned char a;
-	unsigned c, d;
+	unsigned enemies, damage;
 
 	int dx, dy;
 
@@ -748,17 +749,17 @@ int battle(const struct game *restrict game, struct region *restrict region)
 
 	if_set(battle.field);
 
-	count = malloc(game->players_count * sizeof(*count));
-	if (!count)
+	pawns_defend = malloc(game->players_count * sizeof(*pawns_defend));
+	if (!pawns_defend)
 	{
 		status = -1;
 		goto finally;
 	}
 
-	damage = malloc(game->players_count * sizeof(*damage));
-	if (!damage)
+	pawns_damage = malloc(game->players_count * sizeof(*pawns_damage));
+	if (!pawns_damage)
 	{
-		free(count);
+		free(pawns_defend);
 		status = -1;
 		goto finally;
 	}
@@ -766,13 +767,23 @@ int battle(const struct game *restrict game, struct region *restrict region)
 	do
 	{
 		// Ask each player to perform battle actions.
-		for(player = 1; player < game->players_count; ++player) // TODO skip player 0 in a natural way
+		// TODO implement Computer and Remote
+		for(player = 0; player < game->players_count; ++player)
 		{
-			if (!battle.player_pawns[player].length) continue; // skip dead players
-			if (input_battle(game, player) < 0)
+			if (!battle.player_pawns[player].length) continue; // skip players with no pawns
+
+			switch (game->players[player].type)
 			{
-				status = -1;
-				goto finally;
+			case Neutral:
+				continue;
+
+			case Local:
+				if (input_battle(game, player) < 0)
+				{
+					status = -1;
+					goto finally;
+				}
+				break;
 			}
 		}
 
@@ -784,7 +795,7 @@ int battle(const struct game *restrict game, struct region *restrict region)
 				if (!battle.field[i][j]) continue;
 				pawn = battle.field[i][j];
 
-				battle_escape(game->players, game->players_count, pawn, count, damage);
+				battle_escape(game->players, game->players_count, pawn, pawns_defend, pawns_damage);
 
 				do
 				{
@@ -796,39 +807,37 @@ int battle(const struct game *restrict game, struct region *restrict region)
 
 					alliance = game->players[pawn->slot->player].alliance;
 
-					d = 0;
+					damage = 0;
 
 					// Each alliance deals damage equally to each enemy unit.
 					for(a = 0; a < game->players_count; ++a)
 					{
 						if (a == alliance) continue;
 
-						// Calculate the number of enemy units for a.
-						c = count[game->players_count - 1] - (count[a] - (a ? count[a - 1] : 0));
+						// Calculate the number of units from alliances other than a.
+						enemies = pawns_defend[game->players_count - 1] - (pawns_defend[a] - (a ? pawns_defend[a - 1] : 0));
 
-						d += (double)((damage[a] - (a ? damage[a - 1] : 0)) * pawn->slot->count) / c + 0.5;
+						// Calculate the damage that the alliance a will deal to the current pawn.
+						damage += (double)((pawns_damage[a] - (a ? pawns_damage[a - 1] : 0)) * pawn->slot->count) / enemies + 0.5;
 					}
 
 					// TODO implement the too many units sanction
-					// d = ...;
+					// damage = ...;
 
-					// Pawn takes more damage if it moves slower.
+					// The pawn takes less damage if it moves faster.
 					dx = (pawn->move.x[1] - pawn->move.x[0]);
 					dy = (pawn->move.y[1] - pawn->move.y[0]);
-					d *= sqrt((pawn->move.t[1] - pawn->move.t[0]) / sqrt(dx * dx + dy * dy));
+					damage *= sqrt((pawn->move.t[1] - pawn->move.t[0]) / (sqrt(dx * dx + dy * dy) * ROUND_DURATION));
 
 					// Deal damage and kill some of the units.
-					if (d)
+					if (damage)
 					{
-						printf("DAMAGE %u (escape) %u (%u,%u)\n", (unsigned)d, (unsigned)pawn->slot->unit->index, (unsigned)pawn->move.x[0], (unsigned)pawn->move.y[0]);
-						battle_damage(battle.field, pawn, d);
+						printf("DAMAGE %u (escape) %u (%u,%u)\n", (unsigned)damage, (unsigned)pawn->slot->unit->index, (unsigned)pawn->move.x[0], (unsigned)pawn->move.y[0]);
+						battle_damage(battle.field, pawn, damage);
 					}
 				} while (pawn = next);
 			}
 		}
-
-		// Handle pawn movement interference.
-		status = battle_round(game->players, battle.field, pawns, pawns_count, &collisions);
 
 		// Deal damage from the shooting pawns.
 		for(i = 0; i < pawns_count; ++i) // foreach shooter
@@ -843,31 +852,22 @@ int battle(const struct game *restrict game, struct region *restrict region)
 				distance = sqrt(dx * dx + dy * dy);
 				miss = distance / pawns[i].slot->unit->range;
 
-				// Determine the time of the shooting.
-				t = (distance * (pawns[i].move.t[1] - pawns[i].move.t[0]) / pawns[i].slot->unit->range);
-
 				// Deal damage to the pawns close to the shooting target.
 				// All the damage of the shooter is dealt to each pawn (it's not divided).
 				for(j = 0; j < pawns_count; ++j) // foreach target
 				{
 					if (!pawns[j].slot->count) continue; // skip dead pawns
 
-					if ((pawns[j].move.x[1] == pawns[j].move.x[0]) && (pawns[j].move.y[1] == pawns[j].move.y[0]))
-					{
-						// no need to calculate the position of non-moving pawns
-						x = pawns[j].move.x[0];
-						y = pawns[j].move.y[0];
-					}
-					else position(&pawns[j].move, t, &x, &y);
-					target_index = abs(pawns[i].shoot.x - x) * 3 / 2 + abs(pawns[i].shoot.y - y) * 3 / 2;
+					// Calculate the accuracy index for the target.
+					target_index = abs(pawns[i].shoot.x - pawns[j].move.x[0]) * 3 / 2 + abs(pawns[i].shoot.y - pawns[j].move.y[0]) * 3 / 2;
 
 					// Damage is dealt to the target field and to its neighbors.
 					if (target_index < (sizeof(targets) / sizeof(*targets)))
 					{
 						on_target = targets[target_index][0] * (1 - miss) + targets[target_index][1] * miss;
-						d = pawns[i].slot->count * pawns[i].slot->unit->shoot * on_target + 0.5;
-						printf("DAMAGE %u (shoot) %u (%u,%u)\n", (unsigned)d, (unsigned)pawns[j].slot->player, (unsigned)pawns[j].move.x[0], (unsigned)pawns[j].move.y[0]);
-						pawns[j].hurt += d;
+						damage = pawns[i].slot->count * pawns[i].slot->unit->shoot * on_target + 0.5;
+						printf("DAMAGE %u (shoot) %u (%u,%u)\n", (unsigned)damage, (unsigned)pawns[j].slot->player, (unsigned)pawns[j].move.x[0], (unsigned)pawns[j].move.y[0]);
+						pawns[j].hurt += damage;
 
 						// TODO ?deal more damage to moving pawns
 					}
@@ -875,6 +875,18 @@ int battle(const struct game *restrict game, struct region *restrict region)
 			}
 		}
 
+		// Clean the corpses from shooting.
+		for(i = 0; i < pawns_count; ++i)
+		{
+			if (!pawns[i].slot->count) continue; // skip dead pawns
+
+			if (battle_damage(battle.field, pawns + i, 0)) continue;
+		}
+
+		// Handle pawn movement collisions.
+		status = battle_round(game->players, battle.field, pawns, pawns_count, &collisions);
+
+		// Display pawn movement animation.
 		extern double animation_timer;
 		struct timeval start, now;
 		animation_timer = 0;
@@ -885,12 +897,10 @@ int battle(const struct game *restrict game, struct region *restrict region)
 			animation_timer = (now.tv_sec * 1000000 + now.tv_usec - start.tv_sec * 1000000 - start.tv_usec) / 500000.0;
 		}
 
-		// Handle pawn movement and clean the corpses from shooting.
+		// Perform pawn movement.
 		for(i = 0; i < pawns_count; ++i)
 		{
 			if (!pawns[i].slot->count) continue; // skip dead pawns
-
-			if (battle_damage(battle.field, pawns + i, 0)) continue;
 
 			pawns[i].shoot.x = -1;
 			pawns[i].shoot.y = -1;
@@ -908,7 +918,7 @@ int battle(const struct game *restrict game, struct region *restrict region)
 				if (!battle.field[i][j]) continue;
 				pawn = battle.field[i][j];
 
-				battle_fight(game->players, game->players_count, pawn, count, damage);
+				battle_fight(game->players, game->players_count, pawn, pawns_defend, pawns_damage);
 
 				do
 				{
@@ -916,27 +926,28 @@ int battle(const struct game *restrict game, struct region *restrict region)
 
 					alliance = game->players[pawn->slot->player].alliance;
 
-					d = 0;
+					damage = 0;
 
 					// Each alliance deals damage equally to each enemy unit.
 					for(a = 0; a < game->players_count; ++a)
 					{
 						if (a == alliance) continue;
 
-						// Calculate the number of enemy units for a.
-						c = count[game->players_count - 1] - (count[a] - (a ? count[a - 1] : 0));
+						// Calculate the number of units from alliances other than a.
+						enemies = pawns_defend[game->players_count - 1] - (pawns_defend[a] - (a ? pawns_defend[a - 1] : 0));
 
-						d += (double)((damage[a] - (a ? damage[a - 1] : 0)) * pawn->slot->count) / c + 0.5;
+						// Calculate the damage that the alliance a will deal to the current pawn.
+						damage += (double)((pawns_damage[a] - (a ? pawns_damage[a - 1] : 0)) * pawn->slot->count) / enemies + 0.5;
 					}
 
 					// TODO implement the too many units sanction
-					// d = ...;
+					// damage = ...;
 
 					// Deal damage and kill some of the units.
-					if (d)
+					if (damage)
 					{
-						printf("DAMAGE %u (hit) %u (%u,%u)\n", (unsigned)d, (unsigned)pawn->slot->unit->index, (unsigned)pawn->move.x[0], (unsigned)pawn->move.y[0]);
-						battle_damage(battle.field, pawn, d);
+						printf("DAMAGE %u (hit) %u (%u,%u)\n", (unsigned)damage, (unsigned)pawn->slot->unit->index, (unsigned)pawn->move.x[0], (unsigned)pawn->move.y[0]);
+						battle_damage(battle.field, pawn, damage);
 					}
 				} while (pawn = next);
 			}
@@ -947,10 +958,10 @@ int battle(const struct game *restrict game, struct region *restrict region)
 
 finally:
 
-	free(count);
-	free(damage);
+	free(pawns_defend);
+	free(pawns_damage);
 
-	// TODO free each element in the heap
+	for(i = 0; i < collisions.count; ++i) free(collisions.data[i]);
 	heap_term(&collisions);
 
 	return status;
