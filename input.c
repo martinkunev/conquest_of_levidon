@@ -274,6 +274,7 @@ static int input_slot(int code, unsigned x, unsigned y, uint16_t modifiers, cons
 	size_t offset;
 	int found;
 
+	if (code == EVENT_MOTION) return INPUT_NOTME;
 	if (code >= 0) return INPUT_NOTME; // ignore keyboard events
 
 	if (state.region < 0) goto reset; // no region selected
@@ -303,6 +304,7 @@ static int input_slot(int code, unsigned x, unsigned y, uint16_t modifiers, cons
 	{
 		if (!state.selected.slot) return 0; // no slot selected
 		if (slot == state.selected.slot) return 0; // the clicked and the selected slot are the same
+		if (slot->unit != state.selected.slot->unit) return 0; // the clicked and the selected units are different
 
 		// Transfer units from the selected slot to the clicked slot.
 		unsigned transfer_count = (SLOT_UNITS - slot->count);

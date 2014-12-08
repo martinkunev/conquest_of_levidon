@@ -64,7 +64,7 @@ struct region *restrict regions;
 size_t regions_count;
 
 static struct image image_move_destination, image_shoot_destination, image_selected, image_flag, image_panel, image_construction;
-static struct image image_gold, image_food, image_wood, image_stone, image_iron;
+static struct image image_gold, image_food, image_wood, image_stone, image_iron, image_time;
 static struct image image_units[4]; // TODO the array must be enough to hold units_count units
 static struct image image_buildings[7]; // TODO the array must be big enough to hold buildings_count elements
 static struct image image_buildings_gray[7]; // TODO the array must be big enough to hold buildings_count elements
@@ -185,6 +185,7 @@ void if_init(void)
 	image_load_png(&image_wood, "img/wood.png", 0);
 	image_load_png(&image_stone, "img/stone.png", 0);
 	image_load_png(&image_iron, "img/iron.png", 0);
+	image_load_png(&image_time, "img/time.png", 0);
 
 	image_load_png(&image_units[0], "img/peasant.png", 0);
 	image_load_png(&image_units[1], "img/archer.png", 0);
@@ -519,7 +520,7 @@ static void show_resource(const struct image *restrict image, int treasury, int 
 	display_string(buffer, end - buffer, PANEL_X + 16, y, &font12, Black);
 }
 
-static void show_cost(const char *restrict name, size_t name_length, const struct resources *restrict cost)
+static void show_cost(const char *restrict name, size_t name_length, const struct resources *restrict cost, unsigned time)
 {
 	char buffer[16];
 	size_t length;
@@ -573,6 +574,13 @@ static void show_cost(const char *restrict name, size_t name_length, const struc
 		display_string(buffer, length, TOOLTIP_X + offset, TOOLTIP_Y, &font12, White);
 		offset += 40;
 	}
+
+	image_draw(&image_time, TOOLTIP_X + offset, TOOLTIP_Y);
+	offset += 16;
+
+	length = format_uint(buffer, time) - buffer;
+	display_string(buffer, length, TOOLTIP_X + offset, TOOLTIP_Y, &font12, White);
+	offset += 40;
 }
 
 void if_map(const struct player *restrict players, const struct state *restrict state, const struct game *restrict game)
@@ -718,12 +726,12 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 			if ((state->pointed.building >= 0) && !(region->built & (1 << state->pointed.building)))
 			{
 				const struct building *building = buildings + state->pointed.building;
-				show_cost(building->name, building->name_length, &building->cost);
+				show_cost(building->name, building->name_length, &building->cost, building->time);
 			}
 			if (state->pointed.unit >= 0)
 			{
 				const struct unit *unit = game->units + state->pointed.unit;
-				show_cost(unit->name, unit->name_length, &unit->cost);
+				show_cost(unit->name, unit->name_length, &unit->cost, unit->time);
 			}
 		}
 	}

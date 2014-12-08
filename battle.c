@@ -25,7 +25,13 @@ struct encounter
 #undef heap_diff
 #undef heap_type
 
+#define SLOT_UNITS_FRONT 8
+
 #define DIAMETER 1
+
+// the reciprocal of the value of the standard normal distribution for the standard deviation (1)
+// 1 / (1 / (sqrt(2 * pi) * (e ^ (x * x / 2))))
+#define DAMAGE_FACTOR 4.13273135412
 
 // Alliance number must be less than the number of players.
 
@@ -344,19 +350,45 @@ static int battle_damage(struct pawn *battlefield[BATTLEFIELD_HEIGHT][BATTLEFIEL
 
 	pawn->hurt += damage;
 
-	if (pawn->hurt >= (pawn->slot->count * health))
+	if (pawn->hurt >= (pawn->slot->count * health)) // all the units die
 	{
 		pawn->slot->count = 0;
 		pawn_remove(battlefield, pawn);
 		return 1;
 	}
+	else if (pawn->hurt < health) return 0; // no units die
 	else
 	{
-		// TODO this is a stupid implementation. make a better one
+		// Deal damage by performing consecutive hits to a random unit of the pawn.
+		// At most SLOT_UNITS_FRONT units can be at the front line (and so be hit).
+		// Check for death after each hit.
 
+		unsigned char hits[SLOT_UNITS_FRONT] = {0};
+		size_t index;
+		size_t front = ((pawn->slot->count >= SLOT_UNITS_FRONT) ? SLOT_UNITS_FRONT : pawn->slot->count);
+
+		for(damage = 0; damage < pawn->hurt; ++damage)
+		{
+			index = random() % front;
+			if (++hits[index] == health)
+			{
+				pawn->slot->count -= 1; // a unit died
+				if (pawn->slot->count < SLOT_UNITS_FRONT)
+				{
+					hits[index] = hits[pawn->slot->count];
+					front -= 1;
+				}
+				else hits[index] = 0;
+
+				damage -= health;
+				pawn->hurt -= health;
+			}
+		}
+
+		// TODO this is a stupid implementation. write a better one
 		// Deal damage by performing consecutive hits to a random unit of the pawn.
 		// Check for death after each hit.
-		unsigned char hits[SLOT_COUNT_MAX] = {0};
+		/*unsigned char hits[SLOT_COUNT_MAX] = {0};
 		size_t index;
 		for(damage = 0; damage < pawn->hurt; ++damage)
 		{
@@ -367,7 +399,7 @@ static int battle_damage(struct pawn *battlefield[BATTLEFIELD_HEIGHT][BATTLEFIEL
 				damage -= health;
 				pawn->hurt -= health;
 			}
-		}
+		}*/
 	}
 
 	return 0;
@@ -832,7 +864,7 @@ int battle(const struct game *restrict game, struct region *restrict region)
 					// Deal damage and kill some of the units.
 					if (damage)
 					{
-						printf("DAMAGE %u (escape) %u (%u,%u)\n", (unsigned)damage, (unsigned)pawn->slot->unit->index, (unsigned)pawn->move.x[0], (unsigned)pawn->move.y[0]);
+						printf("DAMAGE %u (escape) (%u,%u)\n", (unsigned)damage, (unsigned)pawn->move.x[0], (unsigned)pawn->move.y[0]);
 						battle_damage(battle.field, pawn, damage);
 					}
 				} while (pawn = next);
@@ -866,7 +898,7 @@ int battle(const struct game *restrict game, struct region *restrict region)
 					{
 						on_target = targets[target_index][0] * (1 - miss) + targets[target_index][1] * miss;
 						damage = pawns[i].slot->count * pawns[i].slot->unit->shoot * on_target + 0.5;
-						printf("DAMAGE %u (shoot) %u (%u,%u)\n", (unsigned)damage, (unsigned)pawns[j].slot->player, (unsigned)pawns[j].move.x[0], (unsigned)pawns[j].move.y[0]);
+						printf("DAMAGE %u (shoot) (%u,%u)\n", (unsigned)damage, (unsigned)pawns[j].move.x[0], (unsigned)pawns[j].move.y[0]);
 						pawns[j].hurt += damage;
 
 						// TODO ?deal more damage to moving pawns
@@ -879,8 +911,7 @@ int battle(const struct game *restrict game, struct region *restrict region)
 		for(i = 0; i < pawns_count; ++i)
 		{
 			if (!pawns[i].slot->count) continue; // skip dead pawns
-
-			if (battle_damage(battle.field, pawns + i, 0)) continue;
+			battle_damage(battle.field, pawns + i, 0);
 		}
 
 		// Handle pawn movement collisions.

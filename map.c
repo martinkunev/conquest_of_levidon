@@ -17,7 +17,7 @@ const struct unit units[] =
 {
 	{NAME("Peasant"), .index = 0, .health = 3, .damage = 1, .speed = 3, .cost = {.gold = 1}, .expense = {.food = 1}, .time = 1},
 	{NAME("Archer"), .index = 1, .health = 3, .damage = 1, .speed = 3, .cost = {.gold = 1, .wood = 1}, .expense = {.food = 1}, .shoot = 1, .range = 4, .time = 1, .requires = (1 << 5)},
-	{NAME("Pikeman"), .index = 2, .health = 5, .damage = 2, .speed = 4, .cost = {.gold = 1, .iron = 1}, .expense = {.food = 1}, .time = 1, .requires = (1 << 4)},
+	{NAME("Pikeman"), .index = 2, .health = 5, .damage = 2, .speed = 4, .cost = {.gold = 2, .iron = 1}, .expense = {.food = 1}, .time = 1, .requires = (1 << 4)},
 	{NAME("Horse rider"), .index = 3, .health = 8, .damage = 2, .speed = 8, .cost = {.gold = 3, .iron = 1}, .expense = {.food = 3}, .time = 2, .requires = (1 << 6)},
 };
 const size_t units_count = sizeof(units) / sizeof(*units);
