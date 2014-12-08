@@ -14,6 +14,7 @@ struct state
 	} pointed;
 
 	unsigned self_offset, ally_offset;
+	unsigned self_count, ally_count;
 
 	int region;
 };

@@ -26,11 +26,11 @@
 
 #define MARGIN 4
 
-#define SCROLL 16
+#define SCROLL 8
 
-#define SLOTS_VISIBLE 6
+#define SLOTS_VISIBLE 7
 
-#define SLOT_X(x) (PANEL_X + SCROLL + 2 + 1 + (x) * (FIELD_SIZE + 3))
+#define SLOT_X(x) (PANEL_X + SCROLL + 1 + (x) * (FIELD_SIZE + 1))
 #define SLOT_Y(y) (PANEL_Y + 32 + MARGIN + 2 + 1 + (y) * (FIELD_SIZE + 18 + 2))
 
 #define TRAIN_X(x) (PANEL_X + 80 + (x) * (FIELD_SIZE + 1))

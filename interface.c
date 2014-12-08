@@ -239,7 +239,7 @@ error:
 	XCloseDisplay(display);
 }
 
-static void display_unit(size_t unit, unsigned x, unsigned y, enum color color, unsigned count)
+static void display_unit(size_t unit, unsigned x, unsigned y, enum color color, enum color text, unsigned count)
 {
 	display_rectangle(x, y, FIELD_SIZE, FIELD_SIZE, color);
 	image_draw(&image_units[unit], x, y);
@@ -248,7 +248,7 @@ static void display_unit(size_t unit, unsigned x, unsigned y, enum color color, 
 	{
 		char buffer[16];
 		size_t length = format_uint(buffer, count) - buffer;
-		display_string(buffer, length, x + (FIELD_SIZE - (length * 10)) / 2, y + FIELD_SIZE, &font12, Black);
+		display_string(buffer, length, x + (FIELD_SIZE - (length * 10)) / 2, y + FIELD_SIZE, &font12, text);
 	}
 }
 
@@ -434,7 +434,7 @@ void if_battle(const struct player *restrict players, const struct state *restri
 			x = CTRL_X + 4 + column * (FIELD_SIZE + 4);
 			y = CTRL_Y + 2 + row * (FIELD_SIZE + 4 + 16);
 
-			display_unit(p->slot->unit->index, x, y, Player + p->slot->player, p->slot->count);
+			display_unit(p->slot->unit->index, x, y, Player + p->slot->player, Black, p->slot->count);
 			if (p == state->selected.pawn) draw_rectangle(x - 1, y - 1, FIELD_SIZE + 2, FIELD_SIZE + 2, White);
 
 			// Show destination of each moving pawn.
@@ -650,27 +650,30 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 		if (players[state->player].alliance == players[region->owner].alliance)
 		{
 			unsigned char self_count = 0, ally_count = 0;
+			enum color color_text;
 			for(slot = region->slots; slot; slot = slot->_next)
 			{
 				if (slot->player == state->player)
 				{
-					if (!self_count) display_rectangle(PANEL_X, SLOT_Y(0) - 3, PANEL_WIDTH, FIELD_SIZE + MARGIN + 16, Self);
+					if (!self_count) display_rectangle(PANEL_X, SLOT_Y(0) - 3, PANEL_WIDTH, FIELD_SIZE + MARGIN + 14, Self);
 					x = self_count++;
 					y = 0;
 					offset = state->self_offset;
+					color_text = Black;
 				}
 				else
 				{
-					if (!ally_count) display_rectangle(PANEL_X, SLOT_Y(allies_count) - 3, PANEL_WIDTH, FIELD_SIZE + MARGIN + 16, Ally);
+					if (!ally_count) display_rectangle(PANEL_X, SLOT_Y(1) - 3, PANEL_WIDTH, FIELD_SIZE + MARGIN + 14, Ally);
 					x = ally_count++;
 					y = 1;
 					offset = state->ally_offset;
+					color_text = White;
 				}
 
-				if ((x >= offset) && (x < offset + SLOTS_VISIBLE))
+				if ((x >= offset) && (x < offset + SLOTS_VISIBLE)) // if the unit is visible
 				{
 					x -= offset;
-					display_unit(slot->unit->index, SLOT_X(x), SLOT_Y(y), Player + slot->player, slot->count);
+					display_unit(slot->unit->index, SLOT_X(x), SLOT_Y(y), Player + slot->player, color_text, slot->count);
 					if (slot == state->selected.slot) draw_rectangle(SLOT_X(x) - 1, SLOT_Y(y) - 1, FIELD_SIZE + 2, FIELD_SIZE + 2, White);
 				}
 
@@ -684,10 +687,10 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 			}
 
 			// Display scroll buttons.
-			if (state->self_offset) image_draw(&image_scroll_left, SLOT_X(0) - SCROLL, SLOT_Y(0));
-			if ((self_count - state->self_offset) > SLOTS_VISIBLE) image_draw(&image_scroll_right, SLOT_X(0) - SCROLL, SLOT_Y(0));
-			if (state->ally_offset) image_draw(&image_scroll_left, SLOT_X(0) - SCROLL, SLOT_Y(1));
-			if ((ally_count - state->ally_offset) > SLOTS_VISIBLE) image_draw(&image_scroll_right, SLOT_X(0) - SCROLL, SLOT_Y(1));
+			if (state->self_offset) image_draw(&image_scroll_left, SLOT_X(0) - 1 - SCROLL, SLOT_Y(0));
+			if ((self_count - state->self_offset) > SLOTS_VISIBLE) image_draw(&image_scroll_right, SLOT_X(SLOTS_VISIBLE), SLOT_Y(0));
+			if (state->ally_offset) image_draw(&image_scroll_left, SLOT_X(0) - 1 - SCROLL, SLOT_Y(1));
+			if ((ally_count - state->ally_offset) > SLOTS_VISIBLE) image_draw(&image_scroll_right, SLOT_X(SLOTS_VISIBLE), SLOT_Y(1));
 
 			for(i = 0; i < buildings_count; ++i)
 			{
@@ -707,14 +710,14 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 
 		if (state->player == region->owner)
 		{
-			display_string(S("train:"), PANEL_X + 2, PANEL_Y + 200 + (FIELD_SIZE - font12.height) / 2, &font12, Black); // TODO fix y coordinate
+			display_string(S("train:"), PANEL_X + 2, PANEL_Y + 200 + (FIELD_SIZE - font12.height) / 2, &font12, Black);
 
 			// Display train queue.
 			size_t index;
 			for(index = 0; index < TRAIN_QUEUE; ++index)
 				if (region->train[index])
 				{
-					display_unit(region->train[index]->index, TRAIN_X(index), TRAIN_Y, White, 0);
+					display_unit(region->train[index]->index, TRAIN_X(index), TRAIN_Y, White, 0, 0);
 					show_progress((index ? 0 : region->train_time), region->train[0]->time, TRAIN_X(index), TRAIN_Y, FIELD_SIZE, FIELD_SIZE);
 				}
 				else display_rectangle(TRAIN_X(index), TRAIN_Y, FIELD_SIZE, FIELD_SIZE, Black);
@@ -725,7 +728,7 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 				// Don't display the unit if its requirements are not satisfied.
 				if ((region->built & game->units[index].requires) != game->units[index].requires) continue;
 
-				display_unit(index, INVENTORY_X(index), INVENTORY_Y, Player, 0);
+				display_unit(index, INVENTORY_X(index), INVENTORY_Y, Player, 0, 0);
 			}
 
 			// Display tooltip for the hovered object.

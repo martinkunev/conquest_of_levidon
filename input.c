@@ -150,6 +150,8 @@ static int input_region(int code, unsigned x, unsigned y, uint16_t modifiers, co
 
 	if (code == -1)
 	{
+		struct slot *slot;
+
 		if (!pixel_color[0]) state.region = -1;
 		else state.region = pixel_color[2];
 
@@ -157,6 +159,12 @@ static int input_region(int code, unsigned x, unsigned y, uint16_t modifiers, co
 
 		state.self_offset = 0;
 		state.ally_offset = 0;
+
+		state.self_count = 0;
+		state.ally_count = 0;
+		for(slot = game->regions[state.region].slots; slot; slot = slot->_next)
+			if (slot->player == state.player) state.self_count++;
+			else state.ally_count++;
 	}
 	else if (code == -3)
 	{
@@ -273,41 +281,53 @@ static int input_dismiss(int code, unsigned x, unsigned y, uint16_t modifiers, c
 
 static int input_scroll_self(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game)
 {
-	if (code >= 0) return INPUT_NOTME; // ignore keyboard events
+	if (code != -1) return INPUT_NOTME; // handle only left mouse clicks
 
-	if (state.region < 0) goto reset; // no region selected
-	slot = game->regions[state.region].slots;
-	if (!slot) goto reset; // no slots in this region
+	if (state.region < 0) return 0; // no region selected
+	struct slot *slot = game->regions[state.region].slots;
+	if (!slot) return 0; // no slots in this region
 
 	if (x < SCROLL) // scroll left
 	{
-		if (state.self_offset) state.self_offset -= 1;
-		state.selected.slot = 0;
+		if (state.self_offset)
+		{
+			state.self_offset -= SLOTS_VISIBLE;
+			state.selected.slot = 0;
+		}
 	}
-	else if (x >= SCROLL + SLOTS_VISIBLE * (FIELD_SIZE + MARGIN) - MARGIN) // scroll right
+	else if (x >= SCROLL + 1 + SLOTS_VISIBLE * (FIELD_SIZE + 1)) // scroll right
 	{
-		state.self_offset += 1; // TODO check if this is possible
-		state.selected.slot = 0;
+		if ((state.self_offset + SLOTS_VISIBLE) < state.self_count)
+		{
+			state.self_offset += SLOTS_VISIBLE;
+			state.selected.slot = 0;
+		}
 	}
 }
 
 static int input_scroll_ally(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game)
 {
-	if (code >= 0) return INPUT_NOTME; // ignore keyboard events
+	if (code != -1) return INPUT_NOTME; // handle only left mouse clicks
 
-	if (state.region < 0) goto reset; // no region selected
-	slot = game->regions[state.region].slots;
-	if (!slot) goto reset; // no slots in this region
+	if (state.region < 0) return 0; // no region selected
+	struct slot *slot = game->regions[state.region].slots;
+	if (!slot) return 0; // no slots in this region
 
 	if (x < SCROLL) // scroll left
 	{
-		if (state.ally_offset) state.ally_offset -= 1;
-		state.selected.slot = 0;
+		if (state.ally_offset)
+		{
+			state.ally_offset -= SLOTS_VISIBLE;
+			state.selected.slot = 0;
+		}
 	}
-	else if (x >= SCROLL + SLOTS_VISIBLE * (FIELD_SIZE + MARGIN) - MARGIN) // scroll right
+	else if (x >= SCROLL + 1 + SLOTS_VISIBLE * (FIELD_SIZE + 1)) // scroll right
 	{
-		state.ally_offset += 1; // TODO check if this is possible
-		state.selected.slot = 0;
+		if ((state.ally_offset + SLOTS_VISIBLE) < state.ally_count)
+		{
+			state.ally_offset += SLOTS_VISIBLE;
+			state.selected.slot = 0;
+		}
 	}
 }
 
@@ -325,9 +345,8 @@ static int input_slot(int code, unsigned x, unsigned y, uint16_t modifiers, cons
 	if (!slot) goto reset; // no slots in this region
 
 	// Find which slot was clicked.
-	if ((x % (FIELD_SIZE + 3)) >= FIELD_SIZE) goto reset; // no slot clicked
-	offset = state.self_offset + x / (FIELD_SIZE + 3);
-	//if (offset >  // TODO check if slots count is big enough
+	if ((x % (FIELD_SIZE + 1)) >= FIELD_SIZE) goto reset; // no slot clicked
+	offset = state.self_offset + x / (FIELD_SIZE + 1);
 
 	// Find the clicked slot.
 	while (1)
@@ -465,22 +484,22 @@ int input_map(const struct game *restrict game, unsigned char player)
 			.callback = input_dismiss
 		},
 		{
-			.left = SLOT_X(0) - SCROLL,
-			.right = SLOT_X(0) + SLOTS_VISIBLE * (FIELD_SIZE + MARGIN) - MARGIN + SCROLL - 1,
+			.left = SLOT_X(0) - 1 - SCROLL,
+			.right = SLOT_X(SLOTS_VISIBLE) + SCROLL - 1,
 			.top = SLOT_Y(0),
 			.bottom = SLOT_Y(0) + FIELD_SIZE - 1,
 			.callback = input_scroll_self,
 		},
 		{
-			.left = SLOT_X(0) - SCROLL,
-			.right = SLOT_X(0) + SLOTS_VISIBLE * (FIELD_SIZE + MARGIN) - MARGIN + SCROLL - 1,
+			.left = SLOT_X(0) - 1 - SCROLL,
+			.right = SLOT_X(SLOTS_VISIBLE) + SCROLL - 1,
 			.top = SLOT_Y(1),
 			.bottom = SLOT_Y(1) + FIELD_SIZE - 1,
 			.callback = input_scroll_ally,
 		},
 		{
 			.left = SLOT_X(0),
-			.right = SLOT_X(0) + SLOTS_VISIBLE * (FIELD_SIZE + MARGIN) - MARGIN - 1,
+			.right = SLOT_X(SLOTS_VISIBLE) - 1 - 1,
 			.top = SLOT_Y(0),
 			.bottom = SLOT_Y(0) + FIELD_SIZE - 1,
 			.callback = input_slot,
