@@ -26,17 +26,21 @@
 
 #define MARGIN 4
 
-#define SLOT_X(x) (PANEL_X + 2 + 1 + (x) * (FIELD_SIZE + 3))
+#define SCROLL 16
+
+#define SLOTS_VISIBLE 6
+
+#define SLOT_X(x) (PANEL_X + SCROLL + 2 + 1 + (x) * (FIELD_SIZE + 3))
 #define SLOT_Y(y) (PANEL_Y + 32 + MARGIN + 2 + 1 + (y) * (FIELD_SIZE + 18 + 2))
 
 #define TRAIN_X(x) (PANEL_X + 80 + (x) * (FIELD_SIZE + 1))
-#define TRAIN_Y (PANEL_Y + 200)
+#define TRAIN_Y (PANEL_Y + 300)
 
 #define INVENTORY_X(x) (PANEL_X + 2 + 1 + (x) * (FIELD_SIZE + 1))
 #define INVENTORY_Y (TRAIN_Y + FIELD_SIZE + MARGIN)
 
 #define BUILDING_X(x) (PANEL_X + 2 + 1 + (x) * (FIELD_SIZE + 1))
-#define BUILDING_Y (PANEL_Y + 300)
+#define BUILDING_Y (PANEL_Y + 400)
 
 // TODO fix these values
 #define TOOLTIP_X 256

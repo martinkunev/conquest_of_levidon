@@ -65,6 +65,7 @@ size_t regions_count;
 
 static struct image image_move_destination, image_shoot_destination, image_selected, image_flag, image_panel, image_construction;
 static struct image image_gold, image_food, image_wood, image_stone, image_iron, image_time;
+static struct image image_scroll_left, image_scroll_right;
 static struct image image_units[4]; // TODO the array must be enough to hold units_count units
 static struct image image_buildings[7]; // TODO the array must be big enough to hold buildings_count elements
 static struct image image_buildings_gray[7]; // TODO the array must be big enough to hold buildings_count elements
@@ -179,6 +180,9 @@ void if_init(void)
 	image_load_png(&image_flag, "img/flag.png", 0);
 	image_load_png(&image_panel, "img/panel.png", 0);
 	image_load_png(&image_construction, "img/construction.png", 0);
+
+	image_load_png(&image_scroll_left, "img/scroll_left.png", 0);
+	image_load_png(&image_scroll_right, "img/scroll_right.png", 0);
 
 	image_load_png(&image_gold, "img/gold.png", 0);
 	image_load_png(&image_food, "img/food.png", 0);
@@ -601,6 +605,7 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 	display_rectangle(MAP_X, MAP_Y, MAP_WIDTH, MAP_HEIGHT, Black);
 
 	size_t x, y;
+	size_t offset;
 	struct pawn *p;
 
 	// Map
@@ -636,44 +641,38 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 		const struct region *region = regions + state->region;
 		unsigned progress;
 
-		// Display flag of the region owner and name of the region.
+		// Display region owner's flag and name of the region.
 		display_rectangle(PANEL_X + 4, PANEL_Y + 4, 24, 12, Player + region->owner);
 		image_draw(&image_flag, PANEL_X, PANEL_Y);
 		display_string(region->name, region->name_length, PANEL_X + image_flag.width + MARGIN, PANEL_Y + (image_flag.height - font12.height) / 2, &font12, Black);
 
-		// Display the slots at the current region.
+		// Display the slots at the selected region.
 		if (players[state->player].alliance == players[region->owner].alliance)
 		{
-			unsigned char position_x[PLAYERS_LIMIT] = {0}, position_y[PLAYERS_LIMIT] = {0};
-			unsigned self_count = 0, allies_count = 0;
+			unsigned char self_count = 0, ally_count = 0;
 			for(slot = region->slots; slot; slot = slot->_next)
 			{
 				if (slot->player == state->player)
 				{
-					if (!self_count)
-					{
-						self_count = 1;
-						display_rectangle(PANEL_X, SLOT_Y(0) - 3, PANEL_WIDTH, FIELD_SIZE + MARGIN + 16, Self);
-					}
+					if (!self_count) display_rectangle(PANEL_X, SLOT_Y(0) - 3, PANEL_WIDTH, FIELD_SIZE + MARGIN + 16, Self);
+					x = self_count++;
+					y = 0;
+					offset = state->self_offset;
 				}
 				else
 				{
-					if (!position_y[slot->player])
-					{
-						allies_count += 1;
-						display_rectangle(PANEL_X, SLOT_Y(allies_count) - 3, PANEL_WIDTH, FIELD_SIZE + MARGIN + 16, Ally);
-						position_y[slot->player] = allies_count;
-					}
+					if (!ally_count) display_rectangle(PANEL_X, SLOT_Y(allies_count) - 3, PANEL_WIDTH, FIELD_SIZE + MARGIN + 16, Ally);
+					x = ally_count++;
+					y = 1;
+					offset = state->ally_offset;
 				}
 
-				// TODO make this work for more than 6 slots
-
-				x = SLOT_X(position_x[slot->player]);
-				y = SLOT_Y(position_y[slot->player]);
-				position_x[slot->player] += 1;
-
-				display_unit(slot->unit->index, x, y, Player + slot->player, slot->count);
-				if (slot == state->selected.slot) draw_rectangle(x - 1, y - 1, FIELD_SIZE + 2, FIELD_SIZE + 2, White);
+				if ((x >= offset) && (x < offset + SLOTS_VISIBLE))
+				{
+					x -= offset;
+					display_unit(slot->unit->index, SLOT_X(x), SLOT_Y(y), Player + slot->player, slot->count);
+					if (slot == state->selected.slot) draw_rectangle(SLOT_X(x) - 1, SLOT_Y(y) - 1, FIELD_SIZE + 2, FIELD_SIZE + 2, White);
+				}
 
 				// Draw the destination of each moving slot.
 				if ((slot->player == state->player) && (!state->selected.slot || (slot == state->selected.slot)) && (slot->move->index != state->region))
@@ -683,6 +682,12 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 					display_arrow(from, to, MAP_X, MAP_Y, Self);
 				}
 			}
+
+			// Display scroll buttons.
+			if (state->self_offset) image_draw(&image_scroll_left, SLOT_X(0) - SCROLL, SLOT_Y(0));
+			if ((self_count - state->self_offset) > SLOTS_VISIBLE) image_draw(&image_scroll_right, SLOT_X(0) - SCROLL, SLOT_Y(0));
+			if (state->ally_offset) image_draw(&image_scroll_left, SLOT_X(0) - SCROLL, SLOT_Y(1));
+			if ((ally_count - state->ally_offset) > SLOTS_VISIBLE) image_draw(&image_scroll_right, SLOT_X(0) - SCROLL, SLOT_Y(1));
 
 			for(i = 0; i < buildings_count; ++i)
 			{
@@ -698,6 +703,7 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 				image_draw(&image_construction, BUILDING_X(region->construct), BUILDING_Y);
 			}
 		}
+		else ; // TODO show something (depending on watch towers)
 
 		if (state->player == region->owner)
 		{

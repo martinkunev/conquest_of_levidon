@@ -154,6 +154,9 @@ static int input_region(int code, unsigned x, unsigned y, uint16_t modifiers, co
 		else state.region = pixel_color[2];
 
 		state.selected.slot = 0;
+
+		state.self_offset = 0;
+		state.ally_offset = 0;
 	}
 	else if (code == -3)
 	{
@@ -268,6 +271,46 @@ static int input_dismiss(int code, unsigned x, unsigned y, uint16_t modifiers, c
 	return 0;
 }
 
+static int input_scroll_self(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game)
+{
+	if (code >= 0) return INPUT_NOTME; // ignore keyboard events
+
+	if (state.region < 0) goto reset; // no region selected
+	slot = game->regions[state.region].slots;
+	if (!slot) goto reset; // no slots in this region
+
+	if (x < SCROLL) // scroll left
+	{
+		if (state.self_offset) state.self_offset -= 1;
+		state.selected.slot = 0;
+	}
+	else if (x >= SCROLL + SLOTS_VISIBLE * (FIELD_SIZE + MARGIN) - MARGIN) // scroll right
+	{
+		state.self_offset += 1; // TODO check if this is possible
+		state.selected.slot = 0;
+	}
+}
+
+static int input_scroll_ally(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game)
+{
+	if (code >= 0) return INPUT_NOTME; // ignore keyboard events
+
+	if (state.region < 0) goto reset; // no region selected
+	slot = game->regions[state.region].slots;
+	if (!slot) goto reset; // no slots in this region
+
+	if (x < SCROLL) // scroll left
+	{
+		if (state.ally_offset) state.ally_offset -= 1;
+		state.selected.slot = 0;
+	}
+	else if (x >= SCROLL + SLOTS_VISIBLE * (FIELD_SIZE + MARGIN) - MARGIN) // scroll right
+	{
+		state.ally_offset += 1; // TODO check if this is possible
+		state.selected.slot = 0;
+	}
+}
+
 static int input_slot(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game)
 {
 	struct slot *slot;
@@ -283,8 +326,8 @@ static int input_slot(int code, unsigned x, unsigned y, uint16_t modifiers, cons
 
 	// Find which slot was clicked.
 	if ((x % (FIELD_SIZE + 3)) >= FIELD_SIZE) goto reset; // no slot clicked
-	offset = x / (FIELD_SIZE + 3);
-	if (offset >= buildings_count) goto reset; // no slot clicked
+	offset = state.self_offset + x / (FIELD_SIZE + 3);
+	//if (offset >  // TODO check if slots count is big enough
 
 	// Find the clicked slot.
 	while (1)
@@ -422,8 +465,22 @@ int input_map(const struct game *restrict game, unsigned char player)
 			.callback = input_dismiss
 		},
 		{
+			.left = SLOT_X(0) - SCROLL,
+			.right = SLOT_X(0) + SLOTS_VISIBLE * (FIELD_SIZE + MARGIN) - MARGIN + SCROLL - 1,
+			.top = SLOT_Y(0),
+			.bottom = SLOT_Y(0) + FIELD_SIZE - 1,
+			.callback = input_scroll_self,
+		},
+		{
+			.left = SLOT_X(0) - SCROLL,
+			.right = SLOT_X(0) + SLOTS_VISIBLE * (FIELD_SIZE + MARGIN) - MARGIN + SCROLL - 1,
+			.top = SLOT_Y(1),
+			.bottom = SLOT_Y(1) + FIELD_SIZE - 1,
+			.callback = input_scroll_ally,
+		},
+		{
 			.left = SLOT_X(0),
-			.right = SLOT_X(0) + 7 * (FIELD_SIZE + MARGIN) - MARGIN - 1,
+			.right = SLOT_X(0) + SLOTS_VISIBLE * (FIELD_SIZE + MARGIN) - MARGIN - 1,
 			.top = SLOT_Y(0),
 			.bottom = SLOT_Y(0) + FIELD_SIZE - 1,
 			.callback = input_slot,
