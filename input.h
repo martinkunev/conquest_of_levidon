@@ -13,6 +13,8 @@ struct state
 		signed char unit;
 	} pointed;
 
+	unsigned self_offset, ally_offset;
+
 	int region;
 };
 
