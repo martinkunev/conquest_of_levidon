@@ -235,10 +235,11 @@ int font_init(Display *restrict display, struct font *restrict font, const char 
 	return 0;
 }
 
-void font_term(Display *restrict display, struct font *restrict font)
+// TODO is this necessary?
+/*void font_term(Display *restrict display, struct font *restrict font)
 {
-	XUnloadFont(font);
-}
+	XUnloadFont(display, font);
+}*/
 
 unsigned display_string(const char *string, size_t length, unsigned x, unsigned y, struct font *restrict font, enum color color)
 {
@@ -246,26 +247,23 @@ unsigned display_string(const char *string, size_t length, unsigned x, unsigned 
 	XCharStruct *info;
 	unsigned height;
 
-	if (font->perchar)
+	if (font->info->per_char)
 	{
 		size_t i;
 		for(i = 0; i < length; ++i)
 		{
-			if (!font->min_byte1 && !font->max_byte1) info = font->perchar + string[i] - font->min_char_or_byte2; // TODO check this
+			if (!font->info->min_byte1 && !font->info->max_byte1) info = font->info->per_char + string[i] - font->info->min_char_or_byte2; // TODO check this
 			else
 			{
-				// D = max_char_or_byte2 - min_char_or_byte2 + 1
-				//
-			}
-
+				// TODO finish this
 /*
-If either min_byte1 or max_byte1 are nonzero, both min_char_or_byte2 and max_char_or_byte2 are less than 256, and the 2-byte character index values corresponding to the per_char array element N (counting
-	from 0) are:
+If either min_byte1 or max_byte1 are nonzero, both min_char_or_byte2 and max_char_or_byte2 are less than 256, and the 2-byte character index values corresponding to the per_char array element N (counting from 0) are:
 		 byte1 = N/D + min_byte1
 		 byte2 = N%D + min_char_or_byte2
 	where:
 			D = max_char_or_byte2 - min_char_or_byte2 + 1
 */
+			}
 
 			box.width += info->width;
 			height = info->ascent + info->descent;
@@ -274,8 +272,8 @@ If either min_byte1 or max_byte1 are nonzero, both min_char_or_byte2 and max_cha
 	}
 	else
 	{
-		box.width = font->max_bounds.width;
-		box.height = font->max_bounds.ascent + font->max_bounds.descent;
+		box.width = font->info->max_bounds.width;
+		box.height = font->info->max_bounds.ascent + font->info->max_bounds.descent;
 	}
 
 	glListBase(font->base);

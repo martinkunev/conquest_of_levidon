@@ -511,20 +511,18 @@ static void show_resource(const struct image *restrict image, int treasury, int 
 	image_draw(image, PANEL_X, y);
 	end = format_uint(buffer, treasury);
 
-	x = PANEL_X + image.width;
+	x = PANEL_X + image->width;
 	x += display_string(buffer, end - buffer, x, y, &font12, Black);
 	if (income)
 	{
 		end = format_sint(buffer, income);
-		x += display_string(buffer, end - buffer, x, y, &font12, Self);
+		x += display_string(buffer, end - buffer, x, y, &font12, Ally);
 	}
 	if (expense)
 	{
 		end = format_sint(buffer, -expense);
 		x += display_string(buffer, end - buffer, x, y, &font12, Enemy);
 	}
-
-	//display_string(buffer, end - buffer, PANEL_X + 16, y, &font12, Black);
 }
 
 static void show_cost(const char *restrict name, size_t name_length, const struct resources *restrict cost, unsigned time)
@@ -713,7 +711,7 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 
 		if (state->player == region->owner)
 		{
-			display_string(S("train:"), PANEL_X + 2, PANEL_Y + 200 + (FIELD_SIZE - font12.height) / 2, &font12, Black);
+			display_string(S("train:"), PANEL_X + 2, TRAIN_Y + (FIELD_SIZE - font12.height) / 2, &font12, Black);
 
 			// Display train queue.
 			size_t index;
