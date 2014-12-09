@@ -505,23 +505,26 @@ int if_battle_animation(void)
 
 static void show_resource(const struct image *restrict image, int treasury, int income, int expense, unsigned y)
 {
+	unsigned x;
 	char buffer[32], *end; // TODO make sure this is enough
 
 	image_draw(image, PANEL_X, y);
 	end = format_uint(buffer, treasury);
 
+	x = PANEL_X + image.width;
+	x += display_string(buffer, end - buffer, x, y, &font12, Black);
 	if (income)
 	{
-		*end++ = ' ';
-		end = format_sint(end, income);
+		end = format_sint(buffer, income);
+		x += display_string(buffer, end - buffer, x, y, &font12, Self);
 	}
 	if (expense)
 	{
-		*end++ = ' ';
-		end = format_sint(end, -expense);
+		end = format_sint(buffer, -expense);
+		x += display_string(buffer, end - buffer, x, y, &font12, Enemy);
 	}
 
-	display_string(buffer, end - buffer, PANEL_X + 16, y, &font12, Black);
+	//display_string(buffer, end - buffer, PANEL_X + 16, y, &font12, Black);
 }
 
 static void show_cost(const char *restrict name, size_t name_length, const struct resources *restrict cost, unsigned time)

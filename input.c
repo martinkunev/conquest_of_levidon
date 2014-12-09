@@ -15,6 +15,8 @@
 #include "interface.h"
 #include "region.h"
 
+#define PAWN_MARGIN 4 /* TODO deprecated */
+
 #define INPUT_NOTME 1
 #define INPUT_DONE 2
 #define INPUT_TERMINATE 3

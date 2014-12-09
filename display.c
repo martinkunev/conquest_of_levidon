@@ -235,12 +235,53 @@ int font_init(Display *restrict display, struct font *restrict font, const char 
 	return 0;
 }
 
-void display_string(const char *string, size_t length, unsigned x, unsigned y, struct font *restrict font, enum color color)
+void font_term(Display *restrict display, struct font *restrict font)
 {
+	XUnloadFont(font);
+}
+
+unsigned display_string(const char *string, size_t length, unsigned x, unsigned y, struct font *restrict font, enum color color)
+{
+	struct box box = {0, 0};
+	XCharStruct *info;
+	unsigned height;
+
+	if (font->perchar)
+	{
+		size_t i;
+		for(i = 0; i < length; ++i)
+		{
+			if (!font->min_byte1 && !font->max_byte1) info = font->perchar + string[i] - font->min_char_or_byte2; // TODO check this
+			else
+			{
+				// D = max_char_or_byte2 - min_char_or_byte2 + 1
+				//
+			}
+
+/*
+If either min_byte1 or max_byte1 are nonzero, both min_char_or_byte2 and max_char_or_byte2 are less than 256, and the 2-byte character index values corresponding to the per_char array element N (counting
+	from 0) are:
+		 byte1 = N/D + min_byte1
+		 byte2 = N%D + min_char_or_byte2
+	where:
+			D = max_char_or_byte2 - min_char_or_byte2 + 1
+*/
+
+			box.width += info->width;
+			height = info->ascent + info->descent;
+			if (box.height < height) box.height = height;
+		}
+	}
+	else
+	{
+		box.width = font->max_bounds.width;
+		box.height = font->max_bounds.ascent + font->max_bounds.descent;
+	}
+
 	glListBase(font->base);
 	glColor4ubv(display_colors[color]);
 	glRasterPos2i(x - font->info->min_bounds.lbearing, y + font->info->max_bounds.ascent);
 	glCallLists(length, GL_UNSIGNED_BYTE, string);
 
-	// TODO return the height of the written text
+	return box.width;
 }
