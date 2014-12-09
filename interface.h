@@ -18,11 +18,7 @@
 #define PANEL_WIDTH 248
 #define PANEL_HEIGHT 760
 
-#define PAWN_MARGIN 4
-
 #define FIELD_SIZE 32
-
-//
 
 #define MARGIN 4
 

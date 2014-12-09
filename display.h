@@ -22,6 +22,11 @@ struct font
 	GLuint base;
 };
 
+struct box
+{
+	unsigned width, height;
+};
+
 enum color {White, Gray, Black, B0, Progress, Select, Self, Ally, Enemy, Player};
 extern unsigned char display_colors[][4]; // TODO remove this
 
@@ -33,5 +38,6 @@ void display_polygon(const struct polygon *restrict polygon, int offset_x, int o
 void display_arrow(struct point from, struct point to, int offset_x, int offset_y, enum color color);
 
 int font_init(Display *restrict display, struct font *restrict font, const char *restrict name);
+void font_term(Display *restrict display, struct font *restrict font);
 
-void display_string(const char *string, size_t length, unsigned x, unsigned y, struct font *restrict font, enum color color);
+unsigned display_string(const char *string, size_t length, unsigned x, unsigned y, struct font *restrict font, enum color color);
