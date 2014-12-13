@@ -4,10 +4,10 @@
 #include <math.h>
 
 #include "types.h"
+#include "display.h"
 
 struct path_node
 {
-	struct point location;
 	double distance;
 	struct path_node *origin;
 	size_t heap_index;
@@ -42,7 +42,7 @@ static double field_distance(struct point a, struct point b)
 	return sqrt(dx * dx + dy * dy);
 }
 
-static int angle_positive(const struct polygon *restrict a, const struct polygon *restrict b, const struct polygon *restrict c)
+static int angle_positive(struct point a, struct point b, struct point c)
 {
 	int fx = b.x - a.x, fy = b.y - a.y;
 	int sx = c.x - b.x, sy = c.y - b.y;
@@ -65,6 +65,7 @@ static int blocks(struct point p0, struct point p1, struct point w0, struct poin
 	{
 		// the lines intersect where
 		// p0 + (pm / cross) * p1 = w0 + (wm / cross) * w1
+		long wm, pm;
 		struct point d = {w0.x - p0.x, w0.y - p0.y};
 		wm = cross_product(d, p1);
 		pm = cross_product(d, w1);
@@ -110,14 +111,18 @@ static void graph_attach(struct vector *restrict nodes, size_t index, double *re
 	size_t node;
 	double distance;
 
+	struct point from, to;
+
 	#define CONNECTED(i, j) matrix[i * nodes->length + j]
 
 	CONNECTED(index, index) = INFINITY;
 	for(node = 0; node < index; ++node)
 	{
-		if (visible(nodes->data + index, nodes->data + node, obstacles, obstacles_count))
+		from = *(struct point *)nodes->data[index];
+		to = *(struct point *)nodes->data[node];
+		if (visible(from, to, obstacles, obstacles_count))
 		{
-			distance = field_distance(nodes->data[index], nodes->data[node]);
+			distance = field_distance(from, to);
 			CONNECTED(index, node) = distance;
 			CONNECTED(node, index) = distance;
 		}
@@ -147,15 +152,15 @@ double *visibility_graph_build(const struct polygon *restrict obstacles, size_t 
 		obstacle = obstacles + i;
 
 		if (angle_positive(obstacle->points[obstacle->vertices_count - 2], obstacle->points[obstacle->vertices_count - 1], obstacle->points[0]))
-			if (vector_add(nodes, obstacle->points + obstacle->vertices_count - 1))
+			if (vector_add(nodes, (void *)(obstacle->points + obstacle->vertices_count - 1)))
 				goto error;
 		if (angle_positive(obstacle->points[obstacle->vertices_count - 1], obstacle->points[0], obstacle->points[1]))
-			if (vector_add(nodes, obstacle->points + 0))
+			if (vector_add(nodes, (void *)(obstacle->points + 0)))
 				goto error;
 		for(j = 2; j < obstacle->vertices_count; ++j)
 		{
 			if (angle_positive(obstacle->points[j - 2], obstacle->points[j - 1], obstacle->points[j]))
-				if (vector_add(nodes, obstacle->points + j - 1))
+				if (vector_add(nodes, (void *)(obstacle->points + j - 1)))
 					goto error;
 		}
 	}
@@ -171,7 +176,7 @@ double *visibility_graph_build(const struct polygon *restrict obstacles, size_t 
 	// Consider that no vertex is connected to itself.
 	neighbors[0] = INFINITY;
 	for(i = 1; i < nodes->length; ++i)
-		graph_attach(nodes, i, nodes.data[i], neighbors, obstacles, obstacles_count);
+		graph_attach(nodes, i, neighbors, obstacles, obstacles_count);
 
 	return neighbors;
 
@@ -186,30 +191,35 @@ void visibility_graph_free(struct vector *restrict nodes, double *matrix)
 	free(matrix);
 }
 
-void path_find(struct point origin, struct point target, struct vector *restrict nodes, double *restrict matrix, const struct polygon *restrict obstacles, size_t obstacles_count, struct vector *restrict moves)
+int path_find(const struct point *restrict origin, const struct point *restrict target, struct vector *restrict nodes, double *restrict matrix, const struct polygon *restrict obstacles, size_t obstacles_count, struct vector *restrict moves)
 {
+	const size_t index_origin = nodes->length - 1, index_target = nodes->length - 2;
+
 	// Add target and origin points to the path graph.
-	nodes->data[nodes->length - 2] = target;
-	graph_attach(nodes, nodes->length - 2, matrix, obstacles, obstacles_count);
-	nodes->data[nodes->length - 1] = origin;
-	graph_attach(nodes, nodes->length - 1, matrix, obstacles, obstacles_count);
+	nodes->data[index_target] = (struct point *)target;
+	graph_attach(nodes, index_target, matrix, obstacles, obstacles_count);
+	nodes->data[index_origin] = (struct point *)origin;
+	graph_attach(nodes, index_origin, matrix, obstacles, obstacles_count);
 
 	size_t i;
 	size_t last;
 
-	struct path_node *traverse = 0;
+	struct path_node *traverse = 0, *from, *temp;
 	struct heap closest = {0};
 
 	traverse = malloc(nodes->length * sizeof(*traverse));
-	if (!traverse) goto error;
+	if (!traverse) return ERROR_MEMORY;
 
 	closest.data = malloc((nodes->length - 1) * sizeof(traverse));
-	if (!closest.data) goto error;
+	if (!closest.data)
+	{
+		free(traverse);
+		return ERROR_MEMORY;
+	}
 
 	// Build a heap from path nodes.
 	for(i = 0; i < nodes->length - 1; ++i)
 	{
-		traverse[i].location = *(struct point *)nodes->data[i];
 		traverse[i].distance = INFINITY;
 		traverse[i].origin = 0;
 		// heap_index will be set by heapify
@@ -221,14 +231,14 @@ void path_find(struct point origin, struct point target, struct vector *restrict
 	heapify(&closest);
 
 	// Set origin point data.
-	last = nodes->length - 1;
-	traverse[last].location = origin;
+	last = index_origin;
 	traverse[last].distance = 0;
 	traverse[last].origin = 0;
 
+	// Find the shortest path to target using Dijkstra's algorithm.
 	do
 	{
-		if (!closest.count) return; // TODO unreachable
+		if (!closest.count) goto error;
 
 		#define DISTANCE(i, j) matrix[i * nodes->length + j]
 
@@ -246,17 +256,32 @@ void path_find(struct point origin, struct point target, struct vector *restrict
 		#undef CONNECTED
 
 		last = heap_front(&closest) - traverse;
-		if (traverse[last].distance == INFINITY) return; // TODO unreachable
+		if (traverse[last].distance == INFINITY) goto error;
 		heap_pop_static(&closest);
-	} while (traverse[last].location != target);
+	} while (last != index_target);
 
 	free(closest.data);
+
+	// Construct the final path by reversing the origin pointers.
+	from = traverse + last;
+	do
+	{
+		temp = from->origin;
+		from->origin = from;
+		from = temp;
+	} while (from);
+
+	// Add path points to move.
+	temp = traverse + index_origin;
+	do vector_add(moves, nodes->data + (temp - traverse));
+	while (temp = temp->origin);
+
 	free(traverse);
 
-	return; // TODO return result
+	return 0;
 
 error:
 	free(closest.data);
 	free(traverse);
-	return; // TODO
+	return ERROR_MISSING;
 }
