@@ -5,11 +5,9 @@
 #include <stdint.h>
 #include <sys/types.h>
 
-// TODO errors should be in another file
+#define array_sizeof(a) (sizeof(a) / sizeof(*(a)))
 
-#if defined(OS_WINDOWS)
-# undef ERROR
-#endif
+// TODO errors should be in another file
 
 // System resources are not sufficient to handle the request.
 #define ERROR_MEMORY				-1
@@ -77,15 +75,17 @@ struct string
 
 /* Vector */
 
+// The pointer to the data is the first member of the struct so that pointer to a vector can be used directly by casting it to a pointer to the stored type.
 struct vector
 {
 	void **data;
 	size_t length, size;
 };
 
-bool vector_init(struct vector *restrict v);
+#define VECTOR_EMPTY ((struct vector){0})
+
 #define vector_get(vector, index) ((vector)->data[index])
-bool vector_add(struct vector *restrict v, void *value);
+int vector_add(struct vector *restrict v, void *value);
 #define vector_term(vector) (free((vector)->data))
 
 /* Dictionary */

@@ -1,28 +1,20 @@
-#include <stdbool.h>
 #include <stdlib.h>
+#include <sys/types.h>
 
 #include "types.h"
 
-#define VECTOR_SIZE_BASE 4
+#define VECTOR_SIZE_BASE 8
 
-bool vector_init(struct vector *restrict v)
-{
-	v->length = 0;
-	v->size = VECTOR_SIZE_BASE;
-
-	v->data = malloc(sizeof(void *) * VECTOR_SIZE_BASE);
-	if (!v->data) return false; // memory error
-	return v;
-}
-
-bool vector_add(struct vector *restrict v, void *value)
+int vector_add(struct vector *restrict v, void *value)
 {
 	if (v->length == v->size)
 	{
-		void **buffer = realloc(v->data, sizeof(void *) * (v->size * 2));
-		if (!buffer) return 0; // memory error
-		v->size *= 2;
+		void **buffer;
+		v->size = (v->size ? v->size * 2 : VECTOR_SIZE_BASE);
+		buffer = realloc(v->data, sizeof(void *) * v->size);
+		if (!buffer) return ERROR_MEMORY; // not enough memory; operation canceled
 		v->data = buffer;
 	}
-	return (v->data[v->length++] = value);
+	v->data[v->length++] = value;
+	return -1;
 }

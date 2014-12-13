@@ -21,7 +21,9 @@ struct encounter
 
 #define heap_type struct encounter *
 #define heap_diff(a, b) ((a)->moment <= (b)->moment)
+#define heap_update(heap, position)
 #include "heap.t"
+#undef heap_update
 #undef heap_diff
 #undef heap_type
 
@@ -67,7 +69,7 @@ f(x) where:
 
 /*static unsigned long gcd(unsigned long a, unsigned long b)
 {
-	// asert((a != 0) || (b != 0));
+	// assert((a != 0) || (b != 0));
 	unsigned long c;
 	while (b)
 	{
@@ -616,11 +618,8 @@ static int battle_init(struct battle *restrict battle, const struct player *rest
 	battle->players = players;
 	battle->players_count = players_count;
 
-	battle->player_pawns = malloc(players_count * sizeof(struct vector));
+	battle->player_pawns = calloc(players_count, sizeof(struct vector));
 	if (!battle->player_pawns) return -1;
-	for(i = 0; i < players_count; ++i)
-		if (!vector_init(battle->player_pawns + i))
-			goto error;
 
 	memset((void *)battle->field, 0, BATTLEFIELD_HEIGHT * BATTLEFIELD_WIDTH * sizeof(struct pawn *));
 

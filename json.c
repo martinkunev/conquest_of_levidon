@@ -1303,7 +1303,7 @@ static int token_add(void *restrict context, int type, const JSON_value *value)
 		break;
 	case JSON_T_ARRAY_BEGIN:
 		json_type(item) = ARRAY;
-		if (!vector_init(&item->array_node)) goto error; // memory error
+		memset(&item->array_node, 0, sizeof(item->array_node));
 		node = stack->data + stack->length;
 		*node = item;
 		stack->length += 1;
@@ -1701,7 +1701,7 @@ union json *json_array(void)
 	union json *result = malloc(sizeof(union json));
 	if (!result) return 0; // Memory error
 	json_type(result) = ARRAY;
-	if (!vector_init(&result->array_node)) return 0; // Memory error
+	memset(&result->array_node, 0, sizeof(result->array_node));
 	return result;
 }
 int json_array_insert(union json *restrict parent, union json *restrict child)
