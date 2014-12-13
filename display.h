@@ -11,7 +11,7 @@ struct point
 
 struct polygon
 {
-	size_t vertices;
+	size_t vertices_count;
 	struct point points[];
 };
 

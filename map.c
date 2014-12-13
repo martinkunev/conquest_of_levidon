@@ -44,7 +44,7 @@ static struct polygon *region_create(size_t count, ...)
 	// Allocate memory for the region and its vertices.
 	struct polygon *polygon = malloc(sizeof(struct polygon) + count * sizeof(struct point));
 	if (!polygon) return 0;
-	polygon->vertices = count;
+	polygon->vertices_count = count;
 
 	// Initialize region vertices.
 	va_start(vertices, count);
@@ -192,7 +192,7 @@ int map_init(const union json *restrict json, struct game *restrict game)
 		if (!field || (json_type(field) != ARRAY) || (field->array_node.length < 3)) goto error;
 		game->regions[index].location = malloc(sizeof(struct polygon) + field->array_node.length * sizeof(struct point));
 		if (!game->regions[index].location) goto error;
-		game->regions[index].location->vertices = field->array_node.length;
+		game->regions[index].location->vertices_count = field->array_node.length;
 		points = game->regions[index].location->points;
 		for(j = 0; j < field->array_node.length; ++j)
 		{

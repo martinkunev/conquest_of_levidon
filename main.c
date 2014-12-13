@@ -295,12 +295,13 @@ int main(int argc, char *argv[])
 	}
 
 	srandom(time(0));
-	if_init();
+	if (!if_init())
+	{
+		winner = play(&game);
 
-	winner = play(&game);
-
-	// TODO display game end message
-	write(2, S("game finished\n"));
+		// TODO display game end message
+		write(2, S("game finished\n"));
+	}
 
 	map_term(&game);
 

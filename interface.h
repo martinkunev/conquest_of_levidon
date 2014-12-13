@@ -42,7 +42,7 @@
 #define TOOLTIP_X 256
 #define TOOLTIP_Y 730
 
-void if_init(void);
+int if_init(void);
 
 void if_set(struct pawn *bf[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH]);
 

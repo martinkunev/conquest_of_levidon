@@ -116,9 +116,9 @@ void draw_rectangle(unsigned x, unsigned y, unsigned width, unsigned height, enu
 // Display a region as a polygon, using ear clipping.
 void display_polygon(const struct polygon *restrict polygon, int offset_x, int offset_y)
 {
-	// assert(polygon->vertices > 2);
+	// assert(polygon->vertices_count > 2);
 
-	size_t vertices_left = polygon->vertices;
+	size_t vertices_left = polygon->vertices_count;
 	size_t i;
 
 	// Initialize cyclic linked list with the polygon's vertices.

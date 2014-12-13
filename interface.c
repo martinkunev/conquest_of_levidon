@@ -86,10 +86,10 @@ static void if_reshape(int width, int height)
 	glLoadIdentity();
 }
 
-void if_init(void)
+int if_init(void)
 {
 	display = XOpenDisplay(0);
-	if (!display) return;
+	if (!display) return -1;
 
 	int default_screen = XDefaultScreen(display);
 
@@ -157,6 +157,8 @@ void if_init(void)
 		goto error;
 	}
 
+	// TODO use DPI-based font size
+	// https://wiki.archlinux.org/index.php/X_Logical_Font_Description
 	if (font_init(display, &font12, "-misc-dejavu sans-bold-r-normal--12-0-0-0-p-0-ascii-0") < 0)
 	{
 		xcb_destroy_window(connection, window);
@@ -219,7 +221,7 @@ void if_init(void)
 	// Initialize keyboard mapping table.
 	XDisplayKeycodes(display, &keycode_min, &keycode_max);
 	keymap = XGetKeyboardMapping(display, keycode_min, (keycode_max - keycode_min + 1), &keysyms_per_keycode);
-	if (!keymap) return; // TODO error
+	if (!keymap) return -1; // TODO error
 
 	glGenFramebuffers(1, &map_framebuffer);
 	glGenRenderbuffers(1, &map_renderbuffer);
@@ -233,10 +235,12 @@ void if_init(void)
 	glBindRenderbuffer(GL_RENDERBUFFER, 0);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-	return;
+	return 0;
 
 error:
+	// TODO free what there is to be freed
 	XCloseDisplay(display);
+	return -1;
 }
 
 static void display_unit(size_t unit, unsigned x, unsigned y, enum color color, enum color text, unsigned count)
@@ -632,7 +636,7 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 		// Draw region borders.
 		glColor4ubv(display_colors[Black]);
 		glBegin(GL_LINE_STRIP);
-		for(j = 0; j < regions[i].location->vertices; ++j)
+		for(j = 0; j < regions[i].location->vertices_count; ++j)
 			glVertex2f(MAP_X + regions[i].location->points[j].x, MAP_Y + regions[i].location->points[j].y);
 		glEnd();
 	}
