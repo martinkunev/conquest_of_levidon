@@ -32,6 +32,11 @@ struct path_node
 // TODO use bitmap to filter duplicated vertices
 // TODO do I need non-symmetric distance?
 
+static inline int point_eq(struct point a, struct point b)
+{
+	return ((a.x == b.x) && (a.y == b.y));
+}
+
 static double field_distance(struct point a, struct point b)
 {
 	int dx = b.x - a.x, dy = b.y - a.y;
@@ -154,11 +159,6 @@ static int graph_insert(struct vector_adjacency *nodes, struct point a, struct p
 	node->location.y = b.y + (a.y < b.y) - (b.y < a.y) + (c.y < b.y) - (b.y < c.y);
 
 	return 0;
-}
-
-static inline int point_eq(struct point a, struct point b)
-{
-	return ((a.x == b.x) && (a.y == b.y));
 }
 
 // Stores the vertices of the graph in nodes and returns the adjacency matrix of the graph.
