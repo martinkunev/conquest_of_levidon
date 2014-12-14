@@ -315,6 +315,27 @@ static void show_progress(unsigned current, unsigned total, unsigned x, unsigned
 	else display_rectangle(x, y, width, height, Progress);
 }
 
+void if_test(const struct player *restrict players, const struct state *restrict state, const struct game *restrict game)
+{
+	// clear window
+	glClearColor(0.0, 0.0, 0.0, 0.0);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	size_t i, j;
+
+	for(i = 0; i < BATTLEFIELD_HEIGHT; ++i)
+		for(j = 0; j < BATTLEFIELD_WIDTH; ++j)
+			if ((i + j) % 2)
+				display_rectangle(j * FIELD_SIZE, i * FIELD_SIZE, FIELD_SIZE, FIELD_SIZE, B0);
+
+	struct point from = {0, 0};
+	struct point to = {state->x * FIELD_SIZE + FIELD_SIZE / 2, state->y * FIELD_SIZE + FIELD_SIZE / 2};
+	display_arrow(from, to, BATTLE_X, BATTLE_Y, Self);
+
+	glFlush();
+	glXSwapBuffers(display, drawable);
+}
+
 void if_battle(const struct player *restrict players, const struct state *restrict state, const struct game *restrict game)
 {
 	// clear window

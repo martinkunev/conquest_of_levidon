@@ -21,3 +21,5 @@ struct state
 
 int input_map(const struct game *restrict game, unsigned char player);
 int input_battle(const struct game *restrict game, unsigned char player);
+
+int input_test(const struct game *restrict game, unsigned char player);

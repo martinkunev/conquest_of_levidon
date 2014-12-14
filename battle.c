@@ -407,7 +407,7 @@ static int battle_damage(struct pawn *battlefield[BATTLEFIELD_HEIGHT][BATTLEFIEL
 	return 0;
 }
 
-static int battle_round(const struct player *restrict players, struct pawn *battlefield[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH], struct pawn *pawns, size_t pawns_count, struct heap *collisions)
+static int battle_round(const struct player *restrict players, struct pawn *battlefield[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH], struct pawn *pawns, size_t pawns_count, struct heap_dynamic *collisions)
 {
 	size_t i, j;
 
@@ -435,7 +435,7 @@ static int battle_round(const struct player *restrict players, struct pawn *batt
 				encounter->moment = moment;
 				encounter->pawns[0] = i;
 				encounter->pawns[1] = j;
-				if (!heap_push(collisions, encounter)) return -1;
+				if (!heap_dynamic_push(collisions, encounter)) return -1;
 			}
 		}
 	}
@@ -449,8 +449,8 @@ static int battle_round(const struct player *restrict players, struct pawn *batt
 	// Look if the encounter prevents a later encounter or causes another encounter.
 	while (collisions->count)
 	{
-		item = (struct encounter *)heap_front(collisions);
-		heap_pop(collisions);
+		item = (struct encounter *)heap_dynamic_front(collisions);
+		heap_dynamic_pop(collisions);
 
 		index = item->pawns;
 
@@ -494,7 +494,7 @@ static int battle_round(const struct player *restrict players, struct pawn *batt
 							encounter->moment = moment;
 							encounter->pawns[0] = i;
 							encounter->pawns[1] = index[0];
-							if (!heap_push(collisions, encounter)) return -1;
+							if (!heap_dynamic_push(collisions, encounter)) return -1;
 						}
 					}
 					else if (players[pawns[i].slot->player].alliance != players[pawns[index[1]].slot->player].alliance)
@@ -508,7 +508,7 @@ static int battle_round(const struct player *restrict players, struct pawn *batt
 							encounter->moment = moment;
 							encounter->pawns[0] = i;
 							encounter->pawns[1] = index[1];
-							if (!heap_push(collisions, encounter)) return -1;
+							if (!heap_dynamic_push(collisions, encounter)) return -1;
 						}
 					}
 				}
@@ -540,7 +540,7 @@ static int battle_round(const struct player *restrict players, struct pawn *batt
 							encounter->moment = moment;
 							encounter->pawns[0] = i;
 							encounter->pawns[1] = index[0];
-							if (!heap_push(collisions, encounter)) return -1;
+							if (!heap_dynamic_push(collisions, encounter)) return -1;
 						}
 					}
 				}
@@ -573,7 +573,7 @@ static int battle_round(const struct player *restrict players, struct pawn *batt
 						encounter->moment = moment;
 						encounter->pawns[0] = i;
 						encounter->pawns[1] = index[1];
-						if (!heap_push(collisions, encounter)) return -1;
+						if (!heap_dynamic_push(collisions, encounter)) return -1;
 					}
 				}
 			}
@@ -768,13 +768,13 @@ int battle(const struct game *restrict game, struct region *restrict region)
 	double x, y;
 	double t;
 
-	struct heap collisions;
-	if (!heap_init(&collisions)) return -1;
+	struct heap_dynamic collisions;
+	if (!heap_dynamic_init(&collisions)) return -1;
 
 	struct battle battle;
 	if (battle_init(&battle, game->players, game->players_count, pawns, pawns_count) < 0)
 	{
-		heap_term(&collisions);
+		heap_dynamic_term(&collisions);
 		return -1;
 	}
 
@@ -809,7 +809,8 @@ int battle(const struct game *restrict game, struct region *restrict region)
 				continue;
 
 			case Local:
-				if (input_battle(game, player) < 0)
+				//if (input_battle(game, player) < 0)
+				if (input_test(game, player) < 0)
 				{
 					status = -1;
 					goto finally;
@@ -992,7 +993,7 @@ finally:
 	free(pawns_damage);
 
 	for(i = 0; i < collisions.count; ++i) free(collisions.data[i]);
-	heap_term(&collisions);
+	heap_dynamic_term(&collisions);
 
 	return status;
 }

@@ -681,3 +681,59 @@ int input_battle(const struct game *restrict game, unsigned char player)
 
 	return input_local(if_battle, areas, sizeof(areas) / sizeof(*areas), game);
 }
+
+static int input_ttest(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game)
+{
+	if (code == EVENT_MOTION) return INPUT_NOTME;
+	if (code >= 0) return INPUT_NOTME;
+
+	x /= FIELD_SIZE;
+	y /= FIELD_SIZE;
+
+	// if (modifiers & XCB_MOD_MASK_SHIFT) ; // TODO fast move
+
+	/*if (code == -1)
+	{
+		// Set current field.
+		state.x = x;
+		state.y = y;
+		state.selected.pawn = 0;
+	}
+	else*/ if (code == -3)
+	{
+		state.x = x;
+		state.y = y;
+	}
+
+	return 0;
+}
+
+int input_test(const struct game *restrict game, unsigned char player)
+{
+	struct area areas[] = {
+		{
+			.left = 0,
+			.right = SCREEN_WIDTH - 1,
+			.top = 0,
+			.bottom = SCREEN_HEIGHT - 1,
+			.callback = input_round
+		},
+		{
+			.left = 0,
+			.right = BATTLEFIELD_WIDTH * FIELD_SIZE - 1,
+			.top = 0,
+			.bottom = BATTLEFIELD_HEIGHT * FIELD_SIZE - 1,
+			.callback = input_ttest
+		},
+	};
+
+	state.player = player;
+
+	// Set current field to a field outside of the board.
+	state.x = BATTLEFIELD_WIDTH;
+	state.y = BATTLEFIELD_HEIGHT;
+
+	state.selected.pawn = 0;
+
+	return input_local(if_test, areas, sizeof(areas) / sizeof(*areas), game);
+}
