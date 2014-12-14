@@ -378,28 +378,11 @@ void if_test(const struct player *restrict players, const struct state *restrict
 
 			for(i = 0; i < obstacles->vertices_count; ++i)
 			{
-				if (obstacles->points[i].x == 13) obstacles->points[i].x += 1;
-				if (obstacles->points[i].y == 13) obstacles->points[i].y += 1;
 				obstacles->points[i].x *= FIELD_SIZE;
 				obstacles->points[i].y *= FIELD_SIZE;
 			}
-			/*obstacles->points[0].x += FIELD_SIZE;
-			obstacles->points[0].y += FIELD_SIZE;
-			obstacles->points[1].x += FIELD_SIZE;
-			obstacles->points[3].y += FIELD_SIZE;
-			obstacles->points[4].x += FIELD_SIZE;
-			obstacles->points[4].y += FIELD_SIZE;
-			obstacles->points[5].x += FIELD_SIZE;
-			obstacles->points[7].y += FIELD_SIZE;
-			obstacles->points[8].y += FIELD_SIZE;
-			obstacles->points[10].x += FIELD_SIZE;
-			obstacles->points[11].x += FIELD_SIZE;
-			obstacles->points[11].y += FIELD_SIZE;*/
-			/*obstacles->points[1].y += FIELD_SIZE;
-			obstacles->points[2].x += FIELD_SIZE;
-			obstacles->points[2].y += FIELD_SIZE;
-			obstacles->points[3].x += FIELD_SIZE;*/
 			glColor4ubv(display_colors[Enemy]);
+			obstacles->vertices_count -= 1;
 			display_polygon(obstacles, BATTLE_X, BATTLE_Y);
 
 			for(i = 1; i < moves.length; ++i)

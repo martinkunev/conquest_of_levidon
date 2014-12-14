@@ -55,19 +55,15 @@ static int blocks(struct point p0, struct point p1, struct point w0, struct poin
 
 	long cross;
 
-	// Use exclusive coordinates for the wall (for easier calculations).
-	int sign;
-	sign = (w1.x < w0.x) - (w0.x < w1.x);
-	w0.x += sign;
-	w1.x -= sign;
-	sign = (w1.y < w0.y) - (w0.y < w1.y);
-	w0.y += sign;
-	w1.y -= sign;
-
 	p1.x -= p0.x;
 	p1.y -= p0.y;
 	w1.x -= w0.x;
 	w1.y -= w0.y;
+
+	w0.x = w0.x * 2;
+	w0.y = w0.y * 2;
+	w1.x = w1.x * 2;
+	w1.y = w1.y * 2;
 
 	cross = cross_product(p1, w1);
 
@@ -89,7 +85,7 @@ static int blocks(struct point p0, struct point p1, struct point w0, struct poin
 		}
 
 		// Check if the line segments intersect.
-		if ((0 < wm) && (wm < cross) && (0 < pm) && (pm < cross))
+		if ((0 <= wm) && (wm <= cross) && (0 <= pm) && (pm <= cross))
 			return 1;
 	}
 
@@ -105,7 +101,6 @@ static int visible(struct point origin, struct point target, const struct polygo
 	for(i = 0; i < obstacles_count; ++i)
 	{
 		obstacle = obstacles + i;
-
 		for(j = 1; j < obstacle->vertices_count; ++j)
 			if (blocks(origin, target, obstacle->points[j - 1], obstacle->points[j]))
 				return 0;
@@ -155,8 +150,8 @@ static int graph_insert(struct vector_adjacency *nodes, struct point a, struct p
 	node->neighbors = 0;
 
 	// Calculate the coordinates of the inserted vertex.
-	node->location.x = b.x + (a.x < b.x) - (b.x < a.x) + (c.x < b.x) - (b.x < c.x);
-	node->location.y = b.y + (a.y < b.y) - (b.y < a.y) + (c.y < b.y) - (b.y < c.y);
+	node->location.x = b.x * 2 + (a.x < b.x) - (b.x < a.x) + (c.x < b.x) - (b.x < c.x);
+	node->location.y = b.y * 2 + (a.y < b.y) - (b.y < a.y) + (c.y < b.y) - (b.y < c.y);
 
 	return 0;
 }
@@ -230,6 +225,11 @@ void visibility_graph_free(struct vector_adjacency *nodes)
 int path_find(struct point origin, struct point target, struct vector_adjacency *restrict nodes, const struct polygon *restrict obstacles, size_t obstacles_count, struct vector *restrict moves)
 {
 	const size_t node_origin = nodes->length - 1, node_target = nodes->length - 2;
+
+	origin.x = origin.x * 2 + 1;
+	origin.y = origin.y * 2 + 1;
+	target.x = target.x * 2 + 1;
+	target.y = target.y * 2 + 1;
 
 	// Add target and origin points to the path graph.
 	nodes->data[node_target].location = target;
@@ -314,8 +314,12 @@ int path_find(struct point origin, struct point target, struct vector_adjacency 
 
 	// Add path points to move.
 	temp = traverse + node_origin;
-	do vector_add(moves, nodes->data + (temp - traverse));
-	while (temp = temp->origin);
+	do
+	{
+		nodes->data[temp - traverse].location.x /= 2;
+		nodes->data[temp - traverse].location.y /= 2;
+		vector_add(moves, nodes->data + (temp - traverse));
+	} while (temp = temp->origin);
 
 	free(traverse);
 
