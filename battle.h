@@ -7,6 +7,11 @@
 #define BATTLEFIELD_WIDTH 9
 #define BATTLEFIELD_HEIGHT 9
 
+/*
+#define BATTLEFIELD_WIDTH 32
+#define BATTLEFIELD_HEIGHT 32
+*/
+
 #define ROUND_DURATION 8
 
 struct pawn

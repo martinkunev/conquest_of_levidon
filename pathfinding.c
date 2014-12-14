@@ -1,10 +1,8 @@
-#define BATTLEFIELD_WIDTH 32
-#define BATTLEFIELD_HEIGHT 32
-
 #include <math.h>
 
 #include "types.h"
 #include "display.h"
+#include "pathfinding.h"
 
 struct path_node
 {
@@ -30,23 +28,14 @@ struct path_node
 // The fields are represented by their top left coordinates (in order to facilitate computations).
 // The obstacles are represented as polygons surrounding the blocked area. The coordinates are exclusive (limit fields are passable).
 
-// TODO create the necessary data structures: heap of pointers (reorder should update pointer values)
-
 // TODO obstacles: rectangles, coastlines, fortresses
 // TODO use bitmap to filter duplicated vertices
-// TODO i can use the adjacency matrix to make the distances non-symmetric
+// TODO do I need non-symmetric distance?
 
 static double field_distance(struct point a, struct point b)
 {
 	int dx = b.x - a.x, dy = b.y - a.y;
 	return sqrt(dx * dx + dy * dy);
-}
-
-static int angle_positive(struct point a, struct point b, struct point c)
-{
-	int fx = b.x - a.x, fy = b.y - a.y;
-	int sx = c.x - b.x, sy = c.y - b.y;
-	return ((fx * sy - sx * fy) > 0);
 }
 
 static inline long cross_product(struct point f, struct point s)
@@ -106,106 +95,135 @@ static int visible(struct point origin, struct point target, const struct polygo
 	return 1;
 }
 
-static void graph_attach(struct vector *restrict nodes, size_t index, double *restrict matrix, const struct polygon *restrict obstacles, size_t obstacles_count)
+static int graph_attach(struct vector_adjacency *restrict nodes, size_t index, const struct polygon *restrict obstacles, size_t obstacles_count)
 {
 	size_t node;
+	struct point from, to;
+	struct neighbor *neighbor;
 	double distance;
 
-	struct point from, to;
-
-	#define CONNECTED(i, j) matrix[i * nodes->length + j]
-
-	CONNECTED(index, index) = INFINITY;
 	for(node = 0; node < index; ++node)
 	{
-		from = *(struct point *)nodes->data[index];
-		to = *(struct point *)nodes->data[node];
+		from = nodes->data[index].location;
+		to = nodes->data[node].location;
 		if (visible(from, to, obstacles, obstacles_count))
 		{
 			distance = field_distance(from, to);
-			CONNECTED(index, node) = distance;
-			CONNECTED(node, index) = distance;
-		}
-		else
-		{
-			CONNECTED(index, node) = INFINITY;
-			CONNECTED(node, index) = INFINITY;
+
+			neighbor = malloc(sizeof(*neighbor));
+			if (!neighbor) return ERROR_MEMORY;
+			neighbor->index = index;
+			neighbor->distance = distance;
+			neighbor->next = nodes->data[index].neighbors;
+			nodes->data[index].neighbors = neighbor;
+
+			neighbor = malloc(sizeof(*neighbor));
+			if (!neighbor) return ERROR_MEMORY;
+			neighbor->index = node;
+			neighbor->distance = distance;
+			neighbor->next = nodes->data[node].neighbors;
+			nodes->data[node].neighbors = neighbor;
 		}
 	}
 
-	#undef CONNECTED
+	return 0;
+}
+
+static inline int angle_positive(struct point a, struct point b, struct point c)
+{
+	int fx = b.x - a.x, fy = b.y - a.y;
+	int sx = c.x - b.x, sy = c.y - b.y;
+	return ((fx * sy - sx * fy) > 0);
+}
+static int graph_insert(struct vector_adjacency *nodes, struct point a, struct point b, struct point c)
+{
+	if (angle_positive(a, b, c))
+	{
+		struct adjacency *node = vector_adjacency_insert(nodes);
+		if (!node) return ERROR_MEMORY;
+		node->location = b;
+		node->neighbors = 0;
+	}
+	return 0;
 }
 
 // Stores the vertices of the graph in nodes and returns the adjacency matrix of the graph.
-double *visibility_graph_build(const struct polygon *restrict obstacles, size_t obstacles_count, struct vector *restrict nodes)
+int visibility_graph_build(const struct polygon *restrict obstacles, size_t obstacles_count, struct vector_adjacency *restrict nodes)
 {
 	const struct polygon *restrict obstacle;
 	size_t i, j;
 
-	double *neighbors;
-
-	*nodes = VECTOR_EMPTY;
+	nodes->data = 0;
+	nodes->length = 0;
+	nodes->size = 0;
 
 	// Select the vertices forming positive angles for the visibility graph.
 	for(i = 0; i < obstacles_count; ++i)
 	{
 		obstacle = obstacles + i;
 
-		if (angle_positive(obstacle->points[obstacle->vertices_count - 2], obstacle->points[obstacle->vertices_count - 1], obstacle->points[0]))
-			if (vector_add(nodes, (void *)(obstacle->points + obstacle->vertices_count - 1)))
-				goto error;
-		if (angle_positive(obstacle->points[obstacle->vertices_count - 1], obstacle->points[0], obstacle->points[1]))
-			if (vector_add(nodes, (void *)(obstacle->points + 0)))
-				goto error;
+		if (graph_insert(nodes, obstacle->points[obstacle->vertices_count - 2], obstacle->points[obstacle->vertices_count - 1], obstacle->points[0]) < 0)
+			goto error;
+		if (graph_insert(nodes, obstacle->points[obstacle->vertices_count - 1], obstacle->points[0], obstacle->points[1]) < 0)
+			goto error;
 		for(j = 2; j < obstacle->vertices_count; ++j)
-		{
-			if (angle_positive(obstacle->points[j - 2], obstacle->points[j - 1], obstacle->points[j]))
-				if (vector_add(nodes, (void *)(obstacle->points + j - 1)))
-					goto error;
-		}
+			if (graph_insert(nodes, obstacle->points[j - 2], obstacle->points[j - 1], obstacle->points[j]) < 0)
+				goto error;
 	}
 
 	// Add dummy vertices for the start and the end nodes.
-	vector_add(nodes, 0);
-	vector_add(nodes, 0);
+	vector_adjacency_insert(nodes);
+	vector_adjacency_insert(nodes);
 
-	neighbors = malloc(nodes->length * nodes->length * sizeof(*neighbors));
-	if (!neighbors) goto error;
-
-	// Fill the adjacency matrix of the visibility graph.
+	// Fill the adjacency list of the visibility graph.
 	// Consider that no vertex is connected to itself.
-	neighbors[0] = INFINITY;
 	for(i = 1; i < nodes->length; ++i)
-		graph_attach(nodes, i, neighbors, obstacles, obstacles_count);
+		if (graph_attach(nodes, i, obstacles, obstacles_count) < 0)
+			goto error;
 
-	return neighbors;
+	return 0;
 
 error:
-	vector_term(nodes);
-	return 0;
+	visibility_graph_free(nodes);
+	return ERROR_MEMORY;
 }
 
-void visibility_graph_free(struct vector *restrict nodes, double *matrix)
+void visibility_graph_free(struct vector_adjacency *nodes)
 {
-	vector_term(nodes);
-	free(matrix);
+	size_t i;
+	struct neighbor *item, *next;
+
+	for(i = 0; i < nodes->length; ++i)
+	{
+		item = nodes->data[i].neighbors;
+		while (item)
+		{
+			next = item->next;
+			free(item);
+			item = next;
+		}
+	}
+	free(nodes->data);
 }
 
-int path_find(const struct point *restrict origin, const struct point *restrict target, struct vector *restrict nodes, double *restrict matrix, const struct polygon *restrict obstacles, size_t obstacles_count, struct vector *restrict moves)
+int path_find(struct point origin, struct point target, struct vector_adjacency *restrict nodes, const struct polygon *restrict obstacles, size_t obstacles_count, struct vector *restrict moves)
 {
-	const size_t index_origin = nodes->length - 1, index_target = nodes->length - 2;
+	const size_t node_origin = nodes->length - 1, node_target = nodes->length - 2;
 
 	// Add target and origin points to the path graph.
-	nodes->data[index_target] = (struct point *)target;
-	graph_attach(nodes, index_target, matrix, obstacles, obstacles_count);
-	nodes->data[index_origin] = (struct point *)origin;
-	graph_attach(nodes, index_origin, matrix, obstacles, obstacles_count);
+	nodes->data[node_target].location = target;
+	graph_attach(nodes, node_target, obstacles, obstacles_count);
+	nodes->data[node_origin].location = origin;
+	graph_attach(nodes, node_origin, obstacles, obstacles_count);
 
 	size_t i;
 	size_t last;
 
 	struct path_node *traverse = 0, *from, *temp;
 	struct heap closest = {0};
+
+	struct neighbor *neighbor;
+	double distance;
 
 	traverse = malloc(nodes->length * sizeof(*traverse));
 	if (!traverse) return ERROR_MEMORY;
@@ -226,12 +244,11 @@ int path_find(const struct point *restrict origin, const struct point *restrict 
 
 		closest.data[i] = traverse + i;
 	}
-	//traverse[nodes->length - 1].distance = 0;
 	closest.count = nodes->length;
 	heapify(&closest);
 
 	// Set origin point data.
-	last = index_origin;
+	last = node_origin;
 	traverse[last].distance = 0;
 	traverse[last].origin = 0;
 
@@ -240,25 +257,24 @@ int path_find(const struct point *restrict origin, const struct point *restrict 
 	{
 		if (!closest.count) goto error;
 
-		#define DISTANCE(i, j) matrix[i * nodes->length + j]
-
-		// TODO should I instead heapify after all the distances are updated?
-		for(i = 0; i < nodes->length; ++i)
+		// Update path from last to its neighbors.
+		neighbor = nodes->data[last].neighbors;
+		while (neighbor)
 		{
-			if (DISTANCE(last, i) < INFINITY)
+			distance = traverse[last].distance + neighbor->distance;
+			if (traverse[neighbor->index].distance > distance)
 			{
-				traverse[i].distance = traverse[last].distance + DISTANCE(last, i);
-				traverse[i].origin = traverse + last;
-				heap_emerge(&closest, traverse[i].heap_index);
+				traverse[neighbor->index].distance = distance;
+				traverse[neighbor->index].origin = traverse + last;
+				heap_emerge(&closest, traverse[neighbor->index].heap_index);
 			}
+			neighbor = neighbor->next;
 		}
-
-		#undef CONNECTED
 
 		last = heap_front(&closest) - traverse;
 		if (traverse[last].distance == INFINITY) goto error;
-		heap_pop_static(&closest);
-	} while (last != index_target);
+		heap_pop(&closest);
+	} while (last != node_target);
 
 	free(closest.data);
 
@@ -272,7 +288,7 @@ int path_find(const struct point *restrict origin, const struct point *restrict 
 	} while (from);
 
 	// Add path points to move.
-	temp = traverse + index_origin;
+	temp = traverse + node_origin;
 	do vector_add(moves, nodes->data + (temp - traverse));
 	while (temp = temp->origin);
 
