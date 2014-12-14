@@ -40,7 +40,7 @@ static double field_distance(struct point a, struct point b)
 
 static inline long cross_product(struct point f, struct point s)
 {
-	return (f.x * s.y - s.x * f.y);
+	return (s.x * f.y - f.x * s.y); // negated because the coordinate system is clockwise (y axis is inverted)
 }
 
 // Check if the wall (w0, w1) blocks the path (p0, p1)
@@ -48,7 +48,23 @@ static int blocks(struct point p0, struct point p1, struct point w0, struct poin
 {
 	// http://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect
 
-	long cross = cross_product(p1, w1);
+	long cross;
+
+	// Use exclusive coordinates for the wall (for easier calculations).
+	int sign;
+	sign = (w1.x < w0.x) - (w0.x < w1.x);
+	w0.x += sign;
+	w1.x -= sign;
+	sign = (w1.y < w0.y) - (w0.y < w1.y);
+	w0.y += sign;
+	w1.y -= sign;
+
+	p1.x -= p0.x;
+	p1.y -= p0.y;
+	w1.x -= w0.x;
+	w1.y -= w0.y;
+
+	cross = cross_product(p1, w1);
 
 	if (cross) // the lines intersect
 	{
@@ -68,7 +84,7 @@ static int blocks(struct point p0, struct point p1, struct point w0, struct poin
 		}
 
 		// Check if the line segments intersect.
-		if ((0 <= wm) && (wm < cross) && (0 <= pm) && (pm < cross))
+		if ((0 < wm) && (wm < cross) && (0 < pm) && (pm < cross))
 			return 1;
 	}
 
@@ -85,8 +101,6 @@ static int visible(struct point origin, struct point target, const struct polygo
 	{
 		obstacle = obstacles + i;
 
-		if (blocks(origin, target, obstacle->points[obstacle->vertices_count - 1], obstacle->points[0]))
-			return 0;
 		for(j = 1; j < obstacle->vertices_count; ++j)
 			if (blocks(origin, target, obstacle->points[j - 1], obstacle->points[j]))
 				return 0;
@@ -112,14 +126,14 @@ static int graph_attach(struct vector_adjacency *restrict nodes, size_t index, c
 
 			neighbor = malloc(sizeof(*neighbor));
 			if (!neighbor) return ERROR_MEMORY;
-			neighbor->index = index;
+			neighbor->index = node;
 			neighbor->distance = distance;
 			neighbor->next = nodes->data[index].neighbors;
 			nodes->data[index].neighbors = neighbor;
 
 			neighbor = malloc(sizeof(*neighbor));
 			if (!neighbor) return ERROR_MEMORY;
-			neighbor->index = node;
+			neighbor->index = index;
 			neighbor->distance = distance;
 			neighbor->next = nodes->data[node].neighbors;
 			nodes->data[node].neighbors = neighbor;
@@ -129,22 +143,22 @@ static int graph_attach(struct vector_adjacency *restrict nodes, size_t index, c
 	return 0;
 }
 
-static inline int angle_positive(struct point a, struct point b, struct point c)
-{
-	int fx = b.x - a.x, fy = b.y - a.y;
-	int sx = c.x - b.x, sy = c.y - b.y;
-	return ((fx * sy - sx * fy) > 0);
-}
 static int graph_insert(struct vector_adjacency *nodes, struct point a, struct point b, struct point c)
 {
-	if (angle_positive(a, b, c))
-	{
-		struct adjacency *node = vector_adjacency_insert(nodes);
-		if (!node) return ERROR_MEMORY;
-		node->location = b;
-		node->neighbors = 0;
-	}
+	struct adjacency *node = vector_adjacency_insert(nodes);
+	if (!node) return ERROR_MEMORY;
+	node->neighbors = 0;
+
+	// Calculate the coordinates of the inserted vertex.
+	node->location.x = b.x + (a.x < b.x) - (b.x < a.x) + (c.x < b.x) - (b.x < c.x);
+	node->location.y = b.y + (a.y < b.y) - (b.y < a.y) + (c.y < b.y) - (b.y < c.y);
+
 	return 0;
+}
+
+static inline int point_eq(struct point a, struct point b)
+{
+	return ((a.x == b.x) && (a.y == b.y));
 }
 
 // Stores the vertices of the graph in nodes and returns the adjacency matrix of the graph.
@@ -157,29 +171,36 @@ int visibility_graph_build(const struct polygon *restrict obstacles, size_t obst
 	nodes->length = 0;
 	nodes->size = 0;
 
-	// Select the vertices forming positive angles for the visibility graph.
+	// For each angle, use its exterior point for the visibility graph.
 	for(i = 0; i < obstacles_count; ++i)
 	{
 		obstacle = obstacles + i;
 
-		if (graph_insert(nodes, obstacle->points[obstacle->vertices_count - 2], obstacle->points[obstacle->vertices_count - 1], obstacle->points[0]) < 0)
-			goto error;
-		if (graph_insert(nodes, obstacle->points[obstacle->vertices_count - 1], obstacle->points[0], obstacle->points[1]) < 0)
-			goto error;
 		for(j = 2; j < obstacle->vertices_count; ++j)
 			if (graph_insert(nodes, obstacle->points[j - 2], obstacle->points[j - 1], obstacle->points[j]) < 0)
 				goto error;
-	}
 
-	// Add dummy vertices for the start and the end nodes.
-	vector_adjacency_insert(nodes);
-	vector_adjacency_insert(nodes);
+		if (point_eq(obstacle->points[0], obstacle->points[obstacle->vertices_count - 1])) // the obstacle is a closed loop
+		{
+			if (graph_insert(nodes, obstacle->points[obstacle->vertices_count - 2], obstacle->points[0], obstacle->points[1]) < 0)
+				goto error;
+		}
+		else
+		{
+			// TODO implement this
+		}
+	}
 
 	// Fill the adjacency list of the visibility graph.
 	// Consider that no vertex is connected to itself.
 	for(i = 1; i < nodes->length; ++i)
 		if (graph_attach(nodes, i, obstacles, obstacles_count) < 0)
 			goto error;
+
+	// Add dummy vertices for the start and the end nodes.
+	vector_adjacency_insert(nodes);
+	vector_adjacency_insert(nodes);
+	// TODO shrink?
 
 	return 0;
 
@@ -212,14 +233,16 @@ int path_find(struct point origin, struct point target, struct vector_adjacency 
 
 	// Add target and origin points to the path graph.
 	nodes->data[node_target].location = target;
+	nodes->data[node_target].neighbors = 0;
 	graph_attach(nodes, node_target, obstacles, obstacles_count);
 	nodes->data[node_origin].location = origin;
+	nodes->data[node_origin].neighbors = 0;
 	graph_attach(nodes, node_origin, obstacles, obstacles_count);
 
 	size_t i;
 	size_t last;
 
-	struct path_node *traverse = 0, *from, *temp;
+	struct path_node *traverse = 0, *from, *next, *temp;
 	struct heap closest = {0};
 
 	struct neighbor *neighbor;
@@ -236,15 +259,15 @@ int path_find(struct point origin, struct point target, struct vector_adjacency 
 	}
 
 	// Build a heap from path nodes.
-	for(i = 0; i < nodes->length - 1; ++i)
+	for(i = 0; i < node_origin; ++i)
 	{
 		traverse[i].distance = INFINITY;
 		traverse[i].origin = 0;
-		// heap_index will be set by heapify
+		traverse[i].heap_index = i;
 
 		closest.data[i] = traverse + i;
 	}
-	closest.count = nodes->length;
+	closest.count = nodes->length - 1;
 	heapify(&closest);
 
 	// Set origin point data.
@@ -280,10 +303,12 @@ int path_find(struct point origin, struct point target, struct vector_adjacency 
 
 	// Construct the final path by reversing the origin pointers.
 	from = traverse + last;
+	next = 0;
 	do
 	{
 		temp = from->origin;
-		from->origin = from;
+		from->origin = next;
+		next = from;
 		from = temp;
 	} while (from);
 

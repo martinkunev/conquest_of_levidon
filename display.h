@@ -6,7 +6,7 @@
 
 struct point 
 { 
-	unsigned x, y;
+	int x, y;
 };
 
 struct polygon

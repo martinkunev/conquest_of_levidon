@@ -18,7 +18,7 @@ struct vector_name
 	size_t size;
 };
 
-vector_type *VECTOR_NAME(insert)(struct vector_name *vector)
+static vector_type *VECTOR_NAME(insert)(struct vector_name *vector)
 {
 	if (vector->length == vector->size)
 	{
@@ -31,7 +31,7 @@ vector_type *VECTOR_NAME(insert)(struct vector_name *vector)
 	return vector->data + vector->length++;
 }
 
-int VECTOR_NAME(add)(struct vector_name *restrict vector, vector_type value)
+static int VECTOR_NAME(add)(struct vector_name *restrict vector, vector_type value)
 {
 	if (vector->length == vector->size)
 	{
@@ -45,7 +45,7 @@ int VECTOR_NAME(add)(struct vector_name *restrict vector, vector_type value)
 	return 0;
 }
 
-void VECTOR_NAME(shrink)(struct vector_name *vector)
+static void VECTOR_NAME(shrink)(struct vector_name *vector)
 {
 	vector->size = vector->length;
 	vector->data = realloc(vector->data, vector->size * sizeof(*vector->data));

@@ -20,6 +20,8 @@
 #include "input.h"
 #include "interface.h"
 
+#include "pathfinding.h"
+
 // http://xcb.freedesktop.org/opengl/
 // http://xcb.freedesktop.org/tutorial/events/
 // http://techpubs.sgi.com/library/dynaweb_docs/0640/SGI_Developer/books/OpenGL_Porting/sgi_html/ch04.html
@@ -315,6 +317,28 @@ static void show_progress(unsigned current, unsigned total, unsigned x, unsigned
 	else display_rectangle(x, y, width, height, Progress);
 }
 
+#include <stdarg.h>
+#include <stdio.h>
+
+static struct polygon *region_create(size_t count, ...)
+{
+	size_t index;
+	va_list vertices;
+
+	// Allocate memory for the region and its vertices.
+	struct polygon *polygon = malloc(sizeof(struct polygon) + count * sizeof(struct point));
+	if (!polygon) return 0;
+	polygon->vertices_count = count;
+
+	// Initialize region vertices.
+	va_start(vertices, count);
+	for(index = 0; index < count; ++index)
+		polygon->points[index] = va_arg(vertices, struct point);
+	va_end(vertices);
+
+	return polygon;
+}
+
 void if_test(const struct player *restrict players, const struct state *restrict state, const struct game *restrict game)
 {
 	// clear window
@@ -328,9 +352,77 @@ void if_test(const struct player *restrict players, const struct state *restrict
 			if ((i + j) % 2)
 				display_rectangle(j * FIELD_SIZE, i * FIELD_SIZE, FIELD_SIZE, FIELD_SIZE, B0);
 
-	struct point from = {0, 0};
-	struct point to = {state->x * FIELD_SIZE + FIELD_SIZE / 2, state->y * FIELD_SIZE + FIELD_SIZE / 2};
-	display_arrow(from, to, BATTLE_X, BATTLE_Y, Self);
+	/////////
+
+	if ((state->x != BATTLEFIELD_WIDTH) && (state->y != BATTLEFIELD_HEIGHT))
+	{
+		size_t obstacles_count = 1;
+		//struct polygon *obstacles = region_create(12, (struct point){10, 15}, (struct point){10, 17}, (struct point){15, 17}, (struct point){15, 10}, (struct point){4, 10}, (struct point){4, 17}, (struct point){10, 17}, (struct point){10, 15}, (struct point){6, 15}, (struct point){6, 12}, (struct point){13, 12}, (struct point){13, 15});
+		struct polygon *obstacles = region_create(5, (struct point){13, 13}, (struct point){13, 9}, (struct point){6, 9}, (struct point){6, 13}, (struct point){13, 13});
+
+		struct vector_adjacency nodes;
+
+		visibility_graph_build(obstacles, obstacles_count, &nodes);
+
+		struct point from = {0, 0};
+		struct point to = {state->x, state->y};
+
+		struct vector moves = VECTOR_EMPTY;
+		if (path_find(from, to, &nodes, obstacles, obstacles_count, &moves) < 0)
+		{
+			//
+		}
+		else
+		{
+			size_t i;
+
+			for(i = 0; i < obstacles->vertices_count; ++i)
+			{
+				if (obstacles->points[i].x == 13) obstacles->points[i].x += 1;
+				if (obstacles->points[i].y == 13) obstacles->points[i].y += 1;
+				obstacles->points[i].x *= FIELD_SIZE;
+				obstacles->points[i].y *= FIELD_SIZE;
+			}
+			/*obstacles->points[0].x += FIELD_SIZE;
+			obstacles->points[0].y += FIELD_SIZE;
+			obstacles->points[1].x += FIELD_SIZE;
+			obstacles->points[3].y += FIELD_SIZE;
+			obstacles->points[4].x += FIELD_SIZE;
+			obstacles->points[4].y += FIELD_SIZE;
+			obstacles->points[5].x += FIELD_SIZE;
+			obstacles->points[7].y += FIELD_SIZE;
+			obstacles->points[8].y += FIELD_SIZE;
+			obstacles->points[10].x += FIELD_SIZE;
+			obstacles->points[11].x += FIELD_SIZE;
+			obstacles->points[11].y += FIELD_SIZE;*/
+			/*obstacles->points[1].y += FIELD_SIZE;
+			obstacles->points[2].x += FIELD_SIZE;
+			obstacles->points[2].y += FIELD_SIZE;
+			obstacles->points[3].x += FIELD_SIZE;*/
+			glColor4ubv(display_colors[Enemy]);
+			display_polygon(obstacles, BATTLE_X, BATTLE_Y);
+
+			for(i = 1; i < moves.length; ++i)
+			{
+				from = *(struct point *)moves.data[i - 1];
+				from.x = from.x * FIELD_SIZE + FIELD_SIZE / 2;
+				from.y = from.y * FIELD_SIZE + FIELD_SIZE / 2;
+
+				to = *(struct point *)moves.data[i];
+				to.x = to.x * FIELD_SIZE + FIELD_SIZE / 2;
+				to.y = to.y * FIELD_SIZE + FIELD_SIZE / 2;
+
+				display_arrow(from, to, BATTLE_X, BATTLE_Y, Self);
+			}
+
+			vector_term(&moves);
+		}
+
+		visibility_graph_free(&nodes);
+		free(obstacles);
+	}
+
+	/////////
 
 	glFlush();
 	glXSwapBuffers(display, drawable);

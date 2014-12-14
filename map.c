@@ -36,7 +36,7 @@ const size_t buildings_count = sizeof(buildings) / sizeof(*buildings);
 
 #undef NAME
 
-static struct polygon *region_create(size_t count, ...)
+/*static struct polygon *region_create(size_t count, ...)
 {
 	size_t index;
 	va_list vertices;
@@ -53,7 +53,7 @@ static struct polygon *region_create(size_t count, ...)
 	va_end(vertices);
 
 	return polygon;
-}
+}*/
 
 static int map_build(uint32_t *restrict built, const struct vector *restrict list)
 {

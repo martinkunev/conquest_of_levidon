@@ -199,6 +199,7 @@ void display_arrow(struct point from, struct point to, int offset_x, int offset_
 	double angle_y = dy / l, angle_x = dx / l;
 
 	double hx, hy;
+
 	hx = to.x - HEAD_LENGTH * angle_x;
 	hy = to.y - HEAD_LENGTH * angle_y;
 
