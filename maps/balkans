@@ -54,7 +54,8 @@
 		{
 			"comment": "2",
 			"name": "Thessaly",
-			"owner": 0,
+			"owner": 1,
+			"army": [["Peasant", 20, 1]],
 			"built": [],
 			"neighbors": [-1, 6, 5, -1, 3, -1, 1, -1],
 			"location": [
@@ -79,7 +80,8 @@
 		{
 			"comment": "3",
 			"name": "Epirus",
-			"owner": 0,
+			"owner": 2,
+			"army": [["Peasant", 20, 2]],
 			"built": [],
 			"neighbors": [2, 5, 4, -1, -1, -1, -1, 1],
 			"location": [
@@ -219,7 +221,7 @@
 			"comment": "11",
 			"name": "Serdika",
 			"owner": 0,
-			"built": ["Lumbermill"],
+			"built": ["Lumber mill"],
 			"neighbors": [8, 10, -1, -1, 12, -1, 5, 6],
 			"location": [
 				[433, 314],

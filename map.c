@@ -9,8 +9,6 @@
 
 // Player 0 and alliance 0 are hard-coded as neutral.
 
-// TODO support more than 7 slots
-
 #define NAME(s) .name = (s), .name_length = sizeof(s) - 1
 
 const struct unit units[] =
@@ -60,8 +58,6 @@ static int map_build(uint32_t *restrict built, const struct vector *restrict lis
 	size_t i, j;
 	const union json *entry;
 
-	#define EQ(data, size, name) (((size) == (sizeof(name) - 1)) && !memcmp((data), (name), sizeof(name) - 1))
-
 	for(i = 0; i < list->length; ++i)
 	{
 		entry = vector_get(list, i);
@@ -70,13 +66,46 @@ static int map_build(uint32_t *restrict built, const struct vector *restrict lis
 		// TODO maybe use hash table here
 		for(j = 0; j < buildings_count; ++j)
 			if ((entry->string_node.length == buildings[j].name_length) && !memcmp(entry->string_node.data, buildings[j].name, buildings[j].name_length))
+			{
 				*built |= (1 << j);
-		// TODO else show log message
+				goto next;
+			}
+		return -1;
+next:
+		;
 	}
 
-	#undef EQ
+	return 0;
+}
+
+int slot_spawn(struct region *restrict region, const struct unit *restrict unit, unsigned count, unsigned char owner)
+{
+	struct slot *slot = malloc(sizeof(*slot));
+	if (!slot) return -1;
+
+	slot->unit = unit;
+	slot->count = count;
+	slot->player = owner;
+
+	slot->_prev = 0;
+	slot->_next = region->slots;
+	if (region->slots) region->slots->_prev = slot;
+	region->slots = slot;
+	slot->move = slot->location = region;
 
 	return 0;
+}
+
+static int map_slot(struct region *restrict region, const struct string *restrict name, unsigned count, unsigned char owner)
+{
+	size_t i;
+
+	// TODO maybe use hash table
+	for(i = 0; i < units_count; ++i)
+		if ((name->length == units[i].name_length) && !memcmp(name->data, units[i].name, units[i].name_length))
+			return slot_spawn(region, units + i, count, owner);
+
+	return -1;
 }
 
 int map_init(const union json *restrict json, struct game *restrict game)
@@ -84,8 +113,9 @@ int map_init(const union json *restrict json, struct game *restrict game)
 	struct string key;
 	const union json *item, *node, *field, *entry;
 	const union json *x, *y;
+	const union json *name, *count, *owner;
 	size_t index;
-	size_t j;
+	size_t i, j;
 	struct point *points;
 
 	game->players = 0;
@@ -160,17 +190,34 @@ int map_init(const union json *restrict json, struct game *restrict game)
 		if (!field || (json_type(field) != INTEGER)) goto error;
 		game->regions[index].owner = field->integer;
 
+		game->regions[index].slots = 0;
+		key = string("army");
+		if (field = dict_get(item->object, &key))
+		{
+			if (json_type(field) != ARRAY) goto error;
+			for(j = 0; j < field->array_node.length; ++j)
+			{
+				entry = vector_get(&field->array_node, j);
+				if ((json_type(entry) != ARRAY) || (entry->array_node.length != 3)) goto error;
+				name = vector_get(&entry->array_node, 0);
+				if (json_type(name) != STRING) goto error;
+				count = vector_get(&entry->array_node, 1);
+				if ((json_type(count) != INTEGER) || (count->integer <= 0)) goto error;
+				owner = vector_get(&entry->array_node, 2);
+				if ((json_type(owner) != INTEGER) || (owner->integer <= 0) || (owner->integer >= game->players_count)) goto error;
+
+				if (map_slot(game->regions + index, &name->string_node, count->integer, owner->integer)) goto error;
+			}
+		}
+
 		game->regions[index].train_time = 0;
 		memset(game->regions[index].train, 0, sizeof(game->regions[index].train)); // TODO implement this
-
-		game->regions[index].slots = 0; // TODO implement this
 
 		game->regions[index].built = 0;
 		game->regions[index].construct = -1;
 		game->regions[index].construct_time = 0;
 		key = string("built");
-		field = dict_get(item->object, &key);
-		if (field)
+		if (field = dict_get(item->object, &key))
 		{
 			if (json_type(field) != ARRAY) goto error;
 			if (map_build(&game->regions[index].built, &field->array_node)) goto error;
