@@ -16,7 +16,7 @@ int vector_add(struct vector *restrict v, void *value)
 		v->data = buffer;
 	}
 	v->data[v->length++] = value;
-	return -1;
+	return 0;
 }
 
 /*void *array_resize(void *array, size_t count)

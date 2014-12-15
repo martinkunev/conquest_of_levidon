@@ -644,7 +644,7 @@ static int battle_init(struct battle *restrict battle, const struct player *rest
 
 		pawns[i].hurt = 0;
 
-		if (!vector_add(battle->player_pawns + pawns[i].slot->player, pawns + i)) goto error;
+		if (vector_add(battle->player_pawns + pawns[i].slot->player, pawns + i) < 0) goto error;
 	}
 
 	return 0;

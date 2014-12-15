@@ -32,6 +32,11 @@ struct path_node
 // TODO use bitmap to filter duplicated vertices
 // TODO do I need non-symmetric distance?
 
+static inline int sign(int number)
+{
+	return ((number > 0) - (number < 0));
+}
+
 static inline int point_eq(struct point a, struct point b)
 {
 	return ((a.x == b.x) && (a.y == b.y));
@@ -55,15 +60,31 @@ static int blocks(struct point p0, struct point p1, struct point w0, struct poin
 
 	long cross;
 
+	int direction_x = sign(w1.x - w0.x);
+	int direction_y = sign(w1.y - w0.y);
+
+	// Treat the wall as being located at the middle of the field.
+	// Double the coordinates in order to use integers for the calculations.
+	w0.x = w0.x * 2 - direction_y;
+	w0.y = w0.y * 2 + direction_x;
+	w1.x = w1.x * 2 - direction_y;
+	w1.y = w1.y * 2 + direction_x;
+	p0.x *= 2;
+	p0.y *= 2;
+	p1.x *= 2;
+	p1.y *= 2;
+
+	// Expand wall coordinates to span all the length of its boundary fields.
+	w0.x -= direction_x;
+	w0.y -= direction_y;
+	w1.x += direction_x;
+	w1.y += direction_y;
+
+	// Express end coordinates as relative to their start coordinates.
 	p1.x -= p0.x;
 	p1.y -= p0.y;
 	w1.x -= w0.x;
 	w1.y -= w0.y;
-
-	w0.x = w0.x * 2;
-	w0.y = w0.y * 2;
-	w1.x = w1.x * 2;
-	w1.y = w1.y * 2;
 
 	cross = cross_product(p1, w1);
 
@@ -150,8 +171,8 @@ static int graph_insert(struct vector_adjacency *nodes, struct point a, struct p
 	node->neighbors = 0;
 
 	// Calculate the coordinates of the inserted vertex.
-	node->location.x = b.x * 2 + (a.x < b.x) - (b.x < a.x) + (c.x < b.x) - (b.x < c.x);
-	node->location.y = b.y * 2 + (a.y < b.y) - (b.y < a.y) + (c.y < b.y) - (b.y < c.y);
+	node->location.x = b.x + sign(b.x - a.x) + sign(b.x - c.x);
+	node->location.y = b.y + sign(b.y - a.y) + sign(b.y - c.y);
 
 	return 0;
 }
@@ -226,10 +247,44 @@ int path_find(struct point origin, struct point target, struct vector_adjacency 
 {
 	const size_t node_origin = nodes->length - 1, node_target = nodes->length - 2;
 
-	origin.x = origin.x * 2 + 1;
-	origin.y = origin.y * 2 + 1;
-	target.x = target.x * 2 + 1;
-	target.y = target.y * 2 + 1;
+	size_t i;
+	size_t last;
+
+	struct path_node *traverse = 0, *from, *next, *temp;
+	struct heap closest = {0};
+
+	struct neighbor *neighbor, *prev;
+	double distance;
+
+	// Remove edges to origin and target that were left by previous calls to path_find().
+	for(i = 0; i < node_target; ++i)
+	{
+		neighbor = nodes->data[i].neighbors;
+		prev = 0;
+		while (neighbor)
+		{
+			if ((neighbor->index == node_target) || (neighbor->index == node_origin))
+			{
+				if (prev)
+				{
+					prev->next = neighbor->next;
+					free(neighbor);
+					neighbor = prev->next;
+				}
+				else
+				{
+					nodes->data[i].neighbors = neighbor->next;
+					free(neighbor);
+					neighbor = nodes->data[i].neighbors;
+				}
+			}
+			else
+			{
+				prev = neighbor;
+				neighbor = prev->next;
+			}
+		}
+	}
 
 	// Add target and origin points to the path graph.
 	nodes->data[node_target].location = target;
@@ -238,15 +293,6 @@ int path_find(struct point origin, struct point target, struct vector_adjacency 
 	nodes->data[node_origin].location = origin;
 	nodes->data[node_origin].neighbors = 0;
 	graph_attach(nodes, node_origin, obstacles, obstacles_count);
-
-	size_t i;
-	size_t last;
-
-	struct path_node *traverse = 0, *from, *next, *temp;
-	struct heap closest = {0};
-
-	struct neighbor *neighbor;
-	double distance;
 
 	traverse = malloc(nodes->length * sizeof(*traverse));
 	if (!traverse) return ERROR_MEMORY;
@@ -299,8 +345,6 @@ int path_find(struct point origin, struct point target, struct vector_adjacency 
 		heap_pop(&closest);
 	} while (last != node_target);
 
-	free(closest.data);
-
 	// Construct the final path by reversing the origin pointers.
 	from = traverse + last;
 	next = 0;
@@ -316,11 +360,17 @@ int path_find(struct point origin, struct point target, struct vector_adjacency 
 	temp = traverse + node_origin;
 	do
 	{
-		nodes->data[temp - traverse].location.x /= 2;
-		nodes->data[temp - traverse].location.y /= 2;
-		vector_add(moves, nodes->data + (temp - traverse));
+		if (vector_add(moves, nodes->data + (temp - traverse)) < 0)
+		{
+			free(moves->data);
+			moves->data = 0;
+			moves->length = 0;
+			moves->size = 0;
+			goto error;
+		}
 	} while (temp = temp->origin);
 
+	free(closest.data);
 	free(traverse);
 
 	return 0;

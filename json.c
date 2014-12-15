@@ -1342,7 +1342,7 @@ static int token_add(void *restrict context, int type, const JSON_value *value)
 		{
 			bool error;
 		case ARRAY:
-			if (!vector_add(&parent->array_node, item)) goto error;
+			if (vector_add(&parent->array_node, item) < 0) goto error;
 			break;
 		case OBJECT:
 			error = dict_add(parent->object, &stack->key, item);
@@ -1707,7 +1707,7 @@ union json *json_array(void)
 int json_array_insert(union json *restrict parent, union json *restrict child)
 {
 	if (!child) return -1; // child not initialized (usually a memory error)
-	int error = !vector_add(&parent->array_node, child);
+	int error = (vector_add(&parent->array_node, child) < 0);
 	if (error) json_free(child);
 	return (error ? -1 : 0); // TODO fix error codes
 }

@@ -354,55 +354,81 @@ void if_test(const struct player *restrict players, const struct state *restrict
 
 	/////////
 
-	if ((state->x != BATTLEFIELD_WIDTH) && (state->y != BATTLEFIELD_HEIGHT))
+	static size_t obstacles_count = 1;
+	static struct polygon *obstacles = 0;
+	static struct vector_adjacency nodes;
+
+	static struct point from = {0, 0};
+	static struct point to = {BATTLEFIELD_WIDTH, BATTLEFIELD_HEIGHT};
+	static struct vector moves = VECTOR_EMPTY;
+
+	if ((state->x != to.x) || (state->y != to.y))
 	{
-		size_t obstacles_count = 1;
-		//struct polygon *obstacles = region_create(12, (struct point){10, 15}, (struct point){10, 17}, (struct point){15, 17}, (struct point){15, 10}, (struct point){4, 10}, (struct point){4, 17}, (struct point){10, 17}, (struct point){10, 15}, (struct point){6, 15}, (struct point){6, 12}, (struct point){13, 12}, (struct point){13, 15});
-		struct polygon *obstacles = region_create(5, (struct point){13, 13}, (struct point){13, 9}, (struct point){6, 9}, (struct point){6, 13}, (struct point){13, 13});
+		to.x = state->x;
+		to.y = state->y;
 
-		struct vector_adjacency nodes;
+		if (!obstacles)
+		{
+			obstacles = region_create(5, (struct point){13, 13}, (struct point){13, 9}, (struct point){6, 9}, (struct point){6, 13}, (struct point){13, 13});
+			visibility_graph_build(obstacles, obstacles_count, &nodes);
+		}
 
-		visibility_graph_build(obstacles, obstacles_count, &nodes);
+		vector_term(&moves);
+		moves = VECTOR_EMPTY;
 
-		struct point from = {0, 0};
-		struct point to = {state->x, state->y};
-
-		struct vector moves = VECTOR_EMPTY;
 		if (path_find(from, to, &nodes, obstacles, obstacles_count, &moves) < 0)
 		{
 			//
 		}
-		else
-		{
-			size_t i;
 
+		/*
+		visibility_graph_free(&nodes);
+		free(obstacles);
+		*/
+	}
+
+	if ((state->x != BATTLEFIELD_WIDTH) && (state->y != BATTLEFIELD_HEIGHT))
+	{
+		if (moves.data)
+		{
+			obstacles->points[0].x += 1;
+			obstacles->points[0].y += 1;
+			obstacles->points[1].x += 1;
+			obstacles->points[3].y += 1;
+			obstacles->vertices_count -= 1;
 			for(i = 0; i < obstacles->vertices_count; ++i)
 			{
 				obstacles->points[i].x *= FIELD_SIZE;
 				obstacles->points[i].y *= FIELD_SIZE;
 			}
+
 			glColor4ubv(display_colors[Enemy]);
-			obstacles->vertices_count -= 1;
 			display_polygon(obstacles, BATTLE_X, BATTLE_Y);
+
+			for(i = 0; i < obstacles->vertices_count; ++i)
+			{
+				obstacles->points[i].x /= FIELD_SIZE;
+				obstacles->points[i].y /= FIELD_SIZE;
+			}
+			obstacles->vertices_count += 1;
+			obstacles->points[0].x -= 1;
+			obstacles->points[0].y -= 1;
+			obstacles->points[1].x -= 1;
+			obstacles->points[3].y -= 1;
 
 			for(i = 1; i < moves.length; ++i)
 			{
-				from = *(struct point *)moves.data[i - 1];
+				struct point from = *(struct point *)moves.data[i - 1];
 				from.x = from.x * FIELD_SIZE + FIELD_SIZE / 2;
 				from.y = from.y * FIELD_SIZE + FIELD_SIZE / 2;
 
-				to = *(struct point *)moves.data[i];
+				struct point to = *(struct point *)moves.data[i];
 				to.x = to.x * FIELD_SIZE + FIELD_SIZE / 2;
 				to.y = to.y * FIELD_SIZE + FIELD_SIZE / 2;
 
 				display_arrow(from, to, BATTLE_X, BATTLE_Y, Self);
 			}
-
-			vector_term(&moves);
 		}
-
-		visibility_graph_free(&nodes);
-		free(obstacles);
 	}
 
 	/////////
