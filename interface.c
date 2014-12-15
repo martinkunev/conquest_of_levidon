@@ -369,7 +369,8 @@ void if_test(const struct player *restrict players, const struct state *restrict
 
 		if (!obstacles)
 		{
-			obstacles = region_create(5, (struct point){13, 13}, (struct point){13, 9}, (struct point){6, 9}, (struct point){6, 13}, (struct point){13, 13});
+			//obstacles = region_create(5, (struct point){13, 13}, (struct point){13, 9}, (struct point){6, 9}, (struct point){6, 13}, (struct point){13, 13});
+			obstacles = region_create(4, (struct point){13, 13}, (struct point){13, 9}, (struct point){6, 9}, (struct point){6, 13});
 			visibility_graph_build(obstacles, obstacles_count, &nodes);
 		}
 
@@ -391,7 +392,7 @@ void if_test(const struct player *restrict players, const struct state *restrict
 	{
 		if (moves.data)
 		{
-			obstacles->points[0].x += 1;
+			/*obstacles->points[0].x += 1;
 			obstacles->points[0].y += 1;
 			obstacles->points[1].x += 1;
 			obstacles->points[3].y += 1;
@@ -414,7 +415,13 @@ void if_test(const struct player *restrict players, const struct state *restrict
 			obstacles->points[0].x -= 1;
 			obstacles->points[0].y -= 1;
 			obstacles->points[1].x -= 1;
-			obstacles->points[3].y -= 1;
+			obstacles->points[3].y -= 1;*/
+
+			glColor4ubv(display_colors[Enemy]);
+			glBegin(GL_LINE_STRIP);
+			for(i = 0; i < obstacles->vertices_count; ++i)
+				glVertex2i(obstacles->points[i].x * FIELD_SIZE + 16, obstacles->points[i].y * FIELD_SIZE + 16);
+			glEnd();
 
 			for(i = 1; i < moves.length; ++i)
 			{

@@ -177,6 +177,47 @@ static int graph_insert(struct vector_adjacency *nodes, struct point a, struct p
 	return 0;
 }
 
+static int graph_insert_end(struct vector_adjacency *nodes, struct point start, struct point end)
+{
+	struct adjacency *node;
+
+	// Calculate the coordinates of the inserted vertex.
+	int direction_x = sign(end.x - start.x);
+	int direction_y = sign(end.y - start.y);
+
+	// Insert one node at each corner of the end point.
+	if (direction_x)
+	{
+		node = vector_adjacency_insert(nodes);
+		if (!node) return ERROR_MEMORY;
+		node->neighbors = 0;
+		node->location.x = end.x + direction_x;
+		node->location.y = end.y + direction_y + 1;
+
+		node = vector_adjacency_insert(nodes);
+		if (!node) return ERROR_MEMORY;
+		node->neighbors = 0;
+		node->location.x = end.x + direction_x;
+		node->location.y = end.y + direction_y - 1;
+	}
+	else // direction_y
+	{
+		node = vector_adjacency_insert(nodes);
+		if (!node) return ERROR_MEMORY;
+		node->neighbors = 0;
+		node->location.x = end.x + direction_x + 1;
+		node->location.y = end.y + direction_y;
+
+		node = vector_adjacency_insert(nodes);
+		if (!node) return ERROR_MEMORY;
+		node->neighbors = 0;
+		node->location.x = end.x + direction_x - 1;
+		node->location.y = end.y + direction_y;
+	}
+
+	return 0;
+}
+
 // Stores the vertices of the graph in nodes and returns the adjacency matrix of the graph.
 int visibility_graph_build(const struct polygon *restrict obstacles, size_t obstacles_count, struct vector_adjacency *restrict nodes)
 {
@@ -203,7 +244,10 @@ int visibility_graph_build(const struct polygon *restrict obstacles, size_t obst
 		}
 		else
 		{
-			// TODO implement this
+			if (graph_insert_end(nodes, obstacle->points[1], obstacle->points[0]) < 0)
+				goto error;
+			if (graph_insert_end(nodes, obstacle->points[obstacle->vertices_count - 2], obstacle->points[obstacle->vertices_count - 1]) < 0)
+				goto error;
 		}
 	}
 
