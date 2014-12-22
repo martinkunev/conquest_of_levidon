@@ -67,45 +67,6 @@ f(x) where:
 
 #include <stdio.h>
 
-/*static unsigned long gcd(unsigned long a, unsigned long b)
-{
-	// assert((a != 0) || (b != 0));
-	unsigned long c;
-	while (b)
-	{
-		c = a % b;
-		a = b;
-		b = c;
-	}
-	return a;
-}
-
-static unsigned deaths(struct pawn *restrict pawn)
-{
-	// TODO calculate deaths and set them in pawn
-
-	unsigned long n, k;
-
-	unsigned long result = 1;
-
-	unsigned long d;
-
-	// (n.h m)
-
-	// pawn->slot->count * 
-
-	unsigned long chance = ((unsigned long)(random() % 65536) << 48) | ((unsigned long)(random() % 65536) << 32) | ((unsigned long)(random() % 65536) << 16) |= (unsigned long)(random() % 65536);
-
-	unsigned long i;
-	for(i = 1; i <= k; ++i)
-	{
-		d = gcd(result, i);
-		result = (result / d) * ((n - i + 1) / (i / d));
-	}
-
-	return 0;
-}*/
-
 int reachable(const struct player *restrict players, struct pawn *battlefield[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH], const struct pawn *restrict pawn, unsigned char x, unsigned char y)
 {
 	const struct pawn *item;
@@ -183,7 +144,7 @@ static void pawn_move(struct pawn *battlefield[BATTLEFIELD_HEIGHT][BATTLEFIELD_W
 }
 
 // Determines whether the two objects will collide. Returns the time of the collision.
-static double battle_encounter(const struct move *restrict o0, const struct move *restrict o1)
+static double battle_encounter(const struct move_ *restrict o0, const struct move_ *restrict o1)
 {
 	// TODO support movements with different start times
 	// assert(o0->t[0] == o1->t[0]);
@@ -236,18 +197,18 @@ static double battle_encounter(const struct move *restrict o0, const struct move
 
 	// Check if the pawns encounter after one of them stopped moving.
 
-	struct move o0_after, o1_after;
+	struct move_ o0_after, o1_after;
 
 	// Set movement parameters of the two pawns.
 	// The movement of one of the pawns remains unchanged while the other pawn stays at a constant position.
 	if (o1->t[1] < o0->t[1])
 	{
 		o0_after = *o0;
-		o1_after = (struct move){{o1->x[1], o1->x[1]}, {o1->y[1], o1->y[1]}, {o1->t[1], o0->t[1]}};
+		o1_after = (struct move_){{o1->x[1], o1->x[1]}, {o1->y[1], o1->y[1]}, {o1->t[1], o0->t[1]}};
 	}
 	else if (o0->t[1] < o1->t[1])
 	{
-		o0_after = (struct move){{o0->x[1], o0->x[1]}, {o0->y[1], o0->y[1]}, {o0->t[1], o1->t[1]}};
+		o0_after = (struct move_){{o0->x[1], o0->x[1]}, {o0->y[1], o0->y[1]}, {o0->t[1], o1->t[1]}};
 		o1_after = *o1;
 	}
 	else return NAN;
@@ -291,7 +252,7 @@ static double battle_encounter(const struct move *restrict o0, const struct move
 }
 
 // TODO support different start times
-static void collision_location(const struct move *restrict o0, const struct move *restrict o1, double moment, double *restrict x, double *restrict y)
+static void collision_location(const struct move_ *restrict o0, const struct move_ *restrict o1, double moment, double *restrict x, double *restrict y)
 {
 	// Calculate time differences.
 	double o0_t = o0->t[1] - o0->t[0], o1_t = o1->t[1] - o1->t[0];
@@ -316,7 +277,7 @@ static void collision_location(const struct move *restrict o0, const struct move
 }
 
 // Calculates the position of a pawn at a given moment.
-static void position(const struct move *restrict o, double moment, double *restrict x, double *restrict y)
+static void position(const struct move_ *restrict o, double moment, double *restrict x, double *restrict y)
 {
 	int o_t = o->t[1] - o->t[0];
 	*x = ((o->x[0] * o->t[1] - o->x[1] * o->t[0]) + (o->x[1] - o->x[0]) * moment) / o_t;
@@ -725,23 +686,23 @@ int battle(const struct game *restrict game, struct region *restrict region)
 		pawns[i].hurt = 0;
 
 		if (slot->location == region) // the slot stays still
-			pawns[i].move = (struct move){.x = {4, 4}, .y = {4, 4}, .t = {0, 8}};
+			pawns[i].move = (struct move_){.x = {4, 4}, .y = {4, 4}, .t = {0, 8}};
 		else if (slot->location == region->neighbors[0])
-			pawns[i].move = (struct move){.x = {8, 8}, .y = {4, 4}, .t = {0, 8}};
+			pawns[i].move = (struct move_){.x = {8, 8}, .y = {4, 4}, .t = {0, 8}};
 		else if (slot->location == region->neighbors[1])
-			pawns[i].move = (struct move){.x = {8, 8}, .y = {0, 0}, .t = {0, 8}};
+			pawns[i].move = (struct move_){.x = {8, 8}, .y = {0, 0}, .t = {0, 8}};
 		else if (slot->location == region->neighbors[2])
-			pawns[i].move = (struct move){.x = {4, 4}, .y = {0, 0}, .t = {0, 8}};
+			pawns[i].move = (struct move_){.x = {4, 4}, .y = {0, 0}, .t = {0, 8}};
 		else if (slot->location == region->neighbors[3])
-			pawns[i].move = (struct move){.x = {0, 0}, .y = {0, 0}, .t = {0, 8}};
+			pawns[i].move = (struct move_){.x = {0, 0}, .y = {0, 0}, .t = {0, 8}};
 		else if (slot->location == region->neighbors[4])
-			pawns[i].move = (struct move){.x = {0, 0}, .y = {4, 4}, .t = {0, 8}};
+			pawns[i].move = (struct move_){.x = {0, 0}, .y = {4, 4}, .t = {0, 8}};
 		else if (slot->location == region->neighbors[5])
-			pawns[i].move = (struct move){.x = {0, 0}, .y = {8, 8}, .t = {0, 8}};
+			pawns[i].move = (struct move_){.x = {0, 0}, .y = {8, 8}, .t = {0, 8}};
 		else if (slot->location == region->neighbors[6])
-			pawns[i].move = (struct move){.x = {4, 4}, .y = {8, 8}, .t = {0, 8}};
+			pawns[i].move = (struct move_){.x = {4, 4}, .y = {8, 8}, .t = {0, 8}};
 		else if (slot->location == region->neighbors[7])
-			pawns[i].move = (struct move){.x = {8, 8}, .y = {8, 8}, .t = {0, 8}};
+			pawns[i].move = (struct move_){.x = {8, 8}, .y = {8, 8}, .t = {0, 8}};
 
 		pawns[i].shoot.x = -1;
 		pawns[i].shoot.y = -1;

@@ -20,7 +20,7 @@ struct pawn
 	unsigned hurt;
 
 	// Describes movement from (x[0], y[0]) to (x[1], y[1]). The movement starts at t[0] and ends at t[1].
-	struct move
+	struct move_
 	{
 		int x[2], y[2];
 		double t[2];

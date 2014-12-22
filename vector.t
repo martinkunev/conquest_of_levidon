@@ -4,6 +4,8 @@
 
 #include <stdlib.h>
 
+#include "errors.h"
+
 #define VECTOR_SIZE_BASE 8
 
 #define VECTOR_NAME_EXPAND_(name, suffix) name##_##suffix

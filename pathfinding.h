@@ -1,3 +1,5 @@
+#include <math.h>
+
 struct adjacency
 {
 	struct point location;
@@ -15,7 +17,30 @@ struct adjacency
 #undef vector_name
 #undef vector_type
 
+struct move
+{
+    struct point location;
+    double distance;
+    double time;
+};
+
+#define queue_type struct move
+#include "queue.t"
+#undef queue_type
+
+// Calculates the euclidean distance between a and b.
+static inline double battlefield_distance(struct point a, struct point b)
+{
+	int dx = b.x - a.x, dy = b.y - a.y;
+	return sqrt(dx * dx + dy * dy);
+}
+
+static inline int point_eq(struct point a, struct point b)
+{
+	return ((a.x == b.x) && (a.y == b.y));
+}
+
 int visibility_graph_build(const struct polygon *restrict obstacles, size_t obstacles_count, struct vector_adjacency *restrict nodes);
 void visibility_graph_free(struct vector_adjacency *nodes);
 
-int path_find(struct point origin, struct point target, struct vector_adjacency *restrict nodes, const struct polygon *restrict obstacles, size_t obstacles_count, struct vector *restrict moves);
+int path_find(struct queue *restrict moves, struct point target, struct vector_adjacency *restrict nodes, const struct polygon *restrict obstacles, size_t obstacles_count);

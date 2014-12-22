@@ -360,7 +360,7 @@ void if_test(const struct player *restrict players, const struct state *restrict
 
 	static struct point from = {0, 0};
 	static struct point to = {BATTLEFIELD_WIDTH, BATTLEFIELD_HEIGHT};
-	static struct vector moves = VECTOR_EMPTY;
+	static struct queue moves = {0};
 
 	if ((state->x != to.x) || (state->y != to.y))
 	{
@@ -374,10 +374,16 @@ void if_test(const struct player *restrict players, const struct state *restrict
 			visibility_graph_build(obstacles, obstacles_count, &nodes);
 		}
 
-		vector_term(&moves);
-		moves = VECTOR_EMPTY;
+		queue_term_free(&moves, free);
+		queue_init(&moves);
 
-		if (path_find(from, to, &nodes, obstacles, obstacles_count, &moves) < 0)
+		struct move m;
+		m.location = from;
+		m.time = 0;
+		m.distance = 0;
+		queue_push(&moves, m);
+
+		if (path_find(&moves, to, &nodes, obstacles, obstacles_count) < 0)
 		{
 			//
 		}
@@ -390,7 +396,7 @@ void if_test(const struct player *restrict players, const struct state *restrict
 
 	if ((state->x != BATTLEFIELD_WIDTH) && (state->y != BATTLEFIELD_HEIGHT))
 	{
-		if (moves.data)
+		if (moves.length > 1)
 		{
 			/*obstacles->points[0].x += 1;
 			obstacles->points[0].y += 1;
@@ -423,13 +429,14 @@ void if_test(const struct player *restrict players, const struct state *restrict
 				glVertex2i(obstacles->points[i].x * FIELD_SIZE + 16, obstacles->points[i].y * FIELD_SIZE + 16);
 			glEnd();
 
-			for(i = 1; i < moves.length; ++i)
+			struct queue_item *m;
+			for(m = moves.first; m->next; m = m->next)
 			{
-				struct point from = *(struct point *)moves.data[i - 1];
+				struct point from = m->data.location;
 				from.x = from.x * FIELD_SIZE + FIELD_SIZE / 2;
 				from.y = from.y * FIELD_SIZE + FIELD_SIZE / 2;
 
-				struct point to = *(struct point *)moves.data[i];
+				struct point to = m->next->data.location;;
 				to.x = to.x * FIELD_SIZE + FIELD_SIZE / 2;
 				to.y = to.y * FIELD_SIZE + FIELD_SIZE / 2;
 

@@ -13,6 +13,8 @@
 
 #define SLOT_UNITS 20
 
+#define UNIT_SPEED_LIMIT 16
+
 #include "resources.h"
 #include "display.h"
 

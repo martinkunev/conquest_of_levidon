@@ -40,6 +40,7 @@ struct vector
 
 #define vector_get(vector, index) ((vector)->data[index])
 int vector_add(struct vector *restrict v, void *value);
+int vector_resize(struct vector *restrict vector, size_t size);
 #define vector_term(vector) (free((vector)->data))
 
 /* Dictionary */

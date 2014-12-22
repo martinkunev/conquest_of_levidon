@@ -1,5 +1,3 @@
-#include <math.h>
-
 #include "types.h"
 #include "display.h"
 #include "pathfinding.h"
@@ -7,7 +5,7 @@
 struct path_node
 {
 	double distance;
-	struct path_node *origin;
+	struct path_node *origin; // TODO ?rename to link
 	size_t heap_index;
 };
 
@@ -20,32 +18,26 @@ struct path_node
 #undef heap_type
 
 // Find the shortest path from an origin field to a target field.
-// The path consists of a sequence of straight lines with each intermediate point being right angle of an obstacle.
+// The path consists of a sequence of straight lines with each intermediate point being at the corner of an obstacle.
 // steps:
-//  Build visibility graph with vertices the right angles of the obstacles, the origin point and the target point.
+//  Build visibility graph with vertices: the corners of the obstacles, the origin point and the target point.
 //  Use Dijkstra's algorithm to find the shortest path in the graph from origin to target.
 
-// The fields are represented by their top left coordinates (in order to facilitate computations).
-// The obstacles are represented as polygons surrounding the blocked area. The coordinates are exclusive (limit fields are passable).
+// The obstacles are represented as a sequence of directed line segments (each one representing a wall).
+
+// TODO polygons surrounding the blocked area. The coordinates are exclusive (limit fields are passable).
+// TODO The fields are represented by their top left coordinates (in order to facilitate computations).
 
 // TODO obstacles: rectangles, coastlines, fortresses
 // TODO use bitmap to filter duplicated vertices
 // TODO do I need non-symmetric distance?
 
+// TODO there must be obstacles applicable only for some units (horses and balistas can not climb walls)
+// TODO there must be obstacles applicable only for some players (doors can be opened by town owner's alliance)
+
 static inline int sign(int number)
 {
 	return ((number > 0) - (number < 0));
-}
-
-static inline int point_eq(struct point a, struct point b)
-{
-	return ((a.x == b.x) && (a.y == b.y));
-}
-
-static double field_distance(struct point a, struct point b)
-{
-	int dx = b.x - a.x, dy = b.y - a.y;
-	return sqrt(dx * dx + dy * dy);
 }
 
 static inline long cross_product(struct point f, struct point s)
@@ -53,7 +45,7 @@ static inline long cross_product(struct point f, struct point s)
 	return (s.x * f.y - f.x * s.y); // negated because the coordinate system is clockwise (y axis is inverted)
 }
 
-// Check if the wall (w0, w1) blocks the path (p0, p1)
+// Checks if the wall (w0, w1) blocks the path (p0, p1)
 static int blocks(struct point p0, struct point p1, struct point w0, struct point w1)
 {
 	// http://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect
@@ -113,6 +105,7 @@ static int blocks(struct point p0, struct point p1, struct point w0, struct poin
 	return 0;
 }
 
+// Checks whether the field target can be seen from origin.
 static int visible(struct point origin, struct point target, const struct polygon *restrict obstacles, size_t obstacles_count)
 {
 	const struct polygon *restrict obstacle;
@@ -143,7 +136,7 @@ static int graph_attach(struct vector_adjacency *restrict nodes, size_t index, c
 		to = nodes->data[node].location;
 		if (visible(from, to, obstacles, obstacles_count))
 		{
-			distance = field_distance(from, to);
+			distance = battlefield_distance(from, to);
 
 			neighbor = malloc(sizeof(*neighbor));
 			if (!neighbor) return ERROR_MEMORY;
@@ -164,7 +157,7 @@ static int graph_attach(struct vector_adjacency *restrict nodes, size_t index, c
 	return 0;
 }
 
-static int graph_insert(struct vector_adjacency *nodes, struct point a, struct point b, struct point c)
+static int graph_insert_angle(struct vector_adjacency *nodes, struct point a, struct point b, struct point c)
 {
 	struct adjacency *node = vector_adjacency_insert(nodes);
 	if (!node) return ERROR_MEMORY;
@@ -234,12 +227,12 @@ int visibility_graph_build(const struct polygon *restrict obstacles, size_t obst
 		obstacle = obstacles + i;
 
 		for(j = 2; j < obstacle->vertices_count; ++j)
-			if (graph_insert(nodes, obstacle->points[j - 2], obstacle->points[j - 1], obstacle->points[j]) < 0)
+			if (graph_insert_angle(nodes, obstacle->points[j - 2], obstacle->points[j - 1], obstacle->points[j]) < 0)
 				goto error;
 
 		if (point_eq(obstacle->points[0], obstacle->points[obstacle->vertices_count - 1])) // the obstacle is a closed loop
 		{
-			if (graph_insert(nodes, obstacle->points[obstacle->vertices_count - 2], obstacle->points[0], obstacle->points[1]) < 0)
+			if (graph_insert_angle(nodes, obstacle->points[obstacle->vertices_count - 2], obstacle->points[0], obstacle->points[1]) < 0)
 				goto error;
 		}
 		else
@@ -260,7 +253,9 @@ int visibility_graph_build(const struct polygon *restrict obstacles, size_t obst
 	// Add dummy vertices for the start and the end nodes.
 	vector_adjacency_insert(nodes);
 	vector_adjacency_insert(nodes);
-	// TODO shrink?
+
+	// The vector will not be resized any more. Free the unused memory.
+	vector_adjacency_shrink(nodes);
 
 	return 0;
 
@@ -287,20 +282,15 @@ void visibility_graph_free(struct vector_adjacency *nodes)
 	free(nodes->data);
 }
 
-int path_find(struct point origin, struct point target, struct vector_adjacency *restrict nodes, const struct polygon *restrict obstacles, size_t obstacles_count, struct vector *restrict moves)
+// Removes origin and target data left from previous calls to path_find().
+static void graph_clean(struct vector_adjacency *restrict nodes)
 {
-	const size_t node_origin = nodes->length - 1, node_target = nodes->length - 2;
+	const size_t node_target = nodes->length - 2, node_origin = nodes->length - 1;
 
 	size_t i;
-	size_t last;
-
-	struct path_node *traverse = 0, *from, *next, *temp;
-	struct heap closest = {0};
-
 	struct neighbor *neighbor, *prev;
-	double distance;
 
-	// Remove edges to origin and target that were left by previous calls to path_find().
+	// Remove origin and target from neighbors lists.
 	for(i = 0; i < node_target; ++i)
 	{
 		neighbor = nodes->data[i].neighbors;
@@ -329,6 +319,42 @@ int path_find(struct point origin, struct point target, struct vector_adjacency 
 			}
 		}
 	}
+
+	// Remove the neighbors of origin and target.
+	neighbor = nodes->data[node_target].neighbors;
+	while (neighbor)
+	{
+		prev = neighbor;
+		neighbor = neighbor->next;
+		free(prev);
+	}
+	neighbor = nodes->data[node_origin].neighbors;
+	while (neighbor)
+	{
+		prev = neighbor;
+		neighbor = neighbor->next;
+		free(prev);
+	}
+}
+
+int path_find(struct queue *restrict moves, struct point target, struct vector_adjacency *restrict nodes, const struct polygon *restrict obstacles, size_t obstacles_count)
+{
+	const size_t node_origin = nodes->length - 1, node_target = nodes->length - 2;
+
+	size_t i;
+	size_t last;
+
+	struct path_node *traverse = 0, *from, *next, *temp;
+	struct heap closest = {0};
+
+	struct neighbor *neighbor;
+	double distance;
+	unsigned hops;
+
+	//struct point origin = *(struct point *)moves->data[moves->length - 1];
+	struct point origin = moves->last->data.location;
+
+	graph_clean(nodes);
 
 	// Add target and origin points to the path graph.
 	nodes->data[node_target].location = target;
@@ -392,27 +418,33 @@ int path_find(struct point origin, struct point target, struct vector_adjacency 
 	// Construct the final path by reversing the origin pointers.
 	from = traverse + last;
 	next = 0;
-	do
+	hops = 0;
+	while (1)
 	{
 		temp = from->origin;
 		from->origin = next;
 		next = from;
-		from = temp;
-	} while (from);
 
-	// Add path points to move.
+		if (!temp) break;
+		hops += 1;
+		from = temp;
+	}
+
+	// Add the selected path points to move.
 	temp = traverse + node_origin;
-	do
+	/*if (vector_resize(moves, moves->length + hops) < 0) goto error;
+	while (temp = temp->origin)
+		moves->data[moves->length++] = nodes->data + (temp - traverse);*/
+	while (temp = temp->origin)
 	{
-		if (vector_add(moves, nodes->data + (temp - traverse)) < 0)
-		{
-			free(moves->data);
-			moves->data = 0;
-			moves->length = 0;
-			moves->size = 0;
-			goto error;
-		}
-	} while (temp = temp->origin);
+		struct move m;
+		m.location = nodes->data[temp - traverse].location;
+		// m.time is not initialized here
+		m.distance = traverse[temp - traverse].distance;
+
+		// TODO this is inefficient
+		queue_push(moves, m); // TODO error check
+	}
 
 	free(closest.data);
 	free(traverse);

@@ -19,7 +19,19 @@ int vector_add(struct vector *restrict v, void *value)
 	return 0;
 }
 
-/*void *array_resize(void *array, size_t count)
+int vector_resize(struct vector *restrict vector, size_t size)
 {
-	//
-}*/
+	if (vector->size < size)
+	{
+		void **buffer;
+
+		// Round size up to a power of 2.
+		do vector->size *= 2;
+		while (vector->size < size);
+
+		buffer = realloc(vector->data, vector->size * sizeof(*buffer));
+		if (!buffer) return ERROR_MEMORY; // memory error
+		vector->data = buffer;
+	}
+	return 0;
+}
