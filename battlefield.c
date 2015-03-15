@@ -482,7 +482,18 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 	size_t count;
 	struct move move;
 
-	size_t i;
+	size_t i, j;
+
+	// Initialize each field as empty.
+	for(i = 0; i < BATTLEFIELD_HEIGHT; ++i)
+	{
+		for(j = 0; j < BATTLEFIELD_WIDTH; ++j)
+		{
+			battle->field[i][j].location = (struct point){j, i};
+			battle->field[i][j].obstacle = OBSTACLE_NONE;
+			battle->field[i][j].pawn = 0;
+		}
+	}
 
 	count = 0;
 	for(slot = region->slots; slot; slot = slot->_next)
@@ -515,7 +526,6 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 	{
 		pawns[i].slot = slots[i];
 		pawns[i].hurt = 0;
-		pawns[i].moves;
 
 		move.location = POINT_NONE;
 		move.distance = 0;

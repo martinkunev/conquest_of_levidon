@@ -57,6 +57,7 @@ static int battle(struct game *restrict game, struct region *restrict region)
 				continue;
 
 			case Local:
+				if_set(battle.field); // TODO fix this
 				if (input_battle(game, player) < 0)
 				{
 					status = -1;

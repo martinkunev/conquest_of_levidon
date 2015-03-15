@@ -60,7 +60,7 @@ int keycode_min, keycode_max;
 GLuint map_framebuffer;
 
 // TODO Create a struct that stores all the information about the battle (battlefield, players, etc.)
-struct pawn *(*battlefield)[BATTLEFIELD_WIDTH];
+struct battlefield (*battlefield)[BATTLEFIELD_WIDTH];
 
 struct region *restrict regions;
 size_t regions_count;
@@ -474,7 +474,7 @@ void if_battle(const struct player *restrict players, const struct state *restri
 	for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
 		for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
 		{
-			if (p = battlefield[y][x])
+			if (p = battlefield[y][x].pawn)
 			{
 				enum color color;
 				if (p->slot->player == state->player) color = Self;
@@ -493,7 +493,7 @@ void if_battle(const struct player *restrict players, const struct state *restri
 	signed char positions[PLAYERS_LIMIT];
 	unsigned char indexes[PLAYERS_LIMIT] = {0};
 	unsigned self_count = 0, allies_count = 0, enemies_count = 0;
-	if ((state->x < BATTLEFIELD_WIDTH) && (state->y < BATTLEFIELD_HEIGHT) && battlefield[state->y][state->x])
+	if ((state->x < BATTLEFIELD_WIDTH) && (state->y < BATTLEFIELD_HEIGHT) && battlefield[state->y][state->x].pawn)
 	{
 		image_draw(&image_selected, state->x * FIELD_SIZE, state->y * FIELD_SIZE);
 
@@ -502,7 +502,7 @@ void if_battle(const struct player *restrict players, const struct state *restri
 		// Count the number of players in each category (Self, Ally, Enemy).
 		// Initialize their display positions.
 		enum color color;
-		p = battlefield[state->y][state->x];
+		p = battlefield[state->y][state->x].pawn;
 		if (p->slot->player == state->player) color = Self;
 		else if (players[p->slot->player].alliance == players[state->player].alliance) color = Ally;
 		else color = Enemy;
@@ -532,7 +532,7 @@ int if_battle_animation(void)
 	for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
 		for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
 		{
-			if (p = battlefield[y][x])
+			if (p = battlefield[y][x].pawn)
 			{
 				double px, py;
 				double t;
@@ -813,9 +813,9 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 	glXSwapBuffers(display, drawable);
 }
 
-void if_set(struct pawn *bf[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH])
+void if_set(struct battlefield field[BATTLEFIELD_WIDTH][BATTLEFIELD_HEIGHT])
 {
-	battlefield = bf;
+	battlefield = field;
 }
 
 void if_regions(struct game *restrict game)

@@ -35,7 +35,7 @@ struct battlefield
 
 struct battle
 {
-	struct battlefield field[BATTLEFIELD_WIDTH][BATTLEFIELD_HEIGHT];
+	struct battlefield field[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH];
 	struct pawn *pawns;
 	size_t pawns_count;
 	struct vector player_pawns[PLAYERS_LIMIT];
