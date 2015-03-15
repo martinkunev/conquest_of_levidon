@@ -770,8 +770,8 @@ int battle(const struct game *restrict game, struct region *restrict region)
 				continue;
 
 			case Local:
-				//if (input_battle(game, player) < 0)
-				if (input_test(game, player) < 0)
+				//if (input_test(game, player) < 0)
+				if (input_battle(game, player) < 0)
 				{
 					status = -1;
 					goto finally;

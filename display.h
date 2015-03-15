@@ -3,6 +3,7 @@
 #include <X11/Xlib-xcb.h>
 
 #define POINT(x, y) (struct point){(x), (y)}
+#define POINT_NONE POINT(-1, -1)
 
 struct point 
 { 

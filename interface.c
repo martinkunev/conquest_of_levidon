@@ -15,12 +15,12 @@
 #include "json.h"
 #include "format.h"
 #include "map.h"
-#include "battle.h"
+//#include "battle.h"
+#include "battlefield.h"
+#include "pathfinding.h"
 #include "image.h"
 #include "input.h"
 #include "interface.h"
-
-#include "pathfinding.h"
 
 // http://xcb.freedesktop.org/opengl/
 // http://xcb.freedesktop.org/tutorial/events/
@@ -476,51 +476,13 @@ void if_battle(const struct player *restrict players, const struct state *restri
 		{
 			if (p = battlefield[y][x])
 			{
-				size_t unit_index = 0, unit_index_current;
-				enum color color = Enemy;
-				int show_ally = 0, show_enemy = 0;
-
-				// Determine what to display on the field.
-				do
-				{
-					unit_index_current = p->slot->unit->index;
-
-					if (p->slot->player == state->player)
-					{
-						if (color != Self)
-						{
-							unit_index = unit_index_current;
-							color = Self;
-						}
-						else if (unit_index_current > unit_index) unit_index = unit_index_current;
-					}
-					else if (players[p->slot->player].alliance == players[state->player].alliance)
-					{
-						show_ally = 1;
-						if (color != Self)
-						{
-							if (color != Ally)
-							{
-								unit_index = unit_index_current;
-								color = Ally;
-							}
-							else if (unit_index_current > unit_index) unit_index = unit_index_current;
-						}
-					}
-					else
-					{
-						show_enemy = 1;
-						if ((color == Enemy) && (unit_index_current > unit_index)) unit_index = unit_index_current;
-					}
-				} while (p = p->_next);
+				enum color color;
+				if (p->slot->player == state->player) color = Self;
+				else if (players[p->slot->player].alliance == players[state->player].alliance) color = Ally;
+				else color = Enemy;
 
 				display_rectangle(x * FIELD_SIZE, y * FIELD_SIZE, FIELD_SIZE, FIELD_SIZE, color);
-				image_draw(&image_units[unit_index], x * FIELD_SIZE, y * FIELD_SIZE);
-
-				if (show_ally && (color != Ally))
-					display_rectangle(x * FIELD_SIZE + 26, y * FIELD_SIZE, 6, 6, Ally);
-				if (show_enemy && (color != Enemy))
-					display_rectangle(x * FIELD_SIZE + 26, y * FIELD_SIZE + 26, 6, 6, Enemy);
+				image_draw(&image_units[p->slot->unit->index], x * FIELD_SIZE, y * FIELD_SIZE);
 			}
 		}
 
@@ -539,59 +501,12 @@ void if_battle(const struct player *restrict players, const struct state *restri
 
 		// Count the number of players in each category (Self, Ally, Enemy).
 		// Initialize their display positions.
+		enum color color;
 		p = battlefield[state->y][state->x];
-		do
-		{
-			if (p->slot->player == state->player)
-			{
-				positions[p->slot->player] = 0;
-				self_count = 1;
-			}
-			else if (players[p->slot->player].alliance == players[state->player].alliance)
-			{
-				if (positions[p->slot->player] < 0)
-					positions[p->slot->player] = allies_count++;
-			}
-			else
-			{
-				if (positions[p->slot->player] < 0)
-					positions[p->slot->player] = enemies_count++;
-			}
-		} while (p = p->_next);
-
-		if (self_count) display_rectangle(CTRL_X, CTRL_Y, (FIELD_SIZE + 4) * 7 + 4, FIELD_SIZE + 4 + 16, Self);
-		if (allies_count) display_rectangle(CTRL_X, CTRL_Y + self_count * (FIELD_SIZE + 4 + 16), (FIELD_SIZE + 4) * 7 + 4, allies_count * (FIELD_SIZE + 4 + 16), Ally);
-		if (enemies_count) display_rectangle(CTRL_X, CTRL_Y + (self_count + allies_count) * (FIELD_SIZE + 4 + 16), (FIELD_SIZE + 4) * 7 + 4, enemies_count * (FIELD_SIZE + 4 + 16), Enemy);
-
-		// Display the pawns on the selected field.
-		p = battlefield[state->y][state->x];
-		do
-		{
-			// TODO support more than 7 pawns on a row
-			row = ((p->slot->player != state->player) ? self_count : 0) + ((players[p->slot->player].alliance != players[state->player].alliance) ? allies_count : 0) + positions[p->slot->player];
-			column = indexes[p->slot->player]++;
-
-			x = CTRL_X + 4 + column * (FIELD_SIZE + 4);
-			y = CTRL_Y + 2 + row * (FIELD_SIZE + 4 + 16);
-
-			display_unit(p->slot->unit->index, x, y, Player + p->slot->player, Black, p->slot->count);
-			if (p == state->selected.pawn) draw_rectangle(x - 1, y - 1, FIELD_SIZE + 2, FIELD_SIZE + 2, White);
-
-			// Show destination of each moving pawn.
-			// TODO don't draw at the same place twice
-			if (!state->selected.pawn || (p == state->selected.pawn))
-				if (p->slot->player == state->player)
-				{
-					if ((p->move.x[1] != p->move.x[0]) || (p->move.y[1] != p->move.y[0]))
-					{
-						struct point from = {p->move.x[0] * FIELD_SIZE + FIELD_SIZE / 2, p->move.y[0] * FIELD_SIZE + FIELD_SIZE / 2};
-						struct point to = {p->move.x[1] * FIELD_SIZE + FIELD_SIZE / 2, p->move.y[1] * FIELD_SIZE + FIELD_SIZE / 2};
-						display_arrow(from, to, BATTLE_X, BATTLE_Y, Self);
-					}
-					else if ((p->shoot.x >= 0) && (p->shoot.y >= 0) && ((p->shoot.x != p->move.x[0]) || (p->shoot.y != p->move.y[0])))
-						image_draw(&image_shoot_destination, p->shoot.x * FIELD_SIZE, p->shoot.y * FIELD_SIZE);
-				}
-		} while (p = p->_next);
+		if (p->slot->player == state->player) color = Self;
+		else if (players[p->slot->player].alliance == players[state->player].alliance) color = Ally;
+		else color = Enemy;
+		display_unit(p->slot->unit->index, x * FIELD_SIZE, y * FIELD_SIZE, color, Black, p->slot->count);
 	}
 
 	glFlush();
@@ -601,7 +516,7 @@ void if_battle(const struct player *restrict players, const struct state *restri
 double animation_timer;
 int if_battle_animation(void)
 {
-	size_t x, y;
+	/*size_t x, y;
 	const struct pawn *p;
 	int moving = 0;
 
@@ -640,7 +555,8 @@ int if_battle_animation(void)
 	glFlush();
 	glXSwapBuffers(display, drawable);
 
-	return moving;
+	return moving;*/
+	return 0;
 }
 
 static void show_resource(const struct image *restrict image, int treasury, int income, int expense, unsigned y)

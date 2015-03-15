@@ -1,5 +1,7 @@
 #include "types.h"
-#include "display.h"
+#include "json.h"
+#include "map.h"
+#include "battlefield.h"
 #include "pathfinding.h"
 
 struct path_node

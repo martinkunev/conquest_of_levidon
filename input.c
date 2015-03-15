@@ -10,7 +10,9 @@
 #include "types.h"
 #include "json.h"
 #include "map.h"
-#include "battle.h"
+//#include "battle.h"
+#include "battlefield.h"
+#include "pathfinding.h"
 #include "input.h"
 #include "interface.h"
 #include "region.h"
@@ -529,32 +531,46 @@ int input_map(const struct game *restrict game, unsigned char player)
 // Sets move destination of a pawn. Returns -1 if the current player is not allowed to move the pawn at the destination.
 static int pawn_move(const struct player *restrict players, struct pawn *restrict pawn, unsigned x, unsigned y)
 {
+	// TODO improve this function
 	// TODO support fast move
-	if ((state.player == pawn->slot->player) && reachable(players, battlefield, pawn, x, y))
-	{
-		// Reset shoot commands.
-		pawn->shoot.x = -1;
-		pawn->shoot.y = -1;
+	//if ((state.player == pawn->slot->player) && reachable(players, battlefield, pawn, x, y))
 
-		pawn->move.x[1] = x;
-		pawn->move.y[1] = y;
+	if (state.player != pawn->slot->player) return -1;
 
-		return 0;
-	}
-	else return -1;
+	// TODO handle memory errors better
+	// TODO set pawn->fight
+
+	struct vector_adjacency nodes = {0};
+	if (visibility_graph_build(0, 0, &nodes)) abort();
+
+	struct point target = {x, y};
+	if (path_find(&pawn->moves, target, &nodes, 0, 0))
+		return -1;
+
+	// TODO maybe check whether the pawn can reach that location
+	//pawn->moves.last.distance
+
+	visibility_graph_free(&nodes);
+
+	// Reset shoot commands.
+	pawn->shoot.x = -1;
+	pawn->shoot.y = -1;
+
+	return 0;
 }
 
 // Sets shoot target of a pawn. Returns -1 if the current player is not allowed to shoot at the target with this pawn.
 static int pawn_shoot(const struct player *restrict players, struct pawn *restrict pawn, unsigned x, unsigned y)
 {
-	if ((state.player == pawn->slot->player) && shootable(players, battlefield, pawn, x, y))
+	struct point target = {x, y};
+	if ((state.player == pawn->slot->player) && battlefield_shootable(pawn, target))
 	{
-		// Reset move commands.
-		pawn->move.x[1] = pawn->move.x[0];
-		pawn->move.y[1] = pawn->move.y[0];
-
 		pawn->shoot.x = x;
 		pawn->shoot.y = y;
+
+		// Reset move commands.
+		moves_free(pawn->moves.first->next);
+        pawn->moves.first->next = 0;
 
 		return 0;
 	}
@@ -579,8 +595,9 @@ static int input_pawn(int code, unsigned x, unsigned y, uint16_t modifiers, cons
 	{
 		if ((x % (FIELD_SIZE + PAWN_MARGIN)) >= FIELD_SIZE) goto reset;
 
-		// Select the clicked pawn.
-		int offset = x / (FIELD_SIZE + PAWN_MARGIN);
+		state.selected.pawn = pawn;
+
+		/*int offset = x / (FIELD_SIZE + PAWN_MARGIN);
 		int found;
 		while (1)
 		{
@@ -593,7 +610,7 @@ static int input_pawn(int code, unsigned x, unsigned y, uint16_t modifiers, cons
 			}
 			else if (found) break;
 		}
-		state.selected.pawn = pawn;
+		state.selected.pawn = pawn;*/
 	}
 
 	return 0;
@@ -631,7 +648,7 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 			if (modifiers & XCB_MOD_MASK_CONTROL) pawn_shoot(game->players, state.selected.pawn, x, y);
 			else pawn_move(game->players, state.selected.pawn, x, y);
 		}
-		else
+		/*else
 		{
 			struct pawn *pawn;
 			for(pawn = battlefield[state.y][state.x]; pawn; pawn = pawn->_next)
@@ -639,7 +656,7 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 				if (modifiers & XCB_MOD_MASK_CONTROL) pawn_shoot(game->players, pawn, x, y);
 				else pawn_move(game->players, pawn, x, y);
 			}
-		}
+		}*/
 	}
 
 	return 0;

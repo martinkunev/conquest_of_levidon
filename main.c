@@ -9,7 +9,7 @@
 #include "types.h"
 #include "json.h"
 #include "map.h"
-#include "battle.h"
+#include "battlefield.h"
 #include "input.h"
 #include "interface.h"
 
@@ -30,6 +30,66 @@ void region_income(const struct region* restrict region, struct resources *restr
 	for(i = 0; i < buildings_count; ++i)
 		if (region->built & (1 << i))
 			resource_add(income, &buildings[i].income);
+}
+
+static int battle(struct game *restrict game, struct region *restrict region)
+{
+	struct battle battle;
+	unsigned char player;
+
+	int status;
+
+	if (battlefield_init(game, &battle, region) < 0) return -1;
+
+	// TODO ask each player to position their pawns
+
+	do
+	{
+		// Ask each player to perform battle actions.
+		// TODO implement Computer and Remote
+		for(player = 0; player < game->players_count; ++player)
+		{
+			if (!battle.player_pawns[player].length) continue; // skip players with no pawns
+
+			switch (game->players[player].type)
+			{
+			case Neutral:
+				continue;
+
+			case Local:
+				if (input_battle(game, player) < 0)
+				{
+					status = -1;
+					goto finally;
+				}
+				break;
+			}
+		}
+
+		// TODO Deal damage to each pawn escaping from enemy pawns.
+
+		// TODO Deal damage from shooting.
+
+		battlefield_clean_corpses(&battle);
+
+		battlefield_movement_plan(game->players, game->players_count, battle.field, battle.pawns, battle.pawns_count);
+
+		// TODO Display pawn movement animation. // TODO this should be part of player-specific input
+
+		battlefield_movement_perform(battle.field, battle.pawns, battle.pawns_count);
+
+		// TODO Deal damage from fighting.
+
+		battlefield_clean_corpses(&battle);
+	} while ((status = battle_end(&battle, region->owner)) < 0);
+
+	// TODO show battle overview
+
+	status = 0;
+
+finally:
+	battlefield_term(game, &battle);
+	return status;
 }
 
 static int play(struct game *restrict game)

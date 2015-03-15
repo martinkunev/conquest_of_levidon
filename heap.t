@@ -1,12 +1,21 @@
 // The arguments with which the macro functions are called are guaranteed to produce no side effects.
 
 // #define heap_type int
+#if !defined(heap_type)
+# error "Generic header argument heap_type not defined"
+#endif
 
 // Returns whether a is on top of b in the heap.
 // #define heap_diff(a, b) ((a) >= (b))
+#if !defined(heap_diff)
+# error "Generic header argument heap_diff not defined"
+#endif
 
 // Called after an element changes its position in the heap (including initial push).
 // #define heap_update(heap, position)
+#if !defined(heap_update)
+# error "Generic header argument heap_update not defined"
+#endif
 
 #include <stdlib.h>
 
