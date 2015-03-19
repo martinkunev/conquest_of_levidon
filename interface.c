@@ -60,7 +60,7 @@ int keycode_min, keycode_max;
 GLuint map_framebuffer;
 
 // TODO Create a struct that stores all the information about the battle (battlefield, players, etc.)
-struct battlefield (*battlefield)[BATTLEFIELD_WIDTH];
+const struct battlefield (*battlefield)[BATTLEFIELD_WIDTH];
 
 struct region *restrict regions;
 size_t regions_count;
@@ -813,7 +813,7 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 	glXSwapBuffers(display, drawable);
 }
 
-void if_set(struct battlefield field[BATTLEFIELD_WIDTH][BATTLEFIELD_HEIGHT])
+void if_set(const struct battlefield field[BATTLEFIELD_WIDTH][BATTLEFIELD_HEIGHT])
 {
 	battlefield = field;
 }

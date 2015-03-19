@@ -57,8 +57,7 @@ static int battle(struct game *restrict game, struct region *restrict region)
 				continue;
 
 			case Local:
-				if_set(battle.field); // TODO fix this
-				if (input_battle(game, player) < 0)
+				if (input_battle(game, &battle, player) < 0)
 				{
 					status = -1;
 					goto finally;
@@ -84,7 +83,7 @@ static int battle(struct game *restrict game, struct region *restrict region)
 		battlefield_clean_corpses(&battle);
 	} while ((status = battle_end(&battle, region->owner)) < 0);
 
-	// TODO show battle overview
+	// TODO show battle overview // this is player-specific
 
 	status = 0;
 

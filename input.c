@@ -10,7 +10,6 @@
 #include "types.h"
 #include "json.h"
 #include "map.h"
-//#include "battle.h"
 #include "battlefield.h"
 #include "pathfinding.h"
 #include "input.h"
@@ -662,8 +661,10 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 	return 0;
 }
 
-int input_battle(const struct game *restrict game, unsigned char player)
+int input_battle(const struct game *restrict game, const struct battle *restrict battle, unsigned char player)
 {
+	if_set(battle->field);
+
 	struct area areas[] = {
 		{
 			.left = 0,
@@ -699,7 +700,7 @@ int input_battle(const struct game *restrict game, unsigned char player)
 	return input_local(if_battle, areas, sizeof(areas) / sizeof(*areas), game);
 }
 
-static int input_ttest(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game)
+/*static int input_ttest(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game)
 {
 	if (code == EVENT_MOTION) return INPUT_NOTME;
 	if (code >= 0) return INPUT_NOTME;
@@ -709,14 +710,14 @@ static int input_ttest(int code, unsigned x, unsigned y, uint16_t modifiers, con
 
 	// if (modifiers & XCB_MOD_MASK_SHIFT) ; // TODO fast move
 
-	/*if (code == -1)
+	/ *if (code == -1)
 	{
 		// Set current field.
 		state.x = x;
 		state.y = y;
 		state.selected.pawn = 0;
 	}
-	else*/ if (code == -3)
+	else* / if (code == -3)
 	{
 		state.x = x;
 		state.y = y;
@@ -753,4 +754,4 @@ int input_test(const struct game *restrict game, unsigned char player)
 	state.selected.pawn = 0;
 
 	return input_local(if_test, areas, sizeof(areas) / sizeof(*areas), game);
-}
+}*/

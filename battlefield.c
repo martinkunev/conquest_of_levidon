@@ -480,7 +480,6 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 	struct slot **slots, *slot;
 	struct pawn *pawns;
 	size_t count;
-	struct move move;
 
 	size_t i, j;
 
@@ -503,12 +502,12 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 
 	// Sort the slots by speed descending.
 	slots = malloc(count * sizeof(*slots));
-	struct heap heap = {.data = slots, .count = count};
 	if (!slots)
 	{
 		free(pawns);
 		return -1;
 	}
+	struct heap heap = {.data = slots, .count = count};
 	i = 0;
 	for(slot = region->slots; slot; slot = slot->_next) slots[i++] = slot;
 	heapify(&heap);
@@ -527,12 +526,7 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 		pawns[i].slot = slots[i];
 		pawns[i].hurt = 0;
 
-		move.location = POINT_NONE;
-		move.distance = 0;
-		move.time = 0;
-
 		queue_init(&pawns[i].moves);
-		queue_push(&pawns[i].moves, move);
 
 		pawns[i].fight = POINT_NONE;
 		pawns[i].shoot = POINT_NONE;
@@ -548,6 +542,45 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 	}
 
 	free(slots);
+
+	// TODO remove this
+	// Put the pawns at their initial positions.
+	for(i = 0; i < count; ++i)
+	{
+		struct move move;
+
+		// TODO this will break if more than 4 slots come from a given region
+		struct point positions_defend[4] = {
+			{11, 11}, {12, 11}, {11, 12}, {12, 12}
+		};
+		struct point positions_attack[NEIGHBORS_LIMIT][4] = {
+			{{23, 11}, {23, 12}, {23, 10}, {23, 13}},
+			{{23, 0}, {22, 0}, {23, 1}, {22, 1}},
+			{{11, 0}, {12, 0}, {10, 0}, {13, 0}},
+			{{0, 0}, {1, 0}, {0, 1}, {1, 1}},
+			{{0, 11}, {0, 12}, {0, 10}, {0, 13}},
+			{{0, 23}, {0, 22}, {1, 23}, {1, 22}},
+			{{11, 23}, {12, 23}, {10, 23}, {13, 23}},
+			{{23, 23}, {22, 23}, {23, 22}, {22, 22}},
+		};
+		size_t progress_defend = 0;
+		size_t progress_attack[NEIGHBORS_LIMIT] = {0};
+
+		if (slot->location == region) move.location = positions_defend[progress_defend++];
+		else
+		{
+			size_t j;
+			for(j = 0; j < NEIGHBORS_LIMIT; ++j)
+				if (slot->location == region->neighbors[j])
+				{
+					move.location = positions_attack[j][progress_attack[j]++];
+					break;
+				}
+		}
+		move.distance = 0;
+		move.time = 0;
+		queue_push(&pawns[i].moves, move);
+	}
 
 	battle->pawns = pawns;
 	battle->pawns_count = count;
