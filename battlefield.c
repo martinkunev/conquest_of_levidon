@@ -541,8 +541,6 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 		}
 	}
 
-	free(slots);
-
 	// TODO remove this
 	// Put the pawns at their initial positions.
 	for(i = 0; i < count; ++i)
@@ -566,12 +564,12 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 		size_t progress_defend = 0;
 		size_t progress_attack[NEIGHBORS_LIMIT] = {0};
 
-		if (slot->location == region) move.location = positions_defend[progress_defend++];
+		if (slots[i]->location == region) move.location = positions_defend[progress_defend++];
 		else
 		{
 			size_t j;
 			for(j = 0; j < NEIGHBORS_LIMIT; ++j)
-				if (slot->location == region->neighbors[j])
+				if (slots[i]->location == region->neighbors[j])
 				{
 					move.location = positions_attack[j][progress_attack[j]++];
 					break;
@@ -580,7 +578,11 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 		move.distance = 0;
 		move.time = 0;
 		queue_push(&pawns[i].moves, move);
+
+		battle->field[move.location.y][move.location.x].pawn = pawns + i;
 	}
+
+	free(slots);
 
 	battle->pawns = pawns;
 	battle->pawns_count = count;
