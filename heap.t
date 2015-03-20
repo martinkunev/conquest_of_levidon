@@ -105,6 +105,8 @@ static void heapify(struct heap *heap)
 	unsigned item, index, swap, other;
 	heap_type temp;
 
+	if (heap->count < 2) return;
+
 	// Move each non-leaf element to its correct position in its subtree.
 	item = (heap->count / 2) - 1;
 	while (1)

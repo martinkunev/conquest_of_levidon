@@ -5,9 +5,9 @@
 
 struct move
 {
-    struct point location;
-    double distance;
-    double time;
+	struct point location;
+	double distance;
+	double time;
 };
 
 #define queue_type struct move
@@ -54,6 +54,8 @@ static inline int point_eq(struct point a, struct point b)
 }
 
 void moves_free(struct queue_item *item);
+
+void pawn_stay(struct pawn *restrict pawn);
 
 int battlefield_init(const struct game *restrict game, struct battle *restrict battle, struct region *restrict region);
 void battlefield_term(const struct game *restrict game, struct battle *restrict battle);

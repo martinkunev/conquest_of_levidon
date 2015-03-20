@@ -443,6 +443,14 @@ void battlefield_clean_corpses(struct battle *battle)
 	}
 }
 
+void pawn_stay(struct pawn *restrict pawn)
+{
+	moves_free(pawn->moves.first->next);
+	pawn->moves.first->next = 0;
+	pawn->moves.last = pawn->moves.first;
+	pawn->moves.length = 1;
+}
+
 int battlefield_reachable(struct battlefield battlefield[][BATTLEFIELD_WIDTH], struct pawn *restrict pawn, struct point target)
 {
 	// TODO better handling of memory errors
@@ -451,15 +459,16 @@ int battlefield_reachable(struct battlefield battlefield[][BATTLEFIELD_WIDTH], s
 	struct vector_adjacency nodes = {0};
 	if (visibility_graph_build(0, 0, &nodes)) abort();
 
+	pawn_stay(pawn);
+
 	if (path_find(&pawn->moves, target, &nodes, 0, 0)) return 0;
 
 	visibility_graph_free(&nodes);
 
-	if (pawn->moves.last->data.distance > 1)
+	if (pawn->moves.last->data.distance > pawn->slot->unit->speed)
 	{
-		// Not reachable in one round. Reset pawn moves.
-		moves_free(pawn->moves.first->next);
-		pawn->moves.first->next = 0;
+		// not reachable in one round
+		pawn_stay(pawn);
 		return 0;
 	}
 

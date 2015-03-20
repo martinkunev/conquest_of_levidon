@@ -506,6 +506,27 @@ void if_battle(const struct player *restrict players, const struct state *restri
 		else if (players[p->slot->player].alliance == players[state->player].alliance) color = Ally;
 		else color = Enemy;
 		display_unit(p->slot->unit->index, x * FIELD_SIZE, y * FIELD_SIZE, color, Black, p->slot->count);
+
+		// Show pawn task (if any).
+		if (p->slot->player == state->player)
+		{
+			struct queue_item *move;
+			for(move = p->moves.first; move->next; move = move->next)
+			{
+				struct point from = move->data.location;
+				from.x = from.x * FIELD_SIZE + FIELD_SIZE / 2;
+				from.y = from.y * FIELD_SIZE + FIELD_SIZE / 2;
+
+				struct point to = move->next->data.location;;
+				to.x = to.x * FIELD_SIZE + FIELD_SIZE / 2;
+				to.y = to.y * FIELD_SIZE + FIELD_SIZE / 2;
+
+				display_arrow(from, to, BATTLE_X, BATTLE_Y, Self);
+			}
+
+			if (!point_eq(p->shoot, POINT_NONE))
+				image_draw(&image_shoot_destination, p->shoot.x * FIELD_SIZE, p->shoot.y * FIELD_SIZE);
+		}
 	}
 
 	glFlush();

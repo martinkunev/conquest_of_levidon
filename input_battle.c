@@ -40,8 +40,7 @@ static void pawn_shoot(struct pawn *restrict pawn, unsigned x, unsigned y)
 	pawn->shoot = target;
 
 	// Reset move commands.
-	moves_free(pawn->moves.first->next);
-	pawn->moves.first->next = 0;
+	pawn_stay(pawn);
 }
 
 static int input_round(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game)

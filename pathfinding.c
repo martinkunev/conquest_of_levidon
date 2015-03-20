@@ -253,8 +253,8 @@ int visibility_graph_build(const struct polygon *restrict obstacles, size_t obst
 			goto error;
 
 	// Add dummy vertices for the start and the end nodes.
-	vector_adjacency_insert(nodes);
-	vector_adjacency_insert(nodes);
+	vector_adjacency_insert(nodes)->neighbors = 0;
+	vector_adjacency_insert(nodes)->neighbors = 0;
 
 	// The vector will not be resized any more. Free the unused memory.
 	vector_adjacency_shrink(nodes);
