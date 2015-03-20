@@ -5,6 +5,7 @@
 #include "json.h"
 #include "map.h"
 #include "battlefield.h"
+#include "pathfinding.h"
 
 #define BATTLEFIELD_WIDTH 24
 #define BATTLEFIELD_HEIGHT 24
@@ -442,29 +443,28 @@ void battlefield_clean_corpses(struct battle *battle)
 	}
 }
 
-/*int battlefield_reachable(const struct player *restrict players, struct pawn *battlefield[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH], const struct pawn *restrict pawn, unsigned char x, unsigned char y)
+int battlefield_reachable(struct battlefield battlefield[][BATTLEFIELD_WIDTH], struct pawn *restrict pawn, struct point target)
 {
-	const struct pawn *item;
-	unsigned char alliance = players[pawn->slot->player].alliance;
-	unsigned char speed = pawn->slot->unit->speed;
+	// TODO better handling of memory errors
 
-	// Determine pawn speed.
-	item = battlefield[pawn->move.y[0]][pawn->move.x[0]];
-	do
+	// TODO it's not necessary to do this every time
+	struct vector_adjacency nodes = {0};
+	if (visibility_graph_build(0, 0, &nodes)) abort();
+
+	if (path_find(&pawn->moves, target, &nodes, 0, 0)) return 0;
+
+	visibility_graph_free(&nodes);
+
+	if (pawn->moves.last->data.distance > 1)
 	{
-		if (players[item->slot->player].alliance != alliance)
-		{
-			speed -= 1;
-			break;
-		}
-	} while (item = item->_next);
+		// Not reachable in one round. Reset pawn moves.
+		moves_free(pawn->moves.first->next);
+		pawn->moves.first->next = 0;
+		return 0;
+	}
 
-	// Determine the euclidean distance between the two fields. Round the value to integer.
-	int dx = x - pawn->move.x[0], dy = y - pawn->move.y[0];
-	unsigned distance = round(sqrt(dx * dx + dy * dy));
-
-	return (distance <= speed);
-}*/
+	return 1;
+}
 
 int battlefield_shootable(const struct pawn *restrict pawn, struct point target)
 {

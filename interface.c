@@ -15,7 +15,6 @@
 #include "json.h"
 #include "format.h"
 #include "map.h"
-//#include "battle.h"
 #include "battlefield.h"
 #include "pathfinding.h"
 #include "image.h"
