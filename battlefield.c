@@ -47,12 +47,12 @@ static struct queue_item *pawn_location(const struct queue *restrict moves, doub
 		time_start = item->data.time;
 		if (time_now < time_start) break; // this move has not started yet
 		time_end = item->next->data.time;
-		if (time_now > time_end) continue; // this move is already done
+		if (time_now >= time_end) continue; // this move is already done
 
 		progress = (time_now - time_start) / (time_end - time_start);
 
-		real_x = item->next->data.location.x * progress + item->next->data.location.x * (1 - progress);
-		real_y = item->next->data.location.y * progress + item->next->data.location.y * (1 - progress);
+		real_x = item->next->data.location.x * progress + item->data.location.x * (1 - progress);
+		real_y = item->next->data.location.y * progress + item->data.location.y * (1 - progress);
 
 		location->x = real_x * 2;
 		location->y = real_y * 2;
@@ -60,6 +60,8 @@ static struct queue_item *pawn_location(const struct queue *restrict moves, doub
 		return item;
 	}
 
+	location->x = moves->last->data.location.x * 2;
+	location->y = moves->last->data.location.y * 2;
 	return 0; // the pawn is immobile
 }
 
@@ -87,7 +89,7 @@ static inline void square_clear(struct pawn **occupied, const struct pawn *restr
 	}
 }
 
-static void pawn_detour(struct pawn *occupied[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH][OVERLAP_LIMIT], struct pawn *pawn, unsigned x, unsigned y)
+static void pawn_detour(struct pawn *occupied[BATTLEFIELD_HEIGHT * 2][BATTLEFIELD_WIDTH * 2][OVERLAP_LIMIT], struct pawn *pawn, unsigned x, unsigned y)
 {
 	if ((pawn->step.x != x) && (pawn->step.y != y)) square_clear(occupied[y][x], pawn);
 	if ((pawn->step.x + 1 != x) && (pawn->step.y != y)) square_clear(occupied[y][x + 1], pawn);
@@ -113,7 +115,7 @@ void moves_free(struct queue_item *item)
 	}
 }
 
-static int pawn_wait(struct pawn *occupied[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH][OVERLAP_LIMIT], struct pawn *pawn, unsigned step)
+static int pawn_wait(struct pawn *occupied[BATTLEFIELD_HEIGHT * 2][BATTLEFIELD_WIDTH * 2][OVERLAP_LIMIT], struct pawn *pawn, unsigned step)
 {
 	// Collisions can only occur after the start of the movement.
 	// assert(step);
@@ -183,7 +185,7 @@ static int pawn_wait(struct pawn *occupied[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH
 	return 0;
 }
 
-static int pawn_stop(struct pawn *occupied[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH][OVERLAP_LIMIT], struct pawn *pawn, unsigned step)
+static int pawn_stop(struct pawn *occupied[BATTLEFIELD_HEIGHT * 2][BATTLEFIELD_WIDTH * 2][OVERLAP_LIMIT], struct pawn *pawn, unsigned step)
 {
 	// Collisions can only occur after the start of the movement.
 	// assert(step);
@@ -242,11 +244,9 @@ static int pawn_stop(struct pawn *occupied[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH
 	return 0;
 }
 
+// pawns must be sorted by speed descending
 int battlefield_movement_plan(const struct player *restrict players, size_t players_count, struct battlefield battlefield[][BATTLEFIELD_HEIGHT], struct pawn *restrict pawns, size_t pawns_count)
 {
-	// TODO move times must be set before this function is called
-	// TODO pawns must be ordered in decending order by speed
-
 	unsigned step;
 	double now;
 
@@ -255,7 +255,7 @@ int battlefield_movement_plan(const struct player *restrict players, size_t play
 
 	// Store a list of the pawns occupying a given square.
 	// Pawn at its failback location is placed first in the list.
-	struct pawn *occupied[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH][OVERLAP_LIMIT];
+	struct pawn *occupied[BATTLEFIELD_HEIGHT * 2][BATTLEFIELD_WIDTH * 2][OVERLAP_LIMIT];
 	struct pawn **square;
 
 	size_t x, y;
@@ -269,13 +269,22 @@ int battlefield_movement_plan(const struct player *restrict players, size_t play
 	int changed;
 
 	for(p = 0; p < pawns_count; ++p)
-		pawns[p].failback = pawns[p].moves.first->data.location;
+	{
+		pawns[p].failback.x = pawns[p].moves.first->data.location.x * 2;
+		pawns[p].failback.y = pawns[p].moves.first->data.location.y * 2;
+
+		struct queue_item *item;
+		pawns[p].moves.first->data.time = 0;
+		for(item = pawns[p].moves.first; item->next; item = item->next)
+			item->next->data.time = item->next->data.distance / pawns[p].slot->unit->speed;
+	}
 
 	for(step = 0; step < MOVEMENT_STEPS; ++step)
 	{
 		now = (double)step / MOVEMENT_STEPS;
 
 		// Update occupied squares for each pawn.
+		memset(occupied, 0, sizeof(occupied));
 		for(p = 0; p < pawns_count; ++p)
 		{
 			pawn = pawns + p;
@@ -297,9 +306,9 @@ int battlefield_movement_plan(const struct player *restrict players, size_t play
 		{
 			changed = 0;
 
-			for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
+			for(y = 0; y < BATTLEFIELD_HEIGHT * 2; ++y)
 			{
-				for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
+				for(x = 0; x < BATTLEFIELD_WIDTH * 2; ++x)
 				{
 					square = occupied[y][x];
 					if (square[1]) // movement overlap
@@ -378,45 +387,51 @@ void battlefield_movement_perform(struct battlefield battlefield[][BATTLEFIELD_H
 	size_t p;
 	struct pawn *pawn;
 
-	struct queue_item *current, *next, *item;
+	struct queue_item *move_next, *next, *item;
 	double distance;
 
 	// Update occupied squares for each pawn.
 	for(p = 0; p < pawns_count; ++p)
 	{
 		pawn = pawns + p;
-		current = pawn_location(&pawn->moves, 1, &pawn->step);
+		move_next = pawn_location(&pawn->moves, 1, &pawn->step);
 
-		if (current)
+		// Change pawn position on the battlefield.
+		struct point location_old = pawn->moves.first->data.location;
+		struct point location_new = {pawn->step.x / 2, pawn->step.y / 2};
+		if (battlefield[location_old.y][location_old.x].pawn == pawn)
+			battlefield[location_old.y][location_old.x].pawn = 0;
+		battlefield[location_new.y][location_new.x].pawn = pawn;
+
+		if (move_next)
 		{
 			// Remove finished moves.
 			item = pawn->moves.first;
-			while (item != current)
+			while (item != move_next)
 			{
 				next = item->next;
 				free(item);
 				item = next;
 			}
-			pawn->moves.first = current;
+			pawn->moves.first = move_next;
 
-			current->data.location = pawn->step;
-			current->data.distance = 0;
-			current->data.time = 0;
+			move_next->data.location = location_new;
+			move_next->data.distance = 0;
+			move_next->data.time = 0;
 
-			while (next = current->next)
+			while (next = move_next->next)
 			{
-				distance = battlefield_distance(current->data.location, next->data.location);
-				next->data.distance = current->data.distance + distance;
-				next->data.time = current->data.time + distance / pawn->slot->unit->speed;
-				current = next;
+				distance = battlefield_distance(move_next->data.location, next->data.location);
+				next->data.distance = move_next->data.distance + distance;
+				next->data.time = move_next->data.time + distance / pawn->slot->unit->speed;
+				move_next = next;
 			}
 		}
 		else
 		{
-			moves_free(pawn->moves.first->next);
-			pawn->moves.first->next = 0;
+			pawn_stay(pawn);
 
-			pawn->moves.first->data.location = pawn->step;
+			pawn->moves.first->data.location = location_new;
 			pawn->moves.first->data.distance = 0;
 			pawn->moves.first->data.time = 0;
 		}
@@ -451,9 +466,9 @@ void battlefield_fight(const struct game *restrict game, struct battle *restrict
 			victims[enemies_count++] = victim;
 		if ((x < (BATTLEFIELD_WIDTH - 1)) && (victim = battle->field[y][x + 1].pawn) && (game->players[victim->slot->player].alliance != fighter_alliance))
 			victims[enemies_count++] = victim;
-		if ((y > 0) && (victim = battle->field[y - 1][x].pawn, damage) && (game->players[victim->slot->player].alliance != fighter_alliance))
+		if ((y > 0) && (victim = battle->field[y - 1][x].pawn) && (game->players[victim->slot->player].alliance != fighter_alliance))
 			victims[enemies_count++] = victim;
-		if ((y < (BATTLEFIELD_HEIGHT - 1)) && (victim = battle->field[y + 1][x].pawn, damage) && (game->players[victim->slot->player].alliance != fighter_alliance))
+		if ((y < (BATTLEFIELD_HEIGHT - 1)) && (victim = battle->field[y + 1][x].pawn) && (game->players[victim->slot->player].alliance != fighter_alliance))
 			victims[enemies_count++] = victim;
 		if (!enemies_count) continue; // nothing to fight
 
@@ -537,6 +552,10 @@ void battlefield_clean_corpses(struct battle *battle)
 		{
 			slot->count = 0;
 			battle->field[pawn->moves.first->data.location.y][pawn->moves.first->data.location.x].pawn = 0;
+		}
+		else
+		{
+			// TODO kill some units
 		}
 	}
 }
@@ -707,8 +726,6 @@ void battlefield_term(const struct game *restrict game, struct battle *restrict 
 // Returns winner alliance number if the battle ended and -1 otherwise.
 int battle_end(const struct game *restrict game, struct battle *restrict battle, unsigned char defender)
 {
-	return 0;
-
 	int end = 1;
 	int alive;
 

@@ -82,12 +82,10 @@ static int battle(struct game *restrict game, struct region *restrict region)
 
 		battlefield_fight(game, &battle);
 		battlefield_clean_corpses(&battle);
-	} while ((status = battle_end(&battle, game->players[region->owner].alliance)) < 0);
+	} while ((status = battle_end(game, &battle, game->players[region->owner].alliance)) < 0);
 
 	// TODO show battle overview // this is player-specific
 	// winner team is status
-
-	status = 0;
 
 finally:
 	battlefield_term(game, &battle);
