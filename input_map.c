@@ -12,11 +12,9 @@
 #include "map.h"
 #include "battlefield.h"
 #include "pathfinding.h"
-#include "input.h"
+#include "input_map.h"
 #include "interface.h"
 #include "region.h"
-
-#define PAWN_MARGIN 4 /* TODO deprecated */
 
 extern xcb_connection_t *connection;
 extern KeySym *keymap;

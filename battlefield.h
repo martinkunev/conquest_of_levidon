@@ -66,6 +66,8 @@ int battlefield_shootable(const struct pawn *restrict pawn, struct point target)
 int battlefield_movement_plan(const struct player *restrict players, size_t players_count, struct battlefield battlefield[][BATTLEFIELD_HEIGHT], struct pawn *restrict pawns, size_t pawns_count);
 void battlefield_movement_perform(struct battlefield battlefield[][BATTLEFIELD_HEIGHT], struct pawn *restrict pawns, size_t pawns_count);
 
+void battlefield_fight(const struct game *restrict game, struct battle *restrict battle);
+void battlefield_shoot(struct battle *battle);
 void battlefield_clean_corpses(struct battle *battle);
 
-int battle_end(struct battle *restrict battle, unsigned char host);
+int battle_end(const struct game *restrict game, struct battle *restrict battle, unsigned char defender);

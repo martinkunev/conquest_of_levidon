@@ -18,7 +18,7 @@
 #include "battlefield.h"
 #include "pathfinding.h"
 #include "image.h"
-#include "input.h"
+#include "input_map.h"
 #include "interface.h"
 
 // http://xcb.freedesktop.org/opengl/

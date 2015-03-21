@@ -423,6 +423,104 @@ void battlefield_movement_perform(struct battlefield battlefield[][BATTLEFIELD_H
 	}
 }
 
+static void pawn_deal(struct pawn *pawn, unsigned damage)
+{
+	if (!pawn) return;
+	pawn->hurt += damage;
+}
+
+void battlefield_fight(const struct game *restrict game, struct battle *restrict battle)
+{
+	size_t i, j;
+	for(i = 0; i < battle->pawns_count; ++i)
+	{
+		struct pawn *fighter = battle->pawns + i;
+		unsigned char fighter_alliance = game->players[fighter->slot->player].alliance;
+
+		int x = fighter->moves.first->data.location.x;
+		int y = fighter->moves.first->data.location.y;
+		unsigned damage_total = fighter->slot->unit->damage * fighter->slot->count;
+		unsigned damage;
+
+		struct pawn *victims[4], *victim;
+		unsigned enemies_count = 0;
+
+		// Look for pawns to fight at the neighboring fields.
+		enemies_count = 0;
+		if ((x > 0) && (victim = battle->field[y][x - 1].pawn) && (game->players[victim->slot->player].alliance != fighter_alliance))
+			victims[enemies_count++] = victim;
+		if ((x < (BATTLEFIELD_WIDTH - 1)) && (victim = battle->field[y][x + 1].pawn) && (game->players[victim->slot->player].alliance != fighter_alliance))
+			victims[enemies_count++] = victim;
+		if ((y > 0) && (victim = battle->field[y - 1][x].pawn, damage) && (game->players[victim->slot->player].alliance != fighter_alliance))
+			victims[enemies_count++] = victim;
+		if ((y < (BATTLEFIELD_HEIGHT - 1)) && (victim = battle->field[y + 1][x].pawn, damage) && (game->players[victim->slot->player].alliance != fighter_alliance))
+			victims[enemies_count++] = victim;
+		if (!enemies_count) continue; // nothing to fight
+
+		for(j = 0; j < enemies_count; ++j)
+		{
+			damage = (unsigned)((double)damage_total / enemies_count + 0.5);
+			pawn_deal(victims[j], damage);
+		}
+	}
+}
+
+void battlefield_shoot(struct battle *battle)
+{
+	const double targets[3][2] = {{1, 0.5}, {0, 0.078125}, {0, 0.046875}}; // 1/2, 5/64, 3/64
+
+	size_t i;
+	for(i = 0; i < battle->pawns_count; ++i)
+	{
+		struct pawn *shooter = battle->pawns + i;
+
+		if (!shooter->slot->count) continue;
+		if (point_eq(shooter->shoot, POINT_NONE)) continue;
+
+		int x = shooter->shoot.x;
+		int y = shooter->shoot.y;
+		unsigned damage_total = shooter->slot->unit->shoot * shooter->slot->count;
+		unsigned damage;
+
+		unsigned target_index;
+		double distance, miss, on_target;
+
+		distance = battlefield_distance(shooter->moves.first->data.location, shooter->shoot);
+		miss = distance / shooter->slot->unit->range;
+
+		// Shooters have some chance to hit a field adjacent to the target, depending on the distance.
+		// Damage is dealt to the target field and to its neighbors.
+
+		target_index = 0;
+		on_target = targets[target_index][0] * (1 - miss) + targets[target_index][1] * miss;
+		pawn_deal(battle->field[y][x].pawn, (unsigned)(damage * on_target + 0.5));
+
+		target_index = 1;
+		on_target = targets[target_index][0] * (1 - miss) + targets[target_index][1] * miss;
+		damage = (unsigned)(damage_total * on_target + 0.5);
+		if (x > 0) pawn_deal(battle->field[y][x - 1].pawn, damage);
+		if (x < (BATTLEFIELD_WIDTH - 1)) pawn_deal(battle->field[y][x + 1].pawn, damage);
+		if (y > 0) pawn_deal(battle->field[y - 1][x].pawn, damage);
+		if (y < (BATTLEFIELD_HEIGHT - 1)) pawn_deal(battle->field[y + 1][x].pawn, damage);
+
+		target_index = 2;
+		on_target = targets[target_index][0] * (1 - miss) + targets[target_index][1] * miss;
+		damage = (unsigned)(damage_total * on_target + 0.5);
+		if (x > 0)
+		{
+			if (y > 0) pawn_deal(battle->field[y - 1][x - 1].pawn, damage);
+			if (y < (BATTLEFIELD_HEIGHT - 1)) pawn_deal(battle->field[y + 1][x - 1].pawn, damage);
+		}
+		if (x < (BATTLEFIELD_WIDTH - 1))
+		{
+			if (y > 0) pawn_deal(battle->field[y - 1][x + 1].pawn, damage);
+			if (y < (BATTLEFIELD_HEIGHT - 1)) pawn_deal(battle->field[y + 1][x + 1].pawn, damage);
+		}
+
+		// TODO ?deal more damage to moving pawns
+	}
+}
+
 void battlefield_clean_corpses(struct battle *battle)
 {
 	size_t p;
@@ -606,7 +704,43 @@ void battlefield_term(const struct game *restrict game, struct battle *restrict 
 	free(battle->pawns);
 }
 
-int battle_end(struct battle *restrict battle, unsigned char host)
+// Returns winner alliance number if the battle ended and -1 otherwise.
+int battle_end(const struct game *restrict game, struct battle *restrict battle, unsigned char defender)
 {
 	return 0;
+
+	int end = 1;
+	int alive;
+
+	signed char winner = -1;
+	unsigned char alliance;
+
+	struct pawn *pawn;
+
+	size_t i, j;
+	for(i = 0; i < game->players_count; ++i)
+	{
+		if (!battle->player_pawns[i].length) continue; // skip dead players
+
+		alliance = game->players[i].alliance;
+
+		alive = 0;
+		for(j = 0; j < battle->player_pawns[i].length; ++j)
+		{
+			pawn = battle->player_pawns[i].data[j];
+			if (pawn->slot->count)
+			{
+				alive = 1;
+
+				if (winner < 0) winner = alliance;
+				else if (alliance != winner) end = 0;
+			}
+		}
+
+		// Mark players with no pawns left as dead.
+		if (!alive) battle->player_pawns[i].length = 0;
+	}
+
+	if (end) return ((winner >= 0) ? winner : defender);
+	else return -1;
 }

@@ -10,7 +10,7 @@
 #include "json.h"
 #include "map.h"
 #include "battlefield.h"
-#include "input.h"
+#include "input_map.h"
 #include "interface.h"
 
 #define S(s) s, sizeof(s) - 1
@@ -66,24 +66,26 @@ static int battle(struct game *restrict game, struct region *restrict region)
 			}
 		}
 
+		// TODO shoot animation // TODO this should be part of player-specific input
+
 		// TODO Deal damage to each pawn escaping from enemy pawns.
-
-		// TODO Deal damage from shooting.
-
+		battlefield_shoot(&battle);
 		battlefield_clean_corpses(&battle);
 
 		battlefield_movement_plan(game->players, game->players_count, battle.field, battle.pawns, battle.pawns_count);
 
-		// TODO Display pawn movement animation. // TODO this should be part of player-specific input
+		// TODO movement animation. // TODO this should be part of player-specific input
 
 		battlefield_movement_perform(battle.field, battle.pawns, battle.pawns_count);
 
-		// TODO Deal damage from fighting.
+		// TODO fight animation // TODO this should be part of player-specific input
 
+		battlefield_fight(game, &battle);
 		battlefield_clean_corpses(&battle);
-	} while ((status = battle_end(&battle, region->owner)) < 0);
+	} while ((status = battle_end(&battle, game->players[region->owner].alliance)) < 0);
 
 	// TODO show battle overview // this is player-specific
+	// winner team is status
 
 	status = 0;
 

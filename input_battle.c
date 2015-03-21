@@ -1,16 +1,10 @@
-//#include <stdlib.h>
-
-//#include <GL/glx.h>
-//#include <GL/glext.h>
-
 #include <xcb/xcb.h>
 
 #include "types.h"
 #include "json.h"
 #include "map.h"
 #include "battlefield.h"
-//#include "pathfinding.h"
-#include "input.h"
+#include "input_map.h"
 #include "interface.h"
 
 extern struct battlefield (*battlefield)[BATTLEFIELD_WIDTH];
@@ -70,6 +64,14 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 		struct pawn *pawn = state.selected.pawn;
 		if (!pawn) return 0;
 		if (pawn->slot->player != state.player) return 0;
+
+		struct point target = {x, y};
+		if (point_eq(target, pawn->moves.first->data.location))
+		{
+			pawn_stay(pawn);
+			pawn->shoot = POINT_NONE;
+			return 0;
+		}
 
 		// shoot if CONTROL is pressed; move otherwise
 		if (modifiers & XCB_MOD_MASK_CONTROL) pawn_shoot(pawn, x, y);
