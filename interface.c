@@ -488,24 +488,16 @@ void if_battle(const struct player *restrict players, const struct state *restri
 	unsigned row, column;
 
 	// Display information about the selected field.
-	// Show each player's units on a separate line. Order: Self, Ally, Enemy.
-	signed char positions[PLAYERS_LIMIT];
-	unsigned char indexes[PLAYERS_LIMIT] = {0};
-	unsigned self_count = 0, allies_count = 0, enemies_count = 0;
 	if ((state->x < BATTLEFIELD_WIDTH) && (state->y < BATTLEFIELD_HEIGHT) && battlefield[state->y][state->x].pawn)
 	{
 		image_draw(&image_selected, state->x * FIELD_SIZE, state->y * FIELD_SIZE);
 
-		memset(positions, -1, sizeof(positions) * sizeof(*positions));
-
-		// Count the number of players in each category (Self, Ally, Enemy).
-		// Initialize their display positions.
 		enum color color;
 		p = battlefield[state->y][state->x].pawn;
 		if (p->slot->player == state->player) color = Self;
 		else if (players[p->slot->player].alliance == players[state->player].alliance) color = Ally;
 		else color = Enemy;
-		display_unit(p->slot->unit->index, x * FIELD_SIZE, y * FIELD_SIZE, color, Black, p->slot->count);
+		display_unit(p->slot->unit->index, CTRL_X + x * FIELD_SIZE, CTRL_Y + y * FIELD_SIZE, color, Black, p->slot->count);
 
 		// Show pawn task (if any).
 		if (p->slot->player == state->player)
