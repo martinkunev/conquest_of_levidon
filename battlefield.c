@@ -536,6 +536,75 @@ void battlefield_shoot(struct battle *battle)
 	}
 }
 
+// Determine how many units to kill.
+static unsigned pawn_victims(unsigned min, unsigned max)
+{
+	// The possible outcomes are all the integers in [min, max].
+	if (max == min) return min;
+	unsigned outcomes = (max - min + 1);
+
+	// TODO ?use a better algorithm here
+	// For the outcomes min and max there is 1 chance value (least probable).
+	// Outcomes closer to the middle of the interval are more probable than the ones farther from it.
+	// When going from the end of the interval to the middle, the number of chance values increases by 2 with every integer.
+	// Example: for the interval [2, 6], the chance values are: 1, 3, 5, 3, 1
+
+	unsigned chances, chance;
+	if (outcomes % 2)
+		chances = outcomes - 1 + (outcomes - 3) * (outcomes - 1) / 2;
+	else
+		chances = (outcomes - 2) * outcomes / 2;
+	chance = random() % chances;
+
+	// Find the outcome corresponding to the chosen chance value.
+	size_t distance = 0;
+	if (chance < chances / 2)
+	{
+		// left half of the interval [min, max]
+		while ((distance + 1) * (distance + 1) <= chance) distance += 1;
+		return min + distance;
+	}
+	else
+	{
+		// right half of the interval [min, max]
+		while ((distance + 1) * (distance + 1) <= (chances - chance)) distance += 1;
+		return max - distance;
+	}
+}
+
+void battlefield_clean_corpses(struct battle *battle)
+{
+	size_t p;
+	struct pawn *pawn;
+	struct slot *slot;
+	for(p = 0; p < battle->pawns_count; ++p)
+	{
+		pawn = battle->pawns + p;
+		slot = pawn->slot;
+
+		if (!slot->count) continue;
+
+		if ((slot->count * slot->unit->health) <= pawn->hurt)
+		{
+			// All units in this pawn are killed.
+			slot->count = 0;
+			battle->field[pawn->moves.first->data.location.y][pawn->moves.first->data.location.x].pawn = 0;
+		}
+		else
+		{
+			// Find the minimum and maximum of units that can be killed.
+			unsigned max = pawn->hurt / slot->unit->health;
+			unsigned min;
+			if ((slot->unit->health - 1) * slot->count >= pawn->hurt) min = 0;
+			else min = pawn->hurt % slot->count;
+
+			unsigned victims = pawn_victims(min, max);
+			slot->count -= victims;
+			pawn->hurt -= victims * slot->unit->health;
+		}
+	}
+}
+
 void battlefield_clean_corpses(struct battle *battle)
 {
 	size_t p;
