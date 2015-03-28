@@ -33,6 +33,15 @@ When enemy pawns try to occupy the same square, they are redirected to their fai
 When allied pawns try to occupy the same squre, one of them stays where it is and the other are detoured to their failback locations to wait.
 */
 
+static struct point location_field(const struct point location)
+{
+	struct point square;
+	square.x = location.x / 2;
+	square.y = location.y / 2;
+	return square;
+}
+
+// Returns the first movement that is not finished or 0 if there is no such move. Sets current position in location.
 static struct queue_item *pawn_location(const struct queue *restrict moves, double time_now, struct point *restrict location)
 {
 	struct queue_item *item;
@@ -45,7 +54,11 @@ static struct queue_item *pawn_location(const struct queue *restrict moves, doub
 	for(item = moves->first; item->next; item = item->next)
 	{
 		time_start = item->data.time;
-		if (time_now < time_start) break; // this move has not started yet
+		if (time_now < time_start) // this move has not started yet
+		{
+			*location = moves->first->data.location;
+			return item;
+		}
 		time_end = item->next->data.time;
 		if (time_now >= time_end) continue; // this move is already done
 
@@ -56,7 +69,6 @@ static struct queue_item *pawn_location(const struct queue *restrict moves, doub
 
 		location->x = real_x * 2;
 		location->y = real_y * 2;
-
 		return item;
 	}
 
@@ -77,31 +89,37 @@ static inline void square_occupy(struct pawn **occupied, struct pawn *restrict p
 	else occupied[i] = pawn;
 }
 
+// Removes pawn from a square (if the pawn occupies it).
 static inline void square_clear(struct pawn **occupied, const struct pawn *restrict pawn)
 {
 	size_t i, last = OVERLAP_LIMIT - 1;
 	while (!occupied[last]) last -= 1;
-	for(i = last; occupied[i] != pawn; --i) ;
-	if (i != last)
-	{
-		occupied[i] = occupied[last];
-		occupied[last] = 0;
-	}
+	for(i = last; occupied[i] != pawn; --i)
+		if (!i)
+			break;
+	if (i != last) occupied[i] = occupied[last];
+	occupied[last] = 0;
 }
 
-static void pawn_detour(struct pawn *occupied[BATTLEFIELD_HEIGHT * 2][BATTLEFIELD_WIDTH * 2][OVERLAP_LIMIT], struct pawn *pawn, unsigned x, unsigned y)
+static void pawn_detour(struct pawn *occupied[BATTLEFIELD_HEIGHT * 2][BATTLEFIELD_WIDTH * 2][OVERLAP_LIMIT], struct pawn *pawn)
 {
-	if ((pawn->step.x != x) && (pawn->step.y != y)) square_clear(occupied[y][x], pawn);
-	if ((pawn->step.x + 1 != x) && (pawn->step.y != y)) square_clear(occupied[y][x + 1], pawn);
-	if ((pawn->step.x != x) && (pawn->step.y + 1 != y)) square_clear(occupied[y + 1][x], pawn);
-	if ((pawn->step.x + 1 != x) && (pawn->step.y + 1 != y)) square_clear(occupied[y + 1][x + 1], pawn);
+	unsigned x, y;
+
+	x = pawn->step.x;
+	y = pawn->step.y;
+	square_clear(occupied[y][x], pawn);
+	square_clear(occupied[y][x + 1], pawn);
+	square_clear(occupied[y + 1][x], pawn);
+	square_clear(occupied[y + 1][x + 1], pawn);
 
 	pawn->step = pawn->failback;
 
-	if ((pawn->step.x != x) && (pawn->step.y != y)) square_occupy(occupied[y][x], pawn, 1);
-	if ((pawn->step.x + 1 != x) && (pawn->step.y != y)) square_occupy(occupied[y][x + 1], pawn, 1);
-	if ((pawn->step.x != x) && (pawn->step.y + 1 != y)) square_occupy(occupied[y + 1][x], pawn, 1);
-	if ((pawn->step.x + 1 != x) && (pawn->step.y + 1 != y)) square_occupy(occupied[y + 1][x + 1], pawn, 1);
+	x = pawn->step.x;
+	y = pawn->step.y;
+	square_occupy(occupied[y][x], pawn, 1);
+	square_occupy(occupied[y][x + 1], pawn, 1);
+	square_occupy(occupied[y + 1][x], pawn, 1);
+	square_occupy(occupied[y + 1][x + 1], pawn, 1);
 }
 
 void moves_free(struct queue_item *item)
@@ -142,7 +160,7 @@ static int pawn_wait(struct pawn *occupied[BATTLEFIELD_HEIGHT * 2][BATTLEFIELD_W
 		if (queue_insert(&pawn->moves, current, move) < 0) return -1;
 		next = current->next;
 
-		next->data.location = location;
+		next->data.location = location_field(location);
 		next->data.distance = current->data.distance + battlefield_distance(current->data.location, next->data.location);
 		next->data.time = time_detour;
 
@@ -153,7 +171,7 @@ static int pawn_wait(struct pawn *occupied[BATTLEFIELD_HEIGHT * 2][BATTLEFIELD_W
 			next = current->next;
 
 			// Make the failback location the pawn's next location.
-			next->data.location = pawn->failback;
+			next->data.location = location_field(pawn->failback);
 			next->data.distance = current->data.distance + battlefield_distance(current->data.location, next->data.location);
 			next->data.time = (double)step / MOVEMENT_STEPS;
 		}
@@ -194,21 +212,23 @@ static int pawn_stop(struct pawn *occupied[BATTLEFIELD_HEIGHT * 2][BATTLEFIELD_W
 
 	double time_detour = ((double)step - 1) / MOVEMENT_STEPS;
 
-	struct queue_item *current, *next;
-
 	if (time_detour > pawn->moves.first->data.time)
 	{
 		// The pawn has started moving at the time of the detour.
 
+		struct queue_item *current, *next;
+
 		struct point location;
 		current = pawn_location(&pawn->moves, time_detour, &location);
+
+		if (!current) return 0; // TODO is this right?
 
 		// assert(current);
 		// assert(current->next);
 
 		next = current->next;
 
-		next->data.location = location;
+		next->data.location = location_field(location);
 		next->data.distance = current->data.distance + battlefield_distance(current->data.location, next->data.location);
 		next->data.time = time_detour;
 
@@ -223,7 +243,7 @@ static int pawn_stop(struct pawn *occupied[BATTLEFIELD_HEIGHT * 2][BATTLEFIELD_W
 			next = current->next;
 
 			// Make the failback location the pawn's next location.
-			next->data.location = pawn->failback;
+			next->data.location = location_field(pawn->failback);
 			next->data.distance = current->data.distance + battlefield_distance(current->data.location, next->data.location);
 			next->data.time = (double)step / MOVEMENT_STEPS;
 		}
@@ -321,7 +341,7 @@ int battlefield_movement_plan(const struct player *restrict players, size_t play
 
 						for(i = 1; (i < OVERLAP_LIMIT) && square[i]; ++i)
 						{
-							if (players[square[i]->slot->player].alliance != alliance) goto ready;
+							if (players[square[i]->slot->player].alliance != alliance) goto enemy;
 
 							speed = square[i]->slot->unit->speed;
 							if (speed > fastest_speed)
@@ -340,7 +360,7 @@ int battlefield_movement_plan(const struct player *restrict players, size_t play
 							for(i = 1; (i < OVERLAP_LIMIT) && square[i]; ++i)
 							{
 								if (pawn_wait(occupied, square[i], step) < 0) return -1;
-								pawn_detour(occupied, pawn, x, y);
+								pawn_detour(occupied, pawn);
 							}
 						}
 						else
@@ -354,17 +374,20 @@ int battlefield_movement_plan(const struct player *restrict players, size_t play
 									else continue;
 								}
 								if (pawn_wait(occupied, square[i], step) < 0) return -1;
-								pawn_detour(occupied, pawn, x, y);
+								pawn_detour(occupied, pawn);
 							}
 						}
 						continue;
 
-ready:
+enemy:
 						// There are enemies on the square.
-						for(i = 0; (i < OVERLAP_LIMIT) && square[i]; ++i)
 						{
-							if (pawn_stop(occupied, square[i], step) < 0) return -1;
-							pawn_detour(occupied, pawn, x, y);
+							struct pawn *pawns[] = {square[0], square[1], square[2], square[3]}; // TODO this hardcodes OVERLAP_LIMIT == 4
+							for(i = 0; (i < OVERLAP_LIMIT) && pawns[i]; ++i)
+							{
+								if (pawn_stop(occupied, pawns[i], step) < 0) return -1;
+								pawn_detour(occupied, pawns[i]);
+							}
 						}
 					}
 				}
@@ -398,7 +421,7 @@ void battlefield_movement_perform(struct battlefield battlefield[][BATTLEFIELD_H
 
 		// Change pawn position on the battlefield.
 		struct point location_old = pawn->moves.first->data.location;
-		struct point location_new = {pawn->step.x / 2, pawn->step.y / 2};
+		struct point location_new = location_field(pawn->step);
 		if (battlefield[location_old.y][location_old.x].pawn == pawn)
 			battlefield[location_old.y][location_old.x].pawn = 0;
 		battlefield[location_new.y][location_new.x].pawn = pawn;
@@ -550,10 +573,8 @@ static unsigned pawn_victims(unsigned min, unsigned max)
 	// Example: for the interval [2, 6], the chance values are: 1, 3, 5, 3, 1
 
 	unsigned chances, chance;
-	if (outcomes % 2)
-		chances = outcomes - 1 + (outcomes - 3) * (outcomes - 1) / 2;
-	else
-		chances = (outcomes - 2) * outcomes / 2;
+	chances = 2 * (outcomes / 2) * (outcomes / 2);
+	if (outcomes % 2) chances += outcomes;
 	chance = random() % chances;
 
 	// Find the outcome corresponding to the chosen chance value.
@@ -601,30 +622,6 @@ void battlefield_clean_corpses(struct battle *battle)
 			unsigned victims = pawn_victims(min, max);
 			slot->count -= victims;
 			pawn->hurt -= victims * slot->unit->health;
-		}
-	}
-}
-
-void battlefield_clean_corpses(struct battle *battle)
-{
-	size_t p;
-	struct pawn *pawn;
-	struct slot *slot;
-	for(p = 0; p < battle->pawns_count; ++p)
-	{
-		pawn = battle->pawns + p;
-		slot = pawn->slot;
-
-		if (!slot->count) continue;
-
-		if (pawn->hurt >= (slot->count * slot->unit->health))
-		{
-			slot->count = 0;
-			battle->field[pawn->moves.first->data.location.y][pawn->moves.first->data.location.x].pawn = 0;
-		}
-		else
-		{
-			// TODO kill some units
 		}
 	}
 }

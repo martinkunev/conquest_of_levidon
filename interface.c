@@ -497,7 +497,8 @@ void if_battle(const struct player *restrict players, const struct state *restri
 		if (p->slot->player == state->player) color = Self;
 		else if (players[p->slot->player].alliance == players[state->player].alliance) color = Ally;
 		else color = Enemy;
-		display_unit(p->slot->unit->index, CTRL_X + x * FIELD_SIZE, CTRL_Y + y * FIELD_SIZE, color, Black, p->slot->count);
+		display_rectangle(CTRL_X, CTRL_Y, FIELD_SIZE + MARGIN * 2, FIELD_SIZE + font12.height + MARGIN * 2, color);
+		display_unit(p->slot->unit->index, CTRL_X + MARGIN, CTRL_Y + MARGIN, Player + p->slot->player, Black, p->slot->count);
 
 		// Show pawn task (if any).
 		if (p->slot->player == state->player)
