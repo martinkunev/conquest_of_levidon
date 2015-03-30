@@ -1,10 +1,13 @@
+#include <sys/time.h>
+
 #include <xcb/xcb.h>
 
 #include "types.h"
 #include "json.h"
 #include "map.h"
 #include "battlefield.h"
-#include "input_map.h"
+#include "input.h"
+#include "input_battle.h"
 #include "interface.h"
 
 extern struct battlefield (*battlefield)[BATTLEFIELD_WIDTH];
@@ -40,6 +43,11 @@ static void pawn_shoot(struct pawn *restrict pawn, unsigned x, unsigned y)
 static int input_round(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game)
 {
 	return ((code == 'n') ? INPUT_DONE : 0);
+}
+
+static int input_wait(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game)
+{
+	return ((state.animation_progress > 1.0) ? INPUT_DONE : 0);
 }
 
 static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game)
@@ -83,7 +91,7 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 
 int input_battle(const struct game *restrict game, const struct battle *restrict battle, unsigned char player)
 {
-	if_set(battle->field);
+	if_set(battle->field, battle);
 
 	struct area areas[] = {
 		{
@@ -111,4 +119,24 @@ int input_battle(const struct game *restrict game, const struct battle *restrict
 	state.selected.pawn = 0;
 
 	return input_local(if_battle, areas, sizeof(areas) / sizeof(*areas), game);
+}
+
+int input_animation(const struct game *restrict game, const struct battle *restrict battle)
+{
+	if_set(battle->field, battle);
+
+	struct area areas[] = {
+		{
+			.left = 0,
+			.right = SCREEN_WIDTH - 1,
+			.top = 0,
+			.bottom = SCREEN_HEIGHT - 1,
+			.callback = input_wait
+		},
+	};
+
+	gettimeofday(&state.animation_start, 0);
+	state.animation_progress = 0.0;
+
+	return input_local(if_animation, areas, sizeof(areas) / sizeof(*areas), game);
 }

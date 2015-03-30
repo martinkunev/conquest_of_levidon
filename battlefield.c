@@ -42,6 +42,38 @@ static struct point location_field(const struct point location)
 }
 
 // Returns the first movement that is not finished or 0 if there is no such move. Sets current position in location.
+struct queue_item *pawn_location_real(const struct queue *restrict moves, double time_now, double *restrict real_x, double *restrict real_y)
+{
+	struct queue_item *item;
+
+	double time_start, time_end;
+	double progress; // progress of the current move; 0 == start point; 1 == end point
+
+	for(item = moves->first; item->next; item = item->next)
+	{
+		time_start = item->data.time;
+		if (time_now < time_start) // this move has not started yet
+		{
+			*real_x = moves->first->data.location.x;
+			*real_y = moves->first->data.location.y;
+			return item;
+		}
+		time_end = item->next->data.time;
+		if (time_now >= time_end) continue; // this move is already done
+
+		progress = (time_now - time_start) / (time_end - time_start);
+		*real_x = item->next->data.location.x * progress + item->data.location.x * (1 - progress);
+		*real_y = item->next->data.location.y * progress + item->data.location.y * (1 - progress);
+
+		return item;
+	}
+
+	*real_x = moves->last->data.location.x;
+	*real_y = moves->last->data.location.y;
+	return 0; // the pawn is immobile
+}
+
+// Returns the first movement that is not finished or 0 if there is no such move. Sets current position in location.
 static struct queue_item *pawn_location(const struct queue *restrict moves, double time_now, struct point *restrict location)
 {
 	struct queue_item *item;
@@ -154,6 +186,7 @@ static int pawn_wait(struct pawn *occupied[BATTLEFIELD_HEIGHT * 2][BATTLEFIELD_W
 		struct point location;
 		current = pawn_location(&pawn->moves, time_detour, &location);
 
+		if (!current) return 0; // TODO is this right?
 		// assert(current);
 		// assert(current->next);
 
@@ -222,7 +255,6 @@ static int pawn_stop(struct pawn *occupied[BATTLEFIELD_HEIGHT * 2][BATTLEFIELD_W
 		current = pawn_location(&pawn->moves, time_detour, &location);
 
 		if (!current) return 0; // TODO is this right?
-
 		// assert(current);
 		// assert(current->next);
 

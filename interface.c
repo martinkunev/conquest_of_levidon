@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <sys/time.h>
 #include <math.h>
 
 #define GL_GLEXT_PROTOTYPES
@@ -18,8 +19,12 @@
 #include "battlefield.h"
 #include "pathfinding.h"
 #include "image.h"
+#include "input.h"
 #include "input_map.h"
+#include "input_battle.h"
 #include "interface.h"
+
+#define ANIMATION_DURATION 5.0
 
 // http://xcb.freedesktop.org/opengl/
 // http://xcb.freedesktop.org/tutorial/events/
@@ -59,6 +64,7 @@ int keycode_min, keycode_max;
 GLuint map_framebuffer;
 
 // TODO Create a struct that stores all the information about the battle (battlefield, players, etc.)
+const struct battle *battle;
 const struct battlefield (*battlefield)[BATTLEFIELD_WIDTH];
 
 struct region *restrict regions;
@@ -316,7 +322,7 @@ static void show_progress(unsigned current, unsigned total, unsigned x, unsigned
 	else display_rectangle(x, y, width, height, Progress);
 }
 
-#include <stdarg.h>
+/*#include <stdarg.h>
 #include <stdio.h>
 
 static struct polygon *region_create(size_t count, ...)
@@ -336,8 +342,9 @@ static struct polygon *region_create(size_t count, ...)
 	va_end(vertices);
 
 	return polygon;
-}
+}*/
 
+/*
 void if_test(const struct player *restrict players, const struct state *restrict state, const struct game *restrict game)
 {
 	// clear window
@@ -387,17 +394,17 @@ void if_test(const struct player *restrict players, const struct state *restrict
 			//
 		}
 
-		/*
+		/ *
 		visibility_graph_free(&nodes);
 		free(obstacles);
-		*/
+		* /
 	}
 
 	if ((state->x != BATTLEFIELD_WIDTH) && (state->y != BATTLEFIELD_HEIGHT))
 	{
 		if (moves.length > 1)
 		{
-			/*obstacles->points[0].x += 1;
+			/ *obstacles->points[0].x += 1;
 			obstacles->points[0].y += 1;
 			obstacles->points[1].x += 1;
 			obstacles->points[3].y += 1;
@@ -420,7 +427,7 @@ void if_test(const struct player *restrict players, const struct state *restrict
 			obstacles->points[0].x -= 1;
 			obstacles->points[0].y -= 1;
 			obstacles->points[1].x -= 1;
-			obstacles->points[3].y -= 1;*/
+			obstacles->points[3].y -= 1;* /
 
 			glColor4ubv(display_colors[Enemy]);
 			glBegin(GL_LINE_STRIP);
@@ -445,6 +452,42 @@ void if_test(const struct player *restrict players, const struct state *restrict
 	}
 
 	/////////
+
+	glFlush();
+	glXSwapBuffers(display, drawable);
+}*/
+
+static inline unsigned long timediff(const struct timeval *restrict end, const struct timeval *restrict start)
+{
+	return (end->tv_sec * 1000000 + end->tv_usec - start->tv_sec * 1000000 - start->tv_usec);
+}
+
+void if_animation(const struct player *restrict players, const struct state *restrict state, const struct game *restrict game)
+{
+	// clear window
+	glClearColor(0.0, 0.0, 0.0, 0.0);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	// Battlefield
+
+	display_rectangle(0, 0, BATTLEFIELD_WIDTH * FIELD_SIZE, BATTLEFIELD_HEIGHT * FIELD_SIZE, B0);
+
+	struct timeval now;
+	gettimeofday(&now, 0);
+	((struct state *)state)->animation_progress = timediff(&now, &state->animation_start) / (ANIMATION_DURATION * 1000000.0); // TODO fix this cast
+
+	struct point location;
+	size_t p;
+	for(p = 0; p < battle->pawns_count; ++p)
+	{
+		struct pawn *pawn = battle->pawns + p;
+		double x, y;
+
+		pawn_location_real(&pawn->moves, state->animation_progress, &x, &y);
+
+		display_rectangle(x * FIELD_SIZE, y * FIELD_SIZE, FIELD_SIZE, FIELD_SIZE, Player + pawn->slot->player);
+		image_draw(&image_units[pawn->slot->unit->index], x * FIELD_SIZE, y * FIELD_SIZE);
+	}
 
 	glFlush();
 	glXSwapBuffers(display, drawable);
@@ -524,52 +567,6 @@ void if_battle(const struct player *restrict players, const struct state *restri
 
 	glFlush();
 	glXSwapBuffers(display, drawable);
-}
-
-double animation_timer;
-int if_battle_animation(void)
-{
-	/*size_t x, y;
-	const struct pawn *p;
-	int moving = 0;
-
-	// clear window
-	glClearColor(0.0, 0.0, 0.0, 0.0);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-	// Battlefield
-
-	display_rectangle(0, 0, BATTLEFIELD_WIDTH * FIELD_SIZE, BATTLEFIELD_HEIGHT * FIELD_SIZE, B0);
-
-	// display pawns
-	for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
-		for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
-		{
-			if (p = battlefield[y][x].pawn)
-			{
-				double px, py;
-				double t;
-
-				do
-				{
-					t = animation_timer / (p->move.t[1] - p->move.t[0]);
-					if (t > 1) t = 1;
-					else if ((p->move.x[1] != p->move.x[0]) || (p->move.y[1] != p->move.y[0])) moving = 1;
-
-					px = p->move.x[1] * t + p->move.x[0] * (1 - t);
-					py = p->move.y[1] * t + p->move.y[0] * (1 - t);
-
-					display_rectangle(px * FIELD_SIZE, py * FIELD_SIZE, FIELD_SIZE, FIELD_SIZE, Player + p->slot->player);
-					image_draw(&image_units[p->slot->unit->index], px * FIELD_SIZE, py * FIELD_SIZE);
-				} while (p = p->_next);
-			}
-		}
-
-	glFlush();
-	glXSwapBuffers(display, drawable);
-
-	return moving;*/
-	return 0;
 }
 
 static void show_resource(const struct image *restrict image, int treasury, int income, int expense, unsigned y)
@@ -826,8 +823,9 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 	glXSwapBuffers(display, drawable);
 }
 
-void if_set(const struct battlefield field[BATTLEFIELD_WIDTH][BATTLEFIELD_HEIGHT])
+void if_set(const struct battlefield field[BATTLEFIELD_WIDTH][BATTLEFIELD_HEIGHT], const struct battle *b)
 {
+	battle = b;
 	battlefield = field;
 }
 

@@ -57,6 +57,8 @@ void moves_free(struct queue_item *item);
 
 void pawn_stay(struct pawn *restrict pawn);
 
+struct queue_item *pawn_location_real(const struct queue *restrict moves, double time_now, double *restrict real_x, double *restrict real_y);
+
 int battlefield_init(const struct game *restrict game, struct battle *restrict battle, struct region *restrict region);
 void battlefield_term(const struct game *restrict game, struct battle *restrict battle);
 

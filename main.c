@@ -10,7 +10,9 @@
 #include "json.h"
 #include "map.h"
 #include "battlefield.h"
+#include "input.h"
 #include "input_map.h"
+#include "input_battle.h"
 #include "interface.h"
 
 #define S(s) s, sizeof(s) - 1
@@ -74,7 +76,7 @@ static int battle(struct game *restrict game, struct region *restrict region)
 
 		battlefield_movement_plan(game->players, game->players_count, battle.field, battle.pawns, battle.pawns_count);
 
-		// TODO movement animation. // TODO this should be part of player-specific input
+		input_animation(game, &battle); // TODO this should be part of player-specific input
 
 		battlefield_movement_perform(battle.field, battle.pawns, battle.pawns_count);
 
