@@ -283,14 +283,15 @@ static int pawn_stop(struct pawn *occupied[BATTLEFIELD_HEIGHT * 2][BATTLEFIELD_W
 		// Cancel moves after the failback point.
 		moves_free(next->next);
 		next->next = 0;
+		pawn->moves.last = next;
+		// TODO set length
 	}
 	else
 	{
 		// The pawn is at its failback location at the time of the detour.
 
 		// Cancel all the moves.
-		moves_free(pawn->moves.first->next);
-		pawn->moves.first->next = 0;
+		pawn_stay(pawn);
 	}
 
 	return 0;

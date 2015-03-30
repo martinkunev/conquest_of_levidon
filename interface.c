@@ -24,8 +24,6 @@
 #include "input_battle.h"
 #include "interface.h"
 
-#define ANIMATION_DURATION 5.0
-
 // http://xcb.freedesktop.org/opengl/
 // http://xcb.freedesktop.org/tutorial/events/
 // http://techpubs.sgi.com/library/dynaweb_docs/0640/SGI_Developer/books/OpenGL_Porting/sgi_html/ch04.html
@@ -457,13 +455,10 @@ void if_test(const struct player *restrict players, const struct state *restrict
 	glXSwapBuffers(display, drawable);
 }*/
 
-static inline unsigned long timediff(const struct timeval *restrict end, const struct timeval *restrict start)
+int if_animation(const struct player *restrict players, const struct state *restrict state, const struct game *restrict game, double progress)
 {
-	return (end->tv_sec * 1000000 + end->tv_usec - start->tv_sec * 1000000 - start->tv_usec);
-}
+	int finished = 1;
 
-void if_animation(const struct player *restrict players, const struct state *restrict state, const struct game *restrict game)
-{
 	// clear window
 	glClearColor(0.0, 0.0, 0.0, 0.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -472,10 +467,6 @@ void if_animation(const struct player *restrict players, const struct state *res
 
 	display_rectangle(0, 0, BATTLEFIELD_WIDTH * FIELD_SIZE, BATTLEFIELD_HEIGHT * FIELD_SIZE, B0);
 
-	struct timeval now;
-	gettimeofday(&now, 0);
-	((struct state *)state)->animation_progress = timediff(&now, &state->animation_start) / (ANIMATION_DURATION * 1000000.0); // TODO fix this cast
-
 	struct point location;
 	size_t p;
 	for(p = 0; p < battle->pawns_count; ++p)
@@ -483,7 +474,8 @@ void if_animation(const struct player *restrict players, const struct state *res
 		struct pawn *pawn = battle->pawns + p;
 		double x, y;
 
-		pawn_location_real(&pawn->moves, state->animation_progress, &x, &y);
+		if (pawn_location_real(&pawn->moves, progress, &x, &y))
+			finished = 0;
 
 		display_rectangle(x * FIELD_SIZE, y * FIELD_SIZE, FIELD_SIZE, FIELD_SIZE, Player + pawn->slot->player);
 		image_draw(&image_units[pawn->slot->unit->index], x * FIELD_SIZE, y * FIELD_SIZE);
@@ -491,6 +483,8 @@ void if_animation(const struct player *restrict players, const struct state *res
 
 	glFlush();
 	glXSwapBuffers(display, drawable);
+
+	return finished;
 }
 
 void if_battle(const struct player *restrict players, const struct state *restrict state, const struct game *restrict game)
