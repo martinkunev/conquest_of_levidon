@@ -1,8 +1,8 @@
 #include "types.h"
 #include "json.h"
 #include "map.h"
-#include "battlefield.h"
 #include "pathfinding.h"
+#include "battlefield.h"
 
 struct path_node
 {
@@ -125,7 +125,7 @@ static int visible(struct point origin, struct point target, const struct polygo
 	return 1;
 }
 
-static int graph_attach(struct vector_adjacency *restrict nodes, size_t index, const struct polygon *restrict obstacles, size_t obstacles_count)
+static int graph_attach(struct adjacency_list *restrict nodes, size_t index, const struct polygon *restrict obstacles, size_t obstacles_count)
 {
 	size_t node;
 	struct point from, to;
@@ -134,8 +134,8 @@ static int graph_attach(struct vector_adjacency *restrict nodes, size_t index, c
 
 	for(node = 0; node < index; ++node)
 	{
-		from = nodes->data[index].location;
-		to = nodes->data[node].location;
+		from = nodes->list[index].location;
+		to = nodes->list[node].location;
 		if (visible(from, to, obstacles, obstacles_count))
 		{
 			distance = battlefield_distance(from, to);
@@ -144,35 +144,32 @@ static int graph_attach(struct vector_adjacency *restrict nodes, size_t index, c
 			if (!neighbor) return ERROR_MEMORY;
 			neighbor->index = node;
 			neighbor->distance = distance;
-			neighbor->next = nodes->data[index].neighbors;
-			nodes->data[index].neighbors = neighbor;
+			neighbor->next = nodes->list[index].neighbors;
+			nodes->list[index].neighbors = neighbor;
 
 			neighbor = malloc(sizeof(*neighbor));
 			if (!neighbor) return ERROR_MEMORY;
 			neighbor->index = index;
 			neighbor->distance = distance;
-			neighbor->next = nodes->data[node].neighbors;
-			nodes->data[node].neighbors = neighbor;
+			neighbor->next = nodes->list[node].neighbors;
+			nodes->list[node].neighbors = neighbor;
 		}
 	}
 
 	return 0;
 }
 
-static int graph_insert_angle(struct vector_adjacency *nodes, struct point a, struct point b, struct point c)
+static void graph_insert_angle(struct adjacency_list *nodes, struct point a, struct point b, struct point c)
 {
-	struct adjacency *node = vector_adjacency_insert(nodes);
-	if (!node) return ERROR_MEMORY;
+	struct adjacency *node = &nodes->list[nodes->count++];
 	node->neighbors = 0;
 
 	// Calculate the coordinates of the inserted vertex.
 	node->location.x = b.x + sign(b.x - a.x) + sign(b.x - c.x);
 	node->location.y = b.y + sign(b.y - a.y) + sign(b.y - c.y);
-
-	return 0;
 }
 
-static int graph_insert_end(struct vector_adjacency *nodes, struct point start, struct point end)
+static void graph_insert_end(struct adjacency_list *nodes, struct point start, struct point end)
 {
 	struct adjacency *node;
 
@@ -183,45 +180,52 @@ static int graph_insert_end(struct vector_adjacency *nodes, struct point start, 
 	// Insert one node at each corner of the end point.
 	if (direction_x)
 	{
-		node = vector_adjacency_insert(nodes);
-		if (!node) return ERROR_MEMORY;
+		node = &nodes->list[nodes->count++];
 		node->neighbors = 0;
 		node->location.x = end.x + direction_x;
 		node->location.y = end.y + direction_y + 1;
 
-		node = vector_adjacency_insert(nodes);
-		if (!node) return ERROR_MEMORY;
+		node = &nodes->list[nodes->count++];
 		node->neighbors = 0;
 		node->location.x = end.x + direction_x;
 		node->location.y = end.y + direction_y - 1;
 	}
 	else // direction_y
 	{
-		node = vector_adjacency_insert(nodes);
-		if (!node) return ERROR_MEMORY;
+		node = &nodes->list[nodes->count++];
 		node->neighbors = 0;
 		node->location.x = end.x + direction_x + 1;
 		node->location.y = end.y + direction_y;
 
-		node = vector_adjacency_insert(nodes);
-		if (!node) return ERROR_MEMORY;
+		node = &nodes->list[nodes->count++];
 		node->neighbors = 0;
 		node->location.x = end.x + direction_x - 1;
 		node->location.y = end.y + direction_y;
 	}
-
-	return 0;
 }
 
 // Stores the vertices of the graph in nodes and returns the adjacency matrix of the graph.
-int visibility_graph_build(const struct polygon *restrict obstacles, size_t obstacles_count, struct vector_adjacency *restrict nodes)
+int visibility_graph_build(const struct polygon *restrict obstacles, size_t obstacles_count, struct adjacency_list *restrict nodes)
 {
 	const struct polygon *restrict obstacle;
 	size_t i, j;
 
-	nodes->data = 0;
-	nodes->length = 0;
-	nodes->size = 0;
+	// Find the number of vertices in the visibility graph.
+	{
+		size_t count = 0;
+		for(i = 0; i < obstacles_count; ++i)
+		{
+			obstacle = obstacles + i;
+			if (point_eq(obstacle->points[0], obstacle->points[obstacle->vertices_count - 1]))
+				count += obstacle->vertices_count - 1;
+			else
+				count += obstacle->vertices_count + 2;
+		}
+		count += 2;
+
+		nodes = malloc(sizeof(*nodes) + sizeof(*nodes->list) * count);
+		if (!nodes) abort();
+	}
 
 	// For each angle, use its exterior point for the visibility graph.
 	for(i = 0; i < obstacles_count; ++i)
@@ -229,35 +233,28 @@ int visibility_graph_build(const struct polygon *restrict obstacles, size_t obst
 		obstacle = obstacles + i;
 
 		for(j = 2; j < obstacle->vertices_count; ++j)
-			if (graph_insert_angle(nodes, obstacle->points[j - 2], obstacle->points[j - 1], obstacle->points[j]) < 0)
-				goto error;
+			graph_insert_angle(nodes, obstacle->points[j - 2], obstacle->points[j - 1], obstacle->points[j]);
 
 		if (point_eq(obstacle->points[0], obstacle->points[obstacle->vertices_count - 1])) // the obstacle is a closed loop
 		{
-			if (graph_insert_angle(nodes, obstacle->points[obstacle->vertices_count - 2], obstacle->points[0], obstacle->points[1]) < 0)
-				goto error;
+			graph_insert_angle(nodes, obstacle->points[obstacle->vertices_count - 2], obstacle->points[0], obstacle->points[1]);
 		}
 		else
 		{
-			if (graph_insert_end(nodes, obstacle->points[1], obstacle->points[0]) < 0)
-				goto error;
-			if (graph_insert_end(nodes, obstacle->points[obstacle->vertices_count - 2], obstacle->points[obstacle->vertices_count - 1]) < 0)
-				goto error;
+			graph_insert_end(nodes, obstacle->points[1], obstacle->points[0]);
+			graph_insert_end(nodes, obstacle->points[obstacle->vertices_count - 2], obstacle->points[obstacle->vertices_count - 1]);
 		}
 	}
 
 	// Fill the adjacency list of the visibility graph.
 	// Consider that no vertex is connected to itself.
-	for(i = 1; i < nodes->length; ++i)
+	for(i = 1; i < nodes->count; ++i)
 		if (graph_attach(nodes, i, obstacles, obstacles_count) < 0)
 			goto error;
 
 	// Add dummy vertices for the start and the end nodes.
-	vector_adjacency_insert(nodes)->neighbors = 0;
-	vector_adjacency_insert(nodes)->neighbors = 0;
-
-	// The vector will not be resized any more. Free the unused memory.
-	vector_adjacency_shrink(nodes);
+	nodes->list[nodes->count++].neighbors = 0;
+	nodes->list[nodes->count++].neighbors = 0;
 
 	return 0;
 
@@ -266,14 +263,14 @@ error:
 	return ERROR_MEMORY;
 }
 
-void visibility_graph_free(struct vector_adjacency *nodes)
+void visibility_graph_free(struct adjacency_list *nodes)
 {
 	size_t i;
 	struct neighbor *item, *next;
 
-	for(i = 0; i < nodes->length; ++i)
+	for(i = 0; i < nodes->count; ++i)
 	{
-		item = nodes->data[i].neighbors;
+		item = nodes->list[i].neighbors;
 		while (item)
 		{
 			next = item->next;
@@ -281,13 +278,13 @@ void visibility_graph_free(struct vector_adjacency *nodes)
 			item = next;
 		}
 	}
-	free(nodes->data);
+	free(nodes);
 }
 
 // Removes origin and target data left from previous calls to path_find().
-static void graph_clean(struct vector_adjacency *restrict nodes)
+static void graph_clean(struct adjacency_list *restrict nodes)
 {
-	const size_t node_target = nodes->length - 2, node_origin = nodes->length - 1;
+	const size_t node_target = nodes->count - 2, node_origin = nodes->count - 1;
 
 	size_t i;
 	struct neighbor *neighbor, *prev;
@@ -295,7 +292,7 @@ static void graph_clean(struct vector_adjacency *restrict nodes)
 	// Remove origin and target from neighbors lists.
 	for(i = 0; i < node_target; ++i)
 	{
-		neighbor = nodes->data[i].neighbors;
+		neighbor = nodes->list[i].neighbors;
 		prev = 0;
 		while (neighbor)
 		{
@@ -309,9 +306,9 @@ static void graph_clean(struct vector_adjacency *restrict nodes)
 				}
 				else
 				{
-					nodes->data[i].neighbors = neighbor->next;
+					nodes->list[i].neighbors = neighbor->next;
 					free(neighbor);
-					neighbor = nodes->data[i].neighbors;
+					neighbor = nodes->list[i].neighbors;
 				}
 			}
 			else
@@ -323,14 +320,14 @@ static void graph_clean(struct vector_adjacency *restrict nodes)
 	}
 
 	// Remove the neighbors of origin and target.
-	neighbor = nodes->data[node_target].neighbors;
+	neighbor = nodes->list[node_target].neighbors;
 	while (neighbor)
 	{
 		prev = neighbor;
 		neighbor = neighbor->next;
 		free(prev);
 	}
-	neighbor = nodes->data[node_origin].neighbors;
+	neighbor = nodes->list[node_origin].neighbors;
 	while (neighbor)
 	{
 		prev = neighbor;
@@ -339,9 +336,9 @@ static void graph_clean(struct vector_adjacency *restrict nodes)
 	}
 }
 
-int path_find(struct queue *restrict moves, struct point target, struct vector_adjacency *restrict nodes, const struct polygon *restrict obstacles, size_t obstacles_count)
+int path_find(struct queue *restrict moves, struct point target, struct adjacency_list *restrict nodes, const struct polygon *restrict obstacles, size_t obstacles_count)
 {
-	const size_t node_origin = nodes->length - 1, node_target = nodes->length - 2;
+	const size_t node_origin = nodes->count - 1, node_target = nodes->count - 2;
 
 	size_t i;
 	size_t last;
@@ -359,17 +356,17 @@ int path_find(struct queue *restrict moves, struct point target, struct vector_a
 	graph_clean(nodes);
 
 	// Add target and origin points to the path graph.
-	nodes->data[node_target].location = target;
-	nodes->data[node_target].neighbors = 0;
+	nodes->list[node_target].location = target;
+	nodes->list[node_target].neighbors = 0;
 	graph_attach(nodes, node_target, obstacles, obstacles_count);
-	nodes->data[node_origin].location = origin;
-	nodes->data[node_origin].neighbors = 0;
+	nodes->list[node_origin].location = origin;
+	nodes->list[node_origin].neighbors = 0;
 	graph_attach(nodes, node_origin, obstacles, obstacles_count);
 
-	traverse = malloc(nodes->length * sizeof(*traverse));
+	traverse = malloc(nodes->count * sizeof(*traverse));
 	if (!traverse) return ERROR_MEMORY;
 
-	closest.data = malloc((nodes->length - 1) * sizeof(traverse));
+	closest.data = malloc((nodes->count - 1) * sizeof(traverse));
 	if (!closest.data)
 	{
 		free(traverse);
@@ -385,7 +382,7 @@ int path_find(struct queue *restrict moves, struct point target, struct vector_a
 
 		closest.data[i] = traverse + i;
 	}
-	closest.count = nodes->length - 1;
+	closest.count = nodes->count - 1;
 	heapify(&closest);
 
 	// Set origin point data.
@@ -399,7 +396,7 @@ int path_find(struct queue *restrict moves, struct point target, struct vector_a
 		if (!closest.count) goto error;
 
 		// Update path from last to its neighbors.
-		neighbor = nodes->data[last].neighbors;
+		neighbor = nodes->list[last].neighbors;
 		while (neighbor)
 		{
 			distance = traverse[last].distance + neighbor->distance;
@@ -436,11 +433,11 @@ int path_find(struct queue *restrict moves, struct point target, struct vector_a
 	temp = traverse + node_origin;
 	/*if (vector_resize(moves, moves->length + hops) < 0) goto error;
 	while (temp = temp->origin)
-		moves->data[moves->length++] = nodes->data + (temp - traverse);*/
+		moves->data[moves->length++] = nodes->list + (temp - traverse);*/
 	while (temp = temp->origin)
 	{
 		struct move m;
-		m.location = nodes->data[temp - traverse].location;
+		m.location = nodes->list[temp - traverse].location;
 		// m.time is not initialized here
 		m.distance = traverse[temp - traverse].distance;
 

@@ -48,7 +48,7 @@ struct queue_item *pawn_location_real(const struct queue *restrict moves, double
 int battlefield_init(const struct game *restrict game, struct battle *restrict battle, struct region *restrict region);
 void battlefield_term(const struct game *restrict game, struct battle *restrict battle);
 
-int battlefield_reachable(struct pawn *restrict pawn, struct point target, struct vector_adjacency *restrict nodes);
+int battlefield_reachable(struct pawn *restrict pawn, struct point target, struct adjacency_list *restrict nodes);
 int battlefield_shootable(const struct pawn *restrict pawn, struct point target);
 
 int battlefield_movement_plan(const struct player *restrict players, size_t players_count, struct battlefield battlefield[][BATTLEFIELD_HEIGHT], struct pawn *restrict pawns, size_t pawns_count);

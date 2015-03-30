@@ -666,7 +666,7 @@ void pawn_stay(struct pawn *restrict pawn)
 	pawn->moves.length = 1;
 }
 
-int battlefield_reachable(struct pawn *restrict pawn, struct point target, struct vector_adjacency *restrict nodes)
+int battlefield_reachable(struct pawn *restrict pawn, struct point target, struct adjacency_list *restrict nodes)
 {
 	// TODO better handling of memory errors
 

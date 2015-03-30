@@ -21,7 +21,7 @@ static void pawn_move(struct pawn *restrict pawn, unsigned x, unsigned y)
 
 	// TODO support fast move
 
-	if (!battlefield_reachable(pawn, target, &state.nodes)) return;
+	if (!battlefield_reachable(pawn, target, state.nodes)) return;
 
 	// TODO set pawn->fight
 
@@ -120,10 +120,9 @@ int input_battle(const struct game *restrict game, const struct battle *restrict
 
 	state.selected.pawn = 0;
 
-	memset(&state.nodes, 0, sizeof(state.nodes));
-	if (visibility_graph_build(0, 0, &state.nodes)) abort();
+	if (visibility_graph_build(0, 0, state.nodes)) abort();
 	int status = input_local(if_battle, areas, sizeof(areas) / sizeof(*areas), game);
-	visibility_graph_free(&state.nodes);
+	visibility_graph_free(state.nodes);
 
 	return status;
 }
