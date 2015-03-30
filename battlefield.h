@@ -1,19 +1,5 @@
 #include <math.h>
 
-#define BATTLEFIELD_WIDTH 24
-#define BATTLEFIELD_HEIGHT 24
-
-struct move
-{
-	struct point location;
-	double distance;
-	double time;
-};
-
-#define queue_type struct move
-#include "queue.t"
-#undef queue_type
-
 struct pawn
 {
 	struct slot *slot;
@@ -62,7 +48,7 @@ struct queue_item *pawn_location_real(const struct queue *restrict moves, double
 int battlefield_init(const struct game *restrict game, struct battle *restrict battle, struct region *restrict region);
 void battlefield_term(const struct game *restrict game, struct battle *restrict battle);
 
-int battlefield_reachable(struct battlefield battlefield[][BATTLEFIELD_WIDTH], struct pawn *restrict pawn, struct point target);
+int battlefield_reachable(struct pawn *restrict pawn, struct point target, struct vector_adjacency *restrict nodes);
 int battlefield_shootable(const struct pawn *restrict pawn, struct point target);
 
 int battlefield_movement_plan(const struct player *restrict players, size_t players_count, struct battlefield battlefield[][BATTLEFIELD_HEIGHT], struct pawn *restrict pawns, size_t pawns_count);

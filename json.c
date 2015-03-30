@@ -30,15 +30,6 @@ SOFTWARE.
 #include <string.h>
 #include <locale.h>
 
-#ifdef OS_WINDOWS
-# include <sys/types.h>
-# include <windows.h>
-# include <winsock2.h>
-# include <sys/stat.h>
-# undef IS_HIGH_SURROGATE
-# undef IS_LOW_SURROGATE
-#endif
-
 #include "types.h"
 #include "arch.h"
 #include "format.h"

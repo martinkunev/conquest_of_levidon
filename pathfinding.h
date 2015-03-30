@@ -15,6 +15,17 @@ struct adjacency
 #undef vector_name
 #undef vector_type
 
+struct move
+{
+	struct point location;
+	double distance;
+	double time;
+};
+
+#define queue_type struct move
+#include "queue.t"
+#undef queue_type
+
 int visibility_graph_build(const struct polygon *restrict obstacles, size_t obstacles_count, struct vector_adjacency *restrict nodes);
 void visibility_graph_free(struct vector_adjacency *nodes);
 

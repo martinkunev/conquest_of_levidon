@@ -18,6 +18,8 @@ struct state
 
 	int region;
 
+	struct vector_adjacency nodes;
+
 	struct timeval animation_start;
 	double animation_progress;
 };

@@ -4,8 +4,8 @@
 #include "types.h"
 #include "json.h"
 #include "map.h"
-#include "battlefield.h"
 #include "pathfinding.h"
+#include "battlefield.h"
 
 #define BATTLEFIELD_WIDTH 24
 #define BATTLEFIELD_HEIGHT 24
@@ -666,19 +666,13 @@ void pawn_stay(struct pawn *restrict pawn)
 	pawn->moves.length = 1;
 }
 
-int battlefield_reachable(struct battlefield battlefield[][BATTLEFIELD_WIDTH], struct pawn *restrict pawn, struct point target)
+int battlefield_reachable(struct pawn *restrict pawn, struct point target, struct vector_adjacency *restrict nodes)
 {
 	// TODO better handling of memory errors
 
-	// TODO it's not necessary to do this every time
-	struct vector_adjacency nodes = {0};
-	if (visibility_graph_build(0, 0, &nodes)) abort();
-
 	pawn_stay(pawn);
 
-	if (path_find(&pawn->moves, target, &nodes, 0, 0)) return 0;
-
-	visibility_graph_free(&nodes);
+	if (path_find(&pawn->moves, target, nodes, 0, 0)) return 0;
 
 	if (pawn->moves.last->data.distance > pawn->slot->unit->speed)
 	{

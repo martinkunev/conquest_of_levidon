@@ -7,6 +7,7 @@
 #include "types.h"
 #include "json.h"
 #include "map.h"
+#include "pathfinding.h"
 #include "battlefield.h"
 #include "input.h"
 #include "input_map.h"

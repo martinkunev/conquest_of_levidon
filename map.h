@@ -15,6 +15,9 @@
 
 #define UNIT_SPEED_LIMIT 16
 
+#define BATTLEFIELD_WIDTH 24
+#define BATTLEFIELD_HEIGHT 24
+
 #include "resources.h"
 #include "display.h"
 
