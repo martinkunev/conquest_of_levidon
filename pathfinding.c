@@ -205,12 +205,13 @@ static void graph_insert_end(struct adjacency_list *nodes, struct point start, s
 }
 
 // Stores the vertices of the graph in nodes and returns the adjacency matrix of the graph.
-int visibility_graph_build(const struct polygon *restrict obstacles, size_t obstacles_count, struct adjacency_list *restrict nodes)
+struct adjacency_list *visibility_graph_build(const struct polygon *restrict obstacles, size_t obstacles_count)
 {
 	const struct polygon *restrict obstacle;
 	size_t i, j;
 
 	// Find the number of vertices in the visibility graph.
+	struct adjacency_list *nodes;
 	{
 		size_t count = 0;
 		for(i = 0; i < obstacles_count; ++i)
@@ -225,6 +226,7 @@ int visibility_graph_build(const struct polygon *restrict obstacles, size_t obst
 
 		nodes = malloc(sizeof(*nodes) + sizeof(*nodes->list) * count);
 		if (!nodes) abort();
+		nodes->count = 0;
 	}
 
 	// For each angle, use its exterior point for the visibility graph.
@@ -256,11 +258,11 @@ int visibility_graph_build(const struct polygon *restrict obstacles, size_t obst
 	nodes->list[nodes->count++].neighbors = 0;
 	nodes->list[nodes->count++].neighbors = 0;
 
-	return 0;
+	return nodes;
 
 error:
 	visibility_graph_free(nodes);
-	return ERROR_MEMORY;
+	return 0;
 }
 
 void visibility_graph_free(struct adjacency_list *nodes)

@@ -51,6 +51,6 @@ void if_battle(const struct player *restrict players, const struct state *restri
 
 void if_formation(const struct player *restrict players, const struct state *restrict state, const struct game *restrict game);
 
-void if_animation(const struct player *restrict players, const struct state *restrict state, const struct game *restrict game);
+int if_animation(const struct player *restrict players, const struct state *restrict state, const struct game *restrict game, double progress);
 
 void if_regions(struct game *restrict game);

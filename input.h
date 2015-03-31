@@ -19,9 +19,6 @@ struct state
 	int region;
 
 	struct adjacency_list *nodes;
-
-	struct timeval animation_start;
-	double animation_progress;
 };
 
 extern struct state state;

@@ -12,7 +12,12 @@
 #include "input_battle.h"
 #include "interface.h"
 
+<<<<<<< HEAD
 extern const struct battle *battle;
+=======
+#define ANIMATION_DURATION 4.0
+
+>>>>>>> fa72165659548e1fe9722316bfd5ee89893e2cd4
 extern struct battlefield (*battlefield)[BATTLEFIELD_WIDTH];
 
 // Sets move destination of a pawn. Returns -1 if the current player is not allowed to move the pawn at the destination.
@@ -46,11 +51,6 @@ static void pawn_shoot(struct pawn *restrict pawn, unsigned x, unsigned y)
 static int input_round(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game)
 {
 	return ((code == 'n') ? INPUT_DONE : 0);
-}
-
-static int input_wait(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game)
-{
-	return ((state.animation_progress > 1.0) ? INPUT_DONE : 0);
 }
 
 static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game)
@@ -188,7 +188,8 @@ int input_battle(const struct game *restrict game, const struct battle *restrict
 
 	state.selected.pawn = 0;
 
-	if (visibility_graph_build(0, 0, state.nodes)) abort();
+	state.nodes = visibility_graph_build(0, 0);
+	if (!state.nodes) abort();
 	int status = input_local(if_battle, areas, sizeof(areas) / sizeof(*areas), game);
 	visibility_graph_free(state.nodes);
 
@@ -263,22 +264,28 @@ int input_formation(const struct game *restrict game, const struct region *restr
 	return input_local(if_formation, areas, sizeof(areas) / sizeof(*areas), game);
 }
 
+static inline unsigned long timediff(const struct timeval *restrict end, const struct timeval *restrict start)
+{
+	return (end->tv_sec * 1000000 + end->tv_usec - start->tv_sec * 1000000 - start->tv_usec);
+}
+
+// TODO write this better
 int input_animation(const struct game *restrict game, const struct battle *restrict battle)
 {
 	if_set(battle->field, battle);
 
-	struct area areas[] = {
-		{
-			.left = 0,
-			.right = SCREEN_WIDTH - 1,
-			.top = 0,
-			.bottom = SCREEN_HEIGHT - 1,
-			.callback = input_wait
-		},
-	};
+	struct timeval start, now;
+	double progress;
+	gettimeofday(&start, 0);
+	do
+	{
+		gettimeofday(&now, 0);
+		progress = timediff(&now, &start) / (ANIMATION_DURATION * 1000000.0);
+		if (if_animation(game->players, &state, game, progress))
+			break;
+	} while (progress < 1.0);
 
-	gettimeofday(&state.animation_start, 0);
-	state.animation_progress = 0.0;
+	return INPUT_DONE;
 
-	return input_local(if_animation, areas, sizeof(areas) / sizeof(*areas), game);
+	//return input_local(if_animation, areas, sizeof(areas) / sizeof(*areas), game);
 }
