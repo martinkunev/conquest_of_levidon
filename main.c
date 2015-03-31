@@ -44,7 +44,26 @@ static int battle(struct game *restrict game, struct region *restrict region)
 
 	if (battlefield_init(game, &battle, region) < 0) return -1;
 
-	// TODO ask each player to position their pawns
+	// Ask each player to position their pawns.
+	for(player = 0; player < game->players_count; ++player)
+	{
+		if (!battle.player_pawns[player].length) continue; // skip players with no pawns
+
+		switch (game->players[player].type)
+		{
+		case Neutral:
+			input_formation_basic(game, region, &battle, player);
+			break;
+
+		case Local:
+			if (input_formation(game, region, &battle, player) < 0)
+			{
+				status = -1;
+				goto finally;
+			}
+			break;
+		}
+	}
 
 	do
 	{

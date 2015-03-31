@@ -12,6 +12,7 @@
 #include "input_battle.h"
 #include "interface.h"
 
+extern const struct battle *battle;
 extern struct battlefield (*battlefield)[BATTLEFIELD_WIDTH];
 
 // Sets move destination of a pawn. Returns -1 if the current player is not allowed to move the pawn at the destination.
@@ -91,6 +92,73 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 	return 0;
 }
 
+static int input_place(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game)
+{
+	if (code == EVENT_MOTION) return INPUT_NOTME;
+	if (code >= 0) return INPUT_NOTME;
+
+	x /= FIELD_SIZE;
+	y /= FIELD_SIZE;
+
+	if (code == -3)
+	{
+		struct pawn *pawn = state.selected.pawn;
+		if (!pawn) return 0;
+		if (battlefield[y][x].pawn) return 0;
+
+		const struct point *positions = formation_positions(pawn->slot, game->regions + state.region);
+		struct point location = {x, y};
+
+		size_t i;
+		for(i = 0; i < PAWNS_LIMIT; ++i)
+			if (point_eq(location, positions[i]))
+				pawn->moves.first->data.location = location;
+	}
+
+	return 0;
+}
+
+static int input_pawn(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game)
+{
+	if (code == EVENT_MOTION) return INPUT_NOTME;
+	if (code >= 0) return INPUT_NOTME;
+
+	if (code == -1)
+	{
+		if ((x % (FIELD_SIZE + 1)) >= FIELD_SIZE) goto reset;
+		if ((y % (FIELD_SIZE + MARGIN)) >= FIELD_SIZE) goto reset;
+
+		// Select the clicked pawn.
+		unsigned column = x / (FIELD_SIZE + 1);
+		unsigned line = y / (FIELD_SIZE + MARGIN);
+		size_t i;
+		for(i = 0; i < battle->player_pawns[state.player].length; ++i)
+		{
+			struct pawn *pawn = battle->player_pawns[state.player].data[i];
+			if (line)
+			{
+				if (pawn->slot->location != game->regions[state.region].neighbors[line - 1]) continue;
+			}
+			else
+			{
+				if (pawn->slot->location != game->regions + state.region) continue;
+			}
+
+			if (column) column -= 1;
+			else
+			{
+				state.selected.pawn = pawn;
+				return 0;
+			}
+		}
+	}
+
+reset:
+	// Make sure no pawn is selected.
+	state.selected.pawn = 0;
+	return 0;
+}
+
 int input_battle(const struct game *restrict game, const struct battle *restrict battle, unsigned char player)
 {
 	if_set(battle->field, battle);
@@ -125,6 +193,74 @@ int input_battle(const struct game *restrict game, const struct battle *restrict
 	visibility_graph_free(state.nodes);
 
 	return status;
+}
+
+int input_formation_basic(const struct game *restrict game, const struct region *restrict region, const struct battle *restrict battle, unsigned char player)
+{
+	unsigned offset_defend = 0, offset_attack[NEIGHBORS_LIMIT] = {0};
+
+	unsigned column;
+
+	size_t i, j;
+	for(i = 0; i < battle->player_pawns[player].length; ++i)
+	{
+		struct pawn *pawn = battle->player_pawns[player].data[i];
+
+		if (pawn->slot->location == region)
+		{
+			column = offset_defend++;
+		}
+		else for(j = 0; j < NEIGHBORS_LIMIT; ++j)
+		{
+			if (pawn->slot->location == region->neighbors[j])
+			{
+				column = offset_attack[j]++;
+				break;
+			}
+		}
+
+		const struct point *positions = formation_positions(pawn->slot, region);
+		pawn->moves.first->data.location = positions[column];
+	}
+
+	return 0;
+}
+
+int input_formation(const struct game *restrict game, const struct region *restrict region, const struct battle *restrict battle, unsigned char player)
+{
+	if_set(battle->field, battle);
+
+	struct area areas[] = {
+		{
+			.left = 0,
+			.right = SCREEN_WIDTH - 1,
+			.top = 0,
+			.bottom = SCREEN_HEIGHT - 1,
+			.callback = input_round
+		},
+		{
+			.left = 0,
+			.right = BATTLEFIELD_WIDTH * FIELD_SIZE - 1,
+			.top = 0,
+			.bottom = BATTLEFIELD_HEIGHT * FIELD_SIZE - 1,
+			.callback = input_place
+		},
+		{
+			.left = CTRL_X,
+			.right = CTRL_X + 6 * (FIELD_SIZE + 1) + FIELD_SIZE - 1, // TODO fix this
+			.top = CTRL_Y,
+			.bottom = CTRL_Y + 8 * (FIELD_SIZE + MARGIN) + FIELD_SIZE - 1, // TODO fix this
+			.callback = input_pawn
+		},
+	};
+
+	state.player = player;
+
+	state.selected.pawn = 0;
+
+	state.region = region - game->regions;
+
+	return input_local(if_formation, areas, sizeof(areas) / sizeof(*areas), game);
 }
 
 int input_animation(const struct game *restrict game, const struct battle *restrict battle)

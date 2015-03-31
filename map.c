@@ -166,10 +166,12 @@ int map_init(const union json *restrict json, struct game *restrict game)
 		game->players[index].treasury.stone = field->integer;
 
 		game->players[index].type = Local; // TODO set this
+		//game->players[index].input_formation = input_formation;
 	}
 
 	// Player 0 is hard-coded as neutral.
 	game->players[0].type = Neutral;
+	//game->players[0].input_formation = input_formation_none;
 
 	key = string("regions");
 	node = dict_get(json->object, &key);
