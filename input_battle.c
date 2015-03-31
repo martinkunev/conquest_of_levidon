@@ -50,6 +50,11 @@ static int input_round(int code, unsigned x, unsigned y, uint16_t modifiers, con
 	return ((code == 'n') ? INPUT_DONE : 0);
 }
 
+static int input_none(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game)
+{
+	return 0;
+}
+
 static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game)
 {
 	if (code == EVENT_MOTION) return INPUT_NOTME;
@@ -109,7 +114,20 @@ static int input_place(int code, unsigned x, unsigned y, uint16_t modifiers, con
 		size_t i;
 		for(i = 0; i < PAWNS_LIMIT; ++i)
 			if (point_eq(location, positions[i]))
+			{
 				pawn->moves.first->data.location = location;
+				battlefield[y][x].pawn = pawn;
+				state.selected.pawn = 0;
+
+				// Finish formation input if all pawns are placed.
+				for(i = 0; i < battle->player_pawns[state.player].length; ++i)
+				{
+					struct pawn *pawn = battle->player_pawns[state.player].data[i];
+					if (point_eq(pawn->moves.first->data.location, POINT_NONE))
+						return 0;
+				}
+				return INPUT_DONE;
+			}
 	}
 
 	return 0;
@@ -234,7 +252,7 @@ int input_formation(const struct game *restrict game, const struct region *restr
 			.right = SCREEN_WIDTH - 1,
 			.top = 0,
 			.bottom = SCREEN_HEIGHT - 1,
-			.callback = input_round
+			.callback = input_none
 		},
 		{
 			.left = 0,
@@ -254,7 +272,7 @@ int input_formation(const struct game *restrict game, const struct region *restr
 
 	state.player = player;
 
-	state.selected.pawn = 0;
+	state.selected.pawn = battle->player_pawns[player].data[0];
 
 	state.region = region - game->regions;
 

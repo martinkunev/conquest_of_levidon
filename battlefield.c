@@ -758,11 +758,17 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 				free(battle->player_pawns[i].data);
 			return -1;
 		}
+
+		struct move move;
+		move.location = POINT_NONE;
+		move.distance = 0;
+		move.time = 0;
+		queue_push(&pawns[i].moves, move);
 	}
 
 	// TODO remove this
 	// Put the pawns at their initial positions.
-	for(i = 0; i < count; ++i)
+	/*for(i = 0; i < count; ++i)
 	{
 		struct move move;
 
@@ -799,7 +805,7 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 		queue_push(&pawns[i].moves, move);
 
 		battle->field[move.location.y][move.location.x].pawn = pawns + i;
-	}
+	}*/
 
 	free(slots);
 

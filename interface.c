@@ -499,13 +499,26 @@ void if_formation(const struct player *restrict players, const struct state *res
 	// draw rectangle with current player's color
 	display_rectangle(768, 0, 256, 16, Player + state->player);
 
+	size_t i;
+
+	const struct region *region = game->regions + state->region;
+
+	if (state->selected.pawn)
+	{
+		const struct slot *slot = state->selected.pawn->slot;
+
+		// Display at which fields the pawn can be placed.
+
+		const struct point *positions = formation_positions(slot, region);
+		for(i = 0; i < PAWNS_LIMIT; ++i)
+			if (!battlefield[positions[i].y][positions[i].x].pawn)
+				display_rectangle(positions[i].x * FIELD_SIZE, positions[i].y * FIELD_SIZE, FIELD_SIZE, FIELD_SIZE, Gray);
+	}
+
 	unsigned offset_defend = 0, offset_attack[NEIGHBORS_LIMIT] = {0};
 	unsigned line, column;
 
-	struct region *region; // TODO set this
-
 	const struct vector *pawns = battle->player_pawns + state->player;
-	size_t i;
 	for(i = 0; i < pawns->length; ++i)
 	{
 		const struct pawn *pawn = pawns->data[i];
@@ -529,23 +542,13 @@ void if_formation(const struct player *restrict players, const struct state *res
 			}
 
 			display_unit(slot->unit->index, CTRL_X + column * (FIELD_SIZE + 1), CTRL_Y + line * (FIELD_SIZE + MARGIN), Player + state->player, White, slot->count);
+			if (pawn == state->selected.pawn)
+				image_draw(&image_selected, CTRL_X + column * (FIELD_SIZE + 1), CTRL_Y + line * (FIELD_SIZE + MARGIN));
 		}
 		else
 		{
 			display_unit(slot->unit->index, location.x * FIELD_SIZE, location.y * FIELD_SIZE, Player + state->player, 0, 0);
 		}
-	}
-
-	if (state->selected.pawn)
-	{
-		const struct slot *slot = state->selected.pawn->slot;
-
-		// Display at which fields the pawn can be placed.
-
-		const struct point *positions = formation_positions(slot, region);
-		for(i = 0; i < PAWNS_LIMIT; ++i)
-			if (!battlefield[positions[i].y][positions[i].x].pawn)
-				display_rectangle(positions[i].x * FIELD_SIZE, positions[i].y * FIELD_SIZE, FIELD_SIZE, FIELD_SIZE, Gray);
 	}
 
 	glFlush();
