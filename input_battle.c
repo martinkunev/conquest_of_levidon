@@ -12,12 +12,9 @@
 #include "input_battle.h"
 #include "interface.h"
 
-<<<<<<< HEAD
-extern const struct battle *battle;
-=======
 #define ANIMATION_DURATION 4.0
 
->>>>>>> fa72165659548e1fe9722316bfd5ee89893e2cd4
+extern const struct battle *battle;
 extern struct battlefield (*battlefield)[BATTLEFIELD_WIDTH];
 
 // Sets move destination of a pawn. Returns -1 if the current player is not allowed to move the pawn at the destination.
