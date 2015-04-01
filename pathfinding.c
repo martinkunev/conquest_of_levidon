@@ -338,7 +338,7 @@ static void graph_clean(struct adjacency_list *restrict nodes)
 	}
 }
 
-int path_find(struct queue *restrict moves, struct point target, struct adjacency_list *restrict nodes, const struct polygon *restrict obstacles, size_t obstacles_count)
+int path_find(struct pawn *restrict pawn, struct point target, struct adjacency_list *restrict nodes, const struct polygon *restrict obstacles, size_t obstacles_count)
 {
 	const size_t node_origin = nodes->count - 1, node_target = nodes->count - 2;
 
@@ -352,8 +352,7 @@ int path_find(struct queue *restrict moves, struct point target, struct adjacenc
 	double distance;
 	unsigned hops;
 
-	//struct point origin = *(struct point *)moves->data[moves->length - 1];
-	struct point origin = moves->last->data.location;
+	struct point origin = pawn->moves[pawn->moves_count - 1].location;
 
 	graph_clean(nodes);
 
@@ -433,18 +432,12 @@ int path_find(struct queue *restrict moves, struct point target, struct adjacenc
 
 	// Add the selected path points to move.
 	temp = traverse + node_origin;
-	/*if (vector_resize(moves, moves->length + hops) < 0) goto error;
-	while (temp = temp->origin)
-		moves->data[moves->length++] = nodes->list + (temp - traverse);*/
 	while (temp = temp->origin)
 	{
-		struct move m;
-		m.location = nodes->list[temp - traverse].location;
-		// m.time is not initialized here
-		m.distance = traverse[temp - traverse].distance;
-
-		// TODO this is inefficient
-		queue_push(moves, m); // TODO error check
+		double distance = battlefield_distance(pawn->moves[pawn->moves_count - 1].location, pawn->moves[pawn->moves_count].location);
+		pawn->moves[pawn->moves_count].location = nodes->list[temp - traverse].location;
+		pawn->moves[pawn->moves_count].time = pawn->moves[pawn->moves_count - 1].time + distance / pawn->slot->unit->speed;
+		pawn->moves_count += 1;
 	}
 
 	free(closest.data);

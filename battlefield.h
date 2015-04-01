@@ -5,11 +5,9 @@ struct pawn
 	struct slot *slot;
 	unsigned hurt;
 
-	struct point *moves;
-	size_t moves_size;
+	struct move *moves; // TODO allocate this
+	size_t moves_size; // TODO rename this
 	size_t moves_count;
-
-	struct queue moves_;
 
 	struct point fight, shoot;
 
@@ -82,15 +80,14 @@ static inline const struct point *formation_positions(const struct slot *restric
 	}
 }
 
-void moves_free(struct queue_item *item);
-
 void pawn_stay(struct pawn *restrict pawn);
 
-struct queue_item *pawn_location_real(const struct queue *restrict moves, double time_now, double *restrict real_x, double *restrict real_y);
+size_t pawn_location(const struct pawn *restrict pawn, double time_now, double *restrict real_x, double *restrict real_y);
 
 int battlefield_init(const struct game *restrict game, struct battle *restrict battle, struct region *restrict region);
 void battlefield_term(const struct game *restrict game, struct battle *restrict battle);
 
+struct adjacency_list;
 int battlefield_reachable(struct pawn *restrict pawn, struct point target, struct adjacency_list *restrict nodes);
 int battlefield_shootable(const struct pawn *restrict pawn, struct point target);
 

@@ -41,72 +41,48 @@ static struct point location_field(const struct point location)
 	return square;
 }
 
-// Returns the first movement that is not finished or 0 if there is no such move. Sets current position in location.
-struct queue_item *pawn_location_real(const struct queue *restrict moves, double time_now, double *restrict real_x, double *restrict real_y)
+// Returns the index first movement that is not finished or pawn->moves_count if there is no such move. Sets current position in real_x and real_y.
+size_t pawn_location(const struct pawn *restrict pawn, double time_now, double *restrict real_x, double *restrict real_y)
 {
-	struct queue_item *item;
-
-	double time_start, time_end;
 	double progress; // progress of the current move; 0 == start point; 1 == end point
 
-	for(item = moves->first; item->next; item = item->next)
+	if (time_now < pawn->moves[0].time)
 	{
-		time_start = item->data.time;
-		if (time_now < time_start) // this move has not started yet
-		{
-			*real_x = moves->first->data.location.x;
-			*real_y = moves->first->data.location.y;
-			return item;
-		}
-		time_end = item->next->data.time;
+		// The pawn has not started moving yet.
+		*real_x = pawn->moves[0].location.x;
+		*real_y = pawn->moves[0].location.y;
+		return 0;
+	}
+
+	size_t i;
+	for(i = 1; i < pawn->moves_count; ++i)
+	{
+		double time_start = pawn->moves[i - 1].time;
+		double time_end = pawn->moves[i].time;
 		if (time_now >= time_end) continue; // this move is already done
 
 		progress = (time_now - time_start) / (time_end - time_start);
-		*real_x = item->next->data.location.x * progress + item->data.location.x * (1 - progress);
-		*real_y = item->next->data.location.y * progress + item->data.location.y * (1 - progress);
+		*real_x = pawn->moves[i].location.x * progress + pawn->moves[i - 1].location.x * (1 - progress);
+		*real_y = pawn->moves[i].location.y * progress + pawn->moves[i - 1].location.y * (1 - progress);
 
-		return item;
+		return i;
 	}
 
-	*real_x = moves->last->data.location.x;
-	*real_y = moves->last->data.location.y;
-	return 0; // the pawn is immobile
+	// The pawn has reached its final location.
+	*real_x = pawn->moves[pawn->moves_count - 1].location.x;
+	*real_y = pawn->moves[pawn->moves_count - 1].location.y;
+	return pawn->moves_count;
 }
 
-// Returns the first movement that is not finished or 0 if there is no such move. Sets current position in location.
-static struct queue_item *pawn_location(const struct queue *restrict moves, double time_now, struct point *restrict location)
+static size_t pawn_position(const struct pawn *restrict pawn, double time_now, struct point *restrict location)
 {
-	struct queue_item *item;
-
-	double time_start, time_end;
-	double progress; // progress of the current move; 0 == start point; 1 == end point
-
 	double real_x, real_y;
 
-	for(item = moves->first; item->next; item = item->next)
-	{
-		time_start = item->data.time;
-		if (time_now < time_start) // this move has not started yet
-		{
-			*location = moves->first->data.location;
-			return item;
-		}
-		time_end = item->next->data.time;
-		if (time_now >= time_end) continue; // this move is already done
+	size_t index = pawn_location(pawn, time_now, &real_x, &real_y);
 
-		progress = (time_now - time_start) / (time_end - time_start);
-
-		real_x = item->next->data.location.x * progress + item->data.location.x * (1 - progress);
-		real_y = item->next->data.location.y * progress + item->data.location.y * (1 - progress);
-
-		location->x = real_x * 2;
-		location->y = real_y * 2;
-		return item;
-	}
-
-	location->x = moves->last->data.location.x * 2;
-	location->y = moves->last->data.location.y * 2;
-	return 0; // the pawn is immobile
+	location->x = real_x * 2;
+	location->y = real_y * 2;
+	return index;
 }
 
 static inline void square_occupy(struct pawn **occupied, struct pawn *restrict pawn, int failback)
@@ -154,17 +130,6 @@ static void pawn_detour(struct pawn *occupied[BATTLEFIELD_HEIGHT * 2][BATTLEFIEL
 	square_occupy(occupied[y + 1][x + 1], pawn, 1);
 }
 
-void moves_free(struct queue_item *item)
-{
-	struct queue_item *next;
-	while (item)
-	{
-		next = item->next;
-		free(item);
-		item = next;
-	}
-}
-
 static int pawn_wait(struct pawn *occupied[BATTLEFIELD_HEIGHT * 2][BATTLEFIELD_WIDTH * 2][OVERLAP_LIMIT], struct pawn *pawn, unsigned step)
 {
 	// Collisions can only occur after the start of the movement.
@@ -175,62 +140,48 @@ static int pawn_wait(struct pawn *occupied[BATTLEFIELD_HEIGHT * 2][BATTLEFIELD_W
 	double time_detour = ((double)step - 1) / MOVEMENT_STEPS;
 	double distance;
 
-	struct queue_item *current, *next;
-
-	if (time_detour > pawn->moves_.first->data.time)
+	if (time_detour > pawn->moves[0].time)
 	{
 		// The pawn has started moving at the time of the detour.
 
-		struct move move;
-
 		struct point location;
-		current = pawn_location(&pawn->moves_, time_detour, &location);
+		size_t index = pawn_position(pawn, time_detour, &location);
+		if (index == pawn->moves_count) return 0; // TODO is this right?
 
-		if (!current) return 0; // TODO is this right?
-		// assert(current);
-		// assert(current->next);
+		index += 1;
+		if (index < pawn->moves_count)
+			memmove(pawn->moves + index + 1, pawn->moves + index, (pawn->moves_count - index) * sizeof(*pawn->moves));
+		pawn->moves_count += 1;
 
-		if (queue_insert(&pawn->moves_, current, move) < 0) return -1;
-		next = current->next;
-
-		next->data.location = location_field(location);
-		next->data.distance = current->data.distance + battlefield_distance(current->data.location, next->data.location);
-		next->data.time = time_detour;
+		pawn->moves[index].location = location_field(location);
+		pawn->moves[index].time = time_detour;
 
 		if (!point_eq(location, pawn->failback))
 		{
-			current = next;
-			if (queue_insert(&pawn->moves_, current, move) < 0) return -1;
-			next = current->next;
+			index += 1;
+			if (index < pawn->moves_count)
+				memmove(pawn->moves + index + 1, pawn->moves + index, (pawn->moves_count - index) * sizeof(*pawn->moves));
+			pawn->moves_count += 1;
 
 			// Make the failback location the pawn's next location.
-			next->data.location = location_field(pawn->failback);
-			next->data.distance = current->data.distance + battlefield_distance(current->data.location, next->data.location);
-			next->data.time = (double)step / MOVEMENT_STEPS;
+			pawn->moves[index].location = location_field(pawn->failback);
+			pawn->moves[index].time = (double)step / MOVEMENT_STEPS;
 		}
 
-		// Update time and distance for the next movements.
-		current = current->next;
-		while (next = current->next)
+		// Update time for the following movements.
+		for(index += 1; index < pawn->moves_count; ++index)
 		{
-			distance = battlefield_distance(current->data.location, next->data.location);
-			next->data.distance = current->data.distance + distance;
-			next->data.time = current->data.time + distance / pawn->slot->unit->speed;
-			current = next;
+			double distance = battlefield_distance(pawn->moves[index - 1].location, pawn->moves[index].location);
+			pawn->moves[index].time = pawn->moves[index - 1].time + distance / pawn->slot->unit->speed;
 		}
 	}
 	else
 	{
 		// The pawn is at its failback location at the time of the detour.
-
-		double wait = ((double)step / MOVEMENT_STEPS) - pawn->moves_.first->data.time;
-
-		current = pawn->moves_.first;
-		while (current)
-		{
-			current->data.time += wait;
-			current = current->next;
-		}
+		double wait = ((double)step / MOVEMENT_STEPS) - pawn->moves[0].time;
+		size_t i;
+		for(i = 0; i < pawn->moves_count; ++i)
+			pawn->moves[i].time += wait;
 	}
 
 	return 0;
@@ -245,20 +196,30 @@ static int pawn_stop(struct pawn *occupied[BATTLEFIELD_HEIGHT * 2][BATTLEFIELD_W
 
 	double time_detour = ((double)step - 1) / MOVEMENT_STEPS;
 
-	if (time_detour > pawn->moves_.first->data.time)
+	if (time_detour > pawn->moves[0].time)
 	{
 		// The pawn has started moving at the time of the detour.
 
-		struct queue_item *current, *next;
-
 		struct point location;
-		current = pawn_location(&pawn->moves_, time_detour, &location);
+		size_t index = pawn_position(pawn, time_detour, &location);
+		if (index == pawn->moves_count) return 0; // TODO is this right?
 
-		if (!current) return 0; // TODO is this right?
-		// assert(current);
-		// assert(current->next);
+		index += 1; // TODO range check?
+		pawn->moves[index].location = location_field(location);
+		pawn->moves[index].time = time_detour;
 
-		next = current->next;
+		if (!point_eq(location, pawn->failback))
+		{
+			index += 1; // TODO range check?
+
+			// Make the failback location the pawn's next location.
+			pawn->moves[index].location = location_field(pawn->failback);
+			pawn->moves[index].time = (double)step / MOVEMENT_STEPS;
+		}
+
+		pawn->moves_count = index + 1;
+
+		/*next = current->next;
 
 		next->data.location = location_field(location);
 		next->data.distance = current->data.distance + battlefield_distance(current->data.location, next->data.location);
@@ -284,12 +245,11 @@ static int pawn_stop(struct pawn *occupied[BATTLEFIELD_HEIGHT * 2][BATTLEFIELD_W
 		moves_free(next->next);
 		next->next = 0;
 		pawn->moves_.last = next;
-		// TODO set length
+		// TODO set length*/
 	}
 	else
 	{
 		// The pawn is at its failback location at the time of the detour.
-
 		// Cancel all the moves.
 		pawn_stay(pawn);
 	}
@@ -323,13 +283,16 @@ int battlefield_movement_plan(const struct player *restrict players, size_t play
 
 	for(p = 0; p < pawns_count; ++p)
 	{
-		pawns[p].failback.x = pawns[p].moves_.first->data.location.x * 2;
-		pawns[p].failback.y = pawns[p].moves_.first->data.location.y * 2;
+		pawns[p].failback.x = pawns[p].moves[0].location.x * 2;
+		pawns[p].failback.y = pawns[p].moves[0].location.y * 2;
 
 		struct queue_item *item;
-		pawns[p].moves_.first->data.time = 0;
-		for(item = pawns[p].moves_.first; item->next; item = item->next)
-			item->next->data.time = item->next->data.distance / pawns[p].slot->unit->speed;
+		pawns[p].moves[0].time = 0;
+		for(i = 1; i < pawns[p].moves_count; ++i)
+		{
+			double distance = battlefield_distance(pawns[p].moves[i - 1].location, pawns[p].moves[i].location);
+			pawns[p].moves[i].time = pawns[p].moves[i - 1].time + distance / pawns[p].slot->unit->speed;
+		}
 	}
 
 	for(step = 0; step < MOVEMENT_STEPS; ++step)
@@ -341,7 +304,7 @@ int battlefield_movement_plan(const struct player *restrict players, size_t play
 		for(p = 0; p < pawns_count; ++p)
 		{
 			pawn = pawns + p;
-			pawn_location(&pawn->moves_, now, &pawn->step);
+			pawn_position(pawn, now, &pawn->step);
 
 			failback = point_eq(pawn->step, pawn->failback);
 			square_occupy(occupied[pawn->step.y][pawn->step.x], pawn, failback);
@@ -440,56 +403,39 @@ enemy:
 
 void battlefield_movement_perform(struct battlefield battlefield[][BATTLEFIELD_HEIGHT], struct pawn *restrict pawns, size_t pawns_count)
 {
-	size_t p;
-	struct pawn *pawn;
-
-	struct queue_item *move_next, *next, *item;
-	double distance;
+	size_t p, i;
 
 	// Update occupied squares for each pawn.
 	for(p = 0; p < pawns_count; ++p)
 	{
-		pawn = pawns + p;
-		move_next = pawn_location(&pawn->moves_, 1, &pawn->step);
+		struct pawn *pawn = pawns + p;
+		size_t index = pawn_position(pawn, 1, &pawn->step);
 
 		// Change pawn position on the battlefield.
-		struct point location_old = pawn->moves_.first->data.location;
+		struct point location_old = pawn->moves[0].location;
 		struct point location_new = location_field(pawn->step);
 		if (battlefield[location_old.y][location_old.x].pawn == pawn)
 			battlefield[location_old.y][location_old.x].pawn = 0;
 		battlefield[location_new.y][location_new.x].pawn = pawn;
 
-		if (move_next)
+		if (index < pawn->moves_count)
 		{
 			// Remove finished moves.
-			item = pawn->moves_.first;
-			while (item != move_next)
+			pawn->moves_count -= index;
+			memmove(pawn->moves, pawn->moves + index, pawn->moves_count * sizeof(*pawn->moves));
+			pawn->moves[0].location = location_new;
+			pawn->moves[0].time = 0.0;
+			for(i = 1; i < pawn->moves_count; ++i)
 			{
-				next = item->next;
-				free(item);
-				item = next;
-			}
-			pawn->moves_.first = move_next;
-
-			move_next->data.location = location_new;
-			move_next->data.distance = 0;
-			move_next->data.time = 0;
-
-			while (next = move_next->next)
-			{
-				distance = battlefield_distance(move_next->data.location, next->data.location);
-				next->data.distance = move_next->data.distance + distance;
-				next->data.time = move_next->data.time + distance / pawn->slot->unit->speed;
-				move_next = next;
+				double distance = battlefield_distance(pawn->moves[i - 1].location, pawn->moves[i].location);
+				pawn->moves[i].time = pawn->moves[i - 1].time + distance / pawn->slot->unit->speed;
 			}
 		}
 		else
 		{
 			pawn_stay(pawn);
-
-			pawn->moves_.first->data.location = location_new;
-			pawn->moves_.first->data.distance = 0;
-			pawn->moves_.first->data.time = 0;
+			pawn->moves[0].location = location_new;
+			pawn->moves[0].time = 0.0;
 		}
 	}
 }
@@ -508,8 +454,8 @@ void battlefield_fight(const struct game *restrict game, struct battle *restrict
 		struct pawn *fighter = battle->pawns + i;
 		unsigned char fighter_alliance = game->players[fighter->slot->player].alliance;
 
-		int x = fighter->moves_.first->data.location.x;
-		int y = fighter->moves_.first->data.location.y;
+		int x = fighter->moves[0].location.x;
+		int y = fighter->moves[0].location.y;
 		unsigned damage_total = fighter->slot->unit->damage * fighter->slot->count;
 		unsigned damage;
 
@@ -556,7 +502,7 @@ void battlefield_shoot(struct battle *battle)
 		unsigned target_index;
 		double distance, miss, on_target;
 
-		distance = battlefield_distance(shooter->moves_.first->data.location, shooter->shoot);
+		distance = battlefield_distance(shooter->moves[0].location, shooter->shoot);
 		miss = distance / shooter->slot->unit->range;
 
 		// Shooters have some chance to hit a field adjacent to the target, depending on the distance.
@@ -642,7 +588,7 @@ void battlefield_clean_corpses(struct battle *battle)
 		{
 			// All units in this pawn are killed.
 			slot->count = 0;
-			battle->field[pawn->moves_.first->data.location.y][pawn->moves_.first->data.location.x].pawn = 0;
+			battle->field[pawn->moves[0].location.y][pawn->moves[0].location.x].pawn = 0;
 		}
 		else
 		{
@@ -661,10 +607,7 @@ void battlefield_clean_corpses(struct battle *battle)
 
 void pawn_stay(struct pawn *restrict pawn)
 {
-	moves_free(pawn->moves_.first->next);
-	pawn->moves_.first->next = 0;
-	pawn->moves_.last = pawn->moves_.first;
-	pawn->moves_.length = 1;
+	pawn->moves_count = 1;
 }
 
 int battlefield_reachable(struct pawn *restrict pawn, struct point target, struct adjacency_list *restrict nodes)
@@ -673,9 +616,9 @@ int battlefield_reachable(struct pawn *restrict pawn, struct point target, struc
 
 	pawn_stay(pawn);
 
-	if (path_find(&pawn->moves_, target, nodes, 0, 0)) return 0;
+	if (path_find(pawn, target, nodes, 0, 0)) return 0;
 
-	if (pawn->moves_.last->data.distance > pawn->slot->unit->speed)
+	if (pawn->moves[pawn->moves_count - 1].time > 1.0)
 	{
 		// not reachable in one round
 		pawn_stay(pawn);
@@ -690,7 +633,7 @@ int battlefield_shootable(const struct pawn *restrict pawn, struct point target)
 	// Only ranged units can shoot.
 	if (!pawn->slot->unit->shoot) return 0;
 
-	unsigned distance = round(battlefield_distance(pawn->moves_.first->data.location, target));
+	unsigned distance = round(battlefield_distance(pawn->moves[0].location, target));
 	return (distance <= pawn->slot->unit->range);
 }
 
@@ -745,7 +688,7 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 		pawns[i].slot = slots[i];
 		pawns[i].hurt = 0;
 
-		queue_init(&pawns[i].moves_);
+		pawns[i].moves = malloc(32 * sizeof(*pawns[i].moves)); // TODO fix this
 
 		pawns[i].fight = POINT_NONE;
 		pawns[i].shoot = POINT_NONE;
@@ -759,11 +702,8 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 			return -1;
 		}
 
-		struct move move;
-		move.location = POINT_NONE;
-		move.distance = 0;
-		move.time = 0;
-		queue_push(&pawns[i].moves_, move);
+		pawns[i].moves[0].location = POINT_NONE;
+		pawns[i].moves[0].time = 0;
 	}
 
 	// TODO remove this

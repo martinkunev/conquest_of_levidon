@@ -474,7 +474,7 @@ int if_animation(const struct player *restrict players, const struct state *rest
 		struct pawn *pawn = battle->pawns + p;
 		double x, y;
 
-		if (pawn_location_real(&pawn->moves_, progress, &x, &y))
+		if (pawn_location(pawn, progress, &x, &y) < pawn->moves_count)
 			finished = 0;
 
 		display_rectangle(x * FIELD_SIZE, y * FIELD_SIZE, FIELD_SIZE, FIELD_SIZE, Player + pawn->slot->player);
@@ -523,7 +523,7 @@ void if_formation(const struct player *restrict players, const struct state *res
 	{
 		const struct pawn *pawn = pawns->data[i];
 		const struct slot *slot = pawn->slot;
-		struct point location = pawn->moves_.first->data.location;
+		struct point location = pawn->moves[0].location;
 
 		if (point_eq(location, POINT_NONE))
 		{
@@ -608,14 +608,14 @@ void if_battle(const struct player *restrict players, const struct state *restri
 		// Show pawn task (if any).
 		if (p->slot->player == state->player)
 		{
-			struct queue_item *move;
-			for(move = p->moves_.first; move->next; move = move->next)
+			size_t i;
+			for(i = 0; (i + 1) < p->moves_count; ++i)
 			{
-				struct point from = move->data.location;
+				struct point from = p->moves[i].location;
 				from.x = from.x * FIELD_SIZE + FIELD_SIZE / 2;
 				from.y = from.y * FIELD_SIZE + FIELD_SIZE / 2;
 
-				struct point to = move->next->data.location;;
+				struct point to = p->moves[i + 1].location;
 				to.x = to.x * FIELD_SIZE + FIELD_SIZE / 2;
 				to.y = to.y * FIELD_SIZE + FIELD_SIZE / 2;
 
