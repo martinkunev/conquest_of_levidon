@@ -474,7 +474,7 @@ int if_animation(const struct player *restrict players, const struct state *rest
 		struct pawn *pawn = battle->pawns + p;
 		double x, y;
 
-		if (pawn_location_real(&pawn->moves, progress, &x, &y))
+		if (pawn_location_real(&pawn->moves_, progress, &x, &y))
 			finished = 0;
 
 		display_rectangle(x * FIELD_SIZE, y * FIELD_SIZE, FIELD_SIZE, FIELD_SIZE, Player + pawn->slot->player);
@@ -523,7 +523,7 @@ void if_formation(const struct player *restrict players, const struct state *res
 	{
 		const struct pawn *pawn = pawns->data[i];
 		const struct slot *slot = pawn->slot;
-		struct point location = pawn->moves.first->data.location;
+		struct point location = pawn->moves_.first->data.location;
 
 		if (point_eq(location, POINT_NONE))
 		{
@@ -609,7 +609,7 @@ void if_battle(const struct player *restrict players, const struct state *restri
 		if (p->slot->player == state->player)
 		{
 			struct queue_item *move;
-			for(move = p->moves.first; move->next; move = move->next)
+			for(move = p->moves_.first; move->next; move = move->next)
 			{
 				struct point from = move->data.location;
 				from.x = from.x * FIELD_SIZE + FIELD_SIZE / 2;

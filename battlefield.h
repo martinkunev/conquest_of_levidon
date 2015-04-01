@@ -4,7 +4,13 @@ struct pawn
 {
 	struct slot *slot;
 	unsigned hurt;
-	struct queue moves;
+
+	struct point *moves;
+	size_t moves_size;
+	size_t moves_count;
+
+	struct queue moves_;
+
 	struct point fight, shoot;
 
 	// used for movement computation

@@ -79,7 +79,7 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 		if (pawn->slot->player != state.player) return 0;
 
 		struct point target = {x, y};
-		if (point_eq(target, pawn->moves.first->data.location))
+		if (point_eq(target, pawn->moves_.first->data.location))
 		{
 			pawn_stay(pawn);
 			pawn->shoot = POINT_NONE;
@@ -115,7 +115,7 @@ static int input_place(int code, unsigned x, unsigned y, uint16_t modifiers, con
 		for(i = 0; i < PAWNS_LIMIT; ++i)
 			if (point_eq(location, positions[i]))
 			{
-				pawn->moves.first->data.location = location;
+				pawn->moves_.first->data.location = location;
 				battlefield[y][x].pawn = pawn;
 				state.selected.pawn = 0;
 
@@ -123,7 +123,7 @@ static int input_place(int code, unsigned x, unsigned y, uint16_t modifiers, con
 				for(i = 0; i < battle->player_pawns[state.player].length; ++i)
 				{
 					struct pawn *pawn = battle->player_pawns[state.player].data[i];
-					if (point_eq(pawn->moves.first->data.location, POINT_NONE))
+					if (point_eq(pawn->moves_.first->data.location, POINT_NONE))
 						return 0;
 				}
 				return INPUT_DONE;
@@ -236,7 +236,7 @@ int input_formation_basic(const struct game *restrict game, const struct region 
 		}
 
 		const struct point *positions = formation_positions(pawn->slot, region);
-		pawn->moves.first->data.location = positions[column];
+		pawn->moves_.first->data.location = positions[column];
 	}
 
 	return 0;
