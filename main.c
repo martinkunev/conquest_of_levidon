@@ -52,8 +52,7 @@ static int battle(struct game *restrict game, struct region *restrict region)
 		switch (game->players[player].type)
 		{
 		case Neutral:
-			input_formation_basic(game, region, &battle, player);
-			break;
+			continue;
 
 		case Local:
 			if (input_formation(game, region, &battle, player) < 0)

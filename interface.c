@@ -499,54 +499,30 @@ void if_formation(const struct player *restrict players, const struct state *res
 	// draw rectangle with current player's color
 	display_rectangle(768, 0, 256, 16, Player + state->player);
 
-	size_t i;
-
 	const struct region *region = game->regions + state->region;
 
-	if (state->selected.pawn)
-	{
-		const struct slot *slot = state->selected.pawn->slot;
-
-		// Display at which fields the pawn can be placed.
-
-		const struct point *positions = formation_positions(slot, region);
-		for(i = 0; i < PAWNS_LIMIT; ++i)
-			if (!battlefield[positions[i].y][positions[i].x].pawn)
-				display_rectangle(positions[i].x * FIELD_SIZE, positions[i].y * FIELD_SIZE, FIELD_SIZE, FIELD_SIZE, Gray);
-	}
-
-	unsigned offset_defend = 0, offset_attack[NEIGHBORS_LIMIT] = {0};
-	unsigned line, column;
-
+	size_t i;
 	const struct vector *pawns = battle->player_pawns + state->player;
 	for(i = 0; i < pawns->length; ++i)
 	{
 		const struct pawn *pawn = pawns->data[i];
 		const struct slot *slot = pawn->slot;
-		struct point location = pawn->moves[0].location;
 
-		if (point_eq(location, POINT_NONE))
+		if (pawn == state->selected.pawn)
 		{
-			if (slot->location == region)
-			{
-				line = 0;
-				column = offset_defend++;
-			}
-			else for(i = 0; i < NEIGHBORS_LIMIT; ++i)
-			{
-				if (slot->location == region->neighbors[i])
-				{
-					line = 1 + i;
-					column = offset_attack[i]++;
-				}
-			}
+			// Display the selected pawn in the control panel.
+			display_unit(slot->unit->index, CTRL_X, CTRL_Y, Player + state->player, White, slot->count);
 
-			display_unit(slot->unit->index, CTRL_X + column * (FIELD_SIZE + 1), CTRL_Y + line * (FIELD_SIZE + MARGIN), Player + state->player, White, slot->count);
-			if (pawn == state->selected.pawn)
-				image_draw(&image_selected, CTRL_X + column * (FIELD_SIZE + 1), CTRL_Y + line * (FIELD_SIZE + MARGIN));
+			// Display at which fields the pawn can be placed.
+			const struct point *positions = formation_positions(slot, region);
+			for(i = 0; i < PAWNS_LIMIT; ++i)
+				if (!battlefield[positions[i].y][positions[i].x].pawn)
+					display_rectangle(positions[i].x * FIELD_SIZE, positions[i].y * FIELD_SIZE, FIELD_SIZE, FIELD_SIZE, Gray);
 		}
 		else
 		{
+			// Display the pawn at its present location.
+			struct point location = pawn->moves[0].location;
 			display_unit(slot->unit->index, location.x * FIELD_SIZE, location.y * FIELD_SIZE, Player + state->player, 0, 0);
 		}
 	}

@@ -682,6 +682,8 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 
 	memset(battle->player_pawns, 0, sizeof(battle->player_pawns));
 
+	unsigned offset_defend = 0, offset_attack[NEIGHBORS_LIMIT] = {0};
+
 	// Initialize a pawn for each slot.
 	for(i = 0; i < count; ++i)
 	{
@@ -702,50 +704,27 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 			return -1;
 		}
 
-		pawns[i].moves[0].location = POINT_NONE;
-		pawns[i].moves[0].time = 0;
-	}
-
-	// TODO remove this
-	// Put the pawns at their initial positions.
-	/*for(i = 0; i < count; ++i)
-	{
-		struct move move;
-
-		// TODO this will break if more than 4 slots come from a given region
-		struct point positions_defend[4] = {
-			{11, 11}, {12, 11}, {11, 12}, {12, 12}
-		};
-		struct point positions_attack[NEIGHBORS_LIMIT][4] = {
-			{{23, 11}, {23, 12}, {23, 10}, {23, 13}},
-			{{23, 0}, {22, 0}, {23, 1}, {22, 1}},
-			{{11, 0}, {12, 0}, {10, 0}, {13, 0}},
-			{{0, 0}, {1, 0}, {0, 1}, {1, 1}},
-			{{0, 11}, {0, 12}, {0, 10}, {0, 13}},
-			{{0, 23}, {0, 22}, {1, 23}, {1, 22}},
-			{{11, 23}, {12, 23}, {10, 23}, {13, 23}},
-			{{23, 23}, {22, 23}, {23, 22}, {22, 22}},
-		};
-		size_t progress_defend = 0;
-		size_t progress_attack[NEIGHBORS_LIMIT] = {0};
-
-		if (slots[i]->location == region) move.location = positions_defend[progress_defend++];
-		else
+		unsigned column;
+		if (pawns[i].slot->location == region)
 		{
-			size_t j;
-			for(j = 0; j < NEIGHBORS_LIMIT; ++j)
-				if (slots[i]->location == region->neighbors[j])
-				{
-					move.location = positions_attack[j][progress_attack[j]++];
-					break;
-				}
+			column = offset_defend++;
 		}
-		move.distance = 0;
-		move.time = 0;
-		queue_push(&pawns[i].moves_, move);
+		else for(j = 0; j < NEIGHBORS_LIMIT; ++j)
+		{
+			if (pawns[i].slot->location == region->neighbors[j])
+			{
+				column = offset_attack[j]++;
+				break;
+			}
+		}
 
-		battle->field[move.location.y][move.location.x].pawn = pawns + i;
-	}*/
+		// Put the pawns at their initial positions.
+		const struct point *positions = formation_positions(pawns[i].slot, region);
+		pawns[i].moves[0].location = positions[column];
+		pawns[i].moves[0].time = 0.0;
+
+		battle->field[positions[column].y][positions[column].x].pawn = pawns + i;
+	}
 
 	free(slots);
 
