@@ -1,9 +1,9 @@
 {
 	"players": [
 		{"alliance": 0, "gold": 0, "food": 0, "wood": 0, "iron": 0, "stone": 0},
-		{"alliance": 1, "gold": 6, "food": 2, "wood": 1, "iron": 1, "stone": 2},
-		{"alliance": 2, "gold": 6, "food": 2, "wood": 1, "iron": 1, "stone": 2},
-		{"alliance": 1, "gold": 6, "food": 2, "wood": 1, "iron": 1, "stone": 2}
+		{"alliance": 1, "gold": 6, "food": 2, "wood": 4, "iron": 1, "stone": 2},
+		{"alliance": 2, "gold": 6, "food": 2, "wood": 4, "iron": 1, "stone": 2},
+		{"alliance": 1, "gold": 6, "food": 2, "wood": 4, "iron": 1, "stone": 2}
 	],
 	"regions": [
 		{

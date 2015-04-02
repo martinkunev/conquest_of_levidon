@@ -191,6 +191,7 @@ int input_battle(const struct game *restrict game, const struct battle *restrict
 	state.y = BATTLEFIELD_HEIGHT;
 
 	state.selected.pawn = 0;
+	state.hover = POINT_NONE;
 
 	state.nodes = visibility_graph_build(0, 0);
 	if (!state.nodes) abort();
@@ -224,6 +225,7 @@ int input_formation(const struct game *restrict game, const struct region *restr
 	state.player = player;
 
 	state.selected.pawn = 0;
+	state.hover = POINT_NONE;
 
 	state.region = region - game->regions;
 

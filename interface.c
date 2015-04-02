@@ -502,6 +502,10 @@ void if_formation(const struct player *restrict players, const struct state *res
 	// draw rectangle with current player's color
 	display_rectangle(768, 0, 256, 16, Player + state->player);
 
+	// Display hovered field in color.
+	if (!point_eq(state->hover, POINT_NONE))
+		display_rectangle(state->hover.x * FIELD_SIZE, state->hover.y * FIELD_SIZE, FIELD_SIZE, FIELD_SIZE, Unexplored);
+
 	const struct region *region = game->regions + state->region;
 
 	size_t i;
@@ -555,7 +559,7 @@ void if_battle(const struct player *restrict players, const struct state *restri
 
 	// Display hovered field in color.
 	if (!point_eq(state->hover, POINT_NONE))
-		display_rectangle(state->hover.x * FIELD_SIZE, state->hover.y * FIELD_SIZE, FIELD_SIZE, FIELD_SIZE, Select);
+		display_rectangle(state->hover.x * FIELD_SIZE, state->hover.y * FIELD_SIZE, FIELD_SIZE, FIELD_SIZE, Unexplored);
 
 	// display pawns
 	for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
@@ -592,13 +596,13 @@ void if_battle(const struct player *restrict players, const struct state *restri
 		if (p->slot->player == state->player)
 		{
 			size_t i;
-			for(i = 0; (i + 1) < p->moves_count; ++i)
+			for(i = 1; i < p->moves_count; ++i)
 			{
-				struct point from = p->moves[i].location;
+				struct point from = p->moves[i - 1].location;
 				from.x = from.x * FIELD_SIZE + FIELD_SIZE / 2;
 				from.y = from.y * FIELD_SIZE + FIELD_SIZE / 2;
 
-				struct point to = p->moves[i + 1].location;
+				struct point to = p->moves[i].location;
 				to.x = to.x * FIELD_SIZE + FIELD_SIZE / 2;
 				to.y = to.y * FIELD_SIZE + FIELD_SIZE / 2;
 
@@ -795,12 +799,10 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 
 	for(i = 0; i < regions_count; ++i)
 	{
-		// Fill each region with the color of its owner.
-		if (region_visible[i])
-		{
-			glColor4ubv(display_colors[Player + regions[i].owner]);
-			display_polygon(regions[i].location, MAP_X, MAP_Y);
-		}
+		// Fill each region with the color of its owner (or the color indicating unexplored).
+		if (region_visible[i]) glColor4ubv(display_colors[Player + regions[i].owner]);
+		else glColor4ubv(display_colors[Unexplored]);
+		display_polygon(regions[i].location, MAP_X, MAP_Y);
 
 		// Remember income and expenses.
 		if (regions[i].owner == state->player) region_income(regions + i, &income);
@@ -824,8 +826,11 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 		unsigned progress;
 
 		// Display region owner's flag and name of the region.
-		display_rectangle(PANEL_X + 4, PANEL_Y + 4, 24, 12, Player + region->owner);
-		image_draw(&image_flag, PANEL_X, PANEL_Y);
+		if (region_visible[region->index])
+		{
+			display_rectangle(PANEL_X + 4, PANEL_Y + 4, 24, 12, Player + region->owner);
+			image_draw(&image_flag, PANEL_X, PANEL_Y);
+		}
 		display_string(region->name, region->name_length, PANEL_X + image_flag.width + MARGIN, PANEL_Y + (image_flag.height - font12.height) / 2, &font12, Black);
 
 		// Display the slots at the selected region.
@@ -888,7 +893,6 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 				image_draw(&image_construction, BUILDING_X(region->construct), BUILDING_Y);
 			}
 		}
-		else ; // TODO show something (depending on watch towers)
 
 		if (state->player == region->owner)
 		{
