@@ -35,7 +35,7 @@
 #define INVENTORY_X(x) (PANEL_X + 2 + 1 + (x) * (FIELD_SIZE + 1))
 #define INVENTORY_Y (TRAIN_Y + FIELD_SIZE + MARGIN)
 
-#define BUILDING_X(x) (PANEL_X + 2 + 1 + (x) * (FIELD_SIZE + 1))
+#define BUILDING_X(x) (PANEL_X + 1 + (x) * (FIELD_SIZE + 1))
 #define BUILDING_Y (PANEL_Y + 400)
 
 // TODO fix these values

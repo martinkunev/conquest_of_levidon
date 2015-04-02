@@ -73,8 +73,8 @@ static struct image image_move_destination, image_shoot_destination, image_selec
 static struct image image_gold, image_food, image_wood, image_stone, image_iron, image_time;
 static struct image image_scroll_left, image_scroll_right;
 static struct image image_units[4]; // TODO the array must be enough to hold units_count units
-static struct image image_buildings[7]; // TODO the array must be big enough to hold buildings_count elements
-static struct image image_buildings_gray[7]; // TODO the array must be big enough to hold buildings_count elements
+static struct image image_buildings[8]; // TODO the array must be big enough to hold buildings_count elements
+static struct image image_buildings_gray[8]; // TODO the array must be big enough to hold buildings_count elements
 
 static GLuint map_renderbuffer;
 
@@ -211,6 +211,7 @@ int if_init(void)
 	image_load_png(&image_buildings[4], "img/barracks.png", 0);
 	image_load_png(&image_buildings[5], "img/archery_range.png", 0);
 	image_load_png(&image_buildings[6], "img/stables.png", 0);
+	image_load_png(&image_buildings[7], "img/watch_tower.png", 0);
 
 	image_load_png(&image_buildings_gray[0], "img/irrigation.png", 1);
 	image_load_png(&image_buildings_gray[1], "img/lumbermill.png", 1);
@@ -219,6 +220,7 @@ int if_init(void)
 	image_load_png(&image_buildings_gray[4], "img/barracks.png", 1);
 	image_load_png(&image_buildings_gray[5], "img/archery_range.png", 1);
 	image_load_png(&image_buildings_gray[6], "img/stables.png", 1);
+	image_load_png(&image_buildings_gray[7], "img/watch_tower.png", 1);
 
 	// TODO handle modifier keys
 	// TODO handle dead keys
