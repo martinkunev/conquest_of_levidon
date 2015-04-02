@@ -434,8 +434,9 @@ int path_find(struct pawn *restrict pawn, struct point target, struct adjacency_
 	temp = traverse + node_origin;
 	while (temp = temp->origin)
 	{
-		double distance = battlefield_distance(pawn->moves[pawn->moves_count - 1].location, pawn->moves[pawn->moves_count].location);
+		double distance;
 		pawn->moves[pawn->moves_count].location = nodes->list[temp - traverse].location;
+		distance = battlefield_distance(pawn->moves[pawn->moves_count - 1].location, pawn->moves[pawn->moves_count].location);
 		pawn->moves[pawn->moves_count].time = pawn->moves[pawn->moves_count - 1].time + distance / pawn->slot->unit->speed;
 		pawn->moves_count += 1;
 	}
