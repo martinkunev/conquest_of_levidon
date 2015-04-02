@@ -32,7 +32,7 @@
 			"comment": "1",
 			"name": "Attica",
 			"owner": 1,
-			"built": ["Mine"],
+			"built": ["Mine", "Watch tower"],
 			"neighbors": [-1, -1, 2, 3, -1, -1, 0, -1],
 			"location": [
 				[367, 586],
@@ -147,7 +147,7 @@
 			"comment": "7",
 			"name": "Byzantium",
 			"owner": 3,
-			"built": ["Lumber mill", "Irrigation", "Barracks"],
+			"built": ["Lumber mill", "Irrigation", "Barracks", "Watch tower"],
 			"neighbors": [-1, -1, -1, 8, 6, -1, -1, -1],
 			"location": [
 				[516, 391],

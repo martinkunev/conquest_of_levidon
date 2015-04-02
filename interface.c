@@ -55,8 +55,8 @@ static xcb_window_t window;
 static GLXDrawable drawable;
 static GLXContext context;
 static xcb_screen_t *screen;
-static xcb_connection_t *connection;
 
+xcb_connection_t *connection;
 KeySym *keymap;
 int keysyms_per_keycode;
 int keycode_min, keycode_max;
@@ -764,17 +764,41 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 	size_t offset;
 	struct pawn *p;
 
+	size_t i, j;
+
 	// Map
 
 	struct resources income = {0}, expenses = {0};
 	const struct slot *slot;
 
-	size_t i, j;
+	// Determine which regions to show.
+	unsigned char region_visible[REGIONS_LIMIT] = {0};
+	for(i = 0; i < regions_count; ++i)
+	{
+		if (game->players[regions[i].owner].alliance == game->players[state->player].alliance)
+		{
+			region_visible[i] = 1;
+
+			// Make the neighboring regions visible when a watch tower is built.
+			if (regions[i].built & BUILDING_WATCH_TOWER)
+			{
+				for(j = 0; j < NEIGHBORS_LIMIT; ++j)
+				{
+					struct region *neighbor = regions[i].neighbors[j];
+					if (neighbor) region_visible[neighbor->index] = 1;
+				}
+			}
+		}
+	}
+
 	for(i = 0; i < regions_count; ++i)
 	{
 		// Fill each region with the color of its owner.
-		glColor4ubv(display_colors[Player + regions[i].owner]);
-		display_polygon(regions[i].location, MAP_X, MAP_Y);
+		if (region_visible[i])
+		{
+			glColor4ubv(display_colors[Player + regions[i].owner]);
+			display_polygon(regions[i].location, MAP_X, MAP_Y);
+		}
 
 		// Remember income and expenses.
 		if (regions[i].owner == state->player) region_income(regions + i, &income);

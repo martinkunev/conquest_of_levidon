@@ -29,6 +29,7 @@ const struct building buildings[] =
 	{NAME("Barracks"), .cost = {.gold = 10, .stone = 8}, .time = 4},
 	{NAME("Archery range"), .cost = {.gold = 5, .wood = 5}, .time = 2},
 	{NAME("Stables"), .cost = {.gold = 10, .food = 10, .wood = 10}, .time = 3, .requires = (1 << 4)},
+	{NAME("Watch tower"), .cost = {.wood = 4}, .time = 2},
 };
 const size_t buildings_count = sizeof(buildings) / sizeof(*buildings);
 

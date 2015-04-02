@@ -18,6 +18,8 @@
 #define BATTLEFIELD_WIDTH 24
 #define BATTLEFIELD_HEIGHT 24
 
+#define BUILDING_WATCH_TOWER (1 << 7)
+
 #include "resources.h"
 #include "display.h"
 
