@@ -48,12 +48,13 @@ static void pawn_shoot(struct pawn *restrict pawn, unsigned x, unsigned y)
 
 static int input_round(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game)
 {
+	if (code == EVENT_MOTION)
+		state.hover = POINT_NONE;
 	return ((code == 'n') ? INPUT_DONE : 0);
 }
 
 static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game)
 {
-	if (code == EVENT_MOTION) return INPUT_NOTME;
 	if (code >= 0) return INPUT_NOTME;
 
 	x /= FIELD_SIZE;
@@ -86,6 +87,7 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 		if (modifiers & XCB_MOD_MASK_CONTROL) pawn_shoot(pawn, x, y);
 		else pawn_move(pawn, x, y);
 	}
+	else if (code == EVENT_MOTION) state.hover = (struct point){x, y};
 
 	return 0;
 }
@@ -115,6 +117,7 @@ static int input_place(int code, unsigned x, unsigned y, uint16_t modifiers, con
 		battlefield[y][x].pawn = selected;
 		state.selected.pawn = new;
 	}
+	else if (code == EVENT_MOTION) state.hover = (struct point){x, y};
 
 	return 0;
 }

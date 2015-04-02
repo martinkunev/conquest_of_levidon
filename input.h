@@ -19,6 +19,8 @@ struct state
 	int region;
 
 	struct adjacency_list *nodes;
+
+	struct point hover;
 };
 
 extern struct state state;

@@ -54,8 +54,9 @@ static Display *display;
 static xcb_window_t window;
 static GLXDrawable drawable;
 static GLXContext context;
+static xcb_screen_t *screen;
+static xcb_connection_t *connection;
 
-xcb_connection_t *connection;
 KeySym *keymap;
 int keysyms_per_keycode;
 int keycode_min, keycode_max;
@@ -113,7 +114,7 @@ int if_init(void)
 		screen_num -= 1;
 		xcb_screen_next(&screen_iter);
 	}
-	xcb_screen_t *screen = screen_iter.data;
+	screen = screen_iter.data;
 
 	// query framebuffer configurations
 	GLXFBConfig *fb_configs = 0;
@@ -550,6 +551,10 @@ void if_battle(const struct player *restrict players, const struct state *restri
 
 	display_rectangle(0, 0, BATTLEFIELD_WIDTH * FIELD_SIZE, BATTLEFIELD_HEIGHT * FIELD_SIZE, B0);
 
+	// Display hovered field in color.
+	if (!point_eq(state->hover, POINT_NONE))
+		display_rectangle(state->hover.x * FIELD_SIZE, state->hover.y * FIELD_SIZE, FIELD_SIZE, FIELD_SIZE, Select);
+
 	// display pawns
 	for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
 		for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
@@ -605,6 +610,52 @@ void if_battle(const struct player *restrict players, const struct state *restri
 
 	glFlush();
 	glXSwapBuffers(display, drawable);
+
+	// TODO finish this test
+	/*{
+		// http://xcb.freedesktop.org/tutorial/mousecursors/
+		// https://github.com/eBrnd/i3lock-color/blob/master/xcb.c      create_cursor()
+		// http://xcb-util.sourcearchive.com/documentation/0.3.3-1/group__xcb____image__t_g029605b47d6ab95eac66b125a9a7dd64.html
+		// https://en.wikipedia.org/wiki/X_BitMap#Format
+
+		xcb_pixmap_t bitmap;
+		xcb_pixmap_t mask;
+		xcb_cursor_t cursor;
+
+		uint32_t width = 32, height = 32;
+
+		// in the example: curs_bits is unsigned char [50]
+		// width and height are 11 and 19
+		// The bitmap data is assumed to be in xbm format (i.e., 8-bit scanline unit, LSB-first, 8-bit pad). If depth is greater than 1, the bitmap will be expanded to a pixmap using the given foreground and background pixels fg and bg.
+
+		unsigned char curs_bits[...];
+		unsigned char mask_bits[...];
+
+		bitmap = xcb_create_pixmap_from_bitmap_data(connection, window,
+													curs_bits,
+													width, height,
+													1,
+													screen->white_pixel, screen->black_pixel,
+													0);
+		mask = xcb_create_pixmap_from_bitmap_data(connection, window,
+												  mask_bits,
+												  width, height,
+												  1,
+												  screen->white_pixel, screen->black_pixel,
+												  0);
+
+		cursor = xcb_generate_id(connection);
+		xcb_create_cursor(connection,
+						  cursor,
+						  bitmap,
+						  mask,
+						  65535, 65535, 65535,
+						  0, 0, 0,
+						  0, 0);
+
+		xcb_free_pixmap(connection, bitmap);
+		xcb_free_pixmap(connection, mask);
+	}*/
 }
 
 static void show_resource(const struct image *restrict image, int treasury, int income, int expense, unsigned y)
