@@ -29,8 +29,7 @@ When enemy pawns try to occupy the same square, they are redirected to their fai
 When allied pawns try to occupy the same squre, one of them stays where it is and the other are detoured to their failback locations to wait.
 */
 
-// TODO bug: a pawn is trying to pass throgh an immobile pawn
-// TODO bug: a pawn is moving through another pawn; the following rounds it patrols between two locations
+// TODO sometimes multiple pawns waiting for other pawns behave strangely
 
 static struct point location_field(const struct point location)
 {
@@ -228,10 +227,11 @@ static int pawn_stop(struct pawn *occupied[BATTLEFIELD_HEIGHT * 2][BATTLEFIELD_W
 static int pawn_step_time(struct pawn *pawns[OVERLAP_LIMIT], size_t pawn_index, unsigned step)
 {
 	size_t i;
-	for(step += 1; step <= MOVEMENT_STEPS; ++step)
+	unsigned step_next;
+	for(step_next = step + 1; step_next <= MOVEMENT_STEPS; ++step_next)
 	{
 		struct point next;
-		double time_next = (double)step / MOVEMENT_STEPS;
+		double time_next = (double)step_next / MOVEMENT_STEPS;
 		pawn_position(pawns[pawn_index], time_next, &next);
 
 		if (!point_eq(next, pawns[pawn_index]->step))
@@ -241,13 +241,12 @@ static int pawn_step_time(struct pawn *pawns[OVERLAP_LIMIT], size_t pawn_index, 
 				if (i == pawn_index) continue;
 
 				// Check if the pawn will collide when it moves.
-				struct point position;
-				pawn_position(pawns[i], time_next, &position);
+				struct point position = pawns[i]->failback;
 				if ((abs((int)next.x - (int)position.x) < 2) && (abs((int)next.y - (int)position.y) < 2))
 					return -1;
 			}
 
-			return step;
+			return step_next;
 		}
 	}
 	return -1;
@@ -294,10 +293,10 @@ static void battlefield_collision_resolve(const struct player *restrict players,
 		if (step_next > 0) goto wait;
 	}
 
-	// No pawn can continue moving. Stop all pawns.
+	// No pawn can continue moving. Make all pawns wait the end of the round.
 	for(i = 0; (i < OVERLAP_LIMIT) && pawns[i]; ++i)
 	{
-		if (pawn_stop(occupied, pawns[i], step) < 0) return; // TODO memory error?
+		if (pawn_wait(occupied, pawns[i], step - 1, MOVEMENT_STEPS) < 0) return; // TODO memory error?
 		pawn_detour(occupied, pawns[i]);
 	}
 
