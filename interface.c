@@ -477,6 +477,9 @@ int if_animation(const struct player *restrict players, const struct state *rest
 		struct pawn *pawn = battle->pawns + p;
 		double x, y;
 
+		if (!pawn->slot->count) continue;
+
+		// TODO improve this check
 		if (pawn_location(pawn, progress, &x, &y) < pawn->moves_count)
 			finished = 0;
 

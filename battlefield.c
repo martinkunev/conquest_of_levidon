@@ -420,6 +420,8 @@ void battlefield_movement_perform(struct battlefield battlefield[][BATTLEFIELD_H
 	for(p = 0; p < pawns_count; ++p)
 	{
 		struct pawn *pawn = pawns + p;
+		if (!pawn->slot->count) continue;
+
 		size_t index = pawn_position(pawn, 1.0, &pawn->step);
 
 		// assert(index);
@@ -470,6 +472,8 @@ void battlefield_fight(const struct game *restrict game, struct battle *restrict
 	{
 		struct pawn *fighter = battle->pawns + i;
 		unsigned char fighter_alliance = game->players[fighter->slot->player].alliance;
+
+		if (!fighter->slot->count) continue;
 
 		int x = fighter->moves[0].location.x;
 		int y = fighter->moves[0].location.y;
