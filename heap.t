@@ -14,7 +14,7 @@
 // Called after an element changes its position in the heap (including initial push).
 // #define heap_update(heap, position)
 #if !defined(heap_update)
-# error "Generic header argument heap_update not defined"
+# define heap_update(heap, position)
 #endif
 
 #include <stdlib.h>
@@ -213,3 +213,7 @@ static int heap_dynamic_push(struct heap_dynamic *restrict heap, heap_type value
 
 	return 1;
 }
+
+#undef heap_update
+#undef heap_diff
+#undef heap_type
