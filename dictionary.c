@@ -108,7 +108,7 @@ int dict_set(struct dict *restrict dict, const struct string *key, void *value, 
 	// Initialize the allocated memory.
 	slot->key_size = key->length;
 	slot->key_data = (char *)(slot + 1);
-	*format_string(slot->key_data, key->data, key->length) = 0;
+	*format_bytes(slot->key_data, key->data, key->length) = 0;
 	slot->value = value;
 	slot->_next = 0;
 

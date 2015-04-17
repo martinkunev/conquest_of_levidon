@@ -1,214 +1,152 @@
+// WARNING: Works only on POSIX-compatible systems
+
 #include "format.h"
+#include "test/format.h"
 
 // TODO: fix dependency on libc
-
 // TODO: possible future improvements:
 //  format_sint			puts + sign for positive numbers
 //  format_real
 //  custom digits for format_hex and format_base64
-//  format_base64 context (like in glib)
-//  format_base64 custom alphabet
-//    char *format_base64(char *restrict buffer, const uint8_t *restrict bytes, size_t length, uint32_t context, unsigned flush, char alphabet[65])
-//		this is too complex; find a way to simplify it
 //  length functions
-//  memory allocation functions
+//  ? memory allocation functions
+/*
+//  char *format_base64(char *restrict buffer, const uint8_t *restrict bytes, size_t length, uint32_t *state, char alphabet[65])
 
+format_base64_step()
+format_base64_flush()
+
+char *destination
+uint8_t *source
+size_t length
+char alphabet[]
+uint32_t *state
+*/
 // TODO implement format_real in order to use it in json_dump to increase the speed
-
 // TODO: optimize for bases 8, 10, 16
 
 static const unsigned char digits[64] = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-_", padding = '.';
 
-// Writes string representation in base base of number in buffer.
-// WARNING: buffer and number must be lvalues. TODO: explain what should base be
-// _next specifies how to iterate buffer after each character (it's either ++ or -- ).
-#define _format_digits(buffer, number, base, _next) do \
-	{ \
-		do *(buffer)_next = digits[(size_t)((number) % (base))]; \
-		while ((number) /= (base)); \
-	} while (false)
-
-#define _format_uint_nofill_internal(buffer, number, base) do \
-	{ \
-		char *start = (buffer); \
-		_format_digits((buffer), (number), (base), ++); \
-		char *end = (buffer)--; \
-		char swap; \
-		/* reverse digits to obtain the number */ \
-		while (start < (buffer)) \
-		{ \
-			swap = *(buffer); \
-			*(buffer) = *start; \
-			*start = swap; \
-			++start, --(buffer); \
-		} \
-		return end; \
-	} while (false)
-
-char *_format_uint_nofill(char *restrict buffer, uint64_t number, uint8_t base)
+uint32_t format_uint_length(uintmax_t number, uint8_t base)
 {
-	_format_uint_nofill_internal(buffer, number, base);
-}
-
-// If number can't fit in length bytes, the behavior is undefined.
-char *_format_uint_fill(char *restrict buffer, uint64_t number, uint8_t base, uint16_t length, char fill)
-{
-	char *end = buffer + length, *position = end - 1;
-	_format_digits(position, number, base, --);
-	while (position >= buffer) *position-- = fill;
-	return end;
-}
-
-uint16_t format_uint_length(uint64_t number, uint8_t base)
-{
-	uint16_t length = 1;
+	uint32_t length = 1;
 	while (number /= base) ++length;
 	return length;
 }
 
-char *_format_int_nofill(char *restrict buffer, int64_t number, uint8_t base)
+uint8_t *format_uint(uint8_t *buffer, uintmax_t number, uint8_t base)
 {
+	uint8_t temp[sizeof(number) * 8]; // wide enough for any value of number in base-2
+	uint8_t *position = temp + sizeof(temp);
+
+	size_t length;
+
+	// Write the result string in temporary memory.
+	do *--position = digits[(size_t)(number % base)];
+	while (number /= base);
+
+	// Copy the result string to buffer.
+	length = sizeof(temp) - (position - temp);
+	memcpy(buffer, position, length);
+	return buffer + length;
+}
+
+uint8_t *format_uint_pad(uint8_t *buffer, uintmax_t number, uint8_t base, uint32_t length, uint8_t fill)
+{
+	uint8_t *position = buffer + length;
+
+	// Write the result string at the end of the buffer.
+	do *--position = digits[(size_t)(number % base)];
+	while (number /= base);
+
+	// Fill the remaining space at the beginning of the buffer with padding.
+	if (position > buffer) memset(buffer, fill, position - buffer);
+
+	return buffer + length;
+}
+
+uint32_t format_int_length(intmax_t number, uint8_t base)
+{
+	uint32_t length = 1;
+	if (number < 0) ++length;
+	while (number /= base) ++length;
+	return length;
+}
+
+// TODO given the guarantees provided by int64_t, this can be simplified by converting number to uint64_t with -(uint64_t)number
+uint8_t *format_int(uint8_t *buffer, intmax_t number, uint8_t base)
+{
+	uint8_t temp[sizeof(number) * 8]; // wide enough for any value of number in base-2 without the sign
+	uint8_t *position = temp + sizeof(temp);
+
+	int digit;
+	size_t length;
+
+	// In 2's complement INT64_MIN can not be safely negated.
+	// Extract the least significant digit from number to ensure number is small enough to be negated.
+	digit = number % base;
 	if (number < 0)
 	{
-		*buffer++ = '-';
-		number = -number;
+		digit = -digit;
+		*buffer++ = '-'; // minus
+
+		number /= base;
+		number = -number; // negate number and treat it as uint from now on
 	}
-	_format_uint_nofill_internal(buffer, number, base);
+	else number /= base;
+
+	// Write the result string in temporary memory.
+	while (1)
+	{
+		*--position = digits[(size_t)digit];
+		if (!number) break; // no more digits
+		digit = number % base;
+		number /= base;
+	}
+
+	// Copy the result string to buffer.
+	length = sizeof(temp) - (position - temp);
+	memcpy(buffer, position, length);
+	return buffer + length;
 }
 
-// If number can't fit in length bytes, the behavior is undefined.
-char *_format_int_fill(char *restrict buffer, int64_t number, uint8_t base, uint16_t length, char fill)
+uint8_t *format_int_pad(uint8_t *buffer, intmax_t number, uint8_t base, uint32_t length, uint8_t fill)
 {
-	uint64_t unumber;
-	if (number < 0) unumber = -number;
-	else unumber = number;
+	uint8_t *position = buffer + length;
+	int negative = 0;
 
-	char *end = buffer + length, *position = end - 1;
-	_format_digits(position, unumber, base, --);
-	if (number < 0) *position-- = '-';
-	while (position >= buffer) *position-- = fill;
+	int digit;
 
-	return end;
-}
-
-uint16_t format_int_length(int64_t number, uint8_t base)
-{
-	uint16_t length = 1;
+	// In 2's complement INT64_MIN can not be safely negated.
+	// Extract the least significant digit from number to ensure number is small enough to be negated.
+	digit = number % base;
 	if (number < 0)
 	{
-		number = -number;
-		length += 1;
-	}
-	while (number /= base) ++length;
-	return length;
-}
+		digit = -digit;
+		negative = 1;
 
-char *_format_sint_nofill(char *restrict buffer, int64_t number, uint8_t base)
-{
-	if (number > 0) *buffer++ = '+';
-	else if (number < 0)
+		number /= base;
+		number = -number; // negate number and treat it as uint from now on
+	}
+	else number /= base;
+
+	// Write the result string in temporary memory.
+	while (1)
 	{
-		*buffer++ = '-';
-		number = -number;
+		*--position = digits[(size_t)digit];
+		if (!number) break; // no more digits
+		digit = number % base;
+		number /= base;
 	}
-	_format_uint_nofill_internal(buffer, number, base);
+
+	// Fill the remaining space at the beginning of the buffer with padding.
+	if (negative) *--position = '-'; // minus
+	if (position > buffer) memset(buffer, fill, position - buffer);
+
+	return buffer + length;
 }
 
-// If number can't fit in length bytes, the behavior is undefined.
-char *_format_sint_fill(char *restrict buffer, int64_t number, uint8_t base, uint16_t length, char fill)
-{
-	uint64_t unumber;
-	if (number < 0) unumber = -number;
-	else unumber = number;
-
-	char *end = buffer + length, *position = end - 1;
-	_format_digits(position, unumber, base, --);
-	if (number > 0) *position-- = '+';
-	else if (number < 0) *position-- = '-';
-	while (position >= buffer) *position-- = fill;
-
-	return end;
-}
-
-uint16_t format_sint_length(int64_t number, uint8_t base)
-{
-	uint16_t length = 1;
-	length += (number != 0);
-	if (number < 0) number = -number;
-	while (number /= base) ++length;
-	return length;
-}
-
-/*#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
-#include <sys/time.h>
-#include <unistd.h>
-
-//#define rand() ((unsigned)(rand)())
-
-#define T(t) ((t).tv_sec * 1000000 + (t).tv_usec)
-
-#define start() gettimeofday(&s, 0)
-#define end(str) (gettimeofday(&e, 0), fprintf(stderr, "%s%u\n", (str), (unsigned)(T(e) - T(s))))
-
-#define N 1048576
-//#define N 3
-
-static int data[N];
-
-int main(void)
-{
-	char buffer[4096];
-
-	struct timeval s, e;
-	size_t i, j;
-
-	srand(time(0));
-
-	start();
-	for(i = 0; i < N; ++i)
-		data[i] = rand();
-	end("generated: ");
-
-	size_t index;
-
-	start();
-	for(i = 0; i < N; ++i)
-	{
-		index = print_int(buffer, data[i], 10) - buffer;
-		index = print_int(buffer + index, data[i + 1], 10) - buffer;
-		index = print_int(buffer + index, data[i], 10) - buffer;
-		index = print_int(buffer + index, data[i + 1], 10) - buffer;
-		buffer[index] = 0;
-
-		//print_int(print_int(print_int(buffer, data[i], 10), data[i + 1], 10), data[i], 10) = 0;
-	}
-	end("format: ");
-
-	start();
-	for(i = 0; i < N; i += 2)
-		sprintf(buffer, "%d%d%d%d", data[i], data[i + 1], data[i], data[i + 1]);
-	end("sprintf: ");
-
-
-	*print_int(buffer, -138) = 0;
-	printf("%s\n", buffer);
-	*print_int(buffer, -138, 10) = 0;
-	printf("%s\n", buffer);
-	*print_int(buffer, -138, 16) = 0;
-	printf("%s\n", buffer);
-
-	*print_int(buffer, -138, 16, 6) = 0;
-	printf("%s\n", buffer);
-
-	*print_int(buffer, -138, 8, 6, '0') = 0;
-	printf("%s\n", buffer);
-
-	return 0;
-}*/
-
-char *format_bin(char *restrict buffer, const uint8_t *restrict bytes, size_t length)
+char *format_hex(char *restrict buffer, const uint8_t *restrict bytes, size_t length)
 {
 	size_t i;
 	for(i = 0; i < length; ++i)
@@ -255,17 +193,7 @@ char *format_base64(char *restrict buffer, const uint8_t *restrict bytes, size_t
 	}
 }
 
-/*
-format_base64_step()
-format_base64_flush()
-
-char *destination
-uint8_t *source
-size_t length
-char alphabet[]
-uint32_t *state
-bool padding
-*/
+/////////////////////
 
 // TODO: fix this
 size_t hex2bin(unsigned char *restrict dest, const unsigned char *src, size_t length)
@@ -322,7 +250,7 @@ size_t parse_base64(const unsigned char *src, unsigned char *restrict dest, size
 
 	const unsigned char *end = src + length;
 	length = (length / 4) * 3;
-	while (true)
+	while (1)
 	{
 		value = base64_int[src[0]];
 		if (value > 63) return -1;
