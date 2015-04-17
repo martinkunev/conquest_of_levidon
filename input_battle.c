@@ -48,9 +48,18 @@ static void pawn_shoot(struct pawn *restrict pawn, unsigned x, unsigned y)
 
 static int input_round(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game)
 {
-	if (code == EVENT_MOTION)
+	switch (code)
+	{
+	case EVENT_MOTION:
 		state.hover = POINT_NONE;
-	return ((code == 'n') ? INPUT_DONE : 0);
+		return 0;
+	case 'n':
+		return INPUT_DONE;
+	case 'q': // surrender
+		return INPUT_TERMINATE;
+	default:
+		return 0;
+	}
 }
 
 static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game)
@@ -198,6 +207,17 @@ int input_battle(const struct game *restrict game, const struct battle *restrict
 	int status = input_local(if_battle, areas, sizeof(areas) / sizeof(*areas), game);
 	visibility_graph_free(state.nodes);
 
+	if (status == INPUT_TERMINATE) // the player surrenders
+	{
+		// Kill all the pawns of the player.
+		size_t i;
+		struct vector *pawns = (struct vector *)battle->player_pawns + state.player; // TODO fix this cast
+		for(i = 0; i < pawns->length; ++i)
+			((struct pawn *)pawns->data[i])->slot->count = 0;
+
+		status = INPUT_DONE; // the player finished their turn
+	}
+
 	return status;
 }
 
@@ -229,7 +249,18 @@ int input_formation(const struct game *restrict game, const struct region *restr
 
 	state.region = region - game->regions;
 
-	return input_local(if_formation, areas, sizeof(areas) / sizeof(*areas), game);
+	int status = input_local(if_formation, areas, sizeof(areas) / sizeof(*areas), game);
+	if (status == INPUT_TERMINATE) // the player surrenders
+	{
+		// Kill all the pawns of the player.
+		size_t i;
+		struct vector *pawns = (struct vector *)battle->player_pawns + state.player; // TODO fix this cast
+		for(i = 0; i < pawns->length; ++i)
+			((struct pawn *)pawns->data[i])->slot->count = 0;
+
+		status = INPUT_DONE; // the player finished their turn
+	}
+	return status;
 }
 
 static inline unsigned long timediff(const struct timeval *restrict end, const struct timeval *restrict start)
