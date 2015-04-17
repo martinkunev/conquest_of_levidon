@@ -4,8 +4,6 @@
 
 #include <string.h>
 
-//#include "format.h"
-
 /////////////////////////////
 typedef struct
 {
