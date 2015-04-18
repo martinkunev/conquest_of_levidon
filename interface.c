@@ -50,6 +50,9 @@
 #define glRenderbufferStorage(...) glRenderbufferStorageEXT(__VA_ARGS__)
 #define glFramebufferRenderbuffer(...) glFramebufferRenderbufferEXT(__VA_ARGS__)
 
+#define WM_STATE "_NET_WM_STATE"
+#define WM_STATE_FULLSCREEN "_NET_WM_STATE_FULLSCREEN"
+
 static Display *display;
 static xcb_window_t window;
 static GLXDrawable drawable;
@@ -96,6 +99,15 @@ static void if_reshape(int width, int height)
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
+}
+
+static xcb_intern_atom_reply_t *request_atom(xcb_connection_t *restrict connection, const char *restrict name, size_t name_size)
+{
+	xcb_generic_error_t *error;
+	xcb_intern_atom_cookie_t cookie = xcb_intern_atom(connection, 0, sizeof(name_size), name);
+	xcb_intern_atom_reply_t *reply = xcb_intern_atom_reply(connection, cookie, &error);
+	if (error) return 0;
+	return reply;
 }
 
 int if_init(void)
@@ -184,7 +196,31 @@ int if_init(void)
 
 	// TODO set window title, border, etc.
 
-	// TODO full screen
+//#define _NET_WM_STATE_REMOVE        0    // remove/unset property
+//#define _NET_WM_STATE_ADD           1    // add/set property
+//#define _NET_WM_STATE_TOGGLE        2    // toggle property
+	// Make the window fullscreen.
+	{
+		xcb_intern_atom_reply_t *reply_state = request_atom(connection, WM_STATE, sizeof(WM_STATE));
+		if (!reply_state) ; // TODO
+
+		xcb_intern_atom_reply_t *reply_fullscreen = request_atom(connection, WM_STATE_FULLSCREEN, sizeof(WM_STATE_FULLSCREEN));
+		if (!reply_fullscreen) ; // TODO
+
+		xcb_client_message_event_t event;
+		memset(&event, 0, sizeof(event));
+
+		event.response_type = XCB_CLIENT_MESSAGE;
+		event.format = 32;
+		event.window = window;
+		event.type = reply_state->atom;
+
+		event.data.data32[0] = 1; // fullscreen on
+		event.data.data32[1] = reply_fullscreen->atom;
+		event.data.data32[2] = XCB_ATOM_NONE;
+
+		xcb_send_event(connection, 1, window, XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT | XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY, (const char *)&event);
+	}
 
 	if_reshape(SCREEN_WIDTH, SCREEN_HEIGHT); // TODO call this after resize
 
