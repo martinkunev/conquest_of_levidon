@@ -80,6 +80,12 @@ static GLuint map_renderbuffer;
 
 struct font font12;
 
+uint8_t *format_sint(uint8_t *buffer, int64_t number)
+{
+	if (number > 0) *buffer++ = '+';
+	return format_int(buffer, number, 10);
+}
+
 static void if_reshape(int width, int height)
 {
 	glViewport(0, 0, width, height);
@@ -259,7 +265,7 @@ static void display_unit(size_t unit, unsigned x, unsigned y, enum color color, 
 	if (count)
 	{
 		char buffer[16];
-		size_t length = format_uint(buffer, count) - buffer;
+		size_t length = format_uint(buffer, count, 10) - (uint8_t *)buffer;
 		display_string(buffer, length, x + (FIELD_SIZE - (length * 10)) / 2, y + FIELD_SIZE, &font12, text);
 	}
 }
@@ -673,7 +679,7 @@ static void show_resource(const struct image *restrict image, int treasury, int 
 	char buffer[32], *end; // TODO make sure this is enough
 
 	image_draw(image, PANEL_X, y);
-	end = format_uint(buffer, treasury);
+	end = format_uint(buffer, treasury, 10);
 
 	x = PANEL_X + image->width;
 	x += display_string(buffer, end - buffer, x, y, &font12, Black);
@@ -703,7 +709,7 @@ static void show_cost(const char *restrict name, size_t name_length, const struc
 		image_draw(&image_gold, TOOLTIP_X + offset, TOOLTIP_Y);
 		offset += 16;
 
-		length = format_uint(buffer, cost->gold) - buffer;
+		length = format_uint(buffer, cost->gold, 10) - (uint8_t *)buffer;
 		display_string(buffer, length, TOOLTIP_X + offset, TOOLTIP_Y, &font12, White);
 		offset += 40;
 	}
@@ -712,7 +718,7 @@ static void show_cost(const char *restrict name, size_t name_length, const struc
 		image_draw(&image_food, TOOLTIP_X + offset, TOOLTIP_Y);
 		offset += 16;
 
-		length = format_uint(buffer, cost->food) - buffer;
+		length = format_uint(buffer, cost->food, 10) - (uint8_t *)buffer;
 		display_string(buffer, length, TOOLTIP_X + offset, TOOLTIP_Y, &font12, White);
 		offset += 40;
 	}
@@ -721,7 +727,7 @@ static void show_cost(const char *restrict name, size_t name_length, const struc
 		image_draw(&image_wood, TOOLTIP_X + offset, TOOLTIP_Y);
 		offset += 16;
 
-		length = format_uint(buffer, cost->wood) - buffer;
+		length = format_uint(buffer, cost->wood, 10) - (uint8_t *)buffer;
 		display_string(buffer, length, TOOLTIP_X + offset, TOOLTIP_Y, &font12, White);
 		offset += 40;
 	}
@@ -730,7 +736,7 @@ static void show_cost(const char *restrict name, size_t name_length, const struc
 		image_draw(&image_stone, TOOLTIP_X + offset, TOOLTIP_Y);
 		offset += 16;
 
-		length = format_uint(buffer, cost->stone) - buffer;
+		length = format_uint(buffer, cost->stone, 10) - (uint8_t *)buffer;
 		display_string(buffer, length, TOOLTIP_X + offset, TOOLTIP_Y, &font12, White);
 		offset += 40;
 	}
@@ -739,7 +745,7 @@ static void show_cost(const char *restrict name, size_t name_length, const struc
 		image_draw(&image_iron, TOOLTIP_X + offset, TOOLTIP_Y);
 		offset += 16;
 
-		length = format_uint(buffer, cost->iron) - buffer;
+		length = format_uint(buffer, cost->iron, 10) - (uint8_t *)buffer;
 		display_string(buffer, length, TOOLTIP_X + offset, TOOLTIP_Y, &font12, White);
 		offset += 40;
 	}
@@ -747,7 +753,7 @@ static void show_cost(const char *restrict name, size_t name_length, const struc
 	image_draw(&image_time, TOOLTIP_X + offset, TOOLTIP_Y);
 	offset += 16;
 
-	length = format_uint(buffer, time) - buffer;
+	length = format_uint(buffer, time, 10) - (uint8_t *)buffer;
 	display_string(buffer, length, TOOLTIP_X + offset, TOOLTIP_Y, &font12, White);
 	offset += 40;
 }

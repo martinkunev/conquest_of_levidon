@@ -1561,7 +1561,7 @@ char *json_dump_string(unsigned char *restrict dest, const unsigned char *restri
 			// Write the encoded character.
 			*dest++ = '\\';
 			*dest++ = 'u';
-			dest = format_bin(dest, (char *)&character, sizeof(character));
+			dest = format_hex(dest, (char *)&character, sizeof(character));
 
 			continue;
 		}
@@ -1622,7 +1622,7 @@ char *json_dump(char *restrict result, const union json *restrict json)
 	case BOOLEAN:
 		return result + sprintf(result, "%s", boolean_data[json->boolean]);
 	case INTEGER:
-		return format_int(result, json->integer);
+		return format_int(result, json->integer, 10);
 	case REAL:
 		return result + sprintf(result, "%f", json->real);
 	case STRING:
