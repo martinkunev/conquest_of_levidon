@@ -17,6 +17,7 @@
 extern GLuint map_framebuffer;
 
 struct state state;
+//struct state_map state;
 
 static int input_turn(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game)
 {
@@ -29,6 +30,7 @@ static int input_turn(int code, unsigned x, unsigned y, uint16_t modifiers, cons
 		return INPUT_DONE;
 
 	case EVENT_MOTION:
+		//state.hover_type = HOVER_NONE;
 		state.pointed.building = -1;
 		state.pointed.unit = -1;
 	default:
@@ -51,7 +53,7 @@ static int input_region(int code, unsigned x, unsigned y, uint16_t modifiers, co
 
 	if (code == -1)
 	{
-		struct slot *slot;
+		struct troop *slot;
 
 		if (!pixel_color[0]) state.region = -1;
 		else state.region = pixel_color[2];
@@ -70,7 +72,7 @@ static int input_region(int code, unsigned x, unsigned y, uint16_t modifiers, co
 	else if (code == -3)
 	{
 		struct region *region = game->regions + state.region;
-		struct slot *slot;
+		struct troop *slot;
 
 		if (!pixel_color[0]) return 0;
 
@@ -185,7 +187,7 @@ static int input_scroll_self(int code, unsigned x, unsigned y, uint16_t modifier
 	if (code != -1) return INPUT_NOTME; // handle only left mouse clicks
 
 	if (state.region < 0) return 0; // no region selected
-	struct slot *slot = game->regions[state.region].slots;
+	struct troop *slot = game->regions[state.region].slots;
 	if (!slot) return 0; // no slots in this region
 
 	if (x < SCROLL) // scroll left
@@ -211,7 +213,7 @@ static int input_scroll_ally(int code, unsigned x, unsigned y, uint16_t modifier
 	if (code != -1) return INPUT_NOTME; // handle only left mouse clicks
 
 	if (state.region < 0) return 0; // no region selected
-	struct slot *slot = game->regions[state.region].slots;
+	struct troop *slot = game->regions[state.region].slots;
 	if (!slot) return 0; // no slots in this region
 
 	if (x < SCROLL) // scroll left
@@ -234,7 +236,7 @@ static int input_scroll_ally(int code, unsigned x, unsigned y, uint16_t modifier
 
 static int input_slot(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game)
 {
-	struct slot *slot;
+	struct troop *slot;
 	size_t offset;
 	int found;
 
@@ -422,5 +424,5 @@ int input_map(const struct game *restrict game, unsigned char player)
 	state.pointed.building = -1;
 	state.pointed.unit = -1;
 
-	return input_local(if_map, areas, sizeof(areas) / sizeof(*areas), game);
+	return input_local(areas, sizeof(areas) / sizeof(*areas), if_map, game, &state);
 }

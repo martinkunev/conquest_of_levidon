@@ -12,9 +12,9 @@ extern KeySym *keymap;
 extern int keysyms_per_keycode;
 extern int keycode_min, keycode_max;
 
-struct state state;
+struct state state; // TODO remove this
 
-int input_local(void (*display)(const struct player *restrict, const struct state *restrict, const struct game *restrict), const struct area *restrict areas, size_t areas_count, const struct game *restrict game)
+int input_local(const struct area *restrict areas, size_t areas_count, void (*display)(const struct state *, const struct game *), const struct game *restrict game, struct state *state)
 {
 	xcb_generic_event_t *event;
 	xcb_button_release_event_t *mouse;
@@ -28,7 +28,7 @@ int input_local(void (*display)(const struct player *restrict, const struct stat
 	size_t index;
 	int status;
 
-	display(game->players, &state, game);
+	display(state, game); // TODO is this necessary?
 
 	// TODO clear queued events (previously pressed keys, etc.)
 
@@ -41,7 +41,7 @@ int input_local(void (*display)(const struct player *restrict, const struct stat
 		switch (event->response_type & ~0x80)
 		{
 		case XCB_EXPOSE:
-			display(game->players, &state, game);
+			display(state, game);
 			continue;
 
 		case XCB_BUTTON_PRESS:
@@ -84,12 +84,18 @@ int input_local(void (*display)(const struct player *restrict, const struct stat
 			if ((areas[index].left <= x) && (x <= areas[index].right) && (areas[index].top <= y) && (y <= areas[index].bottom))
 			{
 				status = areas[index].callback(code, x - areas[index].left, y - areas[index].top, modifiers, game);
-				if (status == INPUT_TERMINATE) return -1;
-				else if (status == INPUT_DONE) return 0;
-				else if (status == INPUT_NOTME) continue;
-				else break;
+				switch (status)
+				{
+				case INPUT_TERMINATE:
+					return -1;
+				case INPUT_DONE:
+					return 0;
+				case INPUT_NOTME:
+					continue;
+				}
+				break;
 			}
 		} while (index--);
-		display(game->players, &state, game);
+		display(state, game);
 	}
 }

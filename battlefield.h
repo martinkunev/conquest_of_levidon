@@ -2,7 +2,7 @@
 
 struct pawn
 {
-	struct slot *slot;
+	struct troop *slot;
 	unsigned hurt;
 
 	struct move *moves; // TODO allocate this
@@ -55,7 +55,7 @@ o***o
 ***oo
 */
 
-static inline const struct point *formation_positions(const struct slot *restrict slot, const struct region *restrict region)
+static inline const struct point *formation_positions(const struct troop *restrict slot, const struct region *restrict region)
 {
 	static const struct point positions_defend[PAWNS_LIMIT] = {
 		{12, 11}, {11, 11}, {11, 12}, {12, 12}, {13, 11}, {11, 10}, {10, 12}, {12, 13}, {13, 12}, {12, 10}, {10, 11}, {11, 13}

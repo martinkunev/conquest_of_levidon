@@ -13,8 +13,6 @@
 #include "input_battle.h"
 #include "interface.h"
 
-#define ANIMATION_DURATION 4.0
-
 extern const struct battle *battle;
 extern struct battlefield (*battlefield)[BATTLEFIELD_WIDTH];
 
@@ -172,7 +170,49 @@ reset:
 	return 0;
 }
 
-int input_battle(const struct game *restrict game, const struct battle *restrict battle, unsigned char player)
+int input_formation(const struct game *restrict game, const struct region *restrict region, struct battle *restrict battle, unsigned char player)
+{
+	if_set(battle->field, battle);
+
+	struct area areas[] = {
+		{
+			.left = 0,
+			.right = SCREEN_WIDTH - 1,
+			.top = 0,
+			.bottom = SCREEN_HEIGHT - 1,
+			.callback = input_round
+		},
+		{
+			.left = 0,
+			.right = BATTLEFIELD_WIDTH * FIELD_SIZE - 1,
+			.top = 0,
+			.bottom = BATTLEFIELD_HEIGHT * FIELD_SIZE - 1,
+			.callback = input_place
+		},
+	};
+
+	state.player = player;
+
+	state.selected.pawn = 0;
+	state.hover = POINT_NONE;
+
+	state.region = region - game->regions;
+
+	int status = input_local(areas, sizeof(areas) / sizeof(*areas), if_formation, game, &state);
+	if (status == INPUT_TERMINATE) // the player surrenders
+	{
+		// Kill all the pawns of the player.
+		size_t i;
+		struct vector *pawns = battle->player_pawns + state.player;
+		for(i = 0; i < pawns->length; ++i)
+			((struct pawn *)pawns->data[i])->slot->count = 0;
+
+		status = INPUT_DONE; // the player finished their turn
+	}
+	return status;
+}
+
+int input_battle(const struct game *restrict game, struct battle *restrict battle, unsigned char player)
 {
 	if_set(battle->field, battle);
 
@@ -204,14 +244,14 @@ int input_battle(const struct game *restrict game, const struct battle *restrict
 
 	state.nodes = visibility_graph_build(0, 0);
 	if (!state.nodes) abort();
-	int status = input_local(if_battle, areas, sizeof(areas) / sizeof(*areas), game);
+	int status = input_local(areas, sizeof(areas) / sizeof(*areas), if_battle, game, &state);
 	visibility_graph_free(state.nodes);
 
 	if (status == INPUT_TERMINATE) // the player surrenders
 	{
 		// Kill all the pawns of the player.
 		size_t i;
-		struct vector *pawns = (struct vector *)battle->player_pawns + state.player; // TODO fix this cast
+		struct vector *pawns = battle->player_pawns + state.player;
 		for(i = 0; i < pawns->length; ++i)
 			((struct pawn *)pawns->data[i])->slot->count = 0;
 
@@ -219,72 +259,4 @@ int input_battle(const struct game *restrict game, const struct battle *restrict
 	}
 
 	return status;
-}
-
-int input_formation(const struct game *restrict game, const struct region *restrict region, const struct battle *restrict battle, unsigned char player)
-{
-	if_set(battle->field, battle);
-
-	struct area areas[] = {
-		{
-			.left = 0,
-			.right = SCREEN_WIDTH - 1,
-			.top = 0,
-			.bottom = SCREEN_HEIGHT - 1,
-			.callback = input_round
-		},
-		{
-			.left = 0,
-			.right = BATTLEFIELD_WIDTH * FIELD_SIZE - 1,
-			.top = 0,
-			.bottom = BATTLEFIELD_HEIGHT * FIELD_SIZE - 1,
-			.callback = input_place
-		},
-	};
-
-	state.player = player;
-
-	state.selected.pawn = 0;
-	state.hover = POINT_NONE;
-
-	state.region = region - game->regions;
-
-	int status = input_local(if_formation, areas, sizeof(areas) / sizeof(*areas), game);
-	if (status == INPUT_TERMINATE) // the player surrenders
-	{
-		// Kill all the pawns of the player.
-		size_t i;
-		struct vector *pawns = (struct vector *)battle->player_pawns + state.player; // TODO fix this cast
-		for(i = 0; i < pawns->length; ++i)
-			((struct pawn *)pawns->data[i])->slot->count = 0;
-
-		status = INPUT_DONE; // the player finished their turn
-	}
-	return status;
-}
-
-static inline unsigned long timediff(const struct timeval *restrict end, const struct timeval *restrict start)
-{
-	return (end->tv_sec * 1000000 + end->tv_usec - start->tv_sec * 1000000 - start->tv_usec);
-}
-
-// TODO write this better
-int input_animation(const struct game *restrict game, const struct battle *restrict battle)
-{
-	if_set(battle->field, battle);
-
-	struct timeval start, now;
-	double progress;
-	gettimeofday(&start, 0);
-	do
-	{
-		gettimeofday(&now, 0);
-		progress = timediff(&now, &start) / (ANIMATION_DURATION * 1000000.0);
-		if (if_animation(game->players, &state, game, progress))
-			break;
-	} while (progress < 1.0);
-
-	return INPUT_DONE;
-
-	//return input_local(if_animation, areas, sizeof(areas) / sizeof(*areas), game);
 }

@@ -50,6 +50,8 @@
 #define glRenderbufferStorage(...) glRenderbufferStorageEXT(__VA_ARGS__)
 #define glFramebufferRenderbuffer(...) glFramebufferRenderbufferEXT(__VA_ARGS__)
 
+#define ANIMATION_DURATION 4.0
+
 #define WM_STATE "_NET_WM_STATE"
 #define WM_STATE_FULLSCREEN "_NET_WM_STATE_FULLSCREEN"
 
@@ -66,8 +68,8 @@ int keycode_min, keycode_max;
 GLuint map_framebuffer;
 
 // TODO Create a struct that stores all the information about the battle (battlefield, players, etc.)
-const struct battle *battle;
-const struct battlefield (*battlefield)[BATTLEFIELD_WIDTH];
+struct battle *battle;
+struct battlefield (*battlefield)[BATTLEFIELD_WIDTH];
 
 struct region *restrict regions;
 size_t regions_count;
@@ -500,7 +502,8 @@ void if_test(const struct player *restrict players, const struct state *restrict
 	glXSwapBuffers(display, drawable);
 }*/
 
-int if_animation(const struct player *restrict players, const struct state *restrict state, const struct game *restrict game, double progress)
+// TODO write this better
+static int if_animation(const struct player *restrict players, const struct state *restrict state, const struct battle *restrict battle, double progress)
 {
 	int finished = 1;
 
@@ -531,8 +534,25 @@ int if_animation(const struct player *restrict players, const struct state *rest
 
 	return finished;
 }
+static inline unsigned long timediff(const struct timeval *restrict end, const struct timeval *restrict start)
+{
+	return (end->tv_sec * 1000000 + end->tv_usec - start->tv_sec * 1000000 - start->tv_usec);
+}
+void input_animation(const struct game *restrict game, const struct battle *restrict battle)
+{
+	struct timeval start, now;
+	double progress;
+	gettimeofday(&start, 0);
+	do
+	{
+		gettimeofday(&now, 0);
+		progress = timediff(&now, &start) / (ANIMATION_DURATION * 1000000.0);
+		if (if_animation(game->players, &state, battle, progress))
+			break;
+	} while (progress < 1.0);
+}
 
-void if_formation(const struct player *restrict players, const struct state *restrict state, const struct game *restrict game)
+void if_formation(const struct state *state, const struct game *game)
 {
 	// clear window
 	glClearColor(0.0, 0.0, 0.0, 0.0);
@@ -555,7 +575,7 @@ void if_formation(const struct player *restrict players, const struct state *res
 	for(i = 0; i < pawns->length; ++i)
 	{
 		const struct pawn *pawn = pawns->data[i];
-		const struct slot *slot = pawn->slot;
+		const struct troop *slot = pawn->slot;
 
 		if (pawn == state->selected.pawn)
 		{
@@ -580,7 +600,7 @@ void if_formation(const struct player *restrict players, const struct state *res
 	glXSwapBuffers(display, drawable);
 }
 
-void if_battle(const struct player *restrict players, const struct state *restrict state, const struct game *restrict game)
+void if_battle(const struct state *state, const struct game *game)
 {
 	// clear window
 	glClearColor(0.0, 0.0, 0.0, 0.0);
@@ -611,7 +631,7 @@ void if_battle(const struct player *restrict players, const struct state *restri
 			{
 				enum color color;
 				if (p->slot->player == state->player) color = Self;
-				else if (players[p->slot->player].alliance == players[state->player].alliance) color = Ally;
+				else if (game->players[p->slot->player].alliance == game->players[state->player].alliance) color = Ally;
 				else color = Enemy;
 
 				display_rectangle(x * FIELD_SIZE, y * FIELD_SIZE, FIELD_SIZE, FIELD_SIZE, color);
@@ -629,7 +649,7 @@ void if_battle(const struct player *restrict players, const struct state *restri
 		enum color color;
 		p = battlefield[state->y][state->x].pawn;
 		if (p->slot->player == state->player) color = Self;
-		else if (players[p->slot->player].alliance == players[state->player].alliance) color = Ally;
+		else if (game->players[p->slot->player].alliance == game->players[state->player].alliance) color = Ally;
 		else color = Enemy;
 		display_rectangle(CTRL_X, CTRL_Y, FIELD_SIZE + MARGIN * 2, FIELD_SIZE + font12.height + MARGIN * 2, color);
 		display_unit(p->slot->unit->index, CTRL_X + MARGIN, CTRL_Y + MARGIN, Player + p->slot->player, Black, p->slot->count);
@@ -791,7 +811,7 @@ static void show_cost(const char *restrict name, size_t name_length, const struc
 	offset += 40;
 }
 
-void if_map(const struct player *restrict players, const struct state *restrict state, const struct game *restrict game)
+void if_map(const struct state *state, const struct game *game)
 {
 	// clear window
 	glClearColor(0.0, 0.0, 0.0, 0.0);
@@ -817,7 +837,7 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 	// Map
 
 	struct resources income = {0}, expenses = {0};
-	const struct slot *slot;
+	const struct troop *slot;
 
 	// Determine which regions to show.
 	unsigned char region_visible[REGIONS_LIMIT] = {0};
@@ -876,7 +896,7 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 		display_string(region->name, region->name_length, PANEL_X + image_flag.width + MARGIN, PANEL_Y + (image_flag.height - font12.height) / 2, &font12, Black);
 
 		// Display the slots at the selected region.
-		if (players[state->player].alliance == players[region->owner].alliance)
+		if (game->players[state->player].alliance == game->players[region->owner].alliance)
 		{
 			unsigned char self_count = 0, ally_count = 0;
 			enum color color_text;
@@ -974,23 +994,24 @@ void if_map(const struct player *restrict players, const struct state *restrict 
 	}
 
 	// Treasury
-	show_resource(&image_gold, players[state->player].treasury.gold, income.gold, expenses.gold, RESOURCE_GOLD);
-	show_resource(&image_food, players[state->player].treasury.food, income.food, expenses.food, RESOURCE_FOOD);
-	show_resource(&image_wood, players[state->player].treasury.wood, income.wood, expenses.wood, RESOURCE_WOOD);
-	show_resource(&image_stone, players[state->player].treasury.stone, income.stone, expenses.stone, RESOURCE_STONE);
-	show_resource(&image_iron, players[state->player].treasury.iron, income.iron, expenses.iron, RESOURCE_IRON);
+	struct resources *treasury = &game->players[state->player].treasury;
+	show_resource(&image_gold, treasury->gold, income.gold, expenses.gold, RESOURCE_GOLD);
+	show_resource(&image_food, treasury->food, income.food, expenses.food, RESOURCE_FOOD);
+	show_resource(&image_wood, treasury->wood, income.wood, expenses.wood, RESOURCE_WOOD);
+	show_resource(&image_stone, treasury->stone, income.stone, expenses.stone, RESOURCE_STONE);
+	show_resource(&image_iron, treasury->iron, income.iron, expenses.iron, RESOURCE_IRON);
 
 	glFlush();
 	glXSwapBuffers(display, drawable);
 }
 
-void if_set(const struct battlefield field[BATTLEFIELD_WIDTH][BATTLEFIELD_HEIGHT], const struct battle *b)
+void if_set(struct battlefield field[BATTLEFIELD_WIDTH][BATTLEFIELD_HEIGHT], struct battle *b)
 {
 	battle = b;
 	battlefield = field;
 }
 
-void if_regions(struct game *restrict game)
+void if_regions_input(struct game *restrict game)
 {
 	regions = game->regions;
 	regions_count = game->regions_count;

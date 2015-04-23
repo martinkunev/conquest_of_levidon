@@ -30,6 +30,11 @@ struct player
 	unsigned char alliance;
 };
 
+struct object
+{
+	//
+};
+
 struct unit
 {
 	char name[UNIT_NAME_LIMIT];
@@ -58,9 +63,9 @@ struct building
 	uint32_t requires;
 };
 
-struct slot
+struct troop
 {
-	struct slot *_prev, *_next;
+	struct troop *_prev, *_next;
 	const struct unit *unit;
 	unsigned count;
 	unsigned char player;
@@ -75,7 +80,7 @@ struct region
 	unsigned char train_time;
 	struct unit *train[TRAIN_QUEUE];
 
-	struct slot *slots;
+	struct troop *slots;
 
 	size_t index;
 	struct region *neighbors[NEIGHBORS_LIMIT];

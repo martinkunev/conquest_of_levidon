@@ -15,7 +15,7 @@
 // Due to pawn dimensions, at most 4 can try to move to a given square at the same time.
 #define OVERLAP_LIMIT 4
 
-#define heap_type struct slot *
+#define heap_type struct troop *
 #define heap_diff(a, b) ((a)->unit->speed >= (b)->unit->speed)
 #include "heap.t"
 
@@ -593,7 +593,7 @@ void battlefield_clean_corpses(struct battle *battle)
 {
 	size_t p;
 	struct pawn *pawn;
-	struct slot *slot;
+	struct troop *slot;
 	for(p = 0; p < battle->pawns_count; ++p)
 	{
 		pawn = battle->pawns + p;
@@ -656,7 +656,7 @@ int battlefield_shootable(const struct pawn *restrict pawn, struct point target)
 
 int battlefield_init(const struct game *restrict game, struct battle *restrict battle, struct region *restrict region)
 {
-	struct slot **slots, *slot;
+	struct troop **slots, *slot;
 	struct pawn *pawns;
 	size_t count;
 

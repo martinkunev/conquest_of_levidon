@@ -44,13 +44,12 @@
 
 int if_init(void);
 
-void if_set(const struct battlefield field[BATTLEFIELD_WIDTH][BATTLEFIELD_HEIGHT], const struct battle *b);
+void if_set(struct battlefield field[BATTLEFIELD_WIDTH][BATTLEFIELD_HEIGHT], struct battle *b);
 
-void if_map(const struct player *restrict players, const struct state *restrict state, const struct game *restrict game);
-void if_battle(const struct player *restrict players, const struct state *restrict state, const struct game *restrict game);
+void if_map(const struct state *state, const struct game *game);
+void if_formation(const struct state *state, const struct game *game);
+void if_battle(const struct state *state, const struct game *game);
 
-void if_formation(const struct player *restrict players, const struct state *restrict state, const struct game *restrict game);
+void input_animation(const struct game *restrict game, const struct battle *restrict battle);
 
-int if_animation(const struct player *restrict players, const struct state *restrict state, const struct game *restrict game, double progress);
-
-void if_regions(struct game *restrict game);
+void if_regions_input(struct game *restrict game);
