@@ -10,7 +10,7 @@
 #include "json.h"
 #include "map.h"
 #include "pathfinding.h"
-#include "battlefield.h"
+#include "battle.h"
 #include "input.h"
 #include "input_map.h"
 #include "input_battle.h"

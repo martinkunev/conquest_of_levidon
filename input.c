@@ -3,7 +3,6 @@
 #include <xcb/xcb.h>
 
 #include "types.h"
-#include "json.h"
 #include "map.h"
 #include "input.h"
 

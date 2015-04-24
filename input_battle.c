@@ -5,10 +5,10 @@
 #include <xcb/xcb.h>
 
 #include "types.h"
-#include "json.h"
 #include "map.h"
 #include "pathfinding.h"
-#include "battlefield.h"
+#include "movement.h"
+#include "battle.h"
 #include "input.h"
 #include "input_battle.h"
 #include "interface.h"
@@ -17,13 +17,13 @@ extern const struct battle *battle;
 extern struct battlefield (*battlefield)[BATTLEFIELD_WIDTH];
 
 // Sets move destination of a pawn. Returns -1 if the current player is not allowed to move the pawn at the destination.
-static void pawn_move(struct pawn *restrict pawn, unsigned x, unsigned y)
+static void pawn_move(struct pawn *restrict pawn, unsigned x, unsigned y, struct state_battle *state)
 {
 	struct point target = {x, y};
 
 	// TODO support fast move
 
-	if (!battlefield_reachable(pawn, target, state.nodes)) return;
+	if (!movement_reachable(pawn, target, state->nodes)) return;
 
 	// TODO set pawn->fight
 
@@ -41,7 +41,7 @@ static void pawn_shoot(struct pawn *restrict pawn, unsigned x, unsigned y)
 	pawn->shoot = target;
 
 	// Reset move commands.
-	pawn_stay(pawn);
+	movement_stay(pawn);
 }
 
 static int input_round(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
@@ -51,7 +51,7 @@ static int input_round(int code, unsigned x, unsigned y, uint16_t modifiers, con
 	switch (code)
 	{
 	case EVENT_MOTION:
-		state.hover = POINT_NONE;
+		state->hover = POINT_NONE;
 		return 0;
 	case 'n':
 		return INPUT_DONE;
@@ -89,14 +89,14 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 		struct point target = {x, y};
 		if (point_eq(target, pawn->moves[0].location))
 		{
-			pawn_stay(pawn);
+			movement_stay(pawn);
 			pawn->shoot = POINT_NONE;
 			return 0;
 		}
 
 		// shoot if CONTROL is pressed; move otherwise
 		if (modifiers & XCB_MOD_MASK_CONTROL) pawn_shoot(pawn, x, y);
-		else pawn_move(pawn, x, y);
+		else pawn_move(pawn, x, y, state);
 	}
 	else if (code == EVENT_MOTION) state->hover = (struct point){x, y};
 

@@ -110,6 +110,8 @@ struct game
 extern const struct building buildings[];
 extern const size_t buildings_count;
 
+union json;
+
 int map_init(const union json *restrict json, struct game *restrict game);
 void map_term(struct game *restrict game);
 

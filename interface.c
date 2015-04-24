@@ -13,11 +13,11 @@
 //#include <X11/Xlib-xcb.h>
 
 #include "types.h"
-#include "json.h"
 #include "format.h"
 #include "map.h"
 #include "pathfinding.h"
-#include "battlefield.h"
+#include "battle.h"
+#include "movement.h"
 #include "image.h"
 #include "input.h"
 #include "input_map.h"
@@ -522,7 +522,7 @@ static int if_animation(const struct player *restrict players, const struct batt
 		struct pawn *pawn = battle->pawns + p;
 		double x, y;
 
-		if (pawn_location(pawn, progress, &x, &y) < pawn->moves_count)
+		if (movement_location(pawn, progress, &x, &y) < pawn->moves_count)
 			finished = 0;
 
 		display_rectangle(x * FIELD_SIZE, y * FIELD_SIZE, FIELD_SIZE, FIELD_SIZE, Player + pawn->slot->player);
@@ -579,7 +579,7 @@ void if_formation(const void *argument, const struct game *game)
 		const struct pawn *pawn = pawns->data[i];
 		const struct troop *slot = pawn->slot;
 
-		if (i == state->pawn)
+		if (pawn == state->pawn)
 		{
 			// Display the selected pawn in the control panel.
 			display_unit(slot->unit->index, CTRL_X, CTRL_Y, Player + state->player, White, slot->count);

@@ -5,10 +5,9 @@
 #include <GL/glx.h>
 
 #include "types.h"
-#include "json.h"
 #include "map.h"
 #include "pathfinding.h"
-#include "battlefield.h"
+#include "battle.h"
 #include "input.h"
 #include "input_map.h"
 #include "interface.h"
@@ -142,7 +141,7 @@ static int input_train(int code, unsigned x, unsigned y, uint16_t modifiers, con
 	else if (code == EVENT_MOTION)
 	{
 		state->hover_object = HOVER_UNIT;
-		state->hover = unit;
+		state->hover.unit = unit;
 	}
 
 	return 0;

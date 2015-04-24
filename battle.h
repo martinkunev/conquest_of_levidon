@@ -80,15 +80,9 @@ static inline const struct point *formation_positions(const struct troop *restri
 	}
 }
 
-void pawn_stay(struct pawn *restrict pawn);
-
-size_t pawn_location(const struct pawn *restrict pawn, double time_now, double *restrict real_x, double *restrict real_y);
-
 int battlefield_init(const struct game *restrict game, struct battle *restrict battle, struct region *restrict region);
 void battlefield_term(const struct game *restrict game, struct battle *restrict battle);
 
-struct adjacency_list;
-int battlefield_reachable(struct pawn *restrict pawn, struct point target, struct adjacency_list *restrict nodes);
 int battlefield_shootable(const struct pawn *restrict pawn, struct point target);
 
 int battlefield_movement_plan(const struct player *restrict players, size_t players_count, struct battlefield battlefield[][BATTLEFIELD_HEIGHT], struct pawn *restrict pawns, size_t pawns_count);

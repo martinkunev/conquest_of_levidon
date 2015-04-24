@@ -2,10 +2,10 @@
 #include <string.h>
 
 #include "types.h"
-#include "json.h"
 #include "map.h"
 #include "pathfinding.h"
-#include "battlefield.h"
+#include "battle.h"
+#include "movement.h"
 
 #define BATTLEFIELD_WIDTH 24
 #define BATTLEFIELD_HEIGHT 24
@@ -39,44 +39,11 @@ static struct point location_field(const struct point location)
 	return square;
 }
 
-// Returns the index of the first not yet reached move location or pawn->moves_count if there is no unreached location. Sets current location in real_x and real_y.
-size_t pawn_location(const struct pawn *restrict pawn, double time_now, double *restrict real_x, double *restrict real_y)
-{
-	double progress; // progress of the current move; 0 == start point; 1 == end point
-
-	if (time_now < pawn->moves[0].time)
-	{
-		// The pawn has not started moving yet.
-		*real_x = pawn->moves[0].location.x;
-		*real_y = pawn->moves[0].location.y;
-		return 0;
-	}
-
-	size_t i;
-	for(i = 1; i < pawn->moves_count; ++i)
-	{
-		double time_start = pawn->moves[i - 1].time;
-		double time_end = pawn->moves[i].time;
-		if (time_now >= time_end) continue; // this move is already done
-
-		progress = (time_now - time_start) / (time_end - time_start);
-		*real_x = pawn->moves[i].location.x * progress + pawn->moves[i - 1].location.x * (1 - progress);
-		*real_y = pawn->moves[i].location.y * progress + pawn->moves[i - 1].location.y * (1 - progress);
-
-		return i;
-	}
-
-	// The pawn has reached its final location.
-	*real_x = pawn->moves[pawn->moves_count - 1].location.x;
-	*real_y = pawn->moves[pawn->moves_count - 1].location.y;
-	return pawn->moves_count;
-}
-
 static size_t pawn_position(const struct pawn *restrict pawn, double time_now, struct point *restrict location)
 {
 	double real_x, real_y;
 
-	size_t index = pawn_location(pawn, time_now, &real_x, &real_y);
+	size_t index = movement_location(pawn, time_now, &real_x, &real_y);
 
 	location->x = real_x * 2;
 	location->y = real_y * 2;
@@ -217,7 +184,7 @@ static int pawn_stop(struct pawn *occupied[BATTLEFIELD_HEIGHT * 2][BATTLEFIELD_W
 	{
 		// The pawn is at its failback location at the time of the detour.
 		// Cancel all the moves.
-		pawn_stay(pawn);
+		movement_stay(pawn);
 	}
 
 	return 0;
@@ -450,7 +417,7 @@ void battlefield_movement_perform(struct battlefield battlefield[][BATTLEFIELD_H
 		}
 		else
 		{
-			pawn_stay(pawn);
+			movement_stay(pawn);
 			pawn->moves[0].location = location_new;
 			pawn->moves[0].time = 0.0;
 		}
@@ -620,29 +587,6 @@ void battlefield_clean_corpses(struct battle *battle)
 			pawn->hurt -= victims * slot->unit->health;
 		}
 	}
-}
-
-void pawn_stay(struct pawn *restrict pawn)
-{
-	pawn->moves_count = 1;
-}
-
-int battlefield_reachable(struct pawn *restrict pawn, struct point target, struct adjacency_list *restrict nodes)
-{
-	// TODO better handling of memory errors
-
-	pawn_stay(pawn);
-
-	if (path_find(pawn, target, nodes, 0, 0)) return 0;
-
-	if (pawn->moves[pawn->moves_count - 1].time > 1.0)
-	{
-		// not reachable in one round
-		pawn_stay(pawn);
-		return 0;
-	}
-
-	return 1;
 }
 
 int battlefield_shootable(const struct pawn *restrict pawn, struct point target)

@@ -5,7 +5,7 @@ struct state_battle
 	struct point hover; // position of the hovered field
 
 	unsigned char x, y; // position of the current field
-	struct pawn *pawn;
+	struct pawn *pawn; // selected pawn
 
 	int region;
 
@@ -19,7 +19,7 @@ struct state_formation
 	struct point hover; // position of the hovered field
 
 	size_t region; // region index
-	size_t pawn; // index of the selected pawn in player pawns
+	struct pawn *pawn; // selected pawn
 };
 
 int input_formation(const struct game *restrict game, const struct region *restrict region, struct battle *restrict battle, unsigned char player);
