@@ -648,9 +648,10 @@ void if_battle(const void *argument, const struct game *game)
 	// Display information about the selected field.
 	if ((state->x < BATTLEFIELD_WIDTH) && (state->y < BATTLEFIELD_HEIGHT) && battlefield[state->y][state->x].pawn)
 	{
+		enum color color;
+
 		image_draw(&image_selected, state->x * FIELD_SIZE, state->y * FIELD_SIZE);
 
-		enum color color;
 		p = battlefield[state->y][state->x].pawn;
 		if (p->slot->player == state->player) color = Self;
 		else if (game->players[p->slot->player].alliance == game->players[state->player].alliance) color = Ally;
@@ -672,7 +673,10 @@ void if_battle(const void *argument, const struct game *game)
 				to.x = to.x * FIELD_SIZE + FIELD_SIZE / 2;
 				to.y = to.y * FIELD_SIZE + FIELD_SIZE / 2;
 
-				display_arrow(from, to, BATTLE_X, BATTLE_Y, Self);
+				if (p->moves[i].time <= 1.0) color = Reachable;
+				else if (p->moves[i - 1].time <= 1.0) color = Partial;
+				else color = Unreachable;
+				display_arrow(from, to, BATTLE_X, BATTLE_Y, color);
 			}
 
 			if (!point_eq(p->shoot, POINT_NONE))

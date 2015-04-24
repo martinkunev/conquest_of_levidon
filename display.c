@@ -35,6 +35,10 @@ unsigned char display_colors[][4] = {
 	[Ally] = {0, 0, 255, 255},
 	[Enemy] = {255, 0, 0, 255},
 
+	[Reachable] = {0, 192, 0, 255},
+	[Partial] = {192, 192, 0, 255},
+	[Unreachable] = {192, 0, 0, 255},
+
 	[Player + 0] = {192, 192, 192, 255},
 	[Player + 1] = {0, 96, 0, 255},
 	[Player + 2] = {128, 0, 0, 255},

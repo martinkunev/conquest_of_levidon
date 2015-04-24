@@ -37,22 +37,47 @@ size_t movement_location(const struct pawn *restrict pawn, double time_now, doub
 	return pawn->moves_count;
 }
 
-int movement_reachable(struct pawn *restrict pawn, struct point target, struct adjacency_list *restrict nodes)
+int movement_set(struct pawn *restrict pawn, struct point target, struct adjacency_list *restrict nodes)
 {
 	// TODO better handling of memory errors
 
-	movement_stay(pawn);
+	// Erase moves but remember their count so that we can restore them if necessary.
+	size_t moves_count = pawn->moves_count;
+	pawn->moves_count = 1;
 
-	if (path_find(pawn, target, nodes, 0, 0)) return 0;
+	int error = path_find(pawn, target, nodes, 0, 0);
+	if (error) pawn->moves_count = moves_count; // restore moves
 
-	if (pawn->moves[pawn->moves_count - 1].time > 1.0)
+	return error;
+
+	/*else
 	{
-		// not reachable in one round
-		movement_stay(pawn);
-		return 0;
-	}
+		if (pawn->moves[pawn->moves_count - 1].time <= 1.0)
+			return 0; // Success if the pawn can reach its target in one round.
+		else
+		{
+			double x, y;
+			size_t index;
 
-	return 1;
+			// TODO this is buggy
+
+			// Keep only the moves that will be done in one round.
+			index = movement_location(pawn, 1.0, &x, &y);
+			pawn->moves[index].location.x = x;
+			pawn->moves[index].location.y = y;
+			pawn->moves_count = index + 1;
+
+			return ERROR_PROGRESS;
+		}
+	}*/
+}
+
+int movement_queue(struct pawn *restrict pawn, struct point target, struct adjacency_list *restrict nodes)
+{
+	// TODO better handling of memory errors
+
+	int error = path_find(pawn, target, nodes, 0, 0);
+	return error;
 }
 
 void movement_stay(struct pawn *restrict pawn)

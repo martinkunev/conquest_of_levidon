@@ -17,15 +17,20 @@ extern const struct battle *battle;
 extern struct battlefield (*battlefield)[BATTLEFIELD_WIDTH];
 
 // Sets move destination of a pawn. Returns -1 if the current player is not allowed to move the pawn at the destination.
-static void pawn_move(struct pawn *restrict pawn, unsigned x, unsigned y, struct state_battle *state)
+static void pawn_move(struct pawn *restrict pawn, unsigned x, unsigned y, struct state_battle *state, int queue)
 {
 	struct point target = {x, y};
 
-	// TODO support fast move
+	// TODO ? set pawn->fight
 
-	if (!movement_reachable(pawn, target, state->nodes)) return;
-
-	// TODO set pawn->fight
+	if (queue)
+	{
+		if (movement_queue(pawn, target, state->nodes)) return;
+	}
+	else
+	{
+		if (movement_set(pawn, target, state->nodes)) return;
+	}
 
 	// Reset shoot commands.
 	pawn->shoot = POINT_NONE;
@@ -71,7 +76,7 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 	x /= FIELD_SIZE;
 	y /= FIELD_SIZE;
 
-	// if (modifiers & XCB_MOD_MASK_SHIFT) ; // TODO fast move
+	// TODO ? fast move
 
 	if (code == -1)
 	{
@@ -96,7 +101,8 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 
 		// shoot if CONTROL is pressed; move otherwise
 		if (modifiers & XCB_MOD_MASK_CONTROL) pawn_shoot(pawn, x, y);
-		else pawn_move(pawn, x, y, state);
+		else if (modifiers & XCB_MOD_MASK_SHIFT) pawn_move(pawn, x, y, state, 1);
+		else pawn_move(pawn, x, y, state, 0);
 	}
 	else if (code == EVENT_MOTION) state->hover = (struct point){x, y};
 

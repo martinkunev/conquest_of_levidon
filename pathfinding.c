@@ -334,6 +334,8 @@ static void graph_clean(struct adjacency_list *restrict nodes)
 	}
 }
 
+// Finds path from the pawn's current final location to a target field. Appends the path to the pawn's movement queue.
+// On error, returns error code and pawn movement queue remains unchanged.
 int path_find(struct pawn *restrict pawn, struct point target, struct adjacency_list *restrict nodes, const struct polygon *restrict obstacles, size_t obstacles_count)
 {
 	const size_t node_origin = nodes->count - 1, node_target = nodes->count - 2;
