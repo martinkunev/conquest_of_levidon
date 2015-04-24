@@ -58,10 +58,18 @@ static int input_round(int code, unsigned x, unsigned y, uint16_t modifiers, con
 	case EVENT_MOTION:
 		state->hover = POINT_NONE;
 		return 0;
+
+	case 'q': // surrender
+		{
+			// Kill all the pawns of the player.
+			size_t i;
+			const struct vector *pawns = battle->player_pawns + state->player;
+			for(i = 0; i < pawns->length; ++i)
+				((struct pawn *)pawns->data[i])->slot->count = 0;
+		}
 	case 'n':
 		return INPUT_DONE;
-	case 'q': // surrender
-		return INPUT_TERMINATE;
+
 	default:
 		return 0;
 	}
@@ -214,18 +222,7 @@ int input_formation(const struct game *restrict game, const struct region *restr
 
 	state.region = region - game->regions;
 
-	int status = input_local(areas, sizeof(areas) / sizeof(*areas), if_formation, game, &state);
-	if (status == INPUT_TERMINATE) // the player surrenders
-	{
-		// Kill all the pawns of the player.
-		size_t i;
-		struct vector *pawns = battle->player_pawns + state.player;
-		for(i = 0; i < pawns->length; ++i)
-			((struct pawn *)pawns->data[i])->slot->count = 0;
-
-		status = INPUT_DONE; // the player finished their turn
-	}
-	return status;
+	return input_local(areas, sizeof(areas) / sizeof(*areas), if_formation, game, &state);
 }
 
 int input_battle(const struct game *restrict game, struct battle *restrict battle, unsigned char player)
@@ -264,17 +261,6 @@ int input_battle(const struct game *restrict game, struct battle *restrict battl
 	if (!state.nodes) abort();
 	int status = input_local(areas, sizeof(areas) / sizeof(*areas), if_battle, game, &state);
 	visibility_graph_free(state.nodes);
-
-	if (status == INPUT_TERMINATE) // the player surrenders
-	{
-		// Kill all the pawns of the player.
-		size_t i;
-		struct vector *pawns = battle->player_pawns + state.player;
-		for(i = 0; i < pawns->length; ++i)
-			((struct pawn *)pawns->data[i])->slot->count = 0;
-
-		status = INPUT_DONE; // the player finished their turn
-	}
 
 	return status;
 }

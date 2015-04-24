@@ -509,6 +509,8 @@ static int if_animation(const struct player *restrict players, const struct batt
 {
 	int finished = 1;
 
+	// TODO in some cases the animation must terminate but it doesn't
+
 	// clear window
 	glClearColor(0.0, 0.0, 0.0, 0.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);

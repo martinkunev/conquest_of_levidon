@@ -33,7 +33,7 @@ int input_local(const struct area *restrict areas, size_t areas_count, void (*di
 	{
 		// TODO consider using xcb_poll_for_event()
 		event = xcb_wait_for_event(connection);
-		if (!event) return -1;
+		if (!event) return ERROR_MEMORY;
 
 		switch (event->response_type & ~0x80)
 		{
