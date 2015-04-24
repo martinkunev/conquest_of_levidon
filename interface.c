@@ -198,16 +198,20 @@ int if_init(void)
 
 	// TODO set window title, border, etc.
 
+	if_reshape(SCREEN_WIDTH, SCREEN_HEIGHT); // TODO call this after resize
+
 //#define _NET_WM_STATE_REMOVE        0    // remove/unset property
 //#define _NET_WM_STATE_ADD           1    // add/set property
 //#define _NET_WM_STATE_TOGGLE        2    // toggle property
 	// Make the window fullscreen.
 	{
 		xcb_intern_atom_reply_t *reply_state = request_atom(connection, WM_STATE, sizeof(WM_STATE));
-		if (!reply_state) ; // TODO
+		if (!reply_state)
+			goto error; // TODO
 
 		xcb_intern_atom_reply_t *reply_fullscreen = request_atom(connection, WM_STATE_FULLSCREEN, sizeof(WM_STATE_FULLSCREEN));
-		if (!reply_fullscreen) ; // TODO
+		if (!reply_fullscreen)
+			goto error; // TODO
 
 		xcb_client_message_event_t event;
 		memset(&event, 0, sizeof(event));
@@ -223,8 +227,6 @@ int if_init(void)
 
 		xcb_send_event(connection, 1, window, XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT | XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY, (const char *)&event);
 	}
-
-	if_reshape(SCREEN_WIDTH, SCREEN_HEIGHT); // TODO call this after resize
 
 	image_load_png(&image_move_destination, "img/move_destination.png", 0);
 	image_load_png(&image_shoot_destination, "img/shoot_destination.png", 0);
