@@ -81,7 +81,7 @@ next:
 
 int slot_spawn(struct region *restrict region, const struct unit *restrict unit, unsigned count, unsigned char owner)
 {
-	struct slot *slot = malloc(sizeof(*slot));
+	struct troop *slot = malloc(sizeof(*slot));
 	if (!slot) return -1;
 
 	slot->unit = unit;

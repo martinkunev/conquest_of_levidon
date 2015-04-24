@@ -10,7 +10,7 @@
 #include "json.h"
 #include "map.h"
 #include "pathfinding.h"
-#include "battlefield.h"
+#include "battle.h"
 #include "input.h"
 #include "input_map.h"
 #include "input_battle.h"
@@ -64,7 +64,7 @@ static int battle(struct game *restrict game, struct region *restrict region)
 		}
 	}
 
-	do
+	while ((status = battle_end(game, &battle, game->players[region->owner].alliance)) < 0)
 	{
 		// Ask each player to perform battle actions.
 		// TODO implement Computer and Remote
@@ -103,7 +103,7 @@ static int battle(struct game *restrict game, struct region *restrict region)
 
 		battlefield_fight(game, &battle);
 		battlefield_clean_corpses(&battle);
-	} while ((status = battle_end(game, &battle, game->players[region->owner].alliance)) < 0);
+	}
 
 	// TODO show battle overview // this is player-specific
 	// winner team is status
@@ -121,11 +121,10 @@ static int play(struct game *restrict game)
 	size_t index;
 	size_t i;
 
-	struct slot *slot, *next;
+	struct troop *slot, *next;
 
 	unsigned char alliance;
 	uint16_t alliances; // this limits the alliance numbers to the number of bits
-	signed char winner;
 
 	unsigned char slots, owner_slot;
 
@@ -133,7 +132,7 @@ static int play(struct game *restrict game)
 	struct resources expenses[PLAYERS_LIMIT];
 	unsigned char alive[PLAYERS_LIMIT];
 
-	if_regions(game);
+	if_regions_input(game);
 
 	do
 	{
@@ -215,25 +214,20 @@ static int play(struct game *restrict game)
 
 		for(index = 0; index < game->regions_count; ++index)
 		{
-			region = game->regions + index;
-
+			signed char winner; // alliance of the new owner of the region (WINNER_BATTLE if it has to be determined by battle)
 			winner = WINNER_NOBODY;
 
-			// Start a battle if there are enemy units in the region.
-			slots = 0;
+			region = game->regions + index;
+
+			// If slots of two different alliances occupy the region, start a battle.
 			for(slot = region->slots; slot; slot = slot->_next)
 			{
 				alliance = game->players[slot->player].alliance;
 
 				if (winner == WINNER_NOBODY) winner = alliance;
 				else if (winner != alliance) winner = WINNER_BATTLE;
-
-				slots += 1;
 			}
-
 			if (winner == WINNER_BATTLE) winner = battle(game, region);
-
-			// winner - the number of the region's new owner
 
 			// Only slots of a single alliance are allowed to stay in the region.
 			// If there are slots of more than one alliance, return any slot owned by enemy of the region's owner to its initial location.
@@ -243,7 +237,8 @@ static int play(struct game *restrict game)
 
 			slots = 0;
 
-			// Set the location of each unit.
+			// Set the location of each unit to the current region.
+			// Count the slots in the region.
 			for(slot = region->slots; slot; slot = slot->_next)
 			{
 				// Remove dead slots.
@@ -278,7 +273,7 @@ static int play(struct game *restrict game)
 
 			if (winner != WINNER_NOBODY)
 			{
-				if (game->players[region->owner].alliance != winner)
+				if (winner != game->players[region->owner].alliance)
 				{
 					// assert(slots);
 					owner_slot = random() % slots;

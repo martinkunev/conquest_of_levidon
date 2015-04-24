@@ -23,6 +23,8 @@
 #include "resources.h"
 #include "display.h"
 
+#define building_built(region, building) ((int)((region)->built & (1 << (building))))
+
 struct player
 {
 	enum {Neutral, Local, Computer, Remote} type;
@@ -58,9 +60,9 @@ struct building
 	uint32_t requires;
 };
 
-struct slot
+struct troop
 {
-	struct slot *_prev, *_next;
+	struct troop *_prev, *_next;
 	const struct unit *unit;
 	unsigned count;
 	unsigned char player;
@@ -75,7 +77,7 @@ struct region
 	unsigned char train_time;
 	struct unit *train[TRAIN_QUEUE];
 
-	struct slot *slots;
+	struct troop *slots;
 
 	size_t index;
 	struct region *neighbors[NEIGHBORS_LIMIT];
@@ -107,6 +109,8 @@ struct game
 
 extern const struct building buildings[];
 extern const size_t buildings_count;
+
+union json;
 
 int map_init(const union json *restrict json, struct game *restrict game);
 void map_term(struct game *restrict game);

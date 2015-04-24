@@ -2,7 +2,7 @@
 
 struct pawn
 {
-	struct slot *slot;
+	struct troop *slot;
 	unsigned hurt;
 
 	struct move *moves; // TODO allocate this
@@ -55,7 +55,7 @@ o***o
 ***oo
 */
 
-static inline const struct point *formation_positions(const struct slot *restrict slot, const struct region *restrict region)
+static inline const struct point *formation_positions(const struct troop *restrict slot, const struct region *restrict region)
 {
 	static const struct point positions_defend[PAWNS_LIMIT] = {
 		{12, 11}, {11, 11}, {11, 12}, {12, 12}, {13, 11}, {11, 10}, {10, 12}, {12, 13}, {13, 12}, {12, 10}, {10, 11}, {11, 13}
@@ -80,15 +80,9 @@ static inline const struct point *formation_positions(const struct slot *restric
 	}
 }
 
-void pawn_stay(struct pawn *restrict pawn);
-
-size_t pawn_location(const struct pawn *restrict pawn, double time_now, double *restrict real_x, double *restrict real_y);
-
 int battlefield_init(const struct game *restrict game, struct battle *restrict battle, struct region *restrict region);
 void battlefield_term(const struct game *restrict game, struct battle *restrict battle);
 
-struct adjacency_list;
-int battlefield_reachable(struct pawn *restrict pawn, struct point target, struct adjacency_list *restrict nodes);
 int battlefield_shootable(const struct pawn *restrict pawn, struct point target);
 
 int battlefield_movement_plan(const struct player *restrict players, size_t players_count, struct battlefield battlefield[][BATTLEFIELD_HEIGHT], struct pawn *restrict pawns, size_t pawns_count);
