@@ -44,8 +44,10 @@ static void pawn_shoot(struct pawn *restrict pawn, unsigned x, unsigned y)
 	pawn_stay(pawn);
 }
 
-static int input_round(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game)
+static int input_round(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
 {
+	struct state_battle *state = argument; // TODO sometimes this is state_formation
+
 	switch (code)
 	{
 	case EVENT_MOTION:
@@ -60,8 +62,10 @@ static int input_round(int code, unsigned x, unsigned y, uint16_t modifiers, con
 	}
 }
 
-static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game)
+static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
 {
+	struct state_battle *state = argument;
+
 	if (code >= 0) return INPUT_NOTME;
 
 	x /= FIELD_SIZE;
@@ -72,15 +76,15 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 	if (code == -1)
 	{
 		// Set current field.
-		state.x = x;
-		state.y = y;
-		state.selected.pawn = battlefield[y][x].pawn;
+		state->x = x;
+		state->y = y;
+		state->pawn = battlefield[y][x].pawn;
 	}
 	else if (code == -3)
 	{
-		struct pawn *pawn = state.selected.pawn;
+		struct pawn *pawn = state->pawn;
 		if (!pawn) return 0;
-		if (pawn->slot->player != state.player) return 0;
+		if (pawn->slot->player != state->player) return 0;
 
 		struct point target = {x, y};
 		if (point_eq(target, pawn->moves[0].location))
@@ -94,13 +98,15 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 		if (modifiers & XCB_MOD_MASK_CONTROL) pawn_shoot(pawn, x, y);
 		else pawn_move(pawn, x, y);
 	}
-	else if (code == EVENT_MOTION) state.hover = (struct point){x, y};
+	else if (code == EVENT_MOTION) state->hover = (struct point){x, y};
 
 	return 0;
 }
 
-static int input_place(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game)
+static int input_place(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
 {
+	struct state_formation *state = argument;
+
 	if (code == EVENT_MOTION) return INPUT_NOTME;
 	if (code >= 0) return INPUT_NOTME;
 
@@ -109,7 +115,7 @@ static int input_place(int code, unsigned x, unsigned y, uint16_t modifiers, con
 
 	if (code == -1)
 	{
-		struct pawn *selected = state.selected.pawn;
+		struct pawn *selected = state->pawn;
 		struct pawn *new = battlefield[y][x].pawn;
 
 		// If there is a selected pawn, put it at the clicked field.
@@ -122,15 +128,17 @@ static int input_place(int code, unsigned x, unsigned y, uint16_t modifiers, con
 		}
 
 		battlefield[y][x].pawn = selected;
-		state.selected.pawn = new;
+		state->pawn = new;
 	}
-	else if (code == EVENT_MOTION) state.hover = (struct point){x, y};
+	else if (code == EVENT_MOTION) state->hover = (struct point){x, y};
 
 	return 0;
 }
 
-static int input_pawn(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game)
+static int input_pawn(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
 {
+	struct state_battle *state = argument;
+
 	if (code == EVENT_MOTION) return INPUT_NOTME;
 	if (code >= 0) return INPUT_NOTME;
 
@@ -143,22 +151,22 @@ static int input_pawn(int code, unsigned x, unsigned y, uint16_t modifiers, cons
 		unsigned column = x / (FIELD_SIZE + 1);
 		unsigned line = y / (FIELD_SIZE + MARGIN);
 		size_t i;
-		for(i = 0; i < battle->player_pawns[state.player].length; ++i)
+		for(i = 0; i < battle->player_pawns[state->player].length; ++i)
 		{
-			struct pawn *pawn = battle->player_pawns[state.player].data[i];
+			struct pawn *pawn = battle->player_pawns[state->player].data[i];
 			if (line)
 			{
-				if (pawn->slot->location != game->regions[state.region].neighbors[line - 1]) continue;
+				if (pawn->slot->location != game->regions[state->region].neighbors[line - 1]) continue;
 			}
 			else
 			{
-				if (pawn->slot->location != game->regions + state.region) continue;
+				if (pawn->slot->location != game->regions + state->region) continue;
 			}
 
 			if (column) column -= 1;
 			else
 			{
-				state.selected.pawn = pawn;
+				state->pawn = pawn;
 				return 0;
 			}
 		}
@@ -166,7 +174,7 @@ static int input_pawn(int code, unsigned x, unsigned y, uint16_t modifiers, cons
 
 reset:
 	// Make sure no pawn is selected.
-	state.selected.pawn = 0;
+	state->pawn = 0;
 	return 0;
 }
 
@@ -191,9 +199,11 @@ int input_formation(const struct game *restrict game, const struct region *restr
 		},
 	};
 
+	struct state_formation state;
+
 	state.player = player;
 
-	state.selected.pawn = 0;
+	state.pawn = 0;
 	state.hover = POINT_NONE;
 
 	state.region = region - game->regions;
@@ -233,13 +243,15 @@ int input_battle(const struct game *restrict game, struct battle *restrict battl
 		},
 	};
 
+	struct state_battle state;
+
 	state.player = player;
 
 	// Set current field to a field outside of the board.
 	state.x = BATTLEFIELD_WIDTH;
 	state.y = BATTLEFIELD_HEIGHT;
 
-	state.selected.pawn = 0;
+	state.pawn = 0;
 	state.hover = POINT_NONE;
 
 	state.nodes = visibility_graph_build(0, 0);

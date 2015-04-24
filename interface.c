@@ -503,7 +503,7 @@ void if_test(const struct player *restrict players, const struct state *restrict
 }*/
 
 // TODO write this better
-static int if_animation(const struct player *restrict players, const struct state *restrict state, const struct battle *restrict battle, double progress)
+static int if_animation(const struct player *restrict players, const struct battle *restrict battle, double progress)
 {
 	int finished = 1;
 
@@ -547,13 +547,15 @@ void input_animation(const struct game *restrict game, const struct battle *rest
 	{
 		gettimeofday(&now, 0);
 		progress = timediff(&now, &start) / (ANIMATION_DURATION * 1000000.0);
-		if (if_animation(game->players, &state, battle, progress))
+		if (if_animation(game->players, battle, progress))
 			break;
 	} while (progress < 1.0);
 }
 
-void if_formation(const struct state *state, const struct game *game)
+void if_formation(const void *argument, const struct game *game)
 {
+	const struct state_formation *state = argument;
+
 	// clear window
 	glClearColor(0.0, 0.0, 0.0, 0.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -577,7 +579,7 @@ void if_formation(const struct state *state, const struct game *game)
 		const struct pawn *pawn = pawns->data[i];
 		const struct troop *slot = pawn->slot;
 
-		if (pawn == state->selected.pawn)
+		if (i == state->pawn)
 		{
 			// Display the selected pawn in the control panel.
 			display_unit(slot->unit->index, CTRL_X, CTRL_Y, Player + state->player, White, slot->count);
@@ -600,8 +602,10 @@ void if_formation(const struct state *state, const struct game *game)
 	glXSwapBuffers(display, drawable);
 }
 
-void if_battle(const struct state *state, const struct game *game)
+void if_battle(const void *argument, const struct game *game)
 {
+	const struct state_battle *state = argument;
+
 	// clear window
 	glClearColor(0.0, 0.0, 0.0, 0.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -748,7 +752,7 @@ static void show_resource(const struct image *restrict image, int treasury, int 
 	}
 }
 
-static void show_cost(const char *restrict name, size_t name_length, const struct resources *restrict cost, unsigned time)
+static void tooltip_cost(const char *restrict name, size_t name_length, const struct resources *restrict cost, unsigned time)
 {
 	char buffer[16];
 	size_t length;
@@ -811,8 +815,10 @@ static void show_cost(const char *restrict name, size_t name_length, const struc
 	offset += 40;
 }
 
-void if_map(const struct state *state, const struct game *game)
+void if_map(const void *argument, const struct game *game)
 {
+	const struct state_map *state = argument;
+
 	// clear window
 	glClearColor(0.0, 0.0, 0.0, 0.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -923,11 +929,11 @@ void if_map(const struct state *state, const struct game *game)
 				{
 					x -= offset;
 					display_unit(slot->unit->index, SLOT_X(x), SLOT_Y(y), Player + slot->player, color_text, slot->count);
-					if (slot == state->selected.slot) draw_rectangle(SLOT_X(x) - 1, SLOT_Y(y) - 1, FIELD_SIZE + 2, FIELD_SIZE + 2, White);
+					if (slot == state->troop) draw_rectangle(SLOT_X(x) - 1, SLOT_Y(y) - 1, FIELD_SIZE + 2, FIELD_SIZE + 2, White);
 				}
 
 				// Draw the destination of each moving slot.
-				if ((slot->player == state->player) && (!state->selected.slot || (slot == state->selected.slot)) && (slot->move->index != state->region))
+				if ((slot->player == state->player) && (!state->troop || (slot == state->troop)) && (slot->move->index != state->region))
 				{
 					struct point from = {slot->location->center.x, slot->location->center.y};
 					struct point to = {slot->move->center.x, slot->move->center.y};
@@ -980,15 +986,21 @@ void if_map(const struct state *state, const struct game *game)
 			}
 
 			// Display tooltip for the hovered object.
-			if ((state->pointed.building >= 0) && !(region->built & (1 << state->pointed.building)))
+			switch (state->hover_object)
 			{
-				const struct building *building = buildings + state->pointed.building;
-				show_cost(building->name, building->name_length, &building->cost, building->time);
-			}
-			if (state->pointed.unit >= 0)
-			{
-				const struct unit *unit = game->units + state->pointed.unit;
-				show_cost(unit->name, unit->name_length, &unit->cost, unit->time);
+			case HOVER_UNIT:
+				{
+					const struct unit *unit = game->units + state->hover.unit;
+					tooltip_cost(unit->name, unit->name_length, &unit->cost, unit->time);
+				}
+				break;
+			case HOVER_BUILDING:
+				if (!building_built(region, state->hover.building))
+				{
+					const struct building *building = buildings + state->hover.building;
+					tooltip_cost(building->name, building->name_length, &building->cost, building->time);
+				}
+				break;
 			}
 		}
 	}

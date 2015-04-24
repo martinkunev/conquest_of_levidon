@@ -23,16 +23,13 @@
 #include "resources.h"
 #include "display.h"
 
+#define building_built(region, building) ((int)((region)->built & (1 << (building))))
+
 struct player
 {
 	enum {Neutral, Local, Computer, Remote} type;
 	struct resources treasury;
 	unsigned char alliance;
-};
-
-struct object
-{
-	//
 };
 
 struct unit

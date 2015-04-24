@@ -12,9 +12,7 @@ extern KeySym *keymap;
 extern int keysyms_per_keycode;
 extern int keycode_min, keycode_max;
 
-struct state state; // TODO remove this
-
-int input_local(const struct area *restrict areas, size_t areas_count, void (*display)(const struct state *, const struct game *), const struct game *restrict game, struct state *state)
+int input_local(const struct area *restrict areas, size_t areas_count, void (*display)(const void *, const struct game *), const struct game *restrict game, void *state)
 {
 	xcb_generic_event_t *event;
 	xcb_button_release_event_t *mouse;
@@ -83,7 +81,7 @@ int input_local(const struct area *restrict areas, size_t areas_count, void (*di
 		{
 			if ((areas[index].left <= x) && (x <= areas[index].right) && (areas[index].top <= y) && (y <= areas[index].bottom))
 			{
-				status = areas[index].callback(code, x - areas[index].left, y - areas[index].top, modifiers, game);
+				status = areas[index].callback(code, x - areas[index].left, y - areas[index].top, modifiers, game, state);
 				switch (status)
 				{
 				case INPUT_TERMINATE:
