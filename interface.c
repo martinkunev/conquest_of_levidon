@@ -960,16 +960,19 @@ void if_map(const void *argument, const struct game *game)
 
 			for(i = 0; i < buildings_count; ++i)
 			{
+				struct point position = if_position(Building, i);
+
 				// Don't display the building if its requirements are not satisfied.
 				if ((region->built & buildings[i].requires) != buildings[i].requires) continue;
 
-				if (region->built & (1 << i)) image_draw(image_buildings + i, BUILDING_X(i), BUILDING_Y);
-				else image_draw(image_buildings_gray + i, BUILDING_X(i), BUILDING_Y);
+				if (region->built & (1 << i)) image_draw(image_buildings + i, position.x, position.y);
+				else image_draw(image_buildings_gray + i, position.x, position.y);
 			}
 			if (region->construct >= 0)
 			{
-				show_progress(region->construct_time, buildings[region->construct].time, BUILDING_X(region->construct), BUILDING_Y, FIELD_SIZE, FIELD_SIZE);
-				image_draw(&image_construction, BUILDING_X(region->construct), BUILDING_Y);
+				struct point position = if_position(Building, region->construct);
+				show_progress(region->construct_time, buildings[region->construct].time, position.x, position.y, object_group[Building].width, object_group[Building].height);
+				image_draw(&image_construction, position.x, position.y);
 			}
 		}
 

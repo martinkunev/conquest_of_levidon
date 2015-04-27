@@ -313,7 +313,7 @@ static int input_build(int code, unsigned x, unsigned y, uint16_t modifiers, con
 {
 	struct state_map *state = argument;
 
-	size_t index;
+	ssize_t index;
 	struct region *region;
 
 	if (code >= 0) return INPUT_NOTME; // ignore keyboard events
@@ -323,9 +323,8 @@ static int input_build(int code, unsigned x, unsigned y, uint16_t modifiers, con
 	if (state->player != region->owner) goto reset; // player does not control the region
 
 	// Find which building was clicked.
-	if ((x % (FIELD_SIZE + 1)) >= FIELD_SIZE) goto reset; // no building clicked
-	index = x / (FIELD_SIZE + 1);
-	if (index >= buildings_count) goto reset; // no building clicked
+	index = if_index(Building, (struct point){x, y});
+	if ((index < 0) || (index >= buildings_count)) goto reset; // no building clicked
 
 	if (!region_order_available(region, buildings[index].requires)) goto reset;
 
@@ -418,10 +417,10 @@ int input_map(const struct game *restrict game, unsigned char player)
 			.callback = input_slot,
 		},
 		{
-			.left = BUILDING_X(0),
-			.right = BUILDING_X(0) + buildings_count * (FIELD_SIZE + 1) - 1 - 1,
-			.top = BUILDING_Y,
-			.bottom = BUILDING_Y + FIELD_SIZE - 1,
+			.left = object_group[Building].left,
+			.right = object_group[Building].right,
+			.top = object_group[Building].top,
+			.bottom = object_group[Building].bottom,
 			.callback = input_build,
 		},
 	};
