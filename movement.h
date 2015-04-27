@@ -1,3 +1,5 @@
+struct pawn;
+
 size_t movement_location(const struct pawn *restrict pawn, double time_now, double *restrict real_x, double *restrict real_y);
 
 struct adjacency_list;

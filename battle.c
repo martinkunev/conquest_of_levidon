@@ -39,6 +39,7 @@ static struct point location_field(const struct point location)
 	return square;
 }
 
+// Finds the top-left square that the pawn occupies at moment time_now.
 static size_t pawn_position(const struct pawn *restrict pawn, double time_now, struct point *restrict location)
 {
 	double real_x, real_y;
@@ -50,6 +51,7 @@ static size_t pawn_position(const struct pawn *restrict pawn, double time_now, s
 	return index;
 }
 
+// Places pawn on a square.
 static inline void square_occupy(struct pawn **occupied, struct pawn *restrict pawn, int failback)
 {
 	size_t i = 0;
@@ -74,6 +76,7 @@ static inline void square_clear(struct pawn **occupied, const struct pawn *restr
 	occupied[last] = 0;
 }
 
+// Detours a pawn to its failback. Updates occupied squares information.
 static void pawn_detour(struct pawn *occupied[BATTLEFIELD_HEIGHT * 2][BATTLEFIELD_WIDTH * 2][OVERLAP_LIMIT], struct pawn *pawn)
 {
 	unsigned x, y;
@@ -191,7 +194,7 @@ static int pawn_stop(struct pawn *occupied[BATTLEFIELD_HEIGHT * 2][BATTLEFIELD_W
 }
 
 // Returns the step at which the pawn will first change its position or -1 if it will not move until the end of the round.
-static int pawn_step_time(struct pawn *pawns[OVERLAP_LIMIT], size_t pawn_index, unsigned step)
+static int pawn_move_step(struct pawn *pawns[OVERLAP_LIMIT], size_t pawn_index, unsigned step)
 {
 	size_t i;
 	unsigned step_next;
@@ -208,8 +211,9 @@ static int pawn_step_time(struct pawn *pawns[OVERLAP_LIMIT], size_t pawn_index, 
 				if (i == pawn_index) continue;
 
 				// Check if the pawn will collide when it moves.
-				struct point position = pawns[i]->failback;
-				if ((abs((int)next.x - (int)position.x) < 2) && (abs((int)next.y - (int)position.y) < 2))
+				struct point wait = pawns[i]->failback;
+				// TODO there appears to be a bug below
+				if ((abs((int)next.x - (int)wait.x) < 2) && (abs((int)next.y - (int)wait.y) < 2))
 					return -1;
 			}
 
@@ -240,7 +244,7 @@ static void battlefield_collision_resolve(const struct player *restrict players,
 
 	// All pawns on the square are allies.
 	// Choose one of the pawns to continue its movement.
-	// If one of the pawns is at its failback position, the others have to wait for it.
+	// If a pawn is at its failback position, the others have to wait for it.
 	// Otherwise find a pawn that can move while the others wait for it.
 
 	size_t keep_index;
@@ -249,13 +253,13 @@ static void battlefield_collision_resolve(const struct player *restrict players,
 	if (point_eq(pawns[0]->step, pawns[0]->failback))
 	{
 		keep_index = 0;
-		step_next = pawn_step_time(pawns, keep_index, step);
+		step_next = pawn_move_step(pawns, keep_index, step);
 		// assert(step_next);
 		if (step_next > 0) goto wait;
 	}
 	else for(keep_index = 0; (keep_index < OVERLAP_LIMIT) && pawns[keep_index]; ++keep_index)
 	{
-		step_next = pawn_step_time(pawns, keep_index, step);
+		step_next = pawn_move_step(pawns, keep_index, step);
 		// assert(step_next);
 		if (step_next > 0) goto wait;
 	}
@@ -299,6 +303,7 @@ int battlefield_movement_plan(const struct player *restrict players, size_t play
 
 	int failback;
 
+	// Set failback and movement time for each pawn.
 	for(p = 0; p < pawns_count; ++p)
 	{
 		pawns[p].failback.x = pawns[p].moves[0].location.x * 2;
@@ -331,26 +336,23 @@ int battlefield_movement_plan(const struct player *restrict players, size_t play
 			square_occupy(occupied[pawn->step.y + 1][pawn->step.x + 1], pawn, failback);
 		}
 
-		// Revert the location of overlapping pawns to their failback.
+		// Detect and resolve pawn collisions.
 		// If the overlapping pawns are enemies, make them stay and fight.
 		// If the overlapping pawns are allies, make the slower pawns wait the faster pass.
 		// Repeat as long as pawn movement changed during the last pass.
 		// Each repetition causes at least one pawn to move to its failback. This ensures the algorithm will finish.
-		do
-		{
 retry:
-			for(y = 0; y < BATTLEFIELD_HEIGHT * 2; ++y)
+		for(y = 0; y < BATTLEFIELD_HEIGHT * 2; ++y)
+		{
+			for(x = 0; x < BATTLEFIELD_WIDTH * 2; ++x)
 			{
-				for(x = 0; x < BATTLEFIELD_WIDTH * 2; ++x)
+				if (occupied[y][x][1]) // movement overlap
 				{
-					if (occupied[y][x][1]) // movement overlap
-					{
-						battlefield_collision_resolve(players, occupied, x, y, step);
-						goto retry;
-					}
+					battlefield_collision_resolve(players, occupied, x, y, step);
+					goto retry;
 				}
 			}
-		} while (0);
+		}
 
 		// Update the failback of each pawn to the field at the top left side of the pawn.
 		for(p = 0; p < pawns_count; ++p)
@@ -360,7 +362,7 @@ retry:
 		}
 	}
 
-	// Make sure the position of the pawn after the round is stored as a move position.
+	// Make sure the position of the pawn after the round is stored as a move entry.
 	for(p = 0; p < pawns_count; ++p)
 	{
 		pawn = pawns + p;
@@ -424,182 +426,6 @@ void battlefield_movement_perform(struct battlefield battlefield[][BATTLEFIELD_H
 			pawn->moves[0].time = 0.0;
 		}
 	}
-}
-
-static void pawn_deal(struct pawn *pawn, unsigned damage)
-{
-	if (!pawn) return;
-	pawn->hurt += damage;
-}
-
-void battlefield_fight(const struct game *restrict game, struct battle *restrict battle)
-{
-	size_t i, j;
-	for(i = 0; i < battle->pawns_count; ++i)
-	{
-		struct pawn *fighter = battle->pawns + i;
-		unsigned char fighter_alliance = game->players[fighter->slot->player].alliance;
-
-		if (!fighter->slot->count) continue;
-
-		int x = fighter->moves[0].location.x;
-		int y = fighter->moves[0].location.y;
-		unsigned damage_total = fighter->slot->unit->damage * fighter->slot->count;
-		unsigned damage;
-
-		struct pawn *victims[4], *victim;
-		unsigned enemies_count = 0;
-
-		// Look for pawns to fight at the neighboring fields.
-		enemies_count = 0;
-		if ((x > 0) && (victim = battle->field[y][x - 1].pawn) && (game->players[victim->slot->player].alliance != fighter_alliance))
-			victims[enemies_count++] = victim;
-		if ((x < (BATTLEFIELD_WIDTH - 1)) && (victim = battle->field[y][x + 1].pawn) && (game->players[victim->slot->player].alliance != fighter_alliance))
-			victims[enemies_count++] = victim;
-		if ((y > 0) && (victim = battle->field[y - 1][x].pawn) && (game->players[victim->slot->player].alliance != fighter_alliance))
-			victims[enemies_count++] = victim;
-		if ((y < (BATTLEFIELD_HEIGHT - 1)) && (victim = battle->field[y + 1][x].pawn) && (game->players[victim->slot->player].alliance != fighter_alliance))
-			victims[enemies_count++] = victim;
-		if (!enemies_count) continue; // nothing to fight
-
-		for(j = 0; j < enemies_count; ++j)
-		{
-			damage = (unsigned)((double)damage_total / enemies_count + 0.5);
-			pawn_deal(victims[j], damage);
-		}
-	}
-}
-
-void battlefield_shoot(struct battle *battle)
-{
-	const double targets[3][2] = {{1, 0.5}, {0, 0.078125}, {0, 0.046875}}; // 1/2, 5/64, 3/64
-
-	size_t i;
-	for(i = 0; i < battle->pawns_count; ++i)
-	{
-		struct pawn *shooter = battle->pawns + i;
-
-		if (!shooter->slot->count) continue;
-		if (point_eq(shooter->shoot, POINT_NONE)) continue;
-
-		int x = shooter->shoot.x;
-		int y = shooter->shoot.y;
-		unsigned damage_total = shooter->slot->unit->shoot * shooter->slot->count;
-		unsigned damage;
-
-		unsigned target_index;
-		double distance, miss, on_target;
-
-		distance = battlefield_distance(shooter->moves[0].location, shooter->shoot);
-		miss = distance / shooter->slot->unit->range;
-
-		// Shooters have some chance to hit a field adjacent to the target, depending on the distance.
-		// Damage is dealt to the target field and to its neighbors.
-
-		target_index = 0;
-		on_target = targets[target_index][0] * (1 - miss) + targets[target_index][1] * miss;
-		pawn_deal(battle->field[y][x].pawn, (unsigned)(damage * on_target + 0.5));
-
-		target_index = 1;
-		on_target = targets[target_index][0] * (1 - miss) + targets[target_index][1] * miss;
-		damage = (unsigned)(damage_total * on_target + 0.5);
-		if (x > 0) pawn_deal(battle->field[y][x - 1].pawn, damage);
-		if (x < (BATTLEFIELD_WIDTH - 1)) pawn_deal(battle->field[y][x + 1].pawn, damage);
-		if (y > 0) pawn_deal(battle->field[y - 1][x].pawn, damage);
-		if (y < (BATTLEFIELD_HEIGHT - 1)) pawn_deal(battle->field[y + 1][x].pawn, damage);
-
-		target_index = 2;
-		on_target = targets[target_index][0] * (1 - miss) + targets[target_index][1] * miss;
-		damage = (unsigned)(damage_total * on_target + 0.5);
-		if (x > 0)
-		{
-			if (y > 0) pawn_deal(battle->field[y - 1][x - 1].pawn, damage);
-			if (y < (BATTLEFIELD_HEIGHT - 1)) pawn_deal(battle->field[y + 1][x - 1].pawn, damage);
-		}
-		if (x < (BATTLEFIELD_WIDTH - 1))
-		{
-			if (y > 0) pawn_deal(battle->field[y - 1][x + 1].pawn, damage);
-			if (y < (BATTLEFIELD_HEIGHT - 1)) pawn_deal(battle->field[y + 1][x + 1].pawn, damage);
-		}
-
-		// TODO ?deal more damage to moving pawns
-	}
-}
-
-// Determine how many units to kill.
-static unsigned pawn_victims(unsigned min, unsigned max)
-{
-	// The possible outcomes are all the integers in [min, max].
-	if (max == min) return min;
-	unsigned outcomes = (max - min + 1);
-
-	// TODO ?use a better algorithm here
-	// For the outcomes min and max there is 1 chance value (least probable).
-	// Outcomes closer to the middle of the interval are more probable than the ones farther from it.
-	// When going from the end of the interval to the middle, the number of chance values increases by 2 with every integer.
-	// Example: for the interval [2, 6], the chance values are: 1, 3, 5, 3, 1
-
-	unsigned chances, chance;
-	chances = 2 * (outcomes / 2) * (outcomes / 2);
-	if (outcomes % 2) chances += outcomes;
-	chance = random() % chances;
-
-	// Find the outcome corresponding to the chosen chance value.
-	size_t distance = 0;
-	if (chance < chances / 2)
-	{
-		// left half of the interval [min, max]
-		while ((distance + 1) * (distance + 1) <= chance) distance += 1;
-		return min + distance;
-	}
-	else
-	{
-		// right half of the interval [min, max]
-		while ((distance + 1) * (distance + 1) <= (chances - chance)) distance += 1;
-		return max - distance;
-	}
-}
-
-void battlefield_clean_corpses(struct battle *battle)
-{
-	size_t p;
-	struct pawn *pawn;
-	struct troop *slot;
-	for(p = 0; p < battle->pawns_count; ++p)
-	{
-		pawn = battle->pawns + p;
-		slot = pawn->slot;
-
-		if (!slot->count) continue;
-
-		if ((slot->count * slot->unit->health) <= pawn->hurt)
-		{
-			// All units in this pawn are killed.
-			slot->count = 0;
-			battle->field[pawn->moves[0].location.y][pawn->moves[0].location.x].pawn = 0;
-		}
-		else
-		{
-			// Find the minimum and maximum of units that can be killed.
-			unsigned max = pawn->hurt / slot->unit->health;
-			unsigned min;
-			if ((slot->unit->health - 1) * slot->count >= pawn->hurt) min = 0;
-			else min = pawn->hurt % slot->count;
-
-			unsigned victims = pawn_victims(min, max);
-			slot->count -= victims;
-			pawn->hurt -= victims * slot->unit->health;
-		}
-	}
-}
-
-int battlefield_shootable(const struct pawn *restrict pawn, struct point target)
-{
-	// Only ranged units can shoot.
-	if (!pawn->slot->unit->shoot) return 0;
-
-	unsigned distance = round(battlefield_distance(pawn->moves[0].location, target));
-	return (distance <= pawn->slot->unit->range);
 }
 
 int battlefield_init(const struct game *restrict game, struct battle *restrict battle, struct region *restrict region)

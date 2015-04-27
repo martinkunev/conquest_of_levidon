@@ -9,6 +9,7 @@
 #include "pathfinding.h"
 #include "movement.h"
 #include "battle.h"
+#include "combat.h"
 #include "input.h"
 #include "input_battle.h"
 #include "interface.h"

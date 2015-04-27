@@ -11,6 +11,7 @@
 #include "map.h"
 #include "pathfinding.h"
 #include "battle.h"
+#include "combat.h"
 #include "input.h"
 #include "input_map.h"
 #include "input_battle.h"
