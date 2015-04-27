@@ -112,26 +112,23 @@ static int pawn_wait(struct pawn *occupied[BATTLEFIELD_HEIGHT * 2][BATTLEFIELD_W
 		struct point location;
 		double distance;
 		size_t index = pawn_position(pawn, time_detour, &location);
-		if (index == pawn->moves_count) return 0; // TODO is this right?
+		if (index == pawn->moves_count) return 0; // the pawn is immobile
 
+		// Make the pawn wait at its present location.
 		memmove(pawn->moves + index + 1, pawn->moves + index, (pawn->moves_count - index) * sizeof(*pawn->moves));
 		pawn->moves_count += 1;
-
 		pawn->moves[index].location = location_field(location);
 		distance = battlefield_distance(pawn->moves[index - 1].location, pawn->moves[index].location);
 		pawn->moves[index].time = pawn->moves[index - 1].time + distance / pawn->slot->unit->speed;
 
-		if (!point_eq(location, pawn->failback))
-		{
-			index += 1;
-			if (index < pawn->moves_count)
-				memmove(pawn->moves + index + 1, pawn->moves + index, (pawn->moves_count - index) * sizeof(*pawn->moves));
-			pawn->moves_count += 1;
+		index += 1;
 
-			// Make the failback location the pawn's next location.
-			pawn->moves[index].location = location_field(pawn->failback);
-			pawn->moves[index].time = (double)step_continue / MOVEMENT_STEPS;
-		}
+		// Make the failback location the pawn's next location.
+		if (index < pawn->moves_count)
+			memmove(pawn->moves + index + 1, pawn->moves + index, (pawn->moves_count - index) * sizeof(*pawn->moves));
+		pawn->moves_count += 1;
+		pawn->moves[index].location = location_field(pawn->failback);
+		pawn->moves[index].time = (double)step_continue / MOVEMENT_STEPS;
 
 		// Update time for the following movements.
 		for(index += 1; index < pawn->moves_count; ++index)
@@ -167,7 +164,7 @@ static int pawn_stop(struct pawn *occupied[BATTLEFIELD_HEIGHT * 2][BATTLEFIELD_W
 
 		struct point location;
 		size_t index = pawn_position(pawn, time_detour, &location);
-		if (index == pawn->moves_count) return 0; // TODO is this right?
+		if (index == pawn->moves_count) return 0; // the pawn is immobile
 
 		pawn->moves[index].location = location_field(location);
 		pawn->moves[index].time = time_detour;
@@ -212,7 +209,6 @@ static int pawn_move_step(struct pawn *pawns[OVERLAP_LIMIT], size_t pawn_index, 
 
 				// Check if the pawn will collide when it moves.
 				struct point wait = pawns[i]->failback;
-				// TODO there appears to be a bug below
 				if ((abs((int)next.x - (int)wait.x) < 2) && (abs((int)next.y - (int)wait.y) < 2))
 					return -1;
 			}
