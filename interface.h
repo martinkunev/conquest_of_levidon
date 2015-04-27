@@ -66,8 +66,7 @@ static const struct object_group
 	unsigned padding;
 	unsigned count;
 } object_group[] = {
-	//[Building] = OBJECT_GROUP(2, 5, PANEL_X + 1, PANEL_Y + 400, 48, 48, 1),
-	[Building] = OBJECT_GROUP(2, 7, PANEL_X + 1, PANEL_Y + 400, 32, 32, 1),
+	[Building] = OBJECT_GROUP(2, 5, PANEL_X + 1, PANEL_Y + 400, 48, 48, 1),
 };
 #undef OBJECT_GROUP
 
