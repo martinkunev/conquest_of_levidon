@@ -18,28 +18,22 @@
 #define PANEL_WIDTH 248
 #define PANEL_HEIGHT 760
 
+// TODO fix these values
+#define TOOLTIP_X 256
+#define TOOLTIP_Y 730
+
 #define FIELD_SIZE 32
 
 #define MARGIN 4
 
 #define SCROLL 8
 
-#define SLOTS_VISIBLE 7
+#define TROOPS_VISIBLE 7
 
 #define SLOT_X(x) (PANEL_X + SCROLL + 1 + (x) * (FIELD_SIZE + 1))
 #define SLOT_Y(y) (PANEL_Y + 32 + MARGIN + 2 + 1 + (y) * (FIELD_SIZE + 18 + 2))
 
-#define TRAIN_X(x) (PANEL_X + 80 + (x) * (FIELD_SIZE + 1))
-#define TRAIN_Y (PANEL_Y + 300)
-
-#define INVENTORY_X(x) (PANEL_X + 2 + 1 + (x) * (FIELD_SIZE + 1))
-#define INVENTORY_Y (TRAIN_Y + FIELD_SIZE + MARGIN)
-
-// TODO fix these values
-#define TOOLTIP_X 256
-#define TOOLTIP_Y 730
-
-enum object {Building};
+enum object {Building, Inventory, Dismiss};
 
 // rows, columns, left, top, width, height, padding
 #define OBJECT_GROUP(r, c, l, t, w, h, p) \
@@ -67,6 +61,8 @@ static const struct object_group
 	unsigned count;
 } object_group[] = {
 	[Building] = OBJECT_GROUP(2, 5, PANEL_X + 1, PANEL_Y + 400, 48, 48, 1),
+	[Inventory] = OBJECT_GROUP(1, 5, PANEL_X + 1, PANEL_Y + 340, 32, 32, 1),
+	[Dismiss] = OBJECT_GROUP(1, 4, PANEL_X + 81, PANEL_Y + 300, 32, 32, 1), // TODO replace 4 with TRAIN_QUEUE
 };
 #undef OBJECT_GROUP
 

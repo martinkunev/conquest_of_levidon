@@ -936,7 +936,7 @@ void if_map(const void *argument, const struct game *game)
 					color_text = White;
 				}
 
-				if ((x >= offset) && (x < offset + SLOTS_VISIBLE)) // if the unit is visible
+				if ((x >= offset) && (x < offset + TROOPS_VISIBLE)) // if the unit is visible
 				{
 					x -= offset;
 					display_unit(slot->unit->index, SLOT_X(x), SLOT_Y(y), Player + slot->player, color_text, slot->count);
@@ -954,18 +954,18 @@ void if_map(const void *argument, const struct game *game)
 
 			// Display scroll buttons.
 			if (state->self_offset) image_draw(&image_scroll_left, SLOT_X(0) - 1 - SCROLL, SLOT_Y(0));
-			if ((self_count - state->self_offset) > SLOTS_VISIBLE) image_draw(&image_scroll_right, SLOT_X(SLOTS_VISIBLE), SLOT_Y(0));
+			if ((self_count - state->self_offset) > TROOPS_VISIBLE) image_draw(&image_scroll_right, SLOT_X(TROOPS_VISIBLE), SLOT_Y(0));
 			if (state->ally_offset) image_draw(&image_scroll_left, SLOT_X(0) - 1 - SCROLL, SLOT_Y(1));
-			if ((ally_count - state->ally_offset) > SLOTS_VISIBLE) image_draw(&image_scroll_right, SLOT_X(SLOTS_VISIBLE), SLOT_Y(1));
+			if ((ally_count - state->ally_offset) > TROOPS_VISIBLE) image_draw(&image_scroll_right, SLOT_X(TROOPS_VISIBLE), SLOT_Y(1));
 
 			for(i = 0; i < buildings_count; ++i)
 			{
 				struct point position = if_position(Building, i);
 
 				// Don't display the building if its requirements are not satisfied.
-				if ((region->built & buildings[i].requires) != buildings[i].requires) continue;
+				if (!region_building_available(region, buildings[i])) continue;
 
-				if (region->built & (1 << i)) image_draw(image_buildings + i, position.x, position.y);
+				if (region_built(region, i)) image_draw(image_buildings + i, position.x, position.y);
 				else image_draw(image_buildings_gray + i, position.x, position.y);
 			}
 			if (region->construct >= 0)
@@ -978,38 +978,42 @@ void if_map(const void *argument, const struct game *game)
 
 		if (state->player == region->owner)
 		{
-			display_string(S("train:"), PANEL_X + 2, TRAIN_Y + (FIELD_SIZE - font12.height) / 2, &font12, Black);
+			display_string(S("train:"), PANEL_X + 2, object_group[Dismiss].top + (object_group[Dismiss].height - font12.height) / 2, &font12, Black);
 
 			// Display train queue.
 			size_t index;
 			for(index = 0; index < TRAIN_QUEUE; ++index)
+			{
+				struct point position = if_position(Dismiss, index);
 				if (region->train[index])
 				{
-					display_unit(region->train[index]->index, TRAIN_X(index), TRAIN_Y, White, 0, 0);
-					show_progress((index ? 0 : region->train_time), region->train[0]->time, TRAIN_X(index), TRAIN_Y, FIELD_SIZE, FIELD_SIZE);
+					display_unit(region->train[index]->index, position.x, position.y, White, 0, 0);
+					show_progress((index ? 0 : region->train_time), region->train[0]->time, position.x, position.y, object_group[Dismiss].width, object_group[Dismiss].height);
 				}
-				else display_rectangle(TRAIN_X(index), TRAIN_Y, FIELD_SIZE, FIELD_SIZE, Black);
+				else display_rectangle(position.x, position.y, object_group[Dismiss].width, object_group[Dismiss].height, Black);
+			}
 
 			// Display units available for training.
 			for(index = 0; index < game->units_count; ++index)
 			{
-				// Don't display the unit if its requirements are not satisfied.
-				if ((region->built & game->units[index].requires) != game->units[index].requires) continue;
+				if (!region_unit_available(region, game->units[index])) continue;
 
-				display_unit(index, INVENTORY_X(index), INVENTORY_Y, Player, 0, 0);
+				struct point position = if_position(Inventory, index);
+				display_unit(index, position.x, position.y, Player, 0, 0);
 			}
 
 			// Display tooltip for the hovered object.
 			switch (state->hover_object)
 			{
 			case HOVER_UNIT:
+				// TODO show tooltip only for available units
 				{
 					const struct unit *unit = game->units + state->hover.unit;
 					tooltip_cost(unit->name, unit->name_length, &unit->cost, unit->time);
 				}
 				break;
 			case HOVER_BUILDING:
-				if (!building_built(region, state->hover.building))
+				if (!region_built(region, state->hover.building))
 				{
 					const struct building *building = buildings + state->hover.building;
 					tooltip_cost(building->name, building->name_length, &building->cost, building->time);

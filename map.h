@@ -23,7 +23,10 @@
 #include "resources.h"
 #include "display.h"
 
-#define building_built(region, building) ((int)((region)->built & (1 << (building))))
+#define region_unit_available(region, unit) ((int)((unit).requires & ~(region)->built))
+#define region_building_available(region, building) ((int)((building).requires & ~(region)->built))
+
+#define region_built(region, building) ((int)((region)->built & (1 << (building))))
 
 struct player
 {

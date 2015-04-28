@@ -11,7 +11,6 @@
 #include "input.h"
 #include "input_map.h"
 #include "interface.h"
-#include "region.h"
 
 extern GLuint map_framebuffer;
 
@@ -106,7 +105,7 @@ static int input_train(int code, unsigned x, unsigned y, uint16_t modifiers, con
 {
 	struct state_map *state = argument;
 
-	size_t unit;
+	ssize_t unit;
 	struct region *region;
 
 	if (code >= 0) return INPUT_NOTME; // ignore keyboard events
@@ -116,11 +115,10 @@ static int input_train(int code, unsigned x, unsigned y, uint16_t modifiers, con
 	if (state->player != region->owner) goto reset; // player does not control the region
 
 	// Find which unit was clicked.
-	if ((x % (FIELD_SIZE + 1)) >= FIELD_SIZE) goto reset; // no unit clicked
-	unit = x / (FIELD_SIZE + 1);
-	if (unit >= game->units_count) goto reset; // no unit clicked
+	unit = if_index(Inventory, (struct point){x, y});
+	if ((unit < 0) || (unit >= game->units_count)) goto reset; // no unit clicked
 
-	if (!region_order_available(region, game->units[unit].requires)) goto reset;
+	if (!region_unit_available(region, game->units[unit])) goto reset;
 
 	if (code == -1)
 	{
@@ -155,17 +153,23 @@ static int input_dismiss(int code, unsigned x, unsigned y, uint16_t modifiers, c
 {
 	struct state_map *state = argument;
 
+	ssize_t index;
+	struct region *region;
+
 	if (code == EVENT_MOTION) return INPUT_NOTME;
 	if (code >= 0) return INPUT_NOTME;
 
 	if (state->region == REGION_NONE) return 0;
-	if (state->player != game->regions[state->region].owner) return 0;
-	if ((x % (FIELD_SIZE + 1)) >= FIELD_SIZE) return 0;
+	region = game->regions + state->region;
+	if (state->player != region->owner) return 0; // player does not control the region
+
+	// Find which train order was clicked.
+	index = if_index(Dismiss, (struct point){x, y});
+	if ((index < 0) || (index >= TRAIN_QUEUE)) return 0; // no train order clicked
 
 	if (code == -1)
 	{
-		struct unit **train = game->regions[state->region].train;
-		size_t index = (x / (FIELD_SIZE + 1));
+		struct unit **train = region->train;
 
 		if (!train[index]) return 0;
 
@@ -198,15 +202,15 @@ static int input_scroll_self(int code, unsigned x, unsigned y, uint16_t modifier
 	{
 		if (state->self_offset)
 		{
-			state->self_offset -= SLOTS_VISIBLE;
+			state->self_offset -= TROOPS_VISIBLE;
 			state->troop = 0;
 		}
 	}
-	else if (x >= SCROLL + 1 + SLOTS_VISIBLE * (FIELD_SIZE + 1)) // scroll right
+	else if (x >= SCROLL + 1 + TROOPS_VISIBLE * (FIELD_SIZE + 1)) // scroll right
 	{
-		if ((state->self_offset + SLOTS_VISIBLE) < state->self_count)
+		if ((state->self_offset + TROOPS_VISIBLE) < state->self_count)
 		{
-			state->self_offset += SLOTS_VISIBLE;
+			state->self_offset += TROOPS_VISIBLE;
 			state->troop = 0;
 		}
 	}
@@ -226,15 +230,15 @@ static int input_scroll_ally(int code, unsigned x, unsigned y, uint16_t modifier
 	{
 		if (state->ally_offset)
 		{
-			state->ally_offset -= SLOTS_VISIBLE;
+			state->ally_offset -= TROOPS_VISIBLE;
 			state->troop = 0;
 		}
 	}
-	else if (x >= SCROLL + 1 + SLOTS_VISIBLE * (FIELD_SIZE + 1)) // scroll right
+	else if (x >= SCROLL + 1 + TROOPS_VISIBLE * (FIELD_SIZE + 1)) // scroll right
 	{
-		if ((state->ally_offset + SLOTS_VISIBLE) < state->ally_count)
+		if ((state->ally_offset + TROOPS_VISIBLE) < state->ally_count)
 		{
-			state->ally_offset += SLOTS_VISIBLE;
+			state->ally_offset += TROOPS_VISIBLE;
 			state->troop = 0;
 		}
 	}
@@ -326,7 +330,7 @@ static int input_build(int code, unsigned x, unsigned y, uint16_t modifiers, con
 	index = if_index(Building, (struct point){x, y});
 	if ((index < 0) || (index >= buildings_count)) goto reset; // no building clicked
 
-	if (!region_order_available(region, buildings[index].requires)) goto reset;
+	if (!region_building_available(region, buildings[index])) goto reset;
 
 	if (code == -1)
 	{
@@ -382,36 +386,36 @@ int input_map(const struct game *restrict game, unsigned char player)
 			.callback = input_region
 		},
 		{
-			.left = INVENTORY_X(0),
-			.right = INVENTORY_X(0) + game->units_count * (FIELD_SIZE + 1) - 1 - 1,
-			.top = INVENTORY_Y,
-			.bottom = INVENTORY_Y + FIELD_SIZE - 1,
+			.left = object_group[Inventory].left,
+			.right = object_group[Inventory].right,
+			.top = object_group[Inventory].top,
+			.bottom = object_group[Inventory].bottom,
 			.callback = input_train
 		},
 		{
-			.left = TRAIN_X(0),
-			.right = TRAIN_X(0) + TRAIN_QUEUE * (FIELD_SIZE + 1) - 1 - 1,
-			.top = TRAIN_Y,
-			.bottom = TRAIN_Y + FIELD_SIZE - 1,
+			.left = object_group[Dismiss].left,
+			.right = object_group[Dismiss].right,
+			.top = object_group[Dismiss].top,
+			.bottom = object_group[Dismiss].bottom,
 			.callback = input_dismiss
 		},
 		{
 			.left = SLOT_X(0) - 1 - SCROLL,
-			.right = SLOT_X(SLOTS_VISIBLE) + SCROLL - 1,
+			.right = SLOT_X(TROOPS_VISIBLE) + SCROLL - 1,
 			.top = SLOT_Y(0),
 			.bottom = SLOT_Y(0) + FIELD_SIZE - 1,
 			.callback = input_scroll_self,
 		},
 		{
 			.left = SLOT_X(0) - 1 - SCROLL,
-			.right = SLOT_X(SLOTS_VISIBLE) + SCROLL - 1,
+			.right = SLOT_X(TROOPS_VISIBLE) + SCROLL - 1,
 			.top = SLOT_Y(1),
 			.bottom = SLOT_Y(1) + FIELD_SIZE - 1,
 			.callback = input_scroll_ally,
 		},
 		{
 			.left = SLOT_X(0),
-			.right = SLOT_X(SLOTS_VISIBLE) - 1 - 1,
+			.right = SLOT_X(TROOPS_VISIBLE) - 1 - 1,
 			.top = SLOT_Y(0),
 			.bottom = SLOT_Y(0) + FIELD_SIZE - 1,
 			.callback = input_slot,
