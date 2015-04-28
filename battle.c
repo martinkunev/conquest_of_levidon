@@ -29,8 +29,6 @@ When enemy pawns try to occupy the same square, they are redirected to their fai
 When allied pawns try to occupy the same squre, one of them stays where it is and the other are detoured to their failback locations to wait.
 */
 
-// TODO sometimes multiple pawns waiting for other pawns behave strangely
-
 static struct point location_field(const struct point location)
 {
 	struct point square;
