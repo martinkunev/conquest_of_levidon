@@ -130,7 +130,7 @@
 			"comment": "6",
 			"name": "Thrace",
 			"owner": 0,
-			"built": ["Irrigation"],
+			"built": ["Farm"],
 			"neighbors": [7, 8, -1, 11, 5, 2, -1, -1],
 			"location": [
 				[382, 434],
@@ -147,7 +147,7 @@
 			"comment": "7",
 			"name": "Byzantium",
 			"owner": 3,
-			"built": ["Lumber mill", "Irrigation", "Barracks", "Watch tower"],
+			"built": ["Sawmill", "Farm", "Barracks", "Watch tower"],
 			"neighbors": [-1, -1, -1, 8, 6, -1, -1, -1],
 			"location": [
 				[516, 391],
@@ -222,7 +222,7 @@
 			"comment": "11",
 			"name": "Serdika",
 			"owner": 0,
-			"built": ["Lumber mill"],
+			"built": ["Sawmill"],
 			"neighbors": [8, 10, 18, -1, 12, -1, 5, 6],
 			"location": [
 				[433, 314],

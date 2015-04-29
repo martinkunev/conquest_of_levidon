@@ -14,22 +14,23 @@
 const struct unit units[] =
 {
 	{NAME("Peasant"), .index = 0, .health = 3, .damage = 1, .speed = 4, .cost = {.gold = 1}, .expense = {.food = 1}, .time = 1},
-	{NAME("Archer"), .index = 1, .health = 3, .damage = 1, .speed = 4, .cost = {.gold = 1, .wood = 1}, .expense = {.food = 1}, .shoot = 1, .range = 5, .time = 1, .requires = (1 << 5)},
-	{NAME("Pikeman"), .index = 2, .health = 5, .damage = 2, .speed = 5, .cost = {.gold = 2, .iron = 1}, .expense = {.food = 1}, .time = 1, .requires = (1 << 4)},
-	{NAME("Horse rider"), .index = 3, .health = 8, .damage = 2, .speed = 9, .cost = {.gold = 3, .iron = 1}, .expense = {.food = 3}, .time = 2, .requires = (1 << 6)},
+	{NAME("Archer"), .index = 1, .health = 3, .damage = 1, .speed = 4, .cost = {.gold = 1, .wood = 1}, .expense = {.food = 1}, .shoot = 1, .range = 5, .time = 1, .requires = (1 << 6)},
+	{NAME("Militia"), .index = 2, .health = 5, .damage = 2, .speed = 5, .cost = {.gold = 1, .iron = 1}, .expense = {.food = 1}, .time = 1, .requires = (1 << 5)},
+	{NAME("Light cavalry"), .index = 3, .health = 8, .damage = 2, .speed = 9, .cost = {.gold = 2, .iron = 1}, .expense = {.food = 3}, .time = 2, .requires = (1 << 7)},
 };
 const size_t units_count = sizeof(units) / sizeof(*units);
 
 const struct building buildings[] =
 {
-	{NAME("Irrigation"), .cost = {.gold = 4}, .income = {.food = 2}, .time = 2},
-	{NAME("Lumber mill"), .cost = {.gold = 6}, .income = {.wood = 2}, .time = 3},
-	{NAME("Mine"), .cost = {.gold = 10, .wood = 4}, .income = {.stone = 2}, .time = 4},
-	{NAME("Blast furnace"), .cost = {.gold = 10, .stone = 12}, .income = {.iron = 1, .stone = -1}, .time = 5, .requires = (1 << 2)},
-	{NAME("Barracks"), .cost = {.gold = 10, .stone = 8}, .time = 4},
-	{NAME("Archery range"), .cost = {.gold = 5, .wood = 5}, .time = 2},
-	{NAME("Stables"), .cost = {.gold = 10, .food = 10, .wood = 10}, .time = 3, .requires = (1 << 4)},
-	{NAME("Watch tower"), .cost = {.gold = 2, .wood = 4}, .time = 2},
+	{NAME("Farm"), .cost = {.gold = 3}, .income = {.food = 2}, .time = 2},
+	{NAME("Irrigation"), .cost = {.gold = 5}, .income = {.food = 2}, .time = 4, .requires = (1 << 0)},
+	{NAME("Sawmill"), .cost = {.gold = 4}, .income = {.wood = 3}, .time = 3},
+	{NAME("Mine"), .cost = {.gold = 6, .wood = 6}, .income = {.stone = 3}, .time = 4},
+	{NAME("Blast furnace"), .cost = {.gold = 8, .stone = 10}, .income = {.iron = 1, .stone = -1}, .time = 5, .requires = (1 << 3)},
+	{NAME("Barracks"), .cost = {.gold = 5, .stone = 10}, .time = 4},
+	{NAME("Archery range"), .cost = {.gold = 3, .wood = 4}, .time = 2},
+	{NAME("Stables"), .cost = {.gold = 10, .food = 10, .wood = 15}, .time = 4, .requires = (1 << 0)},
+	{NAME("Watch tower"), .cost = {.gold = 3, .wood = 5}, .time = 2},
 };
 const size_t buildings_count = sizeof(buildings) / sizeof(*buildings);
 

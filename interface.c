@@ -78,8 +78,8 @@ static struct image image_move_destination, image_shoot_destination, image_selec
 static struct image image_gold, image_food, image_wood, image_stone, image_iron, image_time;
 static struct image image_scroll_left, image_scroll_right;
 static struct image image_units[4]; // TODO the array must be enough to hold units_count units
-static struct image image_buildings[8]; // TODO the array must be big enough to hold buildings_count elements
-static struct image image_buildings_gray[8]; // TODO the array must be big enough to hold buildings_count elements
+static struct image image_buildings[9]; // TODO the array must be big enough to hold buildings_count elements
+static struct image image_buildings_gray[9]; // TODO the array must be big enough to hold buildings_count elements
 
 static GLuint map_renderbuffer;
 
@@ -245,23 +245,25 @@ int if_init(void)
 	image_load_png(&image_units[2], "img/pikeman.png", 0);
 	image_load_png(&image_units[3], "img/horse_rider.png", 0);
 
-	image_load_png(&image_buildings[0], "img/irrigation.png", 0);
-	image_load_png(&image_buildings[1], "img/lumbermill.png", 0);
-	image_load_png(&image_buildings[2], "img/mine.png", 0);
-	image_load_png(&image_buildings[3], "img/blast_furnace.png", 0);
-	image_load_png(&image_buildings[4], "img/barracks.png", 0);
-	image_load_png(&image_buildings[5], "img/archery_range.png", 0);
-	image_load_png(&image_buildings[6], "img/stables.png", 0);
-	image_load_png(&image_buildings[7], "img/watch_tower.png", 0);
+	image_load_png(&image_buildings[0], "img/farm.png", 0);
+	image_load_png(&image_buildings[1], "img/irrigation.png", 0);
+	image_load_png(&image_buildings[2], "img/sawmill.png", 0);
+	image_load_png(&image_buildings[3], "img/mine.png", 0);
+	image_load_png(&image_buildings[4], "img/blast_furnace.png", 0);
+	image_load_png(&image_buildings[5], "img/barracks.png", 0);
+	image_load_png(&image_buildings[6], "img/archery_range.png", 0);
+	image_load_png(&image_buildings[7], "img/stables.png", 0);
+	image_load_png(&image_buildings[8], "img/watch_tower.png", 0);
 
-	image_load_png(&image_buildings_gray[0], "img/irrigation.png", 1);
-	image_load_png(&image_buildings_gray[1], "img/lumbermill.png", 1);
-	image_load_png(&image_buildings_gray[2], "img/mine.png", 1);
-	image_load_png(&image_buildings_gray[3], "img/blast_furnace.png", 1);
-	image_load_png(&image_buildings_gray[4], "img/barracks.png", 1);
-	image_load_png(&image_buildings_gray[5], "img/archery_range.png", 1);
-	image_load_png(&image_buildings_gray[6], "img/stables.png", 1);
-	image_load_png(&image_buildings_gray[7], "img/watch_tower.png", 1);
+	image_load_png(&image_buildings_gray[0], "img/farm.png", 1);
+	image_load_png(&image_buildings_gray[1], "img/irrigation.png", 1);
+	image_load_png(&image_buildings_gray[2], "img/sawmill.png", 1);
+	image_load_png(&image_buildings_gray[3], "img/mine.png", 1);
+	image_load_png(&image_buildings_gray[4], "img/blast_furnace.png", 1);
+	image_load_png(&image_buildings_gray[5], "img/barracks.png", 1);
+	image_load_png(&image_buildings_gray[6], "img/archery_range.png", 1);
+	image_load_png(&image_buildings_gray[7], "img/stables.png", 1);
+	image_load_png(&image_buildings_gray[8], "img/watch_tower.png", 1);
 
 	// TODO handle modifier keys
 	// TODO handle dead keys
@@ -843,7 +845,8 @@ void if_map(const void *argument, const struct game *game)
 	// show map in black
 	display_rectangle(MAP_X, MAP_Y, MAP_WIDTH, MAP_HEIGHT, Black);
 
-	size_t x, y;
+	size_t x;
+	enum object object;
 	size_t offset;
 	struct pawn *p;
 
@@ -863,7 +866,7 @@ void if_map(const void *argument, const struct game *game)
 			region_visible[i] = 1;
 
 			// Make the neighboring regions visible when a watch tower is built.
-			if (regions[i].built & BUILDING_WATCH_TOWER)
+			if (region_built(regions + i, BUILDING_WATCH_TOWER))
 			{
 				for(j = 0; j < NEIGHBORS_LIMIT; ++j)
 				{
@@ -910,7 +913,7 @@ void if_map(const void *argument, const struct game *game)
 		}
 		display_string(region->name, region->name_length, PANEL_X + image_flag.width + MARGIN, PANEL_Y + (image_flag.height - font12.height) / 2, &font12, Black);
 
-		// Display the slots at the selected region.
+		// Display the troops at the selected region.
 		if (game->players[state->player].alliance == game->players[region->owner].alliance)
 		{
 			unsigned char self_count = 0, ally_count = 0;
@@ -919,26 +922,27 @@ void if_map(const void *argument, const struct game *game)
 			{
 				if (slot->player == state->player)
 				{
-					if (!self_count) display_rectangle(PANEL_X, SLOT_Y(0) - 3, PANEL_WIDTH, FIELD_SIZE + MARGIN + 14, Self);
+					if (!self_count) display_rectangle(PANEL_X, object_group[TroopSelf].top - 2, PANEL_WIDTH, 2 + object_group[TroopSelf].height + 12 + 2, Self);
 					x = self_count++;
-					y = 0;
+					object = TroopSelf;
 					offset = state->self_offset;
 					color_text = Black;
 				}
 				else
 				{
-					if (!ally_count) display_rectangle(PANEL_X, SLOT_Y(1) - 3, PANEL_WIDTH, FIELD_SIZE + MARGIN + 14, Ally);
+					if (!ally_count) display_rectangle(PANEL_X, object_group[TroopAlly].top - 2, PANEL_WIDTH, 2 + object_group[TroopAlly].height + 12 + 2, Ally);
 					x = ally_count++;
-					y = 1;
+					object = TroopAlly;
 					offset = state->ally_offset;
 					color_text = White;
 				}
 
 				if ((x >= offset) && (x < offset + TROOPS_VISIBLE)) // if the unit is visible
 				{
+					struct point position = if_position(object, x);
 					x -= offset;
-					display_unit(slot->unit->index, SLOT_X(x), SLOT_Y(y), Player + slot->player, color_text, slot->count);
-					if (slot == state->troop) draw_rectangle(SLOT_X(x) - 1, SLOT_Y(y) - 1, FIELD_SIZE + 2, FIELD_SIZE + 2, White);
+					display_unit(slot->unit->index, position.x, position.y, Player + slot->player, color_text, slot->count);
+					if (slot == state->troop) draw_rectangle(position.x - 1, position.y - 1, object_group[object].width + 2, object_group[object].height + 2, White);
 				}
 
 				// Draw the destination of each moving slot.
@@ -951,10 +955,10 @@ void if_map(const void *argument, const struct game *game)
 			}
 
 			// Display scroll buttons.
-			if (state->self_offset) image_draw(&image_scroll_left, SLOT_X(0) - 1 - SCROLL, SLOT_Y(0));
-			if ((self_count - state->self_offset) > TROOPS_VISIBLE) image_draw(&image_scroll_right, SLOT_X(TROOPS_VISIBLE), SLOT_Y(0));
-			if (state->ally_offset) image_draw(&image_scroll_left, SLOT_X(0) - 1 - SCROLL, SLOT_Y(1));
-			if ((ally_count - state->ally_offset) > TROOPS_VISIBLE) image_draw(&image_scroll_right, SLOT_X(TROOPS_VISIBLE), SLOT_Y(1));
+			if (state->self_offset) image_draw(&image_scroll_left, PANEL_X, object_group[TroopSelf].top);
+			if ((self_count - state->self_offset) > TROOPS_VISIBLE) image_draw(&image_scroll_right, object_group[TroopSelf].span_x + object_group[TroopSelf].padding, object_group[TroopSelf].top);
+			if (state->ally_offset) image_draw(&image_scroll_left, PANEL_X, object_group[TroopAlly].top);
+			if ((ally_count - state->ally_offset) > TROOPS_VISIBLE) image_draw(&image_scroll_right, object_group[TroopAlly].span_x + object_group[TroopAlly].padding, object_group[TroopAlly].top);
 
 			for(i = 0; i < buildings_count; ++i)
 			{
@@ -964,7 +968,7 @@ void if_map(const void *argument, const struct game *game)
 				if (!region_building_available(region, buildings[i])) continue;
 
 				if (region_built(region, i)) image_draw(image_buildings + i, position.x, position.y);
-				else image_draw(image_buildings_gray + i, position.x, position.y);
+				else if (state->player == region->owner) image_draw(image_buildings_gray + i, position.x, position.y);
 			}
 			if (region->construct >= 0)
 			{

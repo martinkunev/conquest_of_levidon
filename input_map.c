@@ -199,7 +199,7 @@ static int input_scroll_self(int code, unsigned x, unsigned y, uint16_t modifier
 	struct troop *slot = game->regions[state->region].slots;
 	if (!slot) return 0; // no slots in this region
 
-	if (x < SCROLL) // scroll left
+	if (x <= object_group[TroopSelf].left - 1) // scroll left
 	{
 		if (state->self_offset)
 		{
@@ -207,7 +207,7 @@ static int input_scroll_self(int code, unsigned x, unsigned y, uint16_t modifier
 			state->troop = 0;
 		}
 	}
-	else if (x >= SCROLL + 1 + TROOPS_VISIBLE * (FIELD_SIZE + 1)) // scroll right
+	else if (x >= object_group[TroopSelf].right + 1) // scroll right
 	{
 		if ((state->self_offset + TROOPS_VISIBLE) < state->self_count)
 		{
@@ -227,7 +227,7 @@ static int input_scroll_ally(int code, unsigned x, unsigned y, uint16_t modifier
 	struct troop *slot = game->regions[state->region].slots;
 	if (!slot) return 0; // no slots in this region
 
-	if (x < SCROLL) // scroll left
+	if (x <= object_group[TroopAlly].left - 1) // scroll left
 	{
 		if (state->ally_offset)
 		{
@@ -235,7 +235,7 @@ static int input_scroll_ally(int code, unsigned x, unsigned y, uint16_t modifier
 			state->troop = 0;
 		}
 	}
-	else if (x >= SCROLL + 1 + TROOPS_VISIBLE * (FIELD_SIZE + 1)) // scroll right
+	else if (x >= object_group[TroopAlly].right + 1) // scroll right
 	{
 		if ((state->ally_offset + TROOPS_VISIBLE) < state->ally_count)
 		{
@@ -248,7 +248,7 @@ static int input_scroll_ally(int code, unsigned x, unsigned y, uint16_t modifier
 static int input_slot(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
 {
 	struct troop *slot;
-	size_t offset;
+	ssize_t offset;
 	int found;
 
 	struct state_map *state = argument;
@@ -257,14 +257,16 @@ static int input_slot(int code, unsigned x, unsigned y, uint16_t modifiers, cons
 	if (code >= 0) return INPUT_NOTME; // ignore keyboard events
 
 	if (state->region == REGION_NONE) goto reset; // no region selected
+
 	slot = game->regions[state->region].slots;
 	if (!slot) goto reset; // no slots in this region
 
-	// Find which slot was clicked.
-	if ((x % (FIELD_SIZE + 1)) >= FIELD_SIZE) goto reset; // no slot clicked
-	offset = state->self_offset + x / (FIELD_SIZE + 1);
+	// Find which troop was clicked.
+	offset = if_index(Building, (struct point){x, y});
+	if (offset < 0) goto reset; // no troop clicked
+	offset += state->self_offset;
 
-	// Find the clicked slot.
+	// Find the clicked troop in the linked list.
 	while (1)
 	{
 		found = (slot->player == state->player);
@@ -401,24 +403,24 @@ int input_map(const struct game *restrict game, unsigned char player)
 			.callback = input_dismiss
 		},
 		{
-			.left = SLOT_X(0) - 1 - SCROLL,
-			.right = SLOT_X(TROOPS_VISIBLE) + SCROLL - 1,
-			.top = SLOT_Y(0),
-			.bottom = SLOT_Y(0) + FIELD_SIZE - 1,
+			.left = object_group[TroopSelf].left - 1 - SCROLL,
+			.right = object_group[TroopSelf].right + 1 + SCROLL,
+			.top = object_group[TroopSelf].top,
+			.bottom = object_group[TroopSelf].bottom,
 			.callback = input_scroll_self,
 		},
 		{
-			.left = SLOT_X(0) - 1 - SCROLL,
-			.right = SLOT_X(TROOPS_VISIBLE) + SCROLL - 1,
-			.top = SLOT_Y(1),
-			.bottom = SLOT_Y(1) + FIELD_SIZE - 1,
+			.left = object_group[TroopAlly].left - 1 - SCROLL,
+			.right = object_group[TroopAlly].right + 1 + SCROLL,
+			.top = object_group[TroopAlly].top,
+			.bottom = object_group[TroopAlly].bottom,
 			.callback = input_scroll_ally,
 		},
 		{
-			.left = SLOT_X(0),
-			.right = SLOT_X(TROOPS_VISIBLE) - 1 - 1,
-			.top = SLOT_Y(0),
-			.bottom = SLOT_Y(0) + FIELD_SIZE - 1,
+			.left = object_group[TroopSelf].left,
+			.right = object_group[TroopSelf].right,
+			.top = object_group[TroopSelf].top,
+			.bottom = object_group[TroopSelf].bottom,
 			.callback = input_slot,
 		},
 		{
