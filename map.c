@@ -9,7 +9,7 @@
 
 // Player 0 and alliance 0 are hard-coded as neutral.
 
-#define NAME(s) .name = (s), .name_length = sizeof(s) - 1
+#define NAME(string) .name = string, .name_length = sizeof(string) - 1
 
 const struct unit units[] =
 {
@@ -108,6 +108,9 @@ static int map_slot(struct region *restrict region, const struct string *restric
 
 	return -1;
 }
+
+#undef string
+#define string(s) (struct string){s, sizeof(s) - 1}
 
 int map_init(const union json *restrict json, struct game *restrict game)
 {

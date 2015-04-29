@@ -45,7 +45,8 @@ static int input_region(int code, unsigned x, unsigned y, uint16_t modifiers, co
 	// Get the clicked region.
 	GLubyte pixel_color[3];
 	glBindFramebuffer(GL_FRAMEBUFFER, map_framebuffer);
-	glReadPixels(x, MAP_HEIGHT - y, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixel_color);
+	//glReadPixels(x, MAP_HEIGHT - y, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixel_color);
+	glReadPixels(x, SCREEN_HEIGHT - y, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixel_color); // TODO why does this work?
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	if (code == -1)

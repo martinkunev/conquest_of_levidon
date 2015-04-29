@@ -103,21 +103,10 @@ static void if_reshape(int width, int height)
 	glLoadIdentity();
 }
 
-static xcb_intern_atom_reply_t *request_atom(xcb_connection_t *restrict connection, const char *restrict name, size_t name_size)
-{
-	xcb_generic_error_t *error;
-	xcb_intern_atom_cookie_t cookie = xcb_intern_atom(connection, 0, sizeof(name_size), name);
-	xcb_intern_atom_reply_t *reply = xcb_intern_atom_reply(connection, cookie, &error);
-	if (error) return 0;
-	return reply;
-}
-
 int if_init(void)
 {
 	display = XOpenDisplay(0);
 	if (!display) return -1;
-
-	int default_screen = XDefaultScreen(display);
 
 	connection = XGetXCBConnection(display);
 	if (!connection) goto error;
@@ -127,27 +116,30 @@ int if_init(void)
 	XSetEventQueueOwner(display, XCBOwnsEventQueue);
 
 	// find XCB screen
-	xcb_screen_iterator_t screen_iter = xcb_setup_roots_iterator(xcb_get_setup(connection));
-	int screen_num = default_screen;
-	while (screen_iter.rem && screen_num > 0)
+	// TODO better handling for multiple screens
+	int screen_index = XDefaultScreen(display);
+	xcb_screen_iterator_t iterator = xcb_setup_roots_iterator(xcb_get_setup(connection));
+	int offset = screen_index;
+	while (offset)
 	{
-		screen_num -= 1;
-		xcb_screen_next(&screen_iter);
+		if (!iterator.rem) goto error; // TODO
+		xcb_screen_next(&iterator);
+		offset -= 1;
 	}
-	screen = screen_iter.data;
+	screen = iterator.data;
 
 	// query framebuffer configurations
 	GLXFBConfig *fb_configs = 0;
 	int num_fb_configs = 0;
-	fb_configs = glXGetFBConfigs(display, default_screen, &num_fb_configs);
+	fb_configs = glXGetFBConfigs(display, screen_index, &num_fb_configs);
 	if (!fb_configs || num_fb_configs == 0) goto error;
 
 	// select first framebuffer config and query visualID
 	GLXFBConfig fb_config = fb_configs[0];
-	glXGetFBConfigAttrib(display, fb_config, GLX_VISUAL_ID , &visualID);
+	glXGetFBConfigAttrib(display, fb_config, GLX_VISUAL_ID, &visualID);
 
 	// create OpenGL context
-	context = glXCreateNewContext(display, fb_config, GLX_RGBA_TYPE, 0, True);
+	context = glXCreateNewContext(display, fb_config, GLX_RGBA_TYPE, 0, 1);
 	if (!context) goto error;
 
 	// create XID's for colormap and window
@@ -161,14 +153,14 @@ int if_init(void)
 	uint32_t valuemask = XCB_CW_EVENT_MASK | XCB_CW_COLORMAP;
 
 	// TODO set window parameters
-	xcb_create_window(connection, XCB_COPY_FROM_PARENT, window, screen->root, 100, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, XCB_WINDOW_CLASS_INPUT_OUTPUT, visualID, valuemask, valuelist);
+	xcb_create_window(connection, XCB_COPY_FROM_PARENT, window, screen->root, 100, 0, screen->width_in_pixels, screen->height_in_pixels, 0, XCB_WINDOW_CLASS_INPUT_OUTPUT, visualID, valuemask, valuelist);
 
 	// NOTE: window must be mapped before glXMakeContextCurrent
 	xcb_map_window(connection, window); 
 
 	drawable = glXCreateWindow(display, fb_config, window, 0);
 
-	if (!window)
+	if (!window) // TODO this should be done earlier?
 	{
 		xcb_destroy_window(connection, window);
 		glXDestroyContext(display, context);
@@ -198,35 +190,38 @@ int if_init(void)
 
 	// TODO set window title, border, etc.
 
-	if_reshape(SCREEN_WIDTH, SCREEN_HEIGHT); // TODO call this after resize
+	if_reshape(screen->width_in_pixels, screen->height_in_pixels); // TODO call this after resize
 
-//#define _NET_WM_STATE_REMOVE        0    // remove/unset property
-//#define _NET_WM_STATE_ADD           1    // add/set property
-//#define _NET_WM_STATE_TOGGLE        2    // toggle property
 	// Make the window fullscreen.
 	{
-		xcb_intern_atom_reply_t *reply_state = request_atom(connection, WM_STATE, sizeof(WM_STATE));
-		if (!reply_state)
-			goto error; // TODO
+		XEvent event = {0};
+		event.type = ClientMessage;
+		event.xclient.window = window;
+		event.xclient.message_type = XInternAtom(display, WM_STATE, 0);
+		event.xclient.format = 32;
+		event.xclient.data.l[0] = 1; // 0 == unset; 1 == set; 2 == toggle
+		event.xclient.data.l[1] = XInternAtom(display, WM_STATE_FULLSCREEN, 0);
 
-		xcb_intern_atom_reply_t *reply_fullscreen = request_atom(connection, WM_STATE_FULLSCREEN, sizeof(WM_STATE_FULLSCREEN));
-		if (!reply_fullscreen)
-			goto error; // TODO
-
+		//XMapWindow(display, window);
+		XSendEvent(display, DefaultRootWindow(display), 0, SubstructureRedirectMask | SubstructureNotifyMask, &event);
+		XFlush(display);
+	}
+/*
 		xcb_client_message_event_t event;
 		memset(&event, 0, sizeof(event));
 
-		event.response_type = XCB_CLIENT_MESSAGE;
-		event.format = 32;
 		event.window = window;
 		event.type = reply_state->atom;
+		event.response_type = XCB_CLIENT_MESSAGE;
+		event.format = 32;
 
-		event.data.data32[0] = 1; // fullscreen on
+		event.data.data32[0] = 1; // 0 == unset; 1 == set; 2 == toggle
 		event.data.data32[1] = reply_fullscreen->atom;
 		event.data.data32[2] = XCB_ATOM_NONE;
 
-		xcb_send_event(connection, 1, window, XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT | XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY, (const char *)&event);
-	}
+		xcb_send_event(connection, 1, window, XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT | XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY, &event);
+		xcb_flush(connection);
+*/
 
 	image_load_png(&image_move_destination, "img/move_destination.png", 0);
 	image_load_png(&image_shoot_destination, "img/shoot_destination.png", 0);
@@ -275,19 +270,22 @@ int if_init(void)
 	// Initialize keyboard mapping table.
 	XDisplayKeycodes(display, &keycode_min, &keycode_max);
 	keymap = XGetKeyboardMapping(display, keycode_min, (keycode_max - keycode_min + 1), &keysyms_per_keycode);
-	if (!keymap) return -1; // TODO error
+	if (!keymap) goto error; // TODO error
 
-	glGenFramebuffers(1, &map_framebuffer);
-	glGenRenderbuffers(1, &map_renderbuffer);
+	// Initialize region input recognition.
+	{
+		glGenFramebuffers(1, &map_framebuffer);
+		glGenRenderbuffers(1, &map_renderbuffer);
 
-	glBindFramebuffer(GL_FRAMEBUFFER, map_framebuffer);
-	glBindRenderbuffer(GL_RENDERBUFFER, map_renderbuffer);
+		glBindFramebuffer(GL_FRAMEBUFFER, map_framebuffer);
+		glBindRenderbuffer(GL_RENDERBUFFER, map_renderbuffer);
 
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_RGB8, MAP_WIDTH, MAP_HEIGHT);
-	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, map_renderbuffer);
+		glRenderbufferStorage(GL_RENDERBUFFER, GL_RGB8, MAP_WIDTH, MAP_HEIGHT);
+		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, map_renderbuffer);
 
-	glBindRenderbuffer(GL_RENDERBUFFER, 0);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glBindRenderbuffer(GL_RENDERBUFFER, 0);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	}
 
 	return 0;
 
@@ -697,7 +695,7 @@ void if_battle(const void *argument, const struct game *game)
 	// TODO finish this test
 	/*{
 		// http://xcb.freedesktop.org/tutorial/mousecursors/
-		// https://github.com/eBrnd/i3lock-color/blob/master/xcb.c      create_cursor()
+		// https://github.com/eBrnd/i3lock-color/blob/master/xcb.c	  create_cursor()
 		// http://xcb-util.sourcearchive.com/documentation/0.3.3-1/group__xcb____image__t_g029605b47d6ab95eac66b125a9a7dd64.html
 		// https://en.wikipedia.org/wiki/X_BitMap#Format
 
