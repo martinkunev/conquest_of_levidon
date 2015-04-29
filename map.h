@@ -23,8 +23,8 @@
 #include "resources.h"
 #include "display.h"
 
-#define region_unit_available(region, unit) ((int)((unit).requires & ~(region)->built))
-#define region_building_available(region, building) ((int)((building).requires & ~(region)->built))
+#define region_unit_available(region, unit) (!((unit).requires & ~(region)->built))
+#define region_building_available(region, building) (!((building).requires & ~(region)->built))
 
 #define region_built(region, building) ((int)((region)->built & (1 << (building))))
 

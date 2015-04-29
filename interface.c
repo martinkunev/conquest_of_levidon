@@ -1004,7 +1004,6 @@ void if_map(const void *argument, const struct game *game)
 			switch (state->hover_object)
 			{
 			case HOVER_UNIT:
-				// TODO show tooltip only for available units
 				{
 					const struct unit *unit = game->units + state->hover.unit;
 					tooltip_cost(unit->name, unit->name_length, &unit->cost, unit->time);
