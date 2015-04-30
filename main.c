@@ -9,6 +9,7 @@
 #include "types.h"
 #include "json.h"
 #include "map.h"
+#include "world.h"
 #include "pathfinding.h"
 #include "battle.h"
 #include "combat.h"
@@ -23,18 +24,6 @@
 #define WINNER_BATTLE -2
 
 #define MAP_DEFAULT "maps/balkans"
-
-void region_income(const struct region* restrict region, struct resources *restrict income)
-{
-	size_t i;
-
-	income->gold += 1;
-	income->food += 1;
-
-	for(i = 0; i < buildings_count; ++i)
-		if (region->built & (1 << i))
-			resource_add(income, &buildings[i].income);
-}
 
 static int battle(struct game *restrict game, struct region *restrict region)
 {
@@ -159,7 +148,7 @@ static int play(struct game *restrict game)
 		{
 			region = game->regions + index;
 
-			for(slot = region->slots; slot; slot = slot->_next)
+			for(slot = region->troops_field; slot; slot = slot->_next)
 				resource_add(expenses + slot->player, &slot->unit->expense);
 
 			// Update training time and check if there are trained units.
@@ -172,9 +161,9 @@ static int play(struct game *restrict game)
 				slot->player = region->owner;
 
 				slot->_prev = 0;
-				slot->_next = region->slots;
-				if (region->slots) region->slots->_prev = slot;
-				region->slots = slot;
+				slot->_next = region->troops_field;
+				if (region->troops_field) region->troops_field->_prev = slot;
+				region->troops_field = slot;
 				slot->move = slot->location = region;
 
 				region->train_time = 0;
@@ -184,15 +173,15 @@ static int play(struct game *restrict game)
 			}
 
 			// Update construction time and check if the building is finished.
-			if ((region->construct >= 0) && (++region->construct_time == buildings[region->construct].time))
+			if ((region->construct >= 0) && (++region->build_progress == buildings[region->construct].time))
 			{
 				region->built |= (1 << region->construct);
 				region->construct = -1;
-				region->construct_time = 0;
+				region->build_progress = 0;
 			}
 
 			// Move each unit for which movement is specified.
-			slot = region->slots;
+			slot = region->troops_field;
 			while (slot)
 			{
 				next = slot->_next;
@@ -200,14 +189,14 @@ static int play(struct game *restrict game)
 				{
 					// Remove the slot from its current location.
 					if (slot->_prev) slot->_prev->_next = slot->_next;
-					else region->slots = slot->_next;
+					else region->troops_field = slot->_next;
 					if (slot->_next) slot->_next->_prev = slot->_prev;
 
 					// Put the slot to its new location.
 					slot->_prev = 0;
-					slot->_next = slot->move->slots;
-					if (slot->move->slots) slot->move->slots->_prev = slot;
-					slot->move->slots = slot;
+					slot->_next = slot->move->troops_field;
+					if (slot->move->troops_field) slot->move->troops_field->_prev = slot;
+					slot->move->troops_field = slot;
 				}
 				slot = next;
 			}
@@ -221,7 +210,7 @@ static int play(struct game *restrict game)
 			region = game->regions + index;
 
 			// If slots of two different alliances occupy the region, start a battle.
-			for(slot = region->slots; slot; slot = slot->_next)
+			for(slot = region->troops_field; slot; slot = slot->_next)
 			{
 				alliance = game->players[slot->player].alliance;
 
@@ -240,13 +229,13 @@ static int play(struct game *restrict game)
 
 			// Set the location of each unit to the current region.
 			// Count the slots in the region.
-			for(slot = region->slots; slot; slot = slot->_next)
+			for(slot = region->troops_field; slot; slot = slot->_next)
 			{
 				// Remove dead slots.
 				if (!slot->count)
 				{
 					if (slot->_prev) slot->_prev->_next = slot->_next;
-					else region->slots = slot->_next;
+					else region->troops_field = slot->_next;
 					if (slot->_next) slot->_next->_prev = slot->_prev;
 					free(slot);
 					continue;
@@ -260,14 +249,14 @@ static int play(struct game *restrict game)
 				else
 				{
 					if (slot->_prev) slot->_prev->_next = slot->_next;
-					else region->slots = slot->_next;
+					else region->troops_field = slot->_next;
 					if (slot->_next) slot->_next->_prev = slot->_prev;
 
 					// Put the slot back to its original location.
 					slot->_prev = 0;
-					slot->_next = slot->location->slots;
-					if (slot->location->slots) slot->location->slots->_prev = slot;
-					slot->location->slots = slot;
+					slot->_next = slot->location->troops_field;
+					if (slot->location->troops_field) slot->location->troops_field->_prev = slot;
+					slot->location->troops_field = slot;
 					slot->move = slot->location;
 				}
 			}
@@ -280,7 +269,7 @@ static int play(struct game *restrict game)
 					owner_slot = random() % slots;
 
 					slots = 0;
-					for(slot = region->slots; slot; slot = slot->_next)
+					for(slot = region->troops_field; slot; slot = slot->_next)
 					{
 						if (slots == owner_slot)
 						{
@@ -292,7 +281,7 @@ static int play(struct game *restrict game)
 
 					// Cancel all constructions and trainings.
 					region->construct = -1;
-					region->construct_time = 0;
+					region->build_progress = 0;
 					for(i = 0; i < TRAIN_QUEUE; ++i) region->train[i] = 0;
 					region->train_time = 0;
 				}
@@ -363,7 +352,7 @@ int main(int argc, char *argv[])
 		write(2, S("Invalid map format\n"));
 		return -1;
 	}
-	success = !map_init(json, &game);
+	success = !world_init(json, &game);
 	json_free(json);
 	if (!success)
 	{
@@ -380,7 +369,7 @@ int main(int argc, char *argv[])
 		write(2, S("game finished\n"));
 	}
 
-	map_term(&game);
+	world_term(&game);
 
 	return 0;
 }

@@ -866,7 +866,7 @@ void if_map(const void *argument, const struct game *game)
 			region_visible[i] = 1;
 
 			// Make the neighboring regions visible when a watch tower is built.
-			if (region_built(regions + i, BUILDING_WATCH_TOWER))
+			if (region_built(regions + i, BuildingWatchTower))
 			{
 				for(j = 0; j < NEIGHBORS_LIMIT; ++j)
 				{
@@ -886,7 +886,7 @@ void if_map(const void *argument, const struct game *game)
 
 		// Remember income and expenses.
 		if (regions[i].owner == state->player) region_income(regions + i, &income);
-		for(slot = regions[i].slots; slot; slot = slot->_next)
+		for(slot = regions[i].troops_field; slot; slot = slot->_next)
 			if (slot->player == state->player)
 				resource_add(&expenses, &slot->unit->expense);
 	}
@@ -918,7 +918,7 @@ void if_map(const void *argument, const struct game *game)
 		{
 			unsigned char self_count = 0, ally_count = 0;
 			enum color color_text;
-			for(slot = region->slots; slot; slot = slot->_next)
+			for(slot = region->troops_field; slot; slot = slot->_next)
 			{
 				if (slot->player == state->player)
 				{
@@ -973,7 +973,7 @@ void if_map(const void *argument, const struct game *game)
 			if (region->construct >= 0)
 			{
 				struct point position = if_position(Building, region->construct);
-				show_progress(region->construct_time, buildings[region->construct].time, position.x, position.y, object_group[Building].width, object_group[Building].height);
+				show_progress(region->build_progress, buildings[region->construct].time, position.x, position.y, object_group[Building].width, object_group[Building].height);
 				image_draw(&image_construction, position.x, position.y);
 			}
 		}

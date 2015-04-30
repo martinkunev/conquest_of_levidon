@@ -442,7 +442,7 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 	}
 
 	count = 0;
-	for(slot = region->slots; slot; slot = slot->_next)
+	for(slot = region->troops_field; slot; slot = slot->_next)
 		count += 1;
 	pawns = malloc(count * sizeof(*pawns));
 	if (!pawns) return -1;
@@ -456,7 +456,7 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 	}
 	struct heap heap = {.data = slots, .count = count};
 	i = 0;
-	for(slot = region->slots; slot; slot = slot->_next) slots[i++] = slot;
+	for(slot = region->troops_field; slot; slot = slot->_next) slots[i++] = slot;
 	heapify(&heap);
 	while (--i)
 	{

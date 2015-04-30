@@ -1,5 +1,10 @@
 #include <math.h>
 
+#define BATTLEFIELD_WIDTH 24
+#define BATTLEFIELD_HEIGHT 24
+
+#define PAWNS_LIMIT 12
+
 struct pawn
 {
 	struct troop *slot;
@@ -42,18 +47,6 @@ static inline int point_eq(struct point a, struct point b)
 {
 	return ((a.x == b.x) && (a.y == b.y));
 }
-
-#define PAWNS_LIMIT 12
-
-/*
-**ooooooo|oooo|ooooooo**
-
-oooo*
-ooo**
-oo***
-o***o
-***oo
-*/
 
 static inline const struct point *formation_positions(const struct troop *restrict slot, const struct region *restrict region)
 {

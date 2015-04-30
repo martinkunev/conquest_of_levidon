@@ -63,7 +63,7 @@ static int input_region(int code, unsigned x, unsigned y, uint16_t modifiers, co
 
 		state->self_count = 0;
 		state->ally_count = 0;
-		for(slot = game->regions[state->region].slots; slot; slot = slot->_next)
+		for(slot = game->regions[state->region].troops_field; slot; slot = slot->_next)
 			if (slot->player == state->player) state->self_count++;
 			else state->ally_count++;
 	}
@@ -93,7 +93,7 @@ valid:
 		else
 		{
 			// Set the move destination of all slots in the region.
-			for(slot = region->slots; slot; slot = slot->_next)
+			for(slot = region->troops_field; slot; slot = slot->_next)
 				if (state->player == slot->player)
 					slot->move = game->regions + pixel_color[2];
 		}
@@ -196,7 +196,7 @@ static int input_scroll_self(int code, unsigned x, unsigned y, uint16_t modifier
 	if (code != -1) return INPUT_NOTME; // handle only left mouse clicks
 
 	if (state->region == REGION_NONE) return 0; // no region selected
-	struct troop *slot = game->regions[state->region].slots;
+	struct troop *slot = game->regions[state->region].troops_field;
 	if (!slot) return 0; // no slots in this region
 
 	if (x <= object_group[TroopSelf].left - 1) // scroll left
@@ -224,7 +224,7 @@ static int input_scroll_ally(int code, unsigned x, unsigned y, uint16_t modifier
 	if (code != -1) return INPUT_NOTME; // handle only left mouse clicks
 
 	if (state->region == REGION_NONE) return 0; // no region selected
-	struct troop *slot = game->regions[state->region].slots;
+	struct troop *slot = game->regions[state->region].troops_field;
 	if (!slot) return 0; // no slots in this region
 
 	if (x <= object_group[TroopAlly].left - 1) // scroll left
@@ -258,7 +258,7 @@ static int input_slot(int code, unsigned x, unsigned y, uint16_t modifiers, cons
 
 	if (state->region == REGION_NONE) goto reset; // no region selected
 
-	slot = game->regions[state->region].slots;
+	slot = game->regions[state->region].troops_field;
 	if (!slot) goto reset; // no slots in this region
 
 	// Find which troop was clicked.
@@ -300,7 +300,7 @@ static int input_slot(int code, unsigned x, unsigned y, uint16_t modifiers, cons
 			// Remove the selected slot because all units were transfered to the clicked slot.
 			slot = state->troop;
 			if (slot->_prev) slot->_prev->_next = slot->_next;
-			else game->regions[state->region].slots = slot->_next;
+			else game->regions[state->region].troops_field = slot->_next;
 			if (slot->_next) slot->_next->_prev = slot->_prev;
 			free(slot);
 
@@ -344,8 +344,8 @@ static int input_build(int code, unsigned x, unsigned y, uint16_t modifiers, con
 			// If the building clicked is the one under construction, cancel the construction.
 			if (*construct == index)
 			{
-				if (region->construct_time)
-					region->construct_time = 0;
+				if (region->build_progress)
+					region->build_progress = 0;
 				else
 					resource_add(&game->players[state->player].treasury, &buildings[index].cost);
 				*construct = -1;
