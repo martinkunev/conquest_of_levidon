@@ -32,8 +32,13 @@
 #define SCROLL 8
 
 #define TROOPS_VISIBLE 7
+#define TROOPS_GARRISON 6
 
-enum object {Building, Inventory, Dismiss, TroopSelf, TroopAlly};
+#define GARRISON_X (PANEL_X + 1)
+#define GARRISON_Y (PANEL_Y + 160)
+#define GARRISON_MARGIN 24
+
+enum object {Building, Inventory, Dismiss, TroopSelf, TroopAlly, TroopGarrison};
 
 // rows, columns, left, top, width, height, padding
 #define OBJECT_GROUP(r, c, l, t, w, h, p) \
@@ -68,6 +73,7 @@ static const struct object_group
 	[Dismiss] = OBJECT_GROUP(1, 4, PANEL_X + 81, PANEL_Y + 300, 32, 32, 1), // TODO replace 4 with TRAIN_QUEUE
 	[TroopSelf] = OBJECT_GROUP(1, TROOPS_VISIBLE, PANEL_X + SCROLL + 1, PANEL_Y + 36 + 2, 32, 32, 1),
 	[TroopAlly] = OBJECT_GROUP(1, TROOPS_VISIBLE, PANEL_X + SCROLL + 1, PANEL_Y + 36 + 48 + 2 + 2, 32, 32, 1),
+	[TroopGarrison] = OBJECT_GROUP(1, TROOPS_GARRISON, GARRISON_X + GARRISON_MARGIN, GARRISON_Y + GARRISON_MARGIN, 32, 32, 1),
 };
 #undef OBJECT_GROUP
 

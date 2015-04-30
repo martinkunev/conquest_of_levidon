@@ -77,7 +77,16 @@ struct region
 	unsigned char train_time;
 	struct unit *train[TRAIN_QUEUE];
 
-	struct troop *troops_field, *troops_garrison;
+	struct troop *troops;
+
+	struct
+	{
+		unsigned char owner;
+
+		unsigned siege;
+
+		struct troop *troops;
+	} garrison;
 
 	size_t index;
 	struct region *neighbors[NEIGHBORS_LIMIT];
@@ -102,9 +111,26 @@ struct game
 	size_t units_count;
 };
 
+#define PALISADE 0
+#define FORTRESS 1
+
+static const struct
+{
+	unsigned troops;
+	unsigned provisions;
+} garrison_info[] =
+{
+	[PALISADE] = {.troops = 3, .provisions = 2},
+	[FORTRESS] = {.troops = 6, .provisions = 5},
+};
+
 // neighbors (in order): east, north-east, north, north-west, west, south-west, south, south-east
 
 extern const struct building buildings[];
 extern const size_t buildings_count;
 
 void region_income(const struct region* restrict region, struct resources *restrict income);
+
+void troop_detach(struct troop **troops, struct troop *troop);
+void troop_attach(struct troop **troops, struct troop *troop);
+void troop_remove(struct troop **troops, struct troop *troop);

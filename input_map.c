@@ -63,7 +63,7 @@ static int input_region(int code, unsigned x, unsigned y, uint16_t modifiers, co
 
 		state->self_count = 0;
 		state->ally_count = 0;
-		for(slot = game->regions[state->region].troops_field; slot; slot = slot->_next)
+		for(slot = game->regions[state->region].troops; slot; slot = slot->_next)
 			if (slot->player == state->player) state->self_count++;
 			else state->ally_count++;
 	}
@@ -93,7 +93,7 @@ valid:
 		else
 		{
 			// Set the move destination of all slots in the region.
-			for(slot = region->troops_field; slot; slot = slot->_next)
+			for(slot = region->troops; slot; slot = slot->_next)
 				if (state->player == slot->player)
 					slot->move = game->regions + pixel_color[2];
 		}
@@ -196,7 +196,7 @@ static int input_scroll_self(int code, unsigned x, unsigned y, uint16_t modifier
 	if (code != -1) return INPUT_NOTME; // handle only left mouse clicks
 
 	if (state->region == REGION_NONE) return 0; // no region selected
-	struct troop *slot = game->regions[state->region].troops_field;
+	struct troop *slot = game->regions[state->region].troops;
 	if (!slot) return 0; // no slots in this region
 
 	if (x <= object_group[TroopSelf].left - 1) // scroll left
@@ -224,7 +224,7 @@ static int input_scroll_ally(int code, unsigned x, unsigned y, uint16_t modifier
 	if (code != -1) return INPUT_NOTME; // handle only left mouse clicks
 
 	if (state->region == REGION_NONE) return 0; // no region selected
-	struct troop *slot = game->regions[state->region].troops_field;
+	struct troop *slot = game->regions[state->region].troops;
 	if (!slot) return 0; // no slots in this region
 
 	if (x <= object_group[TroopAlly].left - 1) // scroll left
@@ -245,7 +245,7 @@ static int input_scroll_ally(int code, unsigned x, unsigned y, uint16_t modifier
 	}
 }
 
-static int input_slot(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
+static int input_troop(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
 {
 	struct troop *slot;
 	ssize_t offset;
@@ -258,7 +258,7 @@ static int input_slot(int code, unsigned x, unsigned y, uint16_t modifiers, cons
 
 	if (state->region == REGION_NONE) goto reset; // no region selected
 
-	slot = game->regions[state->region].troops_field;
+	slot = game->regions[state->region].troops;
 	if (!slot) goto reset; // no slots in this region
 
 	// Find which troop was clicked.
@@ -300,7 +300,7 @@ static int input_slot(int code, unsigned x, unsigned y, uint16_t modifiers, cons
 			// Remove the selected slot because all units were transfered to the clicked slot.
 			slot = state->troop;
 			if (slot->_prev) slot->_prev->_next = slot->_next;
-			else game->regions[state->region].troops_field = slot->_next;
+			else game->regions[state->region].troops = slot->_next;
 			if (slot->_next) slot->_next->_prev = slot->_prev;
 			free(slot);
 
@@ -313,6 +313,69 @@ static int input_slot(int code, unsigned x, unsigned y, uint16_t modifiers, cons
 reset:
 	// Make sure no slot is selected.
 	state->troop = 0;
+	return 0;
+}
+
+static int input_garrison(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
+{
+	struct region *region;
+	struct troop *troop;
+	size_t garrison;
+	ssize_t index;
+
+	struct state_map *state = argument;
+
+	if (code == EVENT_MOTION) return INPUT_NOTME;
+	if (code >= 0) return INPUT_NOTME; // ignore keyboard events
+
+	if (state->region == REGION_NONE) return 0;
+	region = game->regions + state->region;
+	if (state->player != region->owner) return 0; // player does not control the region
+
+	if (region_built(region, BuildingFortress)) garrison = FORTRESS;
+	else if (region_built(region, BuildingPalisade)) garrison = PALISADE;
+	else return 0; // no garrison in this region
+
+	if (code == -1)
+	{
+		troop = region->garrison.troops;
+		if (!troop) return 0; // no troops in the garrison
+
+		// Find which troop was clicked.
+		index = if_index(Building, (struct point){x, y});
+		if (index < 0) return 0; // no troop clicked
+
+		// Find the clicked troop in the linked list.
+		while (index)
+		{
+			troop = troop->_next;
+			if (!troop) return 0; // no troop clicked
+			index -= 1;
+		}
+
+		// Move the clicked troop out of the garrison.
+		troop_detach(&region->garrison.troops, troop);
+		troop_attach(&region->troops, troop);
+	}
+	else if (code == -3)
+	{
+		if (!state->troop) return 0; // no troop selected
+
+		// Count how many units are in the garrison.
+		unsigned count = 0;
+		for(troop = region->garrison.troops; troop; troop = troop->_next)
+			count += 1;
+
+		if (count < garrison_info[garrison].troops) // if there is place for one more troop
+		{
+			// Move the selected troop to the garrison.
+			troop_detach(&region->troops, state->troop);
+			troop_attach(&region->garrison.troops, state->troop);
+		}
+
+		state->troop = 0;
+	}
+
 	return 0;
 }
 
@@ -421,7 +484,14 @@ int input_map(const struct game *restrict game, unsigned char player)
 			.right = object_group[TroopSelf].right,
 			.top = object_group[TroopSelf].top,
 			.bottom = object_group[TroopSelf].bottom,
-			.callback = input_slot,
+			.callback = input_troop,
+		},
+		{
+			.left = object_group[TroopGarrison].left,
+			.right = object_group[TroopGarrison].right,
+			.top = object_group[TroopGarrison].top,
+			.bottom = object_group[TroopGarrison].bottom,
+			.callback = input_garrison,
 		},
 		{
 			.left = object_group[Building].left,

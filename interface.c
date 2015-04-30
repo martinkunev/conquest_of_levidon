@@ -75,11 +75,12 @@ struct region *restrict regions;
 size_t regions_count;
 
 static struct image image_move_destination, image_shoot_destination, image_selected, image_flag, image_panel, image_construction;
+static struct image image_palisade, image_fortress;
 static struct image image_gold, image_food, image_wood, image_stone, image_iron, image_time;
 static struct image image_scroll_left, image_scroll_right;
 static struct image image_units[4]; // TODO the array must be enough to hold units_count units
-static struct image image_buildings[9]; // TODO the array must be big enough to hold buildings_count elements
-static struct image image_buildings_gray[9]; // TODO the array must be big enough to hold buildings_count elements
+static struct image image_buildings[12]; // TODO the array must be big enough to hold buildings_count elements
+static struct image image_buildings_gray[12]; // TODO the array must be big enough to hold buildings_count elements
 
 static GLuint map_renderbuffer;
 
@@ -230,6 +231,9 @@ int if_init(void)
 	image_load_png(&image_panel, "img/panel.png", 0);
 	image_load_png(&image_construction, "img/construction.png", 0);
 
+	image_load_png(&image_palisade, "img/palisade.png", 0);
+	image_load_png(&image_fortress, "img/fortress.png", 0);
+
 	image_load_png(&image_scroll_left, "img/scroll_left.png", 0);
 	image_load_png(&image_scroll_right, "img/scroll_right.png", 0);
 
@@ -254,6 +258,9 @@ int if_init(void)
 	image_load_png(&image_buildings[6], "img/archery_range.png", 0);
 	image_load_png(&image_buildings[7], "img/stables.png", 0);
 	image_load_png(&image_buildings[8], "img/watch_tower.png", 0);
+	image_load_png(&image_buildings[9], "img/palisade.png", 0);
+	image_load_png(&image_buildings[10], "img/fortress.png", 0);
+	image_load_png(&image_buildings[11], "img/moat.png", 0);
 
 	image_load_png(&image_buildings_gray[0], "img/farm.png", 1);
 	image_load_png(&image_buildings_gray[1], "img/irrigation.png", 1);
@@ -264,6 +271,9 @@ int if_init(void)
 	image_load_png(&image_buildings_gray[6], "img/archery_range.png", 1);
 	image_load_png(&image_buildings_gray[7], "img/stables.png", 1);
 	image_load_png(&image_buildings_gray[8], "img/watch_tower.png", 1);
+	image_load_png(&image_buildings_gray[9], "img/palisade.png", 1);
+	image_load_png(&image_buildings_gray[10], "img/fortress.png", 1);
+	image_load_png(&image_buildings_gray[11], "img/moat.png", 1);
 
 	// TODO handle modifier keys
 	// TODO handle dead keys
@@ -855,7 +865,7 @@ void if_map(const void *argument, const struct game *game)
 	// Map
 
 	struct resources income = {0}, expenses = {0};
-	const struct troop *slot;
+	const struct troop *troop;
 
 	// Determine which regions to show.
 	unsigned char region_visible[REGIONS_LIMIT] = {0};
@@ -886,9 +896,9 @@ void if_map(const void *argument, const struct game *game)
 
 		// Remember income and expenses.
 		if (regions[i].owner == state->player) region_income(regions + i, &income);
-		for(slot = regions[i].troops_field; slot; slot = slot->_next)
-			if (slot->player == state->player)
-				resource_add(&expenses, &slot->unit->expense);
+		for(troop = regions[i].troops; troop; troop = troop->_next)
+			if (troop->player == state->player)
+				resource_add(&expenses, &troop->unit->expense);
 	}
 	for(i = 0; i < regions_count; ++i)
 	{
@@ -918,9 +928,9 @@ void if_map(const void *argument, const struct game *game)
 		{
 			unsigned char self_count = 0, ally_count = 0;
 			enum color color_text;
-			for(slot = region->troops_field; slot; slot = slot->_next)
+			for(troop = region->troops; troop; troop = troop->_next)
 			{
-				if (slot->player == state->player)
+				if (troop->player == state->player)
 				{
 					if (!self_count) display_rectangle(PANEL_X, object_group[TroopSelf].top - 2, PANEL_WIDTH, 2 + object_group[TroopSelf].height + 12 + 2, Self);
 					x = self_count++;
@@ -941,15 +951,15 @@ void if_map(const void *argument, const struct game *game)
 				{
 					struct point position = if_position(object, x);
 					x -= offset;
-					display_unit(slot->unit->index, position.x, position.y, Player + slot->player, color_text, slot->count);
-					if (slot == state->troop) draw_rectangle(position.x - 1, position.y - 1, object_group[object].width + 2, object_group[object].height + 2, White);
+					display_unit(troop->unit->index, position.x, position.y, Player + troop->player, color_text, troop->count);
+					if (troop == state->troop) draw_rectangle(position.x - 1, position.y - 1, object_group[object].width + 2, object_group[object].height + 2, White);
 				}
 
-				// Draw the destination of each moving slot.
-				if ((slot->player == state->player) && (!state->troop || (slot == state->troop)) && (slot->move->index != state->region))
+				// Draw the destination of each moving troop.
+				if ((troop->player == state->player) && (!state->troop || (troop == state->troop)) && (troop->move->index != state->region))
 				{
-					struct point from = {slot->location->center.x, slot->location->center.y};
-					struct point to = {slot->move->center.x, slot->move->center.y};
+					struct point from = {troop->location->center.x, troop->location->center.y};
+					struct point to = {troop->move->center.x, troop->move->center.y};
 					display_arrow(from, to, MAP_X, MAP_Y, Self);
 				}
 			}
@@ -959,6 +969,40 @@ void if_map(const void *argument, const struct game *game)
 			if ((self_count - state->self_offset) > TROOPS_VISIBLE) image_draw(&image_scroll_right, object_group[TroopSelf].span_x + object_group[TroopSelf].padding, object_group[TroopSelf].top);
 			if (state->ally_offset) image_draw(&image_scroll_left, PANEL_X, object_group[TroopAlly].top);
 			if ((ally_count - state->ally_offset) > TROOPS_VISIBLE) image_draw(&image_scroll_right, object_group[TroopAlly].span_x + object_group[TroopAlly].padding, object_group[TroopAlly].top);
+
+			// Display garrison and garrison troops.
+			{
+				size_t garrison;
+
+				display_rectangle(GARRISON_X + 4, GARRISON_Y - GARRISON_MARGIN + 4, 24, 12, Player + region->garrison.owner);
+				image_draw(&image_flag, GARRISON_X, GARRISON_Y - GARRISON_MARGIN);
+				if (region_built(region, BuildingFortress))
+				{
+					garrison = FORTRESS;
+					image_draw(&image_fortress, GARRISON_X, GARRISON_Y);
+				}
+				else if (region_built(region, BuildingPalisade))
+				{
+					garrison = PALISADE;
+					image_draw(&image_palisade, GARRISON_X, GARRISON_Y);
+				}
+
+				i = 0;
+				for(troop = region->garrison.troops; troop; troop = troop->_next)
+				{
+					struct point position = if_position(TroopGarrison, i);
+					display_unit(troop->unit->index, position.x, position.y, Player + troop->player, Black, troop->count);
+					i += 1;
+				}
+
+				// If the garrison is under siege, display siege information.
+				if (region->owner != region->garrison.owner)
+				{
+					unsigned provisions = garrison_info[garrison].provisions - region->garrison.siege;
+					for(i = 0; i < provisions; ++i)
+						image_draw(&image_food, object_group[TroopGarrison].right + MARGIN, object_group[TroopGarrison].bottom - (i + 1) * image_food.height);
+				}
+			}
 
 			for(i = 0; i < buildings_count; ++i)
 			{

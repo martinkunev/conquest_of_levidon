@@ -148,7 +148,7 @@ static int play(struct game *restrict game)
 		{
 			region = game->regions + index;
 
-			for(slot = region->troops_field; slot; slot = slot->_next)
+			for(slot = region->troops; slot; slot = slot->_next)
 				resource_add(expenses + slot->player, &slot->unit->expense);
 
 			// Update training time and check if there are trained units.
@@ -161,9 +161,9 @@ static int play(struct game *restrict game)
 				slot->player = region->owner;
 
 				slot->_prev = 0;
-				slot->_next = region->troops_field;
-				if (region->troops_field) region->troops_field->_prev = slot;
-				region->troops_field = slot;
+				slot->_next = region->troops;
+				if (region->troops) region->troops->_prev = slot;
+				region->troops = slot;
 				slot->move = slot->location = region;
 
 				region->train_time = 0;
@@ -180,23 +180,17 @@ static int play(struct game *restrict game)
 				region->build_progress = 0;
 			}
 
-			// Move each unit for which movement is specified.
-			slot = region->troops_field;
+			// Move each troop for which movement is specified.
+			slot = region->troops;
 			while (slot)
 			{
 				next = slot->_next;
 				if (slot->move != slot->location)
 				{
-					// Remove the slot from its current location.
-					if (slot->_prev) slot->_prev->_next = slot->_next;
-					else region->troops_field = slot->_next;
-					if (slot->_next) slot->_next->_prev = slot->_prev;
-
-					// Put the slot to its new location.
-					slot->_prev = 0;
-					slot->_next = slot->move->troops_field;
-					if (slot->move->troops_field) slot->move->troops_field->_prev = slot;
-					slot->move->troops_field = slot;
+					// Move the slot to its new location.
+					troop_detach(&region->troops, slot);
+					troop_attach(&slot->move->troops, slot);
+					slot->location = slot->move; // TODO this is done below; no need to do it here
 				}
 				slot = next;
 			}
@@ -210,7 +204,7 @@ static int play(struct game *restrict game)
 			region = game->regions + index;
 
 			// If slots of two different alliances occupy the region, start a battle.
-			for(slot = region->troops_field; slot; slot = slot->_next)
+			for(slot = region->troops; slot; slot = slot->_next)
 			{
 				alliance = game->players[slot->player].alliance;
 
@@ -229,14 +223,12 @@ static int play(struct game *restrict game)
 
 			// Set the location of each unit to the current region.
 			// Count the slots in the region.
-			for(slot = region->troops_field; slot; slot = slot->_next)
+			for(slot = region->troops; slot; slot = slot->_next)
 			{
 				// Remove dead slots.
 				if (!slot->count)
 				{
-					if (slot->_prev) slot->_prev->_next = slot->_next;
-					else region->troops_field = slot->_next;
-					if (slot->_next) slot->_next->_prev = slot->_prev;
+					troop_detach(&region->troops, slot);
 					free(slot);
 					continue;
 				}
@@ -248,15 +240,9 @@ static int play(struct game *restrict game)
 				}
 				else
 				{
-					if (slot->_prev) slot->_prev->_next = slot->_next;
-					else region->troops_field = slot->_next;
-					if (slot->_next) slot->_next->_prev = slot->_prev;
-
-					// Put the slot back to its original location.
-					slot->_prev = 0;
-					slot->_next = slot->location->troops_field;
-					if (slot->location->troops_field) slot->location->troops_field->_prev = slot;
-					slot->location->troops_field = slot;
+					// Move the troop back to its original location.
+					troop_detach(&region->troops, slot);
+					troop_attach(&slot->location->troops, slot);
 					slot->move = slot->location;
 				}
 			}
@@ -269,11 +255,13 @@ static int play(struct game *restrict game)
 					owner_slot = random() % slots;
 
 					slots = 0;
-					for(slot = region->troops_field; slot; slot = slot->_next)
+					for(slot = region->troops; slot; slot = slot->_next)
 					{
 						if (slots == owner_slot)
 						{
 							region->owner = slot->player;
+							region->garrison.siege = 0;
+							if (!region->garrison.troops) region->garrison.owner = slot->player;
 							break;
 						}
 						slots += 1;
@@ -287,10 +275,37 @@ static int play(struct game *restrict game)
 				}
 			}
 
-			// Add the income from each region to the owner's treasury.
-			memset(&income, 0, sizeof(income));
-			region_income(region, &income);
-			resource_add(&game->players[region->owner].treasury, &income);
+			// Add region income to the owner's treasury if the garrison is not under siege.
+			if (region->owner == region->garrison.owner)
+			{
+				memset(&income, 0, sizeof(income));
+				region_income(region, &income);
+				resource_add(&game->players[region->owner].treasury, &income);
+			}
+			else
+			{
+				size_t index;
+
+				if (region_built(region, BuildingFortress)) index = FORTRESS;
+				else if (region_built(region, BuildingPalisade)) index = PALISADE;
+
+				// If the garrison has no more provisions, finish the siege.
+				region->garrison.siege += 1;
+				if (region->garrison.siege > garrison_info[index].provisions)
+				{
+					region->garrison.owner = region->owner;
+					region->garrison.siege = 0;
+
+					slot = region->garrison.troops;
+					while (slot)
+					{
+						next = slot->_next;
+						troop_detach(&region->garrison.troops, slot);
+						free(slot);
+						slot = next;
+					}
+				}
+			}
 
 			// Each player that controls a region is alive.
 			alive[region->owner] = 1;
