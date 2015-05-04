@@ -231,8 +231,8 @@ int if_init(void)
 	image_load_png(&image_panel, "img/panel.png", 0);
 	image_load_png(&image_construction, "img/construction.png", 0);
 
-	image_load_png(&image_palisade, "img/palisade.png", 0);
-	image_load_png(&image_fortress, "img/fortress.png", 0);
+	image_load_png(&image_palisade, "img/garrison_palisade.png", 0);
+	image_load_png(&image_fortress, "img/garrison_fortress.png", 0);
 
 	image_load_png(&image_scroll_left, "img/scroll_left.png", 0);
 	image_load_png(&image_scroll_right, "img/scroll_right.png", 0);
@@ -260,7 +260,7 @@ int if_init(void)
 	image_load_png(&image_buildings[8], "img/watch_tower.png", 0);
 	image_load_png(&image_buildings[9], "img/palisade.png", 0);
 	image_load_png(&image_buildings[10], "img/fortress.png", 0);
-	image_load_png(&image_buildings[11], "img/moat.png", 0);
+	//image_load_png(&image_buildings[11], "img/moat.png", 0);
 
 	image_load_png(&image_buildings_gray[0], "img/farm.png", 1);
 	image_load_png(&image_buildings_gray[1], "img/irrigation.png", 1);
@@ -273,7 +273,7 @@ int if_init(void)
 	image_load_png(&image_buildings_gray[8], "img/watch_tower.png", 1);
 	image_load_png(&image_buildings_gray[9], "img/palisade.png", 1);
 	image_load_png(&image_buildings_gray[10], "img/fortress.png", 1);
-	image_load_png(&image_buildings_gray[11], "img/moat.png", 1);
+	//image_load_png(&image_buildings_gray[11], "img/moat.png", 1);
 
 	// TODO handle modifier keys
 	// TODO handle dead keys
@@ -836,6 +836,188 @@ static void tooltip_cost(const char *restrict name, size_t name_length, const st
 	offset += 40;
 }
 
+static inline void show_flag(unsigned x, unsigned y, unsigned player)
+{
+	display_rectangle(x + 4, x + 4, 24, 12, Player + player);
+	image_draw(&image_flag, x, y);
+}
+
+static void if_map_region(const struct region *region, const struct state_map *state, const struct game *game)
+{
+	unsigned state_alliance = game->players[state->player].alliance;
+	int siege = (region->owner != region->garrison.owner);
+
+	const struct troop *troop;
+	size_t i;
+
+	show_flag(PANEL_X, PANEL_Y, region->owner);
+
+	// Display the troops at the selected region.
+	if ((game->players[region->owner].alliance == state_alliance) || (game->players[region->garrison.owner].alliance == state_alliance))
+	{
+		enum object object;
+		size_t offset;
+
+		unsigned char self_count = 0, other_count = 0;
+
+		// Display building information.
+		// Construct button is displayed if the following conditions are satisfied:
+		// * current player owns the region
+		// * building requirements are satisfied
+		// * there is no siege
+		for(i = 0; i < buildings_count; ++i)
+		{
+			struct point position = if_position(Building, i);
+			if (region_built(region, i)) image_draw(image_buildings + i, position.x, position.y);
+			else if ((state->player == region->owner) && region_building_available(region, buildings[i]) && !siege) image_draw(image_buildings_gray + i, position.x, position.y);
+		}
+
+		// Display troops in the region.
+		for(troop = region->troops; troop; troop = troop->_next)
+		{
+			size_t x;
+			enum color color_text;
+
+			if (troop->player == state->player)
+			{
+				if (!self_count) display_rectangle(PANEL_X, object_group[TroopSelf].top - 2, PANEL_WIDTH, 2 + object_group[TroopSelf].height + 12 + 2, Self);
+				x = self_count++;
+				object = TroopSelf;
+				offset = state->self_offset;
+				color_text = Black;
+			}
+			else if (game->players[troop->player].alliance == state_alliance)
+			{
+				if (!other_count) display_rectangle(PANEL_X, object_group[TroopOther].top - 2, PANEL_WIDTH, 2 + object_group[TroopOther].height + 12 + 2, Ally);
+				x = other_count++;
+				object = TroopOther;
+				offset = state->other_offset;
+				color_text = White;
+			}
+			else if (region->garrison.owner == state->player)
+			{
+				if (!other_count) display_rectangle(PANEL_X, object_group[TroopOther].top - 2, PANEL_WIDTH, 2 + object_group[TroopOther].height + 12 + 2, Enemy);
+				x = other_count++;
+				object = TroopOther;
+				offset = state->other_offset;
+				color_text = White;
+			}
+
+			// Draw troops that are visible on the screen.
+			if ((x >= offset) && (x < offset + TROOPS_VISIBLE))
+			{
+				struct point position = if_position(object, x - offset);
+				display_unit(troop->unit->index, position.x, position.y, Player + troop->player, color_text, troop->count);
+				if (troop == state->troop) draw_rectangle(position.x - 1, position.y - 1, object_group[object].width + 2, object_group[object].height + 2, White);
+			}
+
+			// Draw the destination of each moving troop owned by current player.
+			if ((troop->player == state->player) && (!state->troop || (troop == state->troop)) && (troop->move->index != state->region))
+			{
+				struct point from = {troop->location->center.x, troop->location->center.y};
+				struct point to = {troop->move->center.x, troop->move->center.y};
+				display_arrow(from, to, MAP_X, MAP_Y, Self); // TODO change color
+			}
+		}
+
+		// Display scroll buttons.
+		if (state->self_offset) image_draw(&image_scroll_left, PANEL_X, object_group[TroopSelf].top);
+		if ((self_count - state->self_offset) > TROOPS_VISIBLE) image_draw(&image_scroll_right, object_group[TroopSelf].span_x + object_group[TroopSelf].padding, object_group[TroopSelf].top);
+		if (state->other_offset) image_draw(&image_scroll_left, PANEL_X, object_group[TroopOther].top);
+		if ((other_count - state->other_offset) > TROOPS_VISIBLE) image_draw(&image_scroll_right, object_group[TroopOther].span_x + object_group[TroopOther].padding, object_group[TroopOther].top);
+
+		// Display garrison and garrison troops.
+		{
+			ssize_t garrison = -1;
+
+			if (region_built(region, BuildingFortress))
+			{
+				garrison = FORTRESS;
+				image_draw(&image_fortress, GARRISON_X, GARRISON_Y);
+			}
+			else if (region_built(region, BuildingPalisade))
+			{
+				garrison = PALISADE;
+				image_draw(&image_palisade, GARRISON_X, GARRISON_Y);
+			}
+
+			if (garrison >= 0)
+			{
+				display_rectangle(GARRISON_X + 4, GARRISON_Y - GARRISON_MARGIN + 4, 24, 12, Player + region->garrison.owner);
+				image_draw(&image_flag, GARRISON_X, GARRISON_Y - GARRISON_MARGIN);
+
+				i = 0;
+				for(troop = region->garrison.troops; troop; troop = troop->_next)
+				{
+					struct point position = if_position(TroopGarrison, i);
+					display_unit(troop->unit->index, position.x, position.y, Player + troop->player, Black, troop->count);
+					i += 1;
+				}
+
+				// If the garrison is under siege, display siege information.
+				if (siege)
+				{
+					unsigned provisions = garrison_info[garrison].provisions - region->garrison.siege;
+					for(i = 0; i < provisions; ++i)
+						image_draw(&image_food, object_group[TroopGarrison].right + 9, object_group[TroopGarrison].bottom - (i + 1) * image_food.height);
+				}
+			}
+		}
+	}
+
+	if ((state->player == region->owner) && !siege)
+	{
+		if (region->construct >= 0)
+		{
+			struct point position = if_position(Building, region->construct);
+			show_progress(region->build_progress, buildings[region->construct].time, position.x, position.y, object_group[Building].width, object_group[Building].height);
+			image_draw(&image_construction, position.x, position.y);
+		}
+
+		display_string(S("train:"), PANEL_X + 2, object_group[Dismiss].top + (object_group[Dismiss].height - font12.height) / 2, &font12, Black);
+
+		// Display train queue.
+		size_t index;
+		for(index = 0; index < TRAIN_QUEUE; ++index)
+		{
+			struct point position = if_position(Dismiss, index);
+			if (region->train[index])
+			{
+				display_unit(region->train[index]->index, position.x, position.y, White, 0, 0);
+				show_progress((index ? 0 : region->train_time), region->train[0]->time, position.x, position.y, object_group[Dismiss].width, object_group[Dismiss].height);
+			}
+			else display_rectangle(position.x, position.y, object_group[Dismiss].width, object_group[Dismiss].height, Black);
+		}
+
+		// Display units available for training.
+		for(index = 0; index < UNITS_COUNT; ++index)
+		{
+			if (!region_unit_available(region, UNITS[index])) continue;
+
+			struct point position = if_position(Inventory, index);
+			display_unit(index, position.x, position.y, Player, 0, 0);
+		}
+	}
+
+	// Display tooltip for the hovered object.
+	switch (state->hover_object)
+	{
+	case HOVER_UNIT:
+		{
+			const struct unit *unit = UNITS + state->hover.unit;
+			tooltip_cost(unit->name, unit->name_length, &unit->cost, unit->time);
+		}
+		break;
+	case HOVER_BUILDING:
+		if (!region_built(region, state->hover.building))
+		{
+			const struct building *building = buildings + state->hover.building;
+			tooltip_cost(building->name, building->name_length, &building->cost, building->time);
+		}
+		break;
+	}
+}
+
 void if_map(const void *argument, const struct game *game)
 {
 	const struct state_map *state = argument;
@@ -855,14 +1037,11 @@ void if_map(const void *argument, const struct game *game)
 	// show map in black
 	display_rectangle(MAP_X, MAP_Y, MAP_WIDTH, MAP_HEIGHT, Black);
 
-	size_t x;
-	enum object object;
-	size_t offset;
-	struct pawn *p;
-
 	size_t i, j;
 
 	// Map
+
+	unsigned state_alliance = game->players[state->player].alliance;
 
 	struct resources income = {0}, expenses = {0};
 	const struct troop *troop;
@@ -871,7 +1050,7 @@ void if_map(const void *argument, const struct game *game)
 	unsigned char region_visible[REGIONS_LIMIT] = {0};
 	for(i = 0; i < regions_count; ++i)
 	{
-		if (game->players[regions[i].owner].alliance == game->players[state->player].alliance)
+		if (game->players[regions[i].owner].alliance == state_alliance)
 		{
 			region_visible[i] = 1;
 
@@ -884,6 +1063,10 @@ void if_map(const void *argument, const struct game *game)
 					if (neighbor) region_visible[neighbor->index] = 1;
 				}
 			}
+		}
+		else if (game->players[regions[i].garrison.owner].alliance == state_alliance)
+		{
+			region_visible[i] = 1;
 		}
 	}
 
@@ -913,159 +1096,11 @@ void if_map(const void *argument, const struct game *game)
 	if (state->region >= 0)
 	{
 		const struct region *region = regions + state->region;
-		unsigned progress;
 
-		// Display region owner's flag and name of the region.
-		if (region_visible[region->index])
-		{
-			display_rectangle(PANEL_X + 4, PANEL_Y + 4, 24, 12, Player + region->owner);
-			image_draw(&image_flag, PANEL_X, PANEL_Y);
-		}
+		// Show the name of the region.
 		display_string(region->name, region->name_length, PANEL_X + image_flag.width + MARGIN, PANEL_Y + (image_flag.height - font12.height) / 2, &font12, Black);
 
-		// Display the troops at the selected region.
-		if (game->players[state->player].alliance == game->players[region->owner].alliance)
-		{
-			unsigned char self_count = 0, ally_count = 0;
-			enum color color_text;
-			for(troop = region->troops; troop; troop = troop->_next)
-			{
-				if (troop->player == state->player)
-				{
-					if (!self_count) display_rectangle(PANEL_X, object_group[TroopSelf].top - 2, PANEL_WIDTH, 2 + object_group[TroopSelf].height + 12 + 2, Self);
-					x = self_count++;
-					object = TroopSelf;
-					offset = state->self_offset;
-					color_text = Black;
-				}
-				else
-				{
-					if (!ally_count) display_rectangle(PANEL_X, object_group[TroopAlly].top - 2, PANEL_WIDTH, 2 + object_group[TroopAlly].height + 12 + 2, Ally);
-					x = ally_count++;
-					object = TroopAlly;
-					offset = state->ally_offset;
-					color_text = White;
-				}
-
-				if ((x >= offset) && (x < offset + TROOPS_VISIBLE)) // if the unit is visible
-				{
-					struct point position = if_position(object, x);
-					x -= offset;
-					display_unit(troop->unit->index, position.x, position.y, Player + troop->player, color_text, troop->count);
-					if (troop == state->troop) draw_rectangle(position.x - 1, position.y - 1, object_group[object].width + 2, object_group[object].height + 2, White);
-				}
-
-				// Draw the destination of each moving troop.
-				if ((troop->player == state->player) && (!state->troop || (troop == state->troop)) && (troop->move->index != state->region))
-				{
-					struct point from = {troop->location->center.x, troop->location->center.y};
-					struct point to = {troop->move->center.x, troop->move->center.y};
-					display_arrow(from, to, MAP_X, MAP_Y, Self);
-				}
-			}
-
-			// Display scroll buttons.
-			if (state->self_offset) image_draw(&image_scroll_left, PANEL_X, object_group[TroopSelf].top);
-			if ((self_count - state->self_offset) > TROOPS_VISIBLE) image_draw(&image_scroll_right, object_group[TroopSelf].span_x + object_group[TroopSelf].padding, object_group[TroopSelf].top);
-			if (state->ally_offset) image_draw(&image_scroll_left, PANEL_X, object_group[TroopAlly].top);
-			if ((ally_count - state->ally_offset) > TROOPS_VISIBLE) image_draw(&image_scroll_right, object_group[TroopAlly].span_x + object_group[TroopAlly].padding, object_group[TroopAlly].top);
-
-			// Display garrison and garrison troops.
-			{
-				size_t garrison;
-
-				display_rectangle(GARRISON_X + 4, GARRISON_Y - GARRISON_MARGIN + 4, 24, 12, Player + region->garrison.owner);
-				image_draw(&image_flag, GARRISON_X, GARRISON_Y - GARRISON_MARGIN);
-				if (region_built(region, BuildingFortress))
-				{
-					garrison = FORTRESS;
-					image_draw(&image_fortress, GARRISON_X, GARRISON_Y);
-				}
-				else if (region_built(region, BuildingPalisade))
-				{
-					garrison = PALISADE;
-					image_draw(&image_palisade, GARRISON_X, GARRISON_Y);
-				}
-
-				i = 0;
-				for(troop = region->garrison.troops; troop; troop = troop->_next)
-				{
-					struct point position = if_position(TroopGarrison, i);
-					display_unit(troop->unit->index, position.x, position.y, Player + troop->player, Black, troop->count);
-					i += 1;
-				}
-
-				// If the garrison is under siege, display siege information.
-				if (region->owner != region->garrison.owner)
-				{
-					unsigned provisions = garrison_info[garrison].provisions - region->garrison.siege;
-					for(i = 0; i < provisions; ++i)
-						image_draw(&image_food, object_group[TroopGarrison].right + MARGIN, object_group[TroopGarrison].bottom - (i + 1) * image_food.height);
-				}
-			}
-
-			for(i = 0; i < buildings_count; ++i)
-			{
-				struct point position = if_position(Building, i);
-
-				// Don't display the building if its requirements are not satisfied.
-				if (!region_building_available(region, buildings[i])) continue;
-
-				if (region_built(region, i)) image_draw(image_buildings + i, position.x, position.y);
-				else if (state->player == region->owner) image_draw(image_buildings_gray + i, position.x, position.y);
-			}
-			if (region->construct >= 0)
-			{
-				struct point position = if_position(Building, region->construct);
-				show_progress(region->build_progress, buildings[region->construct].time, position.x, position.y, object_group[Building].width, object_group[Building].height);
-				image_draw(&image_construction, position.x, position.y);
-			}
-		}
-
-		if (state->player == region->owner)
-		{
-			display_string(S("train:"), PANEL_X + 2, object_group[Dismiss].top + (object_group[Dismiss].height - font12.height) / 2, &font12, Black);
-
-			// Display train queue.
-			size_t index;
-			for(index = 0; index < TRAIN_QUEUE; ++index)
-			{
-				struct point position = if_position(Dismiss, index);
-				if (region->train[index])
-				{
-					display_unit(region->train[index]->index, position.x, position.y, White, 0, 0);
-					show_progress((index ? 0 : region->train_time), region->train[0]->time, position.x, position.y, object_group[Dismiss].width, object_group[Dismiss].height);
-				}
-				else display_rectangle(position.x, position.y, object_group[Dismiss].width, object_group[Dismiss].height, Black);
-			}
-
-			// Display units available for training.
-			for(index = 0; index < game->units_count; ++index)
-			{
-				if (!region_unit_available(region, game->units[index])) continue;
-
-				struct point position = if_position(Inventory, index);
-				display_unit(index, position.x, position.y, Player, 0, 0);
-			}
-
-			// Display tooltip for the hovered object.
-			switch (state->hover_object)
-			{
-			case HOVER_UNIT:
-				{
-					const struct unit *unit = game->units + state->hover.unit;
-					tooltip_cost(unit->name, unit->name_length, &unit->cost, unit->time);
-				}
-				break;
-			case HOVER_BUILDING:
-				if (!region_built(region, state->hover.building))
-				{
-					const struct building *building = buildings + state->hover.building;
-					tooltip_cost(building->name, building->name_length, &building->cost, building->time);
-				}
-				break;
-			}
-		}
+		if (region_visible[state->region]) if_map_region(region, state, game);
 	}
 
 	// Treasury

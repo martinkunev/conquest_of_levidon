@@ -12,14 +12,14 @@
 
 #define NAME(string) .name = string, .name_length = sizeof(string) - 1
 
-const struct unit units[] =
+const struct unit UNITS[] =
 {
 	{NAME("Peasant"), .index = 0, .health = 3, .damage = 1, .speed = 4, .cost = {.gold = 1}, .expense = {.food = 1}, .time = 1},
 	{NAME("Archer"), .index = 1, .health = 3, .damage = 1, .speed = 4, .cost = {.gold = 1, .wood = 1}, .expense = {.food = 1}, .shoot = 1, .range = 5, .time = 1, .requires = (1 << BuildingArcheryRange)},
 	{NAME("Militia"), .index = 2, .health = 5, .damage = 2, .speed = 5, .cost = {.gold = 1, .iron = 1}, .expense = {.food = 1}, .time = 1, .requires = (1 << BuildingBarracks)},
 	{NAME("Light cavalry"), .index = 3, .health = 8, .damage = 2, .speed = 9, .cost = {.gold = 2, .iron = 1}, .expense = {.food = 3}, .time = 2, .requires = (1 << BuildingStables)},
 };
-const size_t units_count = sizeof(units) / sizeof(*units);
+const size_t UNITS_COUNT = sizeof(UNITS) / sizeof(*UNITS);
 
 const struct building buildings[] =
 {
@@ -34,7 +34,7 @@ const struct building buildings[] =
 	[BuildingWatchTower] = {NAME("Watch tower"), .cost = {.gold = 3, .wood = 5}, .time = 2},
 	[BuildingPalisade] = {NAME("Palisade"), .cost = {.gold = 10, .wood = 20}, .time = 4},
 	[BuildingFortress] = {NAME("Fortress"), .cost = {.gold = 20, .stone = 20}, .time = 8, .requires = (1 << BuildingPalisade)},
-	[BuildingMoat] = {NAME("Moat"), .cost = {.gold = 20, .wood = 10, .stone = 10}, .time = 7, .requires = (1 << BuildingPalisade)},
+//	[BuildingMoat] = {NAME("Moat"), .cost = {.gold = 20, .wood = 10, .stone = 10}, .time = 7, .requires = (1 << BuildingPalisade)},
 };
 const size_t buildings_count = sizeof(buildings) / sizeof(*buildings);
 
@@ -89,13 +89,13 @@ static int troop_spawn(struct troop **restrict troops, struct region *restrict r
 	size_t i;
 
 	// TODO maybe use hash table
-	for(i = 0; i < units_count; ++i)
-		if ((name->length == units[i].name_length) && !memcmp(name->data, units[i].name, units[i].name_length))
+	for(i = 0; i < UNITS_COUNT; ++i)
+		if ((name->length == UNITS[i].name_length) && !memcmp(name->data, UNITS[i].name, UNITS[i].name_length))
 		{
 			struct troop *troop = malloc(sizeof(*troop));
 			if (!troop) return -1;
 
-			troop->unit = units + i;
+			troop->unit = UNITS + i;
 			troop->count = count;
 			troop->player = owner;
 
@@ -329,9 +329,6 @@ int world_init(const union json *restrict json, struct game *restrict game)
 
 		////////////////////////
 	}
-
-	game->units = units;
-	game->units_count = units_count;
 
 	return 0;
 

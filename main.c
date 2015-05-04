@@ -116,7 +116,7 @@ static int play(struct game *restrict game)
 	unsigned char alliance;
 	uint16_t alliances; // this limits the alliance numbers to the number of bits
 
-	unsigned char slots, owner_slot;
+	unsigned char slots, owner_troop;
 
 	struct resources income;
 	struct resources expenses[PLAYERS_LIMIT];
@@ -217,7 +217,7 @@ static int play(struct game *restrict game)
 			// If there are slots of more than one alliance, return any slot owned by enemy of the region's owner to its initial location.
 			// If there are slots of just one alliance and the region's owner is not in it, change region's owner to the owner of a random slot.
 
-			// TODO is it a good idea to choose owner based on number of slots?
+			// TODO is it a good idea to choose owner based on number of troops?
 
 			slots = 0;
 
@@ -252,13 +252,14 @@ static int play(struct game *restrict game)
 				if (winner != game->players[region->owner].alliance)
 				{
 					// assert(slots);
-					owner_slot = random() % slots;
+					owner_troop = random() % slots;
 
 					slots = 0;
 					for(slot = region->troops; slot; slot = slot->_next)
 					{
-						if (slots == owner_slot)
+						if (slots == owner_troop)
 						{
+							// Set new region owner.
 							region->owner = slot->player;
 							region->garrison.siege = 0;
 							if (!region->garrison.troops) region->garrison.owner = slot->player;

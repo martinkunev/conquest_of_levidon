@@ -17,8 +17,8 @@ struct state_map
 		int train;
 	} hover; // index of the hovered object
 
-	unsigned self_offset, ally_offset;
-	unsigned self_count, ally_count;
+	unsigned self_offset, other_offset;
+	unsigned self_count, other_count;
 };
 
 int input_map(const struct game *restrict game, unsigned char player);

@@ -45,7 +45,8 @@ struct unit
 	unsigned char range;
 };
 
-enum {BuildingFarm, BuildingIrrigation, BuildingSawmill, BuildingMine, BuildingBlastFurnace, BuildingBarracks, BuildingArcheryRange, BuildingStables, BuildingWatchTower, BuildingPalisade, BuildingFortress, BuildingMoat};
+//enum {BuildingFarm, BuildingIrrigation, BuildingSawmill, BuildingMine, BuildingBlastFurnace, BuildingBarracks, BuildingArcheryRange, BuildingStables, BuildingWatchTower, BuildingPalisade, BuildingFortress, BuildingMoat};
+enum {BuildingFarm, BuildingIrrigation, BuildingSawmill, BuildingMine, BuildingBlastFurnace, BuildingBarracks, BuildingArcheryRange, BuildingStables, BuildingWatchTower, BuildingPalisade, BuildingFortress};
 
 struct building
 {
@@ -75,7 +76,7 @@ struct region
 	unsigned char owner;
 
 	unsigned char train_time;
-	struct unit *train[TRAIN_QUEUE];
+	const struct unit *train[TRAIN_QUEUE];
 
 	struct troop *troops;
 
@@ -106,9 +107,6 @@ struct game
 
 	struct region *regions;
 	size_t regions_count;
-
-	const struct unit *units;
-	size_t units_count;
 };
 
 #define PALISADE 0
@@ -126,11 +124,14 @@ static const struct
 
 // neighbors (in order): east, north-east, north, north-west, west, south-west, south, south-east
 
+extern const struct unit UNITS[];
+extern const size_t UNITS_COUNT;
+
 extern const struct building buildings[];
 extern const size_t buildings_count;
 
 void region_income(const struct region* restrict region, struct resources *restrict income);
 
-void troop_detach(struct troop **troops, struct troop *troop);
 void troop_attach(struct troop **troops, struct troop *troop);
+void troop_detach(struct troop **troops, struct troop *troop);
 void troop_remove(struct troop **troops, struct troop *troop);
