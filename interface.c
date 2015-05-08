@@ -380,7 +380,6 @@ static void show_progress(unsigned current, unsigned total, unsigned x, unsigned
 }
 
 /*#include <stdarg.h>
-#include <stdio.h>
 
 static struct polygon *region_create(size_t count, ...)
 {
@@ -399,24 +398,9 @@ static struct polygon *region_create(size_t count, ...)
 	va_end(vertices);
 
 	return polygon;
-}*/
+}
 
-/*
-void if_test(const struct player *restrict players, const struct state *restrict state, const struct game *restrict game)
 {
-	// clear window
-	glClearColor(0.0, 0.0, 0.0, 0.0);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-	size_t i, j;
-
-	for(i = 0; i < BATTLEFIELD_HEIGHT; ++i)
-		for(j = 0; j < BATTLEFIELD_WIDTH; ++j)
-			if ((i + j) % 2)
-				display_rectangle(j * FIELD_SIZE, i * FIELD_SIZE, FIELD_SIZE, FIELD_SIZE, B0);
-
-	/////////
-
 	static size_t obstacles_count = 1;
 	static struct polygon *obstacles = 0;
 	static struct vector_adjacency nodes;
@@ -446,7 +430,7 @@ void if_test(const struct player *restrict players, const struct state *restrict
 		m.distance = 0;
 		queue_push(&moves, m);
 
-		if (path_find(&moves, to, &nodes, obstacles, obstacles_count) < 0)
+		if (path_queue(&moves, to, &nodes, obstacles, obstacles_count) < 0)
 		{
 			//
 		}
@@ -507,11 +491,6 @@ void if_test(const struct player *restrict players, const struct state *restrict
 			}
 		}
 	}
-
-	/////////
-
-	glFlush();
-	glXSwapBuffers(display, drawable);
 }*/
 
 // TODO write this better
@@ -634,7 +613,7 @@ void if_battle(const void *argument, const struct game *game)
 	display_rectangle(768, 0, 256, 16, Player + state->player);
 
 	size_t x, y;
-	const struct pawn *p;
+	const struct pawn *pawn;
 
 	// Battlefield
 
@@ -644,62 +623,69 @@ void if_battle(const void *argument, const struct game *game)
 	if (!point_eq(state->hover, POINT_NONE))
 		display_rectangle(state->hover.x * FIELD_SIZE, state->hover.y * FIELD_SIZE, FIELD_SIZE, FIELD_SIZE, Unexplored);
 
-	// display pawns
-	for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
-		for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
-		{
-			if (p = battlefield[y][x].pawn)
-			{
-				enum color color;
-				if (p->slot->player == state->player) color = Self;
-				else if (game->players[p->slot->player].alliance == game->players[state->player].alliance) color = Ally;
-				else color = Enemy;
-
-				display_rectangle(x * FIELD_SIZE, y * FIELD_SIZE, FIELD_SIZE, FIELD_SIZE, color);
-				image_draw(&image_units[p->slot->unit->index], x * FIELD_SIZE, y * FIELD_SIZE);
-			}
-		}
-
-	unsigned row, column;
-
 	// Display information about the selected field.
 	if ((state->x < BATTLEFIELD_WIDTH) && (state->y < BATTLEFIELD_HEIGHT) && battlefield[state->y][state->x].pawn)
 	{
 		enum color color;
+		unsigned char reachable[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH];
+
+		pawn = battlefield[state->y][state->x].pawn;
+
+		// Show which field are reachable by the pawn.
+		// TODO obstacles
+		path_reachable(pawn, state->graph, 0, 0, reachable);
+		for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
+			for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
+				display_rectangle(x * FIELD_SIZE, y * FIELD_SIZE, FIELD_SIZE, FIELD_SIZE, FieldReachable);
 
 		image_draw(&image_selected, state->x * FIELD_SIZE, state->y * FIELD_SIZE);
 
-		p = battlefield[state->y][state->x].pawn;
-		if (p->slot->player == state->player) color = Self;
-		else if (game->players[p->slot->player].alliance == game->players[state->player].alliance) color = Ally;
+		if (pawn->slot->player == state->player) color = Self;
+		else if (game->players[pawn->slot->player].alliance == game->players[state->player].alliance) color = Ally;
 		else color = Enemy;
 		display_rectangle(CTRL_X, CTRL_Y, FIELD_SIZE + MARGIN * 2, FIELD_SIZE + font12.height + MARGIN * 2, color);
-		display_unit(p->slot->unit->index, CTRL_X + MARGIN, CTRL_Y + MARGIN, Player + p->slot->player, Black, p->slot->count);
+		display_unit(pawn->slot->unit->index, CTRL_X + MARGIN, CTRL_Y + MARGIN, Player + pawn->slot->player, Black, pawn->slot->count);
 
 		// Show pawn task (if any).
-		if (p->slot->player == state->player)
+		if (pawn->slot->player == state->player)
 		{
 			size_t i;
-			for(i = 1; i < p->moves_count; ++i)
+			for(i = 1; i < pawn->moves_count; ++i)
 			{
-				struct point from = p->moves[i - 1].location;
+				struct point from = pawn->moves[i - 1].location;
 				from.x = from.x * FIELD_SIZE + FIELD_SIZE / 2;
 				from.y = from.y * FIELD_SIZE + FIELD_SIZE / 2;
 
-				struct point to = p->moves[i].location;
+				struct point to = pawn->moves[i].location;
 				to.x = to.x * FIELD_SIZE + FIELD_SIZE / 2;
 				to.y = to.y * FIELD_SIZE + FIELD_SIZE / 2;
 
-				if (p->moves[i].time <= 1.0) color = Reachable;
-				else if (p->moves[i - 1].time <= 1.0) color = Partial;
+				if (pawn->moves[i].time <= 1.0) color = Reachable;
+				else if (pawn->moves[i - 1].time <= 1.0) color = Partial;
 				else color = Unreachable;
 				display_arrow(from, to, BATTLE_X, BATTLE_Y, color);
 			}
 
-			if (!point_eq(p->shoot, POINT_NONE))
-				image_draw(&image_shoot_destination, p->shoot.x * FIELD_SIZE, p->shoot.y * FIELD_SIZE);
+			if (!point_eq(pawn->shoot, POINT_NONE))
+				image_draw(&image_shoot_destination, pawn->shoot.x * FIELD_SIZE, pawn->shoot.y * FIELD_SIZE);
 		}
 	}
+
+	// display pawns
+	for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
+		for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
+		{
+			if (pawn = battlefield[y][x].pawn)
+			{
+				enum color color;
+				if (pawn->slot->player == state->player) color = Self;
+				else if (game->players[pawn->slot->player].alliance == game->players[state->player].alliance) color = Ally;
+				else color = Enemy;
+
+				display_rectangle(x * FIELD_SIZE, y * FIELD_SIZE, FIELD_SIZE, FIELD_SIZE, color);
+				image_draw(&image_units[pawn->slot->unit->index], x * FIELD_SIZE, y * FIELD_SIZE);
+			}
+		}
 
 	glFlush();
 	glXSwapBuffers(display, drawable);

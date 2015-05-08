@@ -1,5 +1,8 @@
 enum {INPUT_NOTME = 1, INPUT_DONE, INPUT_TERMINATE};
 
+#define EVENT_MOUSE_LEFT -1
+#define EVENT_MOUSE_RIGHT -3
+
 #define EVENT_MOTION -127
 
 struct area

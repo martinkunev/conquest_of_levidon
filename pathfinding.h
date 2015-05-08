@@ -1,3 +1,8 @@
+#include <math.h>
+
+#define BATTLEFIELD_WIDTH 25
+#define BATTLEFIELD_HEIGHT 25
+
 struct move
 {
 	struct point location;
@@ -19,8 +24,18 @@ struct adjacency_list
 	} list[];
 };
 
+// Calculates the euclidean distance between a and b.
+static inline double battlefield_distance(struct point a, struct point b)
+{
+	int dx = b.x - a.x, dy = b.y - a.y;
+	return sqrt(dx * dx + dy * dy);
+}
+
 struct adjacency_list *visibility_graph_build(const struct polygon *restrict obstacles, size_t obstacles_count);
 void visibility_graph_free(struct adjacency_list *nodes);
 
+int path_visible(struct point origin, struct point target, const struct polygon *restrict obstacles, size_t obstacles_count);
+
 struct pawn;
-int path_find(struct pawn *restrict pawn, struct point target, struct adjacency_list *restrict nodes, const struct polygon *restrict obstacles, size_t obstacles_count);
+int path_reachable(const struct pawn *restrict pawn, struct adjacency_list *restrict graph, const struct polygon *restrict obstacles, size_t obstacles_count, unsigned char reachable[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH]);
+int path_queue(struct pawn *restrict pawn, struct point target, struct adjacency_list *restrict nodes, const struct polygon *restrict obstacles, size_t obstacles_count);

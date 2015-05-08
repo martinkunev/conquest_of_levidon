@@ -1,8 +1,3 @@
-#include <math.h>
-
-#define BATTLEFIELD_WIDTH 24
-#define BATTLEFIELD_HEIGHT 24
-
 #define PAWNS_LIMIT 12
 
 struct pawn
@@ -23,7 +18,7 @@ struct pawn
 struct battlefield
 {
 	struct point location;
-	enum {OBSTACLE_NONE, OBSTACLE_FIXED} obstacle;
+	enum {OBSTACLE_NONE, OBSTACLE_FIXED, OBSTACLE_GATE, OBSTACLE_WALL} obstacle;
 
 	struct pawn *pawn;
 };
@@ -35,13 +30,6 @@ struct battle
 	size_t pawns_count;
 	struct vector player_pawns[PLAYERS_LIMIT];
 };
-
-// Calculates the euclidean distance between a and b.
-static inline double battlefield_distance(struct point a, struct point b)
-{
-	int dx = b.x - a.x, dy = b.y - a.y;
-	return sqrt(dx * dx + dy * dy);
-}
 
 static inline int point_eq(struct point a, struct point b)
 {

@@ -26,11 +26,11 @@ static void pawn_move(struct pawn *restrict pawn, unsigned x, unsigned y, struct
 
 	if (queue)
 	{
-		if (movement_queue(pawn, target, state->nodes)) return;
+		if (movement_queue(pawn, target, state->graph)) return;
 	}
 	else
 	{
-		if (movement_set(pawn, target, state->nodes)) return;
+		if (movement_set(pawn, target, state->graph)) return;
 	}
 
 	// Reset shoot commands.
@@ -258,10 +258,12 @@ int input_battle(const struct game *restrict game, struct battle *restrict battl
 	state.pawn = 0;
 	state.hover = POINT_NONE;
 
-	state.nodes = visibility_graph_build(0, 0);
-	if (!state.nodes) abort();
+	// TODO obstacles
+
+	state.graph = visibility_graph_build(0, 0);
+	if (!state.graph) abort();
 	int status = input_local(areas, sizeof(areas) / sizeof(*areas), if_battle, game, &state);
-	visibility_graph_free(state.nodes);
+	visibility_graph_free(state.graph);
 
 	return status;
 }

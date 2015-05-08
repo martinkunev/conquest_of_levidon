@@ -45,7 +45,7 @@ int movement_set(struct pawn *restrict pawn, struct point target, struct adjacen
 	size_t moves_count = pawn->moves_count;
 	pawn->moves_count = 1;
 
-	int error = path_find(pawn, target, nodes, 0, 0);
+	int error = path_queue(pawn, target, nodes, 0, 0);
 	if (error) pawn->moves_count = moves_count; // restore moves
 
 	return error;
@@ -76,7 +76,7 @@ int movement_queue(struct pawn *restrict pawn, struct point target, struct adjac
 {
 	// TODO better handling of memory errors
 
-	int error = path_find(pawn, target, nodes, 0, 0);
+	int error = path_queue(pawn, target, nodes, 0, 0);
 	return error;
 }
 

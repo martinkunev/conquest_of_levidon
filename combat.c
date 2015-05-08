@@ -2,8 +2,8 @@
 
 #include "types.h"
 #include "map.h"
-#include "pathfinding.h"
 #include "movement.h"
+#include "pathfinding.h"
 #include "battle.h"
 #include "combat.h"
 

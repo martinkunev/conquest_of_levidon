@@ -9,8 +9,8 @@
 #define MAP_X 256
 #define MAP_Y 0
 
-#define BATTLE_X 0
-#define BATTLE_Y 0
+#define BATTLE_X 8
+#define BATTLE_Y 8
 
 #define CTRL_X 768
 #define CTRL_Y 32
@@ -25,7 +25,7 @@
 #define TOOLTIP_X 256
 #define TOOLTIP_Y 730
 
-#define FIELD_SIZE 32
+#define FIELD_SIZE 30
 
 #define MARGIN 4
 

@@ -39,6 +39,8 @@ unsigned char display_colors[][4] = {
 	[Partial] = {192, 192, 0, 255},
 	[Unreachable] = {192, 0, 0, 255},
 
+	[FieldReachable] = {0, 0, 0, 64},
+
 	[Player + 0] = {192, 192, 192, 255},
 	[Player + 1] = {0, 96, 0, 255},
 	[Player + 2] = {128, 0, 0, 255},

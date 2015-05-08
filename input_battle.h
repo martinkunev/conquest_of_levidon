@@ -9,7 +9,7 @@ struct state_battle
 
 	int region;
 
-	struct adjacency_list *nodes;
+	struct adjacency_list *graph; // graph used for pathfinding
 };
 
 struct state_formation

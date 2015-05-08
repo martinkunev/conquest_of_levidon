@@ -7,9 +7,6 @@
 #include "battle.h"
 #include "movement.h"
 
-#define BATTLEFIELD_WIDTH 24
-#define BATTLEFIELD_HEIGHT 24
-
 #define MOVEMENT_STEPS (UNIT_SPEED_LIMIT * 2)
 
 // Due to pawn dimensions, at most 4 can try to move to a given square at the same time.
