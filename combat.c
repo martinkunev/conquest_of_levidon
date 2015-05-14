@@ -2,7 +2,6 @@
 
 #include "types.h"
 #include "map.h"
-#include "movement.h"
 #include "pathfinding.h"
 #include "battle.h"
 #include "combat.h"
@@ -179,6 +178,8 @@ int battlefield_shootable(const struct pawn *restrict pawn, struct point target)
 {
 	// Only ranged units can shoot.
 	if (!pawn->slot->unit->shoot) return 0;
+
+	// TODO decrease range by 1 if there is a wall on the way or if target is on a wall
 
 	unsigned distance = round(battlefield_distance(pawn->moves[0].location, target));
 	return (distance <= pawn->slot->unit->range);

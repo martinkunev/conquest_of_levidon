@@ -12,6 +12,7 @@
 #include "world.h"
 #include "pathfinding.h"
 #include "battle.h"
+#include "movement.h"
 #include "combat.h"
 #include "input.h"
 #include "input_map.h"

@@ -87,7 +87,7 @@ static GLuint map_renderbuffer;
 
 struct font font12;
 
-uint8_t *format_sint(uint8_t *buffer, int64_t number)
+static uint8_t *format_sint(uint8_t *buffer, int64_t number)
 {
 	if (number > 0) *buffer++ = '+';
 	return format_int(buffer, number, 10);
@@ -208,22 +208,6 @@ int if_init(void)
 		XSendEvent(display, DefaultRootWindow(display), 0, SubstructureRedirectMask | SubstructureNotifyMask, &event);
 		XFlush(display);
 	}
-/*
-		xcb_client_message_event_t event;
-		memset(&event, 0, sizeof(event));
-
-		event.window = window;
-		event.type = reply_state->atom;
-		event.response_type = XCB_CLIENT_MESSAGE;
-		event.format = 32;
-
-		event.data.data32[0] = 1; // 0 == unset; 1 == set; 2 == toggle
-		event.data.data32[1] = reply_fullscreen->atom;
-		event.data.data32[2] = XCB_ATOM_NONE;
-
-		xcb_send_event(connection, 1, window, XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT | XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY, &event);
-		xcb_flush(connection);
-*/
 
 	image_load_png(&image_move_destination, "img/move_destination.png", 0);
 	image_load_png(&image_shoot_destination, "img/shoot_destination.png", 0);

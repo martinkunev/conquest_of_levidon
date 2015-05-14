@@ -35,6 +35,8 @@ struct path_node
 // TODO there must be obstacles applicable only for some units (horses and balistas can not climb walls)
 // TODO there must be obstacles applicable only for some players (gates can be opened only by owner's alliance)
 
+// TODO path_reachable should be refactored to not depend on battlefield size
+
 static inline int sign(int number)
 {
 	return ((number > 0) - (number < 0));
@@ -450,7 +452,6 @@ int path_queue(struct pawn *restrict pawn, struct point target, struct adjacency
 	size_t vertex_origin, vertex_target;
 
 	struct path_node *from, *next, *temp;
-	// unsigned hops = 0;
 
 	// Add vertex for the target.
 	vertex_target = graph->count++;
@@ -518,8 +519,6 @@ int path_queue(struct pawn *restrict pawn, struct point target, struct adjacency
 
 		if (!temp) break; // vertex_origin found
 		from = temp;
-
-		// hops += 1;
 	}
 
 	// Add the selected path points to move.
