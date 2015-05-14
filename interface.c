@@ -75,6 +75,7 @@ struct region *restrict regions;
 size_t regions_count;
 
 static struct image image_move_destination, image_shoot_destination, image_selected, image_flag, image_panel, image_construction;
+static struct image image_terrain[1];
 static struct image image_palisade, image_fortress;
 static struct image image_gold, image_food, image_wood, image_stone, image_iron, image_time;
 static struct image image_scroll_left, image_scroll_right;
@@ -230,6 +231,8 @@ int if_init(void)
 	image_load_png(&image_flag, "img/flag.png", 0);
 	image_load_png(&image_panel, "img/panel.png", 0);
 	image_load_png(&image_construction, "img/construction.png", 0);
+
+	image_load_png(&image_terrain[0], "img/terrain_grass.png", 0);
 
 	image_load_png(&image_palisade, "img/garrison_palisade.png", 0);
 	image_load_png(&image_fortress, "img/garrison_fortress.png", 0);
@@ -504,9 +507,10 @@ static int if_animation(const struct player *restrict players, const struct batt
 	glClearColor(0.0, 0.0, 0.0, 0.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	// Battlefield
+	// Display panel background pattern.
+	display_image(&image_terrain[0], BATTLE_X - 8, BATTLE_Y - 8, BATTLEFIELD_WIDTH * FIELD_SIZE + 16, BATTLEFIELD_HEIGHT * FIELD_SIZE + 16);
 
-	display_rectangle(0, 0, BATTLEFIELD_WIDTH * FIELD_SIZE, BATTLEFIELD_HEIGHT * FIELD_SIZE, B0);
+	// Battlefield
 
 	struct point location;
 	size_t p;
@@ -548,23 +552,33 @@ void input_animation(const struct game *restrict game, const struct battle *rest
 	} while (progress < 1.0);
 }
 
-void if_formation(const void *argument, const struct game *game)
+static void if_battlefield(const struct state_battle *state, const struct game *game)
 {
-	const struct state_formation *state = argument;
-
 	// clear window
 	glClearColor(0.0, 0.0, 0.0, 0.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	// show the right panel in gray
-	display_rectangle(768, 0, 256, 768, Gray);
+	// Display battleifled background.
+	display_image(&image_terrain[0], BATTLE_X - 8, BATTLE_Y - 8, BATTLEFIELD_WIDTH * FIELD_SIZE + 16, BATTLEFIELD_HEIGHT * FIELD_SIZE + 16);
 
 	// draw rectangle with current player's color
-	display_rectangle(768, 0, 256, 16, Player + state->player);
+	display_rectangle(CTRL_X, CTRL_Y, 256, 16, Player + state->player);
+
+	// show the right panel in gray
+	display_rectangle(CTRL_X, CTRL_Y + CTRL_MARGIN, 256, 768, Gray);
+}
+
+void if_formation(const void *argument, const struct game *game)
+{
+	const struct state_formation *state = argument;
+
+	if_battlefield((const struct state_battle *)state, game); // TODO fix this cast
+
+	// TODO show somehow that only self pawns are displayed
 
 	// Display hovered field in color.
 	if (!point_eq(state->hover, POINT_NONE))
-		display_rectangle(state->hover.x * FIELD_SIZE, state->hover.y * FIELD_SIZE, FIELD_SIZE, FIELD_SIZE, Unexplored);
+		display_rectangle(BATTLE_X + state->hover.x * FIELD_SIZE, BATTLE_Y + state->hover.y * FIELD_SIZE, FIELD_SIZE, FIELD_SIZE, Hover);
 
 	const struct region *region = game->regions + state->region;
 
@@ -577,20 +591,20 @@ void if_formation(const void *argument, const struct game *game)
 
 		if (pawn == state->pawn)
 		{
-			// Display the selected pawn in the control panel.
-			display_unit(slot->unit->index, CTRL_X, CTRL_Y, Player + state->player, White, slot->count);
-
 			// Display at which fields the pawn can be placed.
 			const struct point *positions = formation_positions(slot, region);
 			for(i = 0; i < PAWNS_LIMIT; ++i)
 				if (!battlefield[positions[i].y][positions[i].x].pawn)
-					display_rectangle(positions[i].x * FIELD_SIZE, positions[i].y * FIELD_SIZE, FIELD_SIZE, FIELD_SIZE, Gray);
+					display_rectangle(BATTLE_X + positions[i].x * FIELD_SIZE, BATTLE_Y + positions[i].y * FIELD_SIZE, FIELD_SIZE, FIELD_SIZE, FieldReachable);
+
+			// Display the selected pawn in the control panel.
+			display_unit(slot->unit->index, CTRL_X, CTRL_Y + CTRL_MARGIN, Player + state->player, White, slot->count);
 		}
 		else
 		{
 			// Display the pawn at its present location.
 			struct point location = pawn->moves[0].location;
-			display_unit(slot->unit->index, location.x * FIELD_SIZE, location.y * FIELD_SIZE, Player + state->player, 0, 0);
+			display_unit(slot->unit->index, BATTLE_X + location.x * FIELD_SIZE, BATTLE_Y + location.y * FIELD_SIZE, Player + state->player, 0, 0);
 		}
 	}
 
@@ -602,74 +616,10 @@ void if_battle(const void *argument, const struct game *game)
 {
 	const struct state_battle *state = argument;
 
-	// clear window
-	glClearColor(0.0, 0.0, 0.0, 0.0);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-	// show the right panel in gray
-	display_rectangle(768, 0, 256, 768, Gray);
-
-	// draw rectangle with current player's color
-	display_rectangle(768, 0, 256, 16, Player + state->player);
-
 	size_t x, y;
 	const struct pawn *pawn;
 
-	// Battlefield
-
-	display_rectangle(0, 0, BATTLEFIELD_WIDTH * FIELD_SIZE, BATTLEFIELD_HEIGHT * FIELD_SIZE, B0);
-
-	// Display hovered field in color.
-	if (!point_eq(state->hover, POINT_NONE))
-		display_rectangle(state->hover.x * FIELD_SIZE, state->hover.y * FIELD_SIZE, FIELD_SIZE, FIELD_SIZE, Unexplored);
-
-	// Display information about the selected field.
-	if ((state->x < BATTLEFIELD_WIDTH) && (state->y < BATTLEFIELD_HEIGHT) && battlefield[state->y][state->x].pawn)
-	{
-		enum color color;
-		unsigned char reachable[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH];
-
-		pawn = battlefield[state->y][state->x].pawn;
-
-		// Show which field are reachable by the pawn.
-		// TODO obstacles
-		path_reachable(pawn, state->graph, 0, 0, reachable);
-		for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
-			for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
-				display_rectangle(x * FIELD_SIZE, y * FIELD_SIZE, FIELD_SIZE, FIELD_SIZE, FieldReachable);
-
-		image_draw(&image_selected, state->x * FIELD_SIZE, state->y * FIELD_SIZE);
-
-		if (pawn->slot->player == state->player) color = Self;
-		else if (game->players[pawn->slot->player].alliance == game->players[state->player].alliance) color = Ally;
-		else color = Enemy;
-		display_rectangle(CTRL_X, CTRL_Y, FIELD_SIZE + MARGIN * 2, FIELD_SIZE + font12.height + MARGIN * 2, color);
-		display_unit(pawn->slot->unit->index, CTRL_X + MARGIN, CTRL_Y + MARGIN, Player + pawn->slot->player, Black, pawn->slot->count);
-
-		// Show pawn task (if any).
-		if (pawn->slot->player == state->player)
-		{
-			size_t i;
-			for(i = 1; i < pawn->moves_count; ++i)
-			{
-				struct point from = pawn->moves[i - 1].location;
-				from.x = from.x * FIELD_SIZE + FIELD_SIZE / 2;
-				from.y = from.y * FIELD_SIZE + FIELD_SIZE / 2;
-
-				struct point to = pawn->moves[i].location;
-				to.x = to.x * FIELD_SIZE + FIELD_SIZE / 2;
-				to.y = to.y * FIELD_SIZE + FIELD_SIZE / 2;
-
-				if (pawn->moves[i].time <= 1.0) color = Reachable;
-				else if (pawn->moves[i - 1].time <= 1.0) color = Partial;
-				else color = Unreachable;
-				display_arrow(from, to, BATTLE_X, BATTLE_Y, color);
-			}
-
-			if (!point_eq(pawn->shoot, POINT_NONE))
-				image_draw(&image_shoot_destination, pawn->shoot.x * FIELD_SIZE, pawn->shoot.y * FIELD_SIZE);
-		}
-	}
+	if_battlefield(state, game);
 
 	// display pawns
 	for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
@@ -682,10 +632,67 @@ void if_battle(const void *argument, const struct game *game)
 				else if (game->players[pawn->slot->player].alliance == game->players[state->player].alliance) color = Ally;
 				else color = Enemy;
 
-				display_rectangle(x * FIELD_SIZE, y * FIELD_SIZE, FIELD_SIZE, FIELD_SIZE, color);
-				image_draw(&image_units[pawn->slot->unit->index], x * FIELD_SIZE, y * FIELD_SIZE);
+				display_rectangle(BATTLE_X + x * FIELD_SIZE, BATTLE_Y + y * FIELD_SIZE, FIELD_SIZE, FIELD_SIZE, color);
+				image_draw(&image_units[pawn->slot->unit->index], BATTLE_X + x * FIELD_SIZE, BATTLE_Y + y * FIELD_SIZE);
+				// TODO display pawn
 			}
 		}
+
+	// Display hovered field in color.
+	if (!point_eq(state->hover, POINT_NONE))
+		display_rectangle(BATTLE_X + state->hover.x * FIELD_SIZE, BATTLE_Y + state->hover.y * FIELD_SIZE, FIELD_SIZE, FIELD_SIZE, Hover);
+
+	// Display information about the selected field.
+	if ((state->x < BATTLEFIELD_WIDTH) && (state->y < BATTLEFIELD_HEIGHT) && battlefield[state->y][state->x].pawn)
+	{
+		enum color color;
+		unsigned char reachable[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH];
+
+		pawn = battlefield[state->y][state->x].pawn;
+
+		if (pawn->slot->player == state->player)
+		{
+			// Show which fields are reachable by the pawn.
+			// TODO obstacles
+			path_reachable(pawn, state->graph, 0, 0, reachable);
+			for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
+				for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
+					if (reachable[y][x] && !battlefield[y][x].pawn)
+						display_rectangle(BATTLE_X + x * FIELD_SIZE, BATTLE_Y + y * FIELD_SIZE, FIELD_SIZE, FIELD_SIZE, FieldReachable);
+		}
+
+		if (pawn->slot->player == state->player) color = Self;
+		else if (game->players[pawn->slot->player].alliance == game->players[state->player].alliance) color = Ally;
+		else color = Enemy;
+		display_rectangle(CTRL_X, CTRL_Y + CTRL_MARGIN, FIELD_SIZE + MARGIN * 2, FIELD_SIZE + font12.height + MARGIN * 2, color);
+		display_unit(pawn->slot->unit->index, CTRL_X + MARGIN, CTRL_Y + CTRL_MARGIN + MARGIN, Player + pawn->slot->player, Black, pawn->slot->count);
+
+		image_draw(&image_selected, BATTLE_X + state->x * FIELD_SIZE - 1, BATTLE_Y + state->y * FIELD_SIZE - 1);
+
+		// Show pawn task (if any).
+		if (pawn->slot->player == state->player)
+		{
+			size_t i;
+			for(i = 1; i < pawn->moves_count; ++i)
+			{
+				struct point from = pawn->moves[i - 1].location;
+				from.x = BATTLE_X + from.x * FIELD_SIZE + FIELD_SIZE / 2;
+				from.y = BATTLE_Y + from.y * FIELD_SIZE + FIELD_SIZE / 2;
+
+				struct point to = pawn->moves[i].location;
+				to.x = BATTLE_Y + to.x * FIELD_SIZE + FIELD_SIZE / 2;
+				to.y = BATTLE_Y + to.y * FIELD_SIZE + FIELD_SIZE / 2;
+
+				if (pawn->moves[i].time <= 1.0) color = Reachable;
+				else if (pawn->moves[i - 1].time <= 1.0) color = Partial;
+				else color = Unreachable;
+				display_arrow(from, to, BATTLE_X, BATTLE_Y, color);
+			}
+
+			if (!point_eq(pawn->shoot, POINT_NONE))
+				image_draw(&image_shoot_destination, BATTLE_X + pawn->shoot.x * FIELD_SIZE, BATTLE_Y + pawn->shoot.y * FIELD_SIZE);
+		}
+	}
 
 	glFlush();
 	glXSwapBuffers(display, drawable);

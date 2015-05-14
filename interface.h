@@ -13,7 +13,9 @@
 #define BATTLE_Y 8
 
 #define CTRL_X 768
-#define CTRL_Y 32
+#define CTRL_Y 0
+
+#define CTRL_MARGIN 32
 
 #define PANEL_X 4
 #define PANEL_Y 4

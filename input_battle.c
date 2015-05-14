@@ -122,7 +122,6 @@ static int input_place(int code, unsigned x, unsigned y, uint16_t modifiers, con
 {
 	struct state_formation *state = argument;
 
-	if (code == EVENT_MOTION) return INPUT_NOTME;
 	if (code >= 0) return INPUT_NOTME;
 
 	x /= FIELD_SIZE;

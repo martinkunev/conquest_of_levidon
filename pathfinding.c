@@ -420,7 +420,7 @@ int path_reachable(const struct pawn *restrict pawn, struct adjacency_list *rest
 			{
 				struct point target = {x, y};
 				if (path_visible(graph->list[i].location, target, obstacles, obstacles_count))
-					if (traverse_info[i].distance + battlefield_distance(graph->list[i].location, target) <= 1.0)
+					if (traverse_info[i].distance + battlefield_distance(graph->list[i].location, target) <= pawn->slot->unit->speed)
 						reachable[y][x] = 1;
 			}
 		}

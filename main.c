@@ -190,7 +190,6 @@ static int play(struct game *restrict game)
 					// Move the slot to its new location.
 					troop_detach(&region->troops, slot);
 					troop_attach(&slot->move->troops, slot);
-					slot->location = slot->move; // TODO this is done below; no need to do it here
 				}
 				slot = next;
 			}
@@ -221,8 +220,7 @@ static int play(struct game *restrict game)
 
 			slots = 0;
 
-			// Set the location of each unit to the current region.
-			// Count the slots in the region.
+			// Set the location of each troop and count the troops in the region.
 			for(slot = region->troops; slot; slot = slot->_next)
 			{
 				// Remove dead slots.
@@ -235,6 +233,7 @@ static int play(struct game *restrict game)
 
 				if (game->players[slot->player].alliance == winner)
 				{
+					// Set troop location to the current region.
 					slot->location = region;
 					slots += 1;
 				}

@@ -27,7 +27,6 @@ unsigned char display_colors[][4] = {
 	[Gray] = {128, 128, 128, 255},
 	[Black] = {0, 0, 0, 255},
 	[Unexplored] = {64, 64, 64, 128},
-	[B0] = {96, 96, 96, 255},
 	[Progress] = {128, 128, 128, 160},
 	[Select] = {192, 192, 0, 255},
 
@@ -39,6 +38,7 @@ unsigned char display_colors[][4] = {
 	[Partial] = {192, 192, 0, 255},
 	[Unreachable] = {192, 0, 0, 255},
 
+	[Hover] = {0, 0, 0, 128},
 	[FieldReachable] = {0, 0, 0, 64},
 
 	[Player + 0] = {192, 192, 192, 255},
