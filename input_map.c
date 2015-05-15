@@ -1,9 +1,5 @@
 #include <stdlib.h>
 
-#define GL_GLEXT_PROTOTYPES
-
-#include <GL/glx.h>
-
 #include "types.h"
 #include "map.h"
 #include "pathfinding.h"
@@ -11,8 +7,6 @@
 #include "input.h"
 #include "input_map.h"
 #include "interface.h"
-
-extern GLuint map_framebuffer;
 
 static int input_turn(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
 {
@@ -43,18 +37,14 @@ static int input_region(int code, unsigned x, unsigned y, uint16_t modifiers, co
 	// TODO write this function better
 
 	// Get the clicked region.
-	GLubyte pixel_color[3];
-	glBindFramebuffer(GL_FRAMEBUFFER, map_framebuffer);
-	//glReadPixels(x, MAP_HEIGHT - y, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixel_color);
-	glReadPixels(x, SCREEN_HEIGHT - y, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixel_color); // TODO why does this work?
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	int region_index = if_storage_get(x, y);
 
 	if (code == -1)
 	{
 		struct troop *slot;
 
-		if (!pixel_color[0]) state->region = REGION_NONE;
-		else state->region = pixel_color[2];
+		if (region_index < 0) state->region = REGION_NONE;
+		else state->region = region_index;
 
 		state->troop = 0;
 
@@ -72,10 +62,10 @@ static int input_region(int code, unsigned x, unsigned y, uint16_t modifiers, co
 		struct region *region = game->regions + state->region;
 		struct troop *slot;
 
-		if (!pixel_color[0]) return 0;
+		if (region_index < 0) return 0;
 
 		unsigned index;
-		struct region *destination = game->regions + pixel_color[2];
+		struct region *destination = game->regions + region_index;
 		if (destination == region) goto valid;
 		for(index = 0; index < 8; ++index)
 			if (destination == region->neighbors[index])
@@ -88,14 +78,14 @@ valid:
 			// Set the move destination of the selected troop.
 			slot = state->troop;
 			if (state->player == slot->player)
-				slot->move = game->regions + pixel_color[2];
+				slot->move = game->regions + region_index;
 		}
 		else
 		{
 			// Set the move destination of all slots in the region.
 			for(slot = region->troops; slot; slot = slot->_next)
 				if (state->player == slot->player)
-					slot->move = game->regions + pixel_color[2];
+					slot->move = game->regions + region_index;
 		}
 	}
 
@@ -129,6 +119,7 @@ static int input_construct(int code, unsigned x, unsigned y, uint16_t modifiers,
 			// If the construction has not yet started, return allocated resources.
 			if (region->construct == index)
 			{
+				// build_cancel(game, region, index);
 				if (region->build_progress)
 					region->build_progress = 0;
 				else
@@ -138,6 +129,7 @@ static int input_construct(int code, unsigned x, unsigned y, uint16_t modifiers,
 		}
 		else if (!region_built(region, index))
 		{
+			// if (build_start(game, region, index)) ...;
 			if (!resource_enough(&game->players[state->player].treasury, &buildings[index].cost)) return 0;
 
 			region->construct = index;

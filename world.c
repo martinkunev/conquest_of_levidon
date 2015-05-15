@@ -129,19 +129,25 @@ static int region_init(struct game *restrict game, struct region *restrict regio
 	if (!item || (json_type(item) != INTEGER)) return -1;
 	region->owner = item->integer;
 
+	region->garrison.position = North; // TODO fix this
 	region->garrison.owner = region->owner;
-	region->garrison.siege = 0;
 	region->garrison.troops = 0;
+	region->garrison.siege = 0;
 
 	key = string("garrison");
 	if (item = dict_get(data, &key))
 	{
 		if (json_type(item) != OBJECT) return -1;
 
+		/*key = string("position");
+		field = dict_get(item->object, &key);
+		if (!field || (json_type(field) != INTEGER)) return -1;
+		region->owner = field->integer;*/
+
 		key = string("owner");
 		field = dict_get(item->object, &key);
 		if (!field || (json_type(field) != INTEGER)) return -1;
-		region->owner = field->integer;
+		region->garrison.owner = field->integer;
 
 		key = string("troops");
 		if (field = dict_get(item->object, &key))

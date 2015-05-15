@@ -105,8 +105,58 @@ static void if_reshape(int width, int height)
 	glLoadIdentity();
 }
 
-int if_init(void)
+static void if_regions_init(const struct game *game)
 {
+	size_t i, j;
+
+	unsigned regions_count = game->regions_count;
+	// assert(game->regions_count < 65536);
+
+	glGenFramebuffers(1, &map_framebuffer);
+	glGenRenderbuffers(1, &map_renderbuffer);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, map_framebuffer);
+	glBindRenderbuffer(GL_RENDERBUFFER, map_renderbuffer);
+
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_RGB8, MAP_WIDTH, MAP_HEIGHT);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, map_renderbuffer);
+
+	glBindRenderbuffer(GL_RENDERBUFFER, 0);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, map_framebuffer);
+
+	glClear(GL_COLOR_BUFFER_BIT);
+
+	for(i = 0; i < regions_count; ++i)
+	{
+		glColor3ub(255, i / 256, i % 256);
+		display_polygon(game->regions[i].location, 0, 0);
+	}
+
+	glFlush();
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+int if_storage_get(unsigned x, unsigned y)
+{
+	GLubyte pixel[3];
+
+	glBindFramebuffer(GL_FRAMEBUFFER, map_framebuffer);
+	//glReadPixels(x, MAP_HEIGHT - y, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixel);
+	glReadPixels(x, SCREEN_HEIGHT - y, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixel); // TODO why does this work?
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	if (!pixel[0]) return -1;
+	return pixel[1] * 256 + pixel[2];
+}
+
+int if_init(const struct game *game)
+{
+	// TODO fix this
+	regions = game->regions;
+	regions_count = game->regions_count;
+
 	display = XOpenDisplay(0);
 	if (!display) return -1;
 
@@ -272,19 +322,7 @@ int if_init(void)
 	if (!keymap) goto error; // TODO error
 
 	// Initialize region input recognition.
-	{
-		glGenFramebuffers(1, &map_framebuffer);
-		glGenRenderbuffers(1, &map_renderbuffer);
-
-		glBindFramebuffer(GL_FRAMEBUFFER, map_framebuffer);
-		glBindRenderbuffer(GL_RENDERBUFFER, map_renderbuffer);
-
-		glRenderbufferStorage(GL_RENDERBUFFER, GL_RGB8, MAP_WIDTH, MAP_HEIGHT);
-		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, map_renderbuffer);
-
-		glBindRenderbuffer(GL_RENDERBUFFER, 0);
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	}
+	if_regions_init(game);
 
 	return 0;
 
@@ -571,24 +609,25 @@ void if_formation(const void *argument, const struct game *game)
 	for(i = 0; i < pawns->length; ++i)
 	{
 		const struct pawn *pawn = pawns->data[i];
-		const struct troop *slot = pawn->slot;
+		const struct troop *troop = pawn->slot;
 
 		if (pawn == state->pawn)
 		{
 			// Display at which fields the pawn can be placed.
-			const struct point *positions = formation_positions(slot, region);
-			for(i = 0; i < PAWNS_LIMIT; ++i)
+			struct point positions[REACHABLE_LIMIT];
+			size_t reachable_count = formation_reachable(game, region, troop, positions);
+			for(i = 0; i < reachable_count; ++i)
 				if (!battlefield[positions[i].y][positions[i].x].pawn)
 					display_rectangle(BATTLE_X + positions[i].x * FIELD_SIZE, BATTLE_Y + positions[i].y * FIELD_SIZE, FIELD_SIZE, FIELD_SIZE, FieldReachable);
 
 			// Display the selected pawn in the control panel.
-			display_unit(slot->unit->index, CTRL_X, CTRL_Y + CTRL_MARGIN, Player + state->player, White, slot->count);
+			display_unit(troop->unit->index, CTRL_X, CTRL_Y + CTRL_MARGIN, Player + state->player, White, troop->count);
 		}
 		else
 		{
 			// Display the pawn at its present location.
 			struct point location = pawn->moves[0].location;
-			display_unit(slot->unit->index, BATTLE_X + location.x * FIELD_SIZE, BATTLE_Y + location.y * FIELD_SIZE, Player + state->player, 0, 0);
+			display_unit(troop->unit->index, BATTLE_X + location.x * FIELD_SIZE, BATTLE_Y + location.y * FIELD_SIZE, Player + state->player, 0, 0);
 		}
 	}
 
@@ -616,9 +655,7 @@ void if_battle(const void *argument, const struct game *game)
 				else if (game->players[pawn->slot->player].alliance == game->players[state->player].alliance) color = Ally;
 				else color = Enemy;
 
-				display_rectangle(BATTLE_X + x * FIELD_SIZE, BATTLE_Y + y * FIELD_SIZE, FIELD_SIZE, FIELD_SIZE, color);
-				image_draw(&image_units[pawn->slot->unit->index], BATTLE_X + x * FIELD_SIZE, BATTLE_Y + y * FIELD_SIZE);
-				// TODO display pawn
+				display_unit(pawn->slot->unit->index, BATTLE_X + x * FIELD_SIZE, BATTLE_Y + y * FIELD_SIZE, color, 0, 0);
 			}
 		}
 
@@ -1096,26 +1133,6 @@ void if_set(struct battlefield field[BATTLEFIELD_WIDTH][BATTLEFIELD_HEIGHT], str
 {
 	battle = b;
 	battlefield = field;
-}
-
-void if_regions_input(struct game *restrict game)
-{
-	regions = game->regions;
-	regions_count = game->regions_count;
-
-	glBindFramebuffer(GL_FRAMEBUFFER, map_framebuffer);
-
-	glClear(GL_COLOR_BUFFER_BIT);
-
-	size_t i, j;
-	for(i = 0; i < regions_count; ++i)
-	{
-		glColor3ub(255, 255, i);
-		display_polygon(regions[i].location, 0, 0);
-	}
-
-	glFlush();
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 void if_term(void)

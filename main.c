@@ -123,8 +123,6 @@ static int play(struct game *restrict game)
 	struct resources expenses[PLAYERS_LIMIT];
 	unsigned char alive[PLAYERS_LIMIT];
 
-	if_regions_input(game);
-
 	do
 	{
 		memset(expenses, 0, sizeof(expenses));
@@ -377,7 +375,7 @@ int main(int argc, char *argv[])
 	}
 
 	srandom(time(0));
-	if (!if_init())
+	if (!if_init(&game))
 	{
 		winner = play(&game);
 

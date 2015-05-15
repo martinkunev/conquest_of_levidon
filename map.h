@@ -82,11 +82,12 @@ struct region
 
 	struct
 	{
+		enum {East, NorthEast, North, NorthWest, West, SouthWest, South, SouthEast} position;
+
 		unsigned char owner;
+		struct troop *troops;
 
 		unsigned siege;
-
-		struct troop *troops;
 	} garrison;
 
 	size_t index;
@@ -121,8 +122,6 @@ static const struct
 	[PALISADE] = {.troops = 3, .provisions = 2},
 	[FORTRESS] = {.troops = 6, .provisions = 5},
 };
-
-// neighbors (in order): east, north-east, north, north-west, west, south-west, south, south-east
 
 extern const struct unit UNITS[];
 extern const size_t UNITS_COUNT;

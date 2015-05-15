@@ -98,7 +98,9 @@ static inline int if_index(enum object object, struct point position)
 	return (object_group[object].columns * (position.y / height_padded) + (position.x / width_padded));
 }
 
-int if_init(void);
+int if_init(const struct game *game);
+
+int if_storage_get(unsigned x, unsigned y);
 
 void if_map(const void *argument, const struct game *game);
 void if_formation(const void *argument, const struct game *game);
