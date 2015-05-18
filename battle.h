@@ -28,9 +28,14 @@ struct battlefield
 struct battle
 {
 	struct battlefield field[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH];
-	struct pawn *pawns;
 	size_t pawns_count;
-	struct vector player_pawns[PLAYERS_LIMIT];
+	struct pawn *pawns;
+
+	struct
+	{
+		size_t pawns_count;
+		struct pawn **pawns;
+	} players[PLAYERS_LIMIT];
 };
 
 static inline int point_eq(struct point a, struct point b)

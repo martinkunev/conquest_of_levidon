@@ -40,7 +40,7 @@
 #define GARRISON_Y (PANEL_Y + 160)
 #define GARRISON_MARGIN 24
 
-enum object {Building, Inventory, Dismiss, TroopSelf, TroopOther, TroopGarrison};
+enum object {Building, Inventory, Dismiss, TroopSelf, TroopOther, TroopGarrison, Battlefield};
 
 // rows, columns, left, top, width, height, padding
 #define OBJECT_GROUP(r, c, l, t, w, h, p) \
@@ -72,10 +72,11 @@ static const struct object_group
 } object_group[] = {
 	[Building] = OBJECT_GROUP(3, 5, PANEL_X + 1, PANEL_Y + 400, 48, 48, 1),
 	[Inventory] = OBJECT_GROUP(1, 5, PANEL_X + 1, PANEL_Y + 340, 32, 32, 1),
-	[Dismiss] = OBJECT_GROUP(1, 4, PANEL_X + 81, PANEL_Y + 300, 32, 32, 1), // TODO replace 4 with TRAIN_QUEUE
+	[Dismiss] = OBJECT_GROUP(1, TRAIN_QUEUE, PANEL_X + 81, PANEL_Y + 300, 32, 32, 1),
 	[TroopSelf] = OBJECT_GROUP(1, TROOPS_VISIBLE, PANEL_X + SCROLL + 1, PANEL_Y + 36 + 2, 32, 32, 1),
 	[TroopOther] = OBJECT_GROUP(1, TROOPS_VISIBLE, PANEL_X + SCROLL + 1, PANEL_Y + 36 + 48 + 2 + 2, 32, 32, 1),
 	[TroopGarrison] = OBJECT_GROUP(1, TROOPS_GARRISON, GARRISON_X + 9, GARRISON_Y + GARRISON_MARGIN, 32, 32, 1),
+	[Battlefield] = OBJECT_GROUP(BATTLEFIELD_HEIGHT, BATTLEFIELD_WIDTH, 8, 8, 30, 30, 0),
 };
 #undef OBJECT_GROUP
 

@@ -605,13 +605,13 @@ void if_formation(const void *argument, const struct game *game)
 	const struct region *region = game->regions + state->region;
 
 	size_t i;
-	const struct vector *pawns = battle->player_pawns + state->player;
-	for(i = 0; i < pawns->length; ++i)
+	struct pawn *const *pawns = battle->players[state->player].pawns;
+	size_t pawns_count = battle->players[state->player].pawns_count;
+	for(i = 0; i < pawns_count; ++i)
 	{
-		const struct pawn *pawn = pawns->data[i];
-		const struct troop *troop = pawn->slot;
+		const struct troop *troop = pawns[i]->slot;
 
-		if (pawn == state->pawn)
+		if (pawns[i] == state->pawn)
 		{
 			// Display at which fields the pawn can be placed.
 			struct point positions[REACHABLE_LIMIT];
@@ -626,7 +626,7 @@ void if_formation(const void *argument, const struct game *game)
 		else
 		{
 			// Display the pawn at its present location.
-			struct point location = pawn->moves[0].location;
+			struct point location = pawns[i]->moves[0].location;
 			display_unit(troop->unit->index, BATTLE_X + location.x * FIELD_SIZE, BATTLE_Y + location.y * FIELD_SIZE, Player + state->player, 0, 0);
 		}
 	}

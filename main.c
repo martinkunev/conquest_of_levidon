@@ -38,7 +38,7 @@ static int battle(struct game *restrict game, struct region *restrict region)
 	// Ask each player to position their pawns.
 	for(player = 0; player < game->players_count; ++player)
 	{
-		if (!battle.player_pawns[player].length) continue; // skip players with no pawns
+		if (!battle.players[player].pawns_count) continue; // skip players with no pawns
 
 		switch (game->players[player].type)
 		{
@@ -54,6 +54,7 @@ static int battle(struct game *restrict game, struct region *restrict region)
 			break;
 		}
 	}
+	// TODO formation for garrison
 
 	while ((status = battle_end(game, &battle, game->players[region->owner].alliance)) < 0)
 	{
@@ -61,7 +62,7 @@ static int battle(struct game *restrict game, struct region *restrict region)
 		// TODO implement Computer and Remote
 		for(player = 0; player < game->players_count; ++player)
 		{
-			if (!battle.player_pawns[player].length) continue; // skip players with no pawns
+			if (!battle.players[player].pawns_count) continue; // skip players with no pawns
 
 			switch (game->players[player].type)
 			{

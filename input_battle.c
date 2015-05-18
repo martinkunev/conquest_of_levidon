@@ -64,9 +64,10 @@ static int input_round(int code, unsigned x, unsigned y, uint16_t modifiers, con
 		{
 			// Kill all the pawns of the player.
 			size_t i;
-			const struct vector *pawns = battle->player_pawns + state->player;
-			for(i = 0; i < pawns->length; ++i)
-				((struct pawn *)pawns->data[i])->slot->count = 0;
+			struct pawn *const *pawns = battle->players[state->player].pawns;
+			size_t pawns_count = battle->players[state->player].pawns_count;
+			for(i = 0; i < pawns_count; ++i)
+				pawns[i]->slot->count = 0;
 		}
 	case 'n':
 		return INPUT_DONE;
@@ -165,9 +166,9 @@ static int input_pawn(int code, unsigned x, unsigned y, uint16_t modifiers, cons
 		unsigned column = x / (FIELD_SIZE + 1);
 		unsigned line = y / (FIELD_SIZE + MARGIN);
 		size_t i;
-		for(i = 0; i < battle->player_pawns[state->player].length; ++i)
+		for(i = 0; i < battle->players[state->player].pawns_count; ++i)
 		{
-			struct pawn *pawn = battle->player_pawns[state->player].data[i];
+			struct pawn *pawn = battle->players[state->player].pawns[i];
 			if (line)
 			{
 				if (pawn->slot->location != game->regions[state->region].neighbors[line - 1]) continue;
@@ -238,10 +239,10 @@ int input_battle(const struct game *restrict game, struct battle *restrict battl
 			.callback = input_round
 		},
 		{
-			.left = 0,
-			.right = BATTLEFIELD_WIDTH * FIELD_SIZE - 1,
-			.top = 0,
-			.bottom = BATTLEFIELD_HEIGHT * FIELD_SIZE - 1,
+			.left = object_group[Battlefield].left,
+			.right = object_group[Battlefield].right,
+			.top = object_group[Battlefield].top,
+			.bottom = object_group[Battlefield].bottom,
 			.callback = input_field
 		},
 	};
