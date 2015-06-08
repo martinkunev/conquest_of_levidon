@@ -22,6 +22,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
+// http://fossil.wanderinghorse.net/repos/cson/index.cgi/index
+
 #include <assert.h>
 #include <ctype.h>
 #include <float.h>
@@ -30,36 +32,21 @@ SOFTWARE.
 #include <string.h>
 #include <locale.h>
 
-#include "types.h"
 #include "arch.h"
 #include "format.h"
-#include "json.h"
 
-/* Windows DLL stuff */
-#ifdef JSON_PARSER_DLL
-#   ifdef _MSC_VER
-#	    ifdef JSON_PARSER_DLL_EXPORTS
-#		    define JSON_PARSER_DLL_API __declspec(dllexport)
-#	    else
-#		    define JSON_PARSER_DLL_API __declspec(dllimport)
-#       endif
-#   else
-#	    define JSON_PARSER_DLL_API 
-#   endif
-#else
-#	define JSON_PARSER_DLL_API 
-#endif
+#include "json.h"
+#include "test/json.h"
+#include "array.c"
+#include "hashmap.c"
+
+// Parses extended JSON format.
+// Extensions: null as a separate type, floating point as a separate type, string as root node
 
 /* Determine the integer type use to parse non-floating point numbers */
-#if !defined(OS_WINDOWS)
-	typedef long long JSON_int_t;
-	#define JSON_PARSER_INTEGER_SSCANF_TOKEN "%lld"
-	#define JSON_PARSER_INTEGER_SPRINTF_TOKEN "%lld"
-#else
-	typedef int64_t JSON_int_t;
-	#define JSON_PARSER_INTEGER_SSCANF_TOKEN "%lld"
-	#define JSON_PARSER_INTEGER_SPRINTF_TOKEN "%lld"
-#endif
+typedef long long JSON_int_t;
+#define JSON_PARSER_INTEGER_SSCANF_TOKEN "%lld"
+#define JSON_PARSER_INTEGER_SPRINTF_TOKEN "%lld"
 
 typedef enum 
 {
@@ -141,16 +128,16 @@ typedef void (*JSON_free_t)(void* mem);
     \return The parser object, which is owned by the caller and must eventually
     be freed by calling delete_JSON_parser().
 */
-JSON_PARSER_DLL_API JSON_parser new_JSON_parser(JSON_parser_callback callback, void *ctx);
+JSON_parser new_JSON_parser(JSON_parser_callback callback, void *ctx);
 
 /*! \brief Destroy a previously created JSON parser object. */
-JSON_PARSER_DLL_API void delete_JSON_parser(JSON_parser jc);
+void delete_JSON_parser(JSON_parser jc);
 
 /*! \brief Parse a character.
 
     \return Non-zero, if all characters passed to this function are part of are valid JSON.
 */
-JSON_PARSER_DLL_API int JSON_parser_char(JSON_parser jc, int next_char);
+int JSON_parser_char(JSON_parser jc, int next_char);
 
 /*! \brief Finalize parsing.
 
@@ -158,32 +145,25 @@ JSON_PARSER_DLL_API int JSON_parser_char(JSON_parser jc, int next_char);
     
     \return Non-zero, if all parsed characters are valid JSON, zero otherwise.
 */
-JSON_PARSER_DLL_API int JSON_parser_done(JSON_parser jc);
+int JSON_parser_done(JSON_parser jc);
 
 /*! \brief Determine if a given string is valid JSON white space 
 
     \return Non-zero if the string is valid, zero otherwise.
 */
-JSON_PARSER_DLL_API int JSON_parser_is_legal_white_space_string(const char* s);
+int JSON_parser_is_legal_white_space_string(const char* s);
 
 /*! \brief Gets the last error that occurred during the use of JSON_parser.
 
     \return A value from the JSON_error enum.
 */
-JSON_PARSER_DLL_API int JSON_parser_get_last_error(JSON_parser jc);
+int JSON_parser_get_last_error(JSON_parser jc);
 
 /*! \brief Re-sets the parser to prepare it for another parse run.
 
     \return True (non-zero) on success, 0 on error (e.g. !jc).
 */
-JSON_PARSER_DLL_API int JSON_parser_reset(JSON_parser jc);
-
-#ifdef _MSC_VER
-#   if _MSC_VER >= 1400 /* Visual Studio 2005 and up */
-#	  pragma warning(disable:4996) /* unsecure sscanf */
-#	  pragma warning(disable:4127) /* conditional expression is constant */
-#   endif
-#endif
+int JSON_parser_reset(JSON_parser jc);
 
 #define __   -1	 /* the universal error code */
 
@@ -228,9 +208,10 @@ struct JSON_parser_struct {
 
 struct json_context
 {
-	union json *data[JSON_DEPTH_MAX];
-	size_t length;
-	struct string key;
+	union json *root;
+	union json *parents[JSON_DEPTH_MAX];
+	union json **object_value;
+	size_t count;
 };
 
 #define COUNTOF(x) (sizeof(x)/sizeof(x[0])) 
@@ -1234,196 +1215,140 @@ int JSON_parser_get_last_error(JSON_parser jc)
 	return jc->error;
 }
 
-// Returns the position of the Most Significant Bit set in a byte
-static inline unsigned char msb_pos(unsigned char byte)
-{
-	static const unsigned char mask[] = {0x1, 0x3, 0xf};
-	unsigned char r, s;
-	// Round 0
-	r = ((mask[2] & byte) < byte) << 2; // No need to use s here as r is initially zero
-	byte >>= r;
-	// Round 1
-	s = ((mask[1] & byte) < byte) << 1;
-	byte >>= s;
-	r += s;
-	// Round 2
-	return r + ((mask[0] & byte) < byte); // Just return the position
-}
-
-// TODO: memory errors can cause memory leaks
-
 static int token_add(void *restrict context, int type, const JSON_value *value)
 {
 	struct json_context *stack = (struct json_context *)context;
-	union json *item = malloc(sizeof(union json)), *parent;
-	if (!item) return 0; // Memory error
+	union json *item, *parent;
 
-	// Get node parent
-	if (stack->length) parent = stack->data[stack->length - 1];
+	// Find the parent of the current node.
+	if (stack->count) parent = stack->parents[stack->count - 1];
 	else parent = 0;
 
 	switch (type)
 	{
-		union json **node;
 	case JSON_T_NULL:
-		json_type(item) = NONE;
+		item = json_null();
 		break;
 	case JSON_T_TRUE:
-		json_type(item) = BOOLEAN;
-		item->boolean = true;
+		item = json_boolean(true);
 		break;
 	case JSON_T_FALSE:
-		json_type(item) = BOOLEAN;
-		item->boolean = false;
+		item = json_boolean(false);
 		break;
 	case JSON_T_INTEGER:
-		json_type(item) = INTEGER;
-		item->integer = value->vu.integer_value;
+		item = json_integer(value->vu.integer_value);
 		break;
 	case JSON_T_FLOAT:
-		json_type(item) = REAL;
-		item->real = value->vu.float_value;
+		item = json_real(value->vu.float_value);
 		break;
 	case JSON_T_STRING:
-		free(item);
-		{
-			struct string entry = string((char *)value->vu.str.value, value->vu.str.length); // TODO fix this cast
-			item = json_string(&entry);
-		}
-		if (!item) goto error; // memory error
+		item = json_string(value->vu.str.value, value->vu.str.length);
 		break;
 	case JSON_T_ARRAY_BEGIN:
-		json_type(item) = ARRAY;
-		memset(&item->array_node, 0, sizeof(item->array_node));
-		node = stack->data + stack->length;
-		*node = item;
-		stack->length += 1;
+		item = json_array();
+		stack->parents[stack->count++] = item;
 		break;
 	case JSON_T_OBJECT_BEGIN:
-		json_type(item) = OBJECT;
-		item->object = malloc(sizeof(struct dict));
-		if (!item->object) goto error; // memory error
-		if (!dict_init(item->object, DICT_SIZE_BASE))
-		{
-			free(item->object);
-			goto error; // memory error
-		}
-		node = stack->data + stack->length;
-		*node = item;
-		stack->length += 1;
+		item = json_object();
+		stack->parents[stack->count++] = item;
 		break;
+
 	case JSON_T_ARRAY_END:
 	case JSON_T_OBJECT_END:
-		free(item);
-		stack->length -= 1;
+		stack->count -= 1;
 		return 1;
+
 	case JSON_T_KEY:
-		free(item);
-		stack->key.data = malloc(value->vu.str.length);
-		if (!stack->key.data) return 0; // memory error
-		stack->key.length = value->vu.str.length;
-		memcpy(stack->key.data, value->vu.str.value, value->vu.str.length);
+		stack->object_value = hashmap_insert(&stack->parents[stack->count - 1]->object, value->vu.str.value, value->vu.str.length, 0);
+		if (!stack->object_value) return 0; // memory error
+		if (*stack->object_value) return 0; // duplicated key
 		return 1;
 	}
+	if (!item) return 0; // memory error
 
 	if (parent)
 	{
-		// Add the node to its parent node
+		// Add the node as child of its parent.
 		switch (json_type(parent))
 		{
-			bool error;
-		case ARRAY:
-			if (vector_add(&parent->array_node, item) < 0) goto error;
+		case JSON_ARRAY:
+			if (array_push(&parent->array, item) < 0)
+			{
+				free(item);
+				return 0; // memory error
+			}
 			break;
-		case OBJECT:
-			error = dict_add(parent->object, &stack->key, item);
-			free(stack->key.data);
-			if (error) goto error;
+		case JSON_OBJECT:
+			*stack->object_value = item;
 			break;
 		}
 	}
-	else *stack->data = item;
+	else stack->root = item;
 
 	return 1;
-
-error:
-	// Memory error
-	if (json_type(parent) == OBJECT) free(stack->key.data);
-	free(item);
-	return 0;
 }
 
-// TODO: this can be implemented better if dict_term() supports custom free function; fix dict_term() and merge these two functions
-static void json_free_dict(struct dict *restrict dict)
-{
-	struct dict_iterator it;
-	struct dict_item *prev = 0;
-
-	// Free each item in each slot of the dictionary
-	for(it.index = 0; it.index < dict->size; ++it.index)
-		if (dict->items[it.index])
-		{
-			it.item = dict->items[it.index];
-			do
-			{
-				prev = it.item;
-				it.item = it.item->_next;
-
-				json_free(prev->value);
-				free(prev);
-			} while (it.item);
-		}
-
-	free(dict->items);
-	free(dict);
-}
 void json_free(union json *restrict json)
 {
 	if (!json) return; // mimic the behavior of free()
 	switch (json_type(json))
 	{
-		size_t i;
-	case OBJECT:
-		json_free_dict(json->object);
+	case JSON_OBJECT:
+		{
+			struct hashmap_iterator it;
+			struct hashmap_entry *entry;
+			for(entry = hashmap_first(&json->object, &it); entry; entry = hashmap_next(&json->object, &it))
+				free(entry->value);
+			hashmap_term(&json->object);
+		}
 		break;
-	case ARRAY:
-		i = json->array_node.length;
-		while (i--) json_free(json->array_node.data[i]);
-		vector_term(&json->array_node);
+	case JSON_ARRAY:
+		while (json->array.count--)
+			json_free(json->array.data[json->array.count]);
+		array_term(&json->array);
 		break;
 	}
 	free(json);
 }
 
 // TODO: decide how to distinguish parse error from internal server error
-#include <stdio.h>
-union json *json_parse(const struct string *json)
+union json *json_parse(const unsigned char *data, size_t size)
 {
-	struct json_context context = {.length = 0};
-	struct JSON_parser_struct *jc = new_JSON_parser(&token_add, &context); // TODO: memory error
+	struct json_context context = {.count = 0};
+	struct JSON_parser_struct *jc;
 	size_t i;
 
-	unsigned line = 1;
-	for(i = 0; i < json->length; ++i)
-	{
-		if (!JSON_parser_char(jc, (unsigned char)json->data[i])) // TODO: memory or parse error
-		{
-			fprintf(stderr, "Parse error on line %u\n", line);
-			goto error;
-		}
-		if (json->data[i] == '\n') line += 1;
-	}
+	jc = new_JSON_parser(&token_add, &context); // TODO: memory error
 
+	for(i = 0; i < size; ++i)
+		if (!JSON_parser_char(jc, data[i])) // TODO: memory or parse error
+			goto error;
 	if (!JSON_parser_done(jc)) goto error; // TODO: parse error
 
 	delete_JSON_parser(jc);
 
-	return *context.data;
+	return context.root;
 
 error:
-	if (*context.data) json_free(*context.data);
 	delete_JSON_parser(jc);
+	json_free(context.root);
 	return 0;
+}
+
+// Returns the position of the Most Significant Bit set in a byte.
+static inline unsigned char msb_pos(unsigned char byte)
+{
+	static const unsigned char mask[] = {0x1, 0x3, 0xf};
+	unsigned char r, s;
+	// round 0
+	r = ((mask[2] & byte) < byte) << 2; // no need to use s here as r is initially zero
+	byte >>= r;
+	// round 1
+	s = ((mask[1] & byte) < byte) << 1;
+	byte >>= s;
+	r += s;
+	// round 2
+	return r + ((mask[0] & byte) < byte); // just return the position
 }
 
 static size_t utf8_read(uint32_t *restrict result, const unsigned char *start, size_t length)
@@ -1447,7 +1372,7 @@ static size_t utf8_read(uint32_t *restrict result, const unsigned char *start, s
 	else return bytes;
 }
 
-ssize_t json_length_string(const char *restrict data, size_t size)
+ssize_t json_string_size(const char *restrict data, size_t size)
 {
 	unsigned char *start = (unsigned char *)data;
 	size_t length = 0;
@@ -1477,7 +1402,7 @@ ssize_t json_length_string(const char *restrict data, size_t size)
 	return length;
 }
 
-ssize_t json_length(const union json *restrict json)
+ssize_t json_size(const union json *restrict json)
 {
 	static const size_t boolean_length[] = {5, 4};
 
@@ -1486,48 +1411,49 @@ ssize_t json_length(const union json *restrict json)
 		size_t count;
 		size_t i;
 		ssize_t size;
-	case NONE:
+	case JSON_NULL:
 		return 4;
-	case OBJECT:
+	case JSON_OBJECT:
 		{
-			struct dict_iterator it;
-			const struct dict_item *item;
-			count = 2 + json->object->count - (json->object->count > 0); // Non-null objects start with { and end with } and separate elements with ,
-			for(item = dict_first(&it, json->object); item; item = dict_next(&it, json->object))
+			struct hashmap_iterator it;
+			struct hashmap_entry *entry;
+
+			count = 2 + json->object.count - (json->object.count > 0); // Non-null objects start with { and end with } and separate elements with ,
+			for(entry = hashmap_first(&json->object, &it); entry; entry = hashmap_next(&json->object, &it))
 			{
-				size = json_length_string(item->key_data, item->key_size);
+				size = json_string_size(entry->key_data, entry->key_size);
 				if (size < 0) return -1;
 				count += 1 + size + 1 + 1; // "data":
-				size = json_length(item->value);
+				size = json_size(entry->value);
 				if (size < 0) return -1;
 				count += size;
 			}
 		}
 		return count;
-	case ARRAY:
-		i = json->array_node.length;
-		count = 2 + i - (json->array_node.length > 0); // Arrays start with [ and end with ] and separate elements with ,
+	case JSON_ARRAY:
+		i = json->array.count;
+		count = 2 + i - (json->array.count > 0); // Arrays start with [ and end with ] and separate elements with ,
 		while (i--) // We are just counting now so we can walk through the elements in reverse order
 		{
-			size = json_length(json->array_node.data[i]);
+			size = json_size(json->array.data[i]);
 			if (size < 0) return -1;
 			count += size;
 		}
 		return count;
-	case BOOLEAN:
-		return boolean_length[json->boolean];
-	case INTEGER:
+	case JSON_BOOLEAN:
+		return boolean_length[json->boolean]; // TODO use format_ here
+	case JSON_INTEGER:
 		return format_int_length(json->integer, 10);
-	case REAL:
-		return snprintf(0, 0, "%f", json->real);
-	case STRING:
-		size = json_length_string(json->string_node.data, json->string_node.length);
+	case JSON_REAL:
+		return snprintf(0, 0, "%g", json->real); // TODO use format_ here
+	case JSON_STRING:
+		size = json_string_size(json->string.data, json->string.size);
 		if (size < 0) return -1;
 		return 1 + size + 1; // "data"
 	}
 }
 
-char *json_dump_string(unsigned char *restrict dest, const unsigned char *restrict src, size_t size)
+char *json_string_dump(unsigned char *restrict dest, const unsigned char *restrict src, size_t size)
 {
 	size_t i = 0;
 	while (i < size)
@@ -1551,12 +1477,10 @@ char *json_dump_string(unsigned char *restrict dest, const unsigned char *restri
 		}
 		else if (src[i] <= 0x1f)
 		{
-			// TODO this won't work for > U+FFFF
 			uint32_t code;
-			uint16_t character, swap;
+			uint16_t character;
 			i += utf8_read(&code, src + i, size - i);
-			swap = code;
-			endian_big16(&character, &swap);
+			character = htobe16(code);
 
 			// Write the encoded character.
 			*dest++ = '\\';
@@ -1584,242 +1508,195 @@ char *json_dump(char *restrict result, const union json *restrict json)
 	{
 		size_t length;
 		size_t i;
-	case NONE:
+	case JSON_NULL:
 		result[0] = 'n';
 		result[1] = 'u';
 		result[2] = 'l';
 		result[3] = 'l';
 		return result + 4;
-	case OBJECT:
+	case JSON_OBJECT:
 		{
-			struct dict_iterator it;
-			const struct dict_item *item;
+			struct hashmap_iterator it;
+			struct hashmap_entry *entry;
 			bool first = true;
+
 			*result++ = '{';
-			for(item = dict_first(&it, json->object); item; item = dict_next(&it, json->object))
+			for(entry = hashmap_first(&json->object, &it); entry; entry = hashmap_next(&json->object, &it))
 			{
 				if (first) first = false;
 				else *result++ = ','; // , as a separator
 				*result++ = '"'; // " before key string
-				result = json_dump_string(result, item->key_data, item->key_size);
+				result = json_string_dump(result, entry->key_data, entry->key_size);
 				*result++ = '"'; // " after key string
 				*result++ = ':'; // : after the key
-				result = json_dump(result, item->value);
+				result = json_dump(result, entry->value);
 			}
 			*result++ = '}';
 		}
 		return result;
-	case ARRAY:
-		length = json->array_node.length;
+	case JSON_ARRAY:
+		length = json->array.count;
 		*result++ = '[';
 		for(i = 0; i < length; ++i)
 		{
 			if (i) *result++ = ','; // , as a separator
-			result = json_dump(result, json->array_node.data[i]);
+			result = json_dump(result, json->array.data[i]);
 		}
 		*result++ = ']';
 		return result;
-	case BOOLEAN:
-		return result + sprintf(result, "%s", boolean_data[json->boolean]);
-	case INTEGER:
+	case JSON_BOOLEAN:
+		return result + sprintf(result, "%s", boolean_data[json->boolean]); // TODO use format_ here
+	case JSON_INTEGER:
 		return format_int(result, json->integer, 10);
-	case REAL:
-		return result + sprintf(result, "%f", json->real);
-	case STRING:
+	case JSON_REAL:
+		return result + sprintf(result, "%g", json->real); // TODO use format_ here
+	case JSON_STRING:
 		*result++ = '"'; // " before key string
-		result = json_dump_string(result, json->string_node.data, json->string_node.length);
+		result = json_string_dump(result, json->string.data, json->string.size);
 		*result++ = '"'; // " after key string
 		return result;
 	}
 }
 
-struct string *json_serialize(const union json *json)
+union json *json_null(void)
 {
-	ssize_t length = json_length(json);
-	if (length < 0) return 0;
-
-	// Allocate one continuous memory region for the string and its data so that it can be freed with free()
-	struct string *result = malloc(sizeof(struct string) + sizeof(char) * (length + 1));
-	if (!result) return 0; // Memory error
-	result->length = length;
-	result->data = (char *)(result + 1);
-
-	json_dump(result->data, json);
-	result->data[result->length] = 0;
-	return result;
+	struct json_internal *json = malloc(sizeof(struct json_internal));
+	if (!json) return 0; // memory error
+	json->type = JSON_NULL;
+	return &json->data;
 }
 
 union json *json_boolean(bool value)
 {
-	union json *result = malloc(sizeof(union json));
-	if (!result) return 0; // Memory error
-	json_type(result) = BOOLEAN;
-	result->boolean = value;
-	return result;
+	struct json_internal *json = malloc(sizeof(struct json_internal));
+	if (!json) return 0; // memory error
+	json->type = JSON_BOOLEAN;
+	json->data.boolean = value;
+	return &json->data;
 }
 
 union json *json_integer(long long value)
 {
-	union json *result = malloc(sizeof(union json));
-	if (!result) return 0; // Memory error
-	json_type(result) = INTEGER;
-	result->integer = value;
-	return result;
+	struct json_internal *json = malloc(sizeof(struct json_internal));
+	if (!json) return 0; // memory error
+	json->type = JSON_INTEGER;
+	json->data.integer = value;
+	return &json->data;
 }
 
-union json *json_real(bool value)
+union json *json_real(double value)
 {
-	union json *result = malloc(sizeof(union json));
-	if (!result) return 0; // Memory error
-	json_type(result) = REAL;
-	result->real = value;
-	return result;
+	struct json_internal *json = malloc(sizeof(struct json_internal));
+	if (!json) return 0; // memory error
+	json->type = JSON_REAL;
+	json->data.real = value;
+	return &json->data;
 }
 
-union json *json_string(const struct string *value)
+union json *json_string(const char *data, size_t size)
 {
-	union json *result = malloc(sizeof(union json) + sizeof(char) * (value->length + 1));
-	if (!result) return 0; // memory error
-	json_type(result) = STRING;
-	result->string_node = string((char *)(result + 1), value->length);
-	memcpy(result->string_node.data, value->data, value->length);
-	result->string_node.data[value->length] = 0;
-	return result;
+	const size_t data_offset = offsetof(struct json_internal, type) + sizeof(enum json_type);
+	struct json_internal *json = malloc(data_offset + size + 1);
+	if (!json) return 0; // memory error
+	json->type = JSON_STRING;
+	json->data.string.size = size;
+	json->data.string.data = (char *)json + data_offset;
+	*format_bytes(json->data.string.data, data, size) = 0;
+	return &json->data;
 }
 
 union json *json_array(void)
 {
-	union json *result = malloc(sizeof(union json));
-	if (!result) return 0; // Memory error
-	json_type(result) = ARRAY;
-	memset(&result->array_node, 0, sizeof(result->array_node));
-	return result;
-}
-int json_array_insert(union json *restrict parent, union json *restrict child)
-{
-	if (!child) return -1; // child not initialized (usually a memory error)
-	int error = (vector_add(&parent->array_node, child) < 0);
-	if (error) json_free(child);
-	return (error ? -1 : 0); // TODO fix error codes
+	struct json_internal *json = malloc(sizeof(struct json_internal));
+	if (!json) return 0; // memory error
+	if (array_init(&json->data.array, ARRAY_SIZE_DEFAULT) < 0)
+	{
+		free(json);
+		return 0; // memory error
+	}
+	json->type = JSON_ARRAY;
+	return &json->data;
 }
 
-union json *json_object(bool is_null)
+union json *json_object(void)
 {
-	union json *result = malloc(sizeof(union json));
-	if (!result) return 0; // Memory error
-	if (is_null) json_type(result) = NONE;
-	else
+	struct json_internal *json = malloc(sizeof(struct json_internal));
+	if (!json) return 0; // memory error
+	if (hashmap_init(&json->data.object, HASHMAP_SIZE_DEFAULT) < 0)
 	{
-		json_type(result) = OBJECT;
-		result->object = malloc(sizeof(struct dict));
-		if (!result->object) return 0; // memory error
-		if (!dict_init(result->object, DICT_SIZE_BASE))
-		{
-			free(result->object);
-			return 0; // memory error
-		}
+		free(json);
+		return 0; // memory error
 	}
-	return result;
+	json->type = JSON_OBJECT;
+	return &json->data;
 }
-int json_object_insert(union json *restrict parent, const struct string *key, union json *restrict value)
+
+union json *json_array_insert(union json *restrict container, union json *restrict value)
 {
-	if (!value) return -1; // value not initialized (usually a memory error)
-	int error = dict_add(parent->object, key, value);
-	if (error) json_free(value);
-	return error;
+	if (container && value && !array_push(&container->array, value)) return container;
+	json_free(container);
+	json_free(value);
+	return 0;
+}
+
+union json *json_object_insert(union json *restrict container, const unsigned char *restrict key_data, size_t key_size, union json *restrict value)
+{
+	if (container && value)
+	{
+		union json **result = hashmap_insert(&container->object, key_data, key_size, value);
+		if (result && (*result == value))
+			return container;
+	}
+	json_free(container);
+	json_free(value);
+	return 0;
 }
 
 union json *json_clone(const union json *json)
 {
 	switch (json_type(json))
 	{
-		union json *result, *value;
-	case NONE:
-		return json_object(true);
-	case OBJECT:
-		if (json->object)
+	case JSON_NULL:
+		return json_null();
+	case JSON_BOOLEAN:
+		return json_boolean(json->boolean);
+	case JSON_INTEGER:
+		return json_integer(json->integer);
+	case JSON_REAL:
+		return json_real(json->real);
+	case JSON_STRING:
+		return json_string(json->string.data, json->string.size);
+	case JSON_ARRAY:
 		{
-			struct dict_iterator it;
-			const struct dict_item *item;
-			struct string key;
-
-			result = json_object(false);
-			if (!result) return 0;
-
-			for(item = dict_first(&it, json->object); item; item = dict_next(&it, json->object))
-			{
-				value = json_clone(item->value);
-				key = string((char *)item->key_data, item->key_size);
-				if (!value || json_object_insert(result, &key, value))
-				{
-					free(value);
-					json_free(result);
-					return 0;
-				}
-			}
-		}
-		return result;
-	case ARRAY:
-		{
-			size_t index, length;
+			union json *result, *value;
+			size_t index, count;
 
 			result = json_array();
-			if (!result) return 0;
 
-			length = json->array_node.length;
-			for(index = 0; index < length; ++index)
+			count = json->array.count;
+			for(index = 0; index < count; ++index)
 			{
-				value = json_clone(vector_get(&json->array_node, index));
-				if (!value)
-				{
-					json_free(result);
-					return 0;
-				}
-				if (json_array_insert(result, value))
-				{
-					free(value);
-					json_free(result);
-					return 0;
-				}
+				value = json_clone(json->array.data[index]);
+				result = json_array_insert(result, value);
 			}
+
+			return result;
 		}
-		return result;
-	case BOOLEAN:
-		return json_boolean(json->boolean);
-	case INTEGER:
-		return json_integer(json->integer);
-	case REAL:
-		return json_real(json->real);
-	case STRING:
-		return json_string(&json->string_node);
+	case JSON_OBJECT:
+		{
+			union json *result, *value;
+			struct hashmap_iterator it;
+			struct hashmap_entry *entry;
+
+			result = json_object();
+
+			for(entry = hashmap_first(&json->object, &it); entry; entry = hashmap_next(&json->object, &it))
+			{
+				value = json_clone(entry->value);
+				result = json_object_insert(result, entry->key_data, entry->key_size, value);
+			}
+
+			return result;
+		}
 	}
 }
-
-//  http://www.ietf.org/rfc/rfc4627.txt
-//  2.5.  Strings
-
-// WARNING: For testing
-/*int main(int argc, char *argv[])
-{
-	struct string s;
-	s.data = argv[1];
-	s.length = strlen(argv[1]);
-
-	union json *root, *temp;
-
-	//root = json_object(false);
-	root = json_parse(&s);
-	
-	if (root)
-	{
-		struct string *r = json_serialize(root);
-
-		printf("%s\n", r->data);
-
-		free(r);
-		json_free(root);
-	}
-	else printf("Syntax error\n");
-
-	return 0;
-}*/

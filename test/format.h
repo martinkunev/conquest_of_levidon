@@ -1,35 +1,9 @@
 #if defined(TEST)
 
 #include <check.h>
-
 #include <string.h>
 
-/////////////////////////////
-typedef struct
-{
-	size_t size;
-	unsigned char data[];
-} bytes_t;
-
-#define bytes_t(n) struct \
-	{ \
-		size_t size; \
-		char data[n]; \
-	}
-
-#define bytes(value) {sizeof(value) - 1, value}
-
-#define bytes_define(variable, value) bytes_t(sizeof(value) - 1) variable = bytes(value)
-
-// TODO ? make static assert for offsetof(..., data) as this ensures the struct is compatible with bytes_t
-#define bytes_p(s) (bytes_t *)&( \
-		struct \
-		{ \
-			size_t size; \
-			char data[sizeof(s) - 1]; \
-		} \
-	){sizeof(s) - 1, (s)}
-/////////////////////////////
+#include <base.h>
 
 #define SIZE 128
 #define OFFSET 16
@@ -224,8 +198,6 @@ START_TEST(test_int)
 }
 END_TEST
 
-//#include <stdio.h>
-//printf("%.*s\n", (int)(end - buffer - OFFSET), buffer + OFFSET);
 START_TEST(test_base64)
 {
 	char canary[SIZE];
@@ -235,13 +207,11 @@ START_TEST(test_base64)
 	// Use 10100101 as canary.
 	memset(canary, '\xa5', SIZE);
 
-	#define CASE(in, out) do \
+	#define CASE(input, output) do \
 		{ \
-			bytes_define(input, (in)); \
-			bytes_define(output, (out)); \
 			memcpy(buffer, canary, SIZE); \
-			end = format_base64(buffer + OFFSET, input.data, input.size); \
-			check_buffer(end, buffer, output.data, output.size, canary); \
+			end = format_base64(buffer + OFFSET, input, sizeof(input) - 1); \
+			check_buffer(end, buffer, output, sizeof(output) - 1, canary); \
 		} while (0)
 
 	CASE("", "");
@@ -253,7 +223,7 @@ START_TEST(test_base64)
 }
 END_TEST
 
-int main()
+int check_format(void)
 {
 	unsigned failed;
 

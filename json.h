@@ -1,57 +1,63 @@
-// http://fossil.wanderinghorse.net/repos/cson/index.cgi/index
+union json;
 
-#ifndef JSON_H
-# define JSON_H
+#define array_type union json *
+#include "array.h"
 
-#define NONE 0
-#define BOOLEAN 1
-#define INTEGER 2
-#define REAL 3
-#define STRING 4
-#define ARRAY 5
-#define OBJECT 6
-
-// WARNING: This code assumes that struct vector is the largest type in the union.
-union json
-{
-	bool boolean;
-	int64_t integer;
-	double real;
-	struct string string_node;
-	struct vector array_node;
-	struct dict *object;
-	unsigned char _type[sizeof(struct vector) + 1]; // the last array element stores type
-};
-
-#define json_type(data) ((data)->_type[sizeof(struct vector)])
-
-union json *json_parse(const struct string *json); // TODO split the arguments
-
-ssize_t json_length_string(const char *restrict data, size_t size);
-ssize_t json_length(const union json *restrict json);
-
-char *json_dump_string(unsigned char *restrict dest, const unsigned char *restrict src, size_t size);
-char *json_dump(char *restrict result, const union json *restrict json);
-
-// TODO deprecated
-struct string *json_serialize(const union json *json);
-
-// TODO: maybe design better function for creating null object
-
-// TODO: add json_none(); remove json_object argument
-union json *json_boolean(bool value);
-union json *json_integer(long long value);
-union json *json_real(bool value);
-union json *json_string(const struct string *value); // TODO this should take 2 arguments
-union json *json_array(void);
-int json_array_insert(union json *restrict parent, union json *restrict child);
-union json *json_object(bool is_null);
-int json_object_insert(union json *restrict parent, const struct string *key, union json *restrict value);
-
-union json *json_clone(const union json *json);
-
-void json_free(union json *restrict json);
+#define hashmap_type union json *
+#include "hashmap.h"
 
 #define JSON_DEPTH_MAX 7
 
-#endif /* JSON_H */
+#include <stdbool.h>
+#include "errors.h"
+
+enum json_type {JSON_NULL, JSON_BOOLEAN, JSON_INTEGER, JSON_REAL, JSON_STRING, JSON_ARRAY, JSON_OBJECT};
+
+// WARNING: union json should only be allocated internally; operate only with pointers allocated by the library
+
+union json
+{
+	bool boolean;
+	long long integer;
+	double real;
+	struct
+	{
+		size_t size;
+		char *data;
+	} string;
+	struct array array;
+	struct hashmap object;
+};
+struct json_internal
+{
+	union json data;
+	enum json_type type;
+};
+
+static inline enum json_type json_type(const union json *json)
+{
+	struct json_internal *internal = (struct json_internal *)json;
+	return internal->type;
+}
+
+union json *json_null(void);
+union json *json_boolean(bool value);
+union json *json_integer(long long value);
+union json *json_real(double value);
+union json *json_string(const char *data, size_t size);
+union json *json_array(void);
+union json *json_object(void);
+
+union json *json_array_insert(union json *restrict container, union json *restrict value);
+union json *json_object_insert(union json *restrict container, const unsigned char *restrict key_data, size_t key_size, union json *restrict value);
+
+union json *json_parse(const unsigned char *data, size_t size);
+union json *json_clone(const union json *json);
+
+ssize_t json_string_size(const char *restrict data, size_t size);
+ssize_t json_size(const union json *restrict json);
+
+char *json_string_dump(unsigned char *restrict dest, const unsigned char *restrict src, size_t size);
+char *json_dump(char *restrict result, const union json *restrict json);
+
+void json_free(union json *restrict json);

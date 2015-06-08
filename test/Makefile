@@ -1,4 +1,4 @@
-CFLAGS:=$(CFLAGS) -I../ -DTEST
+CFLAGS:=$(CFLAGS) -g -O0 -I../ -DTEST
 LDFLAGS:=$(LDFLAGS) -lcheck
 
 #DEF=-D_GNU_SOURCE -DOS_BSD -D_BSD_SOURCE -D_FILE_OFFSET_BITS=64
@@ -11,12 +11,10 @@ LDFLAGS:=$(LDFLAGS) -lcheck
 #export CFLAGS=-std=c99 -fPIC -pthread -DRUN_MODE=1 -O2 -g -DDEBUG $(DEF) $(INC) $(WARNINGS) -Wno-unused-value
 #export LDFLAGS=-pthread $(LIB) -lz -lcheck
 
-check: format 
-	./format
-
-format: ../format.o
+check: check.o ../format.o ../json.o
 	$(CC) $^ $(LDFLAGS) -o $@
+	./check
 
 clean:
 	rm -f *.o
-	rm -f format
+	rm -f check
