@@ -150,49 +150,6 @@ static int input_place(int code, unsigned x, unsigned y, uint16_t modifiers, con
 	return 0;
 }
 
-static int input_pawn(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
-{
-	struct state_battle *state = argument;
-
-	if (code == EVENT_MOTION) return INPUT_NOTME;
-	if (code >= 0) return INPUT_NOTME;
-
-	if (code == -1)
-	{
-		if ((x % (FIELD_SIZE + 1)) >= FIELD_SIZE) goto reset;
-		if ((y % (FIELD_SIZE + MARGIN)) >= FIELD_SIZE) goto reset;
-
-		// Select the clicked pawn.
-		unsigned column = x / (FIELD_SIZE + 1);
-		unsigned line = y / (FIELD_SIZE + MARGIN);
-		size_t i;
-		for(i = 0; i < battle->players[state->player].pawns_count; ++i)
-		{
-			struct pawn *pawn = battle->players[state->player].pawns[i];
-			if (line)
-			{
-				if (pawn->slot->location != game->regions[state->region].neighbors[line - 1]) continue;
-			}
-			else
-			{
-				if (pawn->slot->location != game->regions + state->region) continue;
-			}
-
-			if (column) column -= 1;
-			else
-			{
-				state->pawn = pawn;
-				return 0;
-			}
-		}
-	}
-
-reset:
-	// Make sure no pawn is selected.
-	state->pawn = 0;
-	return 0;
-}
-
 int input_formation(const struct game *restrict game, const struct region *restrict region, struct battle *restrict battle, unsigned char player)
 {
 	if_set(battle->field, battle);

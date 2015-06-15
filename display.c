@@ -3,13 +3,10 @@
 
 #define GL_GLEXT_PROTOTYPES
 
-//#include <GL/gl.h>
 #include <GL/glx.h>
 #include <GL/glext.h>
 
 #include <xcb/xcb.h>
-
-//#include <X11/Xlib-xcb.h>
 
 #include "display.h"
 
@@ -53,6 +50,11 @@ unsigned char display_colors[][4] = {
 	[Player + 9] = {128, 0, 224, 255},
 	[Player + 10] = {255, 64, 160, 255},
 	[Player + 11] = {160, 160, 255, 255},
+
+	[Player + 12] = {224, 224, 128, 255},
+	[Player + 13] = {160, 96, 96, 255},
+	[Player + 14] = {32, 32, 128, 255},
+	[Player + 15] = {224, 224, 224, 255},
 };
 
 static inline long cross_product(int fx, int fy, int sx, int sy)

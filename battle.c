@@ -165,7 +165,7 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 	// Initialize a pawn for each troop.
 	for(i = 0; i < pawns_count; ++i)
 	{
-		// Find where to place the pawn. Skip it if there is no place available.
+		// Find where to place the pawn. Skip it if there is no place available. // TODO fix this
 		reachable_count = formation_reachable(game, region, pawns[i].slot, reachable);
 		for(j = 0; j < reachable_count; ++j)
 		{

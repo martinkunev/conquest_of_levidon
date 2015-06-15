@@ -26,7 +26,7 @@
 
 #define WORLD_DEFAULT "worlds/balkans"
 
-static int battle(struct game *restrict game, struct region *restrict region)
+static int battle_open(struct game *restrict game, struct region *restrict region)
 {
 	struct battle battle;
 	unsigned char player;
@@ -36,6 +36,7 @@ static int battle(struct game *restrict game, struct region *restrict region)
 	if (battlefield_init(game, &battle, region) < 0) return -1;
 
 	// Ask each player to position their pawns.
+	// TODO ?this should be done on 2 stages (for region owners and for allies if there is an owner at the same location)
 	for(player = 0; player < game->players_count; ++player)
 	{
 		if (!battle.players[player].pawns_count) continue; // skip players with no pawns
@@ -185,6 +186,8 @@ static int play(struct game *restrict game)
 			}
 		}
 
+		// TODO battle_assault()
+
 		for(index = 0; index < game->regions_count; ++index)
 		{
 			signed char winner; // alliance of the new owner of the region (WINNER_BATTLE if it has to be determined by battle)
@@ -192,7 +195,7 @@ static int play(struct game *restrict game)
 
 			region = game->regions + index;
 
-			// If slots of two different alliances occupy the region, start a battle.
+			// If troops of two different alliances occupy the region, start a battle.
 			for(troop = region->troops; troop; troop = troop->_next)
 			{
 				alliance = game->players[troop->owner].alliance;
@@ -200,11 +203,11 @@ static int play(struct game *restrict game)
 				if (winner == WINNER_NOBODY) winner = alliance;
 				else if (winner != alliance) winner = WINNER_BATTLE;
 			}
-			if (winner == WINNER_BATTLE) winner = battle(game, region);
+			if (winner == WINNER_BATTLE) winner = battle_open(game, region);
 
-			// Only slots of a single alliance are allowed to stay in the region.
-			// If there are slots of more than one alliance, return any troop owned by enemy of the region's owner to its initial location.
-			// If there are slots of just one alliance and the region's owner is not in it, change region's owner to the owner of a random troop.
+			// Only troops of a single alliance are allowed to stay in the region.
+			// If there are troops of more than one alliance, return any troop owned by enemy of the region's owner to its initial location.
+			// If there are troops of just one alliance and the region's owner is not in it, change region's owner to the owner of a random troop.
 
 			// TODO is it a good idea to choose owner based on number of troops?
 
@@ -213,7 +216,7 @@ static int play(struct game *restrict game)
 			// Set the location of each troop and count the troops in the region.
 			for(troop = region->troops; troop; troop = troop->_next)
 			{
-				// Remove dead slots.
+				// Remove dead troops.
 				if (!troop->count)
 				{
 					troop_detach(&region->troops, troop);

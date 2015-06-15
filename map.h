@@ -1,7 +1,7 @@
 #define NEIGHBORS_LIMIT 8
 #define TRAIN_QUEUE 4
 
-#define PLAYERS_LIMIT 10 /* TODO change to 16 */
+#define PLAYERS_LIMIT 16
 
 #define NAME_LIMIT 32
 

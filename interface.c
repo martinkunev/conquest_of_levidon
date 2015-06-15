@@ -663,6 +663,7 @@ void if_battle(const void *argument, const struct game *game)
 						display_rectangle(BATTLE_X + x * FIELD_SIZE, BATTLE_Y + y * FIELD_SIZE, FIELD_SIZE, FIELD_SIZE, FieldReachable);
 		}
 
+		// Display pawn information in the control section.
 		if (pawn->slot->owner == state->player) color = Self;
 		else if (game->players[pawn->slot->owner].alliance == game->players[state->player].alliance) color = Ally;
 		else color = Enemy;
@@ -1007,6 +1008,8 @@ void if_map(const void *argument, const struct game *game)
 {
 	const struct state_map *state = argument;
 
+	size_t i, j;
+
 	// clear window
 	glClearColor(0.0, 0.0, 0.0, 0.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -1022,7 +1025,9 @@ void if_map(const void *argument, const struct game *game)
 	// show map in black
 	display_rectangle(MAP_X, MAP_Y, MAP_WIDTH, MAP_HEIGHT, Black);
 
-	size_t i, j;
+	// TODO remove this color display box
+	for(i = 0; i < PLAYERS_LIMIT; ++i)
+		display_rectangle(PANEL_X + (i % 4) * 32, PANEL_Y + 300 + (i / 4) * 32, 32, 32, Players + i);
 
 	// Map
 
