@@ -42,3 +42,13 @@ void resource_spend(struct resources *restrict total, const struct resources *re
 	if (total->iron < 0) total->iron = 0;
 	if (total->stone < 0) total->stone = 0;
 }
+
+// Multiply resource by factor and store the result in total.
+void resource_multiply(struct resources *restrict total, const struct resources *restrict resource, unsigned factor)
+{
+	total->gold = resource->gold * factor;
+	total->food = resource->food * factor;
+	total->wood = resource->wood * factor;
+	total->iron = resource->iron * factor;
+	total->stone = resource->stone * factor;
+}

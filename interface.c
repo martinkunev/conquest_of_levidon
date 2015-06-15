@@ -1027,7 +1027,7 @@ void if_map(const void *argument, const struct game *game)
 
 	// TODO remove this color display box
 	for(i = 0; i < PLAYERS_LIMIT; ++i)
-		display_rectangle(PANEL_X + (i % 4) * 32, PANEL_Y + 300 + (i / 4) * 32, 32, 32, Players + i);
+		display_rectangle(PANEL_X + (i % 4) * 32, PANEL_Y + 300 + (i / 4) * 32, 32, 32, Player + i);
 
 	// Map
 

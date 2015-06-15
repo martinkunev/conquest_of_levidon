@@ -149,8 +149,22 @@ static int play(struct game *restrict game)
 		{
 			region = game->regions + index;
 
-			for(troop = region->troops; troop; troop = troop->_next)
-				resource_add(expenses + troop->owner, &troop->unit->expense);
+			if (region->owner == region->garrison.owner)
+			{
+				// Troops are supported by current region.
+				for(troop = region->troops; troop; troop = troop->_next)
+					resource_add(expenses + troop->owner, &troop->unit->expense);
+			}
+			else
+			{
+				// Troops are supported by another region. Double expenses.
+				for(troop = region->troops; troop; troop = troop->_next)
+				{
+					struct resources expense;
+					resource_multiply(&expense, &troop->unit->expense, 2);
+					resource_add(expenses + troop->owner, &expense);
+				}
+			}
 
 			// Update training time and check if there are trained units.
 			if (region->train[0] && (++region->train_time == region->train[0]->time))
