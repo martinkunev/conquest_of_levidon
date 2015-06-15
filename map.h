@@ -63,7 +63,7 @@ struct troop
 	struct troop *_prev, *_next;
 	const struct unit *unit;
 	unsigned count;
-	unsigned char player;
+	unsigned char owner;
 
 	struct region *location, *move; // TODO maybe change this to *location[2]
 };
@@ -117,10 +117,11 @@ static const struct
 {
 	unsigned troops;
 	unsigned provisions;
+	unsigned strength_wall, strength_gate;
 } garrison_info[] =
 {
-	[PALISADE] = {.troops = 3, .provisions = 2},
-	[FORTRESS] = {.troops = 6, .provisions = 5},
+	[PALISADE] = {.troops = 3, .provisions = 2, .strength_wall = 50, .strength_gate = 25},
+	[FORTRESS] = {.troops = 6, .provisions = 5, .strength_wall = 100, .strength_gate = 40},
 };
 
 extern const struct unit UNITS[];
@@ -134,3 +135,5 @@ void region_income(const struct region* restrict region, struct resources *restr
 void troop_attach(struct troop **troops, struct troop *troop);
 void troop_detach(struct troop **troops, struct troop *troop);
 void troop_remove(struct troop **troops, struct troop *troop);
+
+int troop_spawn(struct region *restrict region, struct troop **restrict troops, const struct unit *restrict unit, unsigned count, unsigned char owner);

@@ -99,7 +99,7 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 	{
 		struct pawn *pawn = state->pawn;
 		if (!pawn) return 0;
-		if (pawn->slot->player != state->player) return 0;
+		if (pawn->slot->owner != state->player) return 0;
 
 		struct point target = {x, y};
 		if (point_eq(target, pawn->moves[0].location))

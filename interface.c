@@ -404,26 +404,7 @@ static void show_progress(unsigned current, unsigned total, unsigned x, unsigned
 	else display_rectangle(x, y, width, height, Progress);
 }
 
-/*#include <stdarg.h>
-
-static struct polygon *region_create(size_t count, ...)
-{
-	size_t index;
-	va_list vertices;
-
-	// Allocate memory for the region and its vertices.
-	struct polygon *polygon = malloc(sizeof(struct polygon) + count * sizeof(struct point));
-	if (!polygon) return 0;
-	polygon->vertices_count = count;
-
-	// Initialize region vertices.
-	va_start(vertices, count);
-	for(index = 0; index < count; ++index)
-		polygon->points[index] = va_arg(vertices, struct point);
-	va_end(vertices);
-
-	return polygon;
-}
+/*
 
 {
 	static size_t obstacles_count = 1;
@@ -547,7 +528,7 @@ static int if_animation(const struct player *restrict players, const struct batt
 		if (movement_location(pawn, progress, &x, &y) < pawn->moves_count)
 			finished = 0;
 
-		display_rectangle(x * FIELD_SIZE, y * FIELD_SIZE, FIELD_SIZE, FIELD_SIZE, Player + pawn->slot->player);
+		display_rectangle(x * FIELD_SIZE, y * FIELD_SIZE, FIELD_SIZE, FIELD_SIZE, Player + pawn->slot->owner);
 		image_draw(&image_units[pawn->slot->unit->index], x * FIELD_SIZE, y * FIELD_SIZE);
 	}
 
@@ -651,8 +632,8 @@ void if_battle(const void *argument, const struct game *game)
 			if (pawn = battlefield[y][x].pawn)
 			{
 				enum color color;
-				if (pawn->slot->player == state->player) color = Self;
-				else if (game->players[pawn->slot->player].alliance == game->players[state->player].alliance) color = Ally;
+				if (pawn->slot->owner == state->player) color = Self;
+				else if (game->players[pawn->slot->owner].alliance == game->players[state->player].alliance) color = Ally;
 				else color = Enemy;
 
 				display_unit(pawn->slot->unit->index, BATTLE_X + x * FIELD_SIZE, BATTLE_Y + y * FIELD_SIZE, color, 0, 0);
@@ -671,7 +652,7 @@ void if_battle(const void *argument, const struct game *game)
 
 		pawn = battlefield[state->y][state->x].pawn;
 
-		if (pawn->slot->player == state->player)
+		if (pawn->slot->owner == state->player)
 		{
 			// Show which fields are reachable by the pawn.
 			// TODO obstacles
@@ -682,16 +663,16 @@ void if_battle(const void *argument, const struct game *game)
 						display_rectangle(BATTLE_X + x * FIELD_SIZE, BATTLE_Y + y * FIELD_SIZE, FIELD_SIZE, FIELD_SIZE, FieldReachable);
 		}
 
-		if (pawn->slot->player == state->player) color = Self;
-		else if (game->players[pawn->slot->player].alliance == game->players[state->player].alliance) color = Ally;
+		if (pawn->slot->owner == state->player) color = Self;
+		else if (game->players[pawn->slot->owner].alliance == game->players[state->player].alliance) color = Ally;
 		else color = Enemy;
 		display_rectangle(CTRL_X, CTRL_Y + CTRL_MARGIN, FIELD_SIZE + MARGIN * 2, FIELD_SIZE + font12.height + MARGIN * 2, color);
-		display_unit(pawn->slot->unit->index, CTRL_X + MARGIN, CTRL_Y + CTRL_MARGIN + MARGIN, Player + pawn->slot->player, Black, pawn->slot->count);
+		display_unit(pawn->slot->unit->index, CTRL_X + MARGIN, CTRL_Y + CTRL_MARGIN + MARGIN, Player + pawn->slot->owner, Black, pawn->slot->count);
 
 		image_draw(&image_selected, BATTLE_X + state->x * FIELD_SIZE - 1, BATTLE_Y + state->y * FIELD_SIZE - 1);
 
 		// Show pawn task (if any).
-		if (pawn->slot->player == state->player)
+		if (pawn->slot->owner == state->player)
 		{
 			size_t i;
 			for(i = 1; i < pawn->moves_count; ++i)
@@ -892,7 +873,7 @@ static void if_map_region(const struct region *region, const struct state_map *s
 			size_t x;
 			enum color color_text;
 
-			if (troop->player == state->player)
+			if (troop->owner == state->player)
 			{
 				if (!self_count) display_rectangle(PANEL_X, object_group[TroopSelf].top - 2, PANEL_WIDTH, 2 + object_group[TroopSelf].height + 12 + 2, Self);
 				x = self_count++;
@@ -900,7 +881,7 @@ static void if_map_region(const struct region *region, const struct state_map *s
 				offset = state->self_offset;
 				color_text = Black;
 			}
-			else if (game->players[troop->player].alliance == state_alliance)
+			else if (game->players[troop->owner].alliance == state_alliance)
 			{
 				if (!other_count) display_rectangle(PANEL_X, object_group[TroopOther].top - 2, PANEL_WIDTH, 2 + object_group[TroopOther].height + 12 + 2, Ally);
 				x = other_count++;
@@ -921,12 +902,12 @@ static void if_map_region(const struct region *region, const struct state_map *s
 			if ((x >= offset) && (x < offset + TROOPS_VISIBLE))
 			{
 				struct point position = if_position(object, x - offset);
-				display_unit(troop->unit->index, position.x, position.y, Player + troop->player, color_text, troop->count);
+				display_unit(troop->unit->index, position.x, position.y, Player + troop->owner, color_text, troop->count);
 				if (troop == state->troop) draw_rectangle(position.x - 1, position.y - 1, object_group[object].width + 2, object_group[object].height + 2, White);
 			}
 
 			// Draw the destination of each moving troop owned by current player.
-			if ((troop->player == state->player) && (!state->troop || (troop == state->troop)) && (troop->move->index != state->region))
+			if ((troop->owner == state->player) && (!state->troop || (troop == state->troop)) && (troop->move->index != state->region))
 			{
 				struct point from = {troop->location->center.x, troop->location->center.y};
 				struct point to = {troop->move->center.x, troop->move->center.y};
@@ -964,7 +945,7 @@ static void if_map_region(const struct region *region, const struct state_map *s
 				for(troop = region->garrison.troops; troop; troop = troop->_next)
 				{
 					struct point position = if_position(TroopGarrison, i);
-					display_unit(troop->unit->index, position.x, position.y, Player + troop->player, Black, troop->count);
+					display_unit(troop->unit->index, position.x, position.y, Player + troop->owner, Black, troop->count);
 					i += 1;
 				}
 
@@ -1094,7 +1075,7 @@ void if_map(const void *argument, const struct game *game)
 		// Remember income and expenses.
 		if (regions[i].owner == state->player) region_income(regions + i, &income);
 		for(troop = regions[i].troops; troop; troop = troop->_next)
-			if (troop->player == state->player)
+			if (troop->owner == state->player)
 				resource_add(&expenses, &troop->unit->expense);
 	}
 	for(i = 0; i < regions_count; ++i)

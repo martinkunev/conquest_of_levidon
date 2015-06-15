@@ -25,7 +25,7 @@ struct path_node
 
 // The obstacles are represented as a sequence of directed line segments (each one representing a wall).
 
-// TODO polygons surrounding the blocked area. The coordinates are exclusive (limit fields are passable).
+// TODO polygons surrounding the blocked area. The coordinates are inclusive (limit fields are not passable).
 // TODO The fields are represented by their top left coordinates (in order to facilitate computations).
 
 // TODO obstacles: rectangles, coastlines, fortresses

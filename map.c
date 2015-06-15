@@ -34,3 +34,21 @@ void troop_remove(struct troop **troops, struct troop *troop)
 	troop_detach(troops, troop);
 	free(troop);
 }
+
+int troop_spawn(struct region *restrict region, struct troop **restrict troops, const struct unit *restrict unit, unsigned count, unsigned char owner)
+{
+	struct troop *troop = malloc(sizeof(*troop));
+	if (!troop) return -1;
+
+	troop->unit = unit;
+	troop->count = count;
+	troop->owner = owner;
+
+	troop->_prev = 0;
+	troop->_next = *troops;
+	if (*troops) (*troops)->_prev = troop;
+	*troops = troop;
+	troop->move = troop->location = region;
+
+	return 0;
+}

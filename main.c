@@ -113,7 +113,7 @@ static int play(struct game *restrict game)
 	size_t index;
 	size_t i;
 
-	struct troop *slot, *next;
+	struct troop *troop, *next;
 
 	unsigned char alliance;
 	uint16_t alliances; // this limits the alliance numbers to the number of bits
@@ -148,23 +148,13 @@ static int play(struct game *restrict game)
 		{
 			region = game->regions + index;
 
-			for(slot = region->troops; slot; slot = slot->_next)
-				resource_add(expenses + slot->player, &slot->unit->expense);
+			for(troop = region->troops; troop; troop = troop->_next)
+				resource_add(expenses + troop->owner, &troop->unit->expense);
 
 			// Update training time and check if there are trained units.
 			if (region->train[0] && (++region->train_time == region->train[0]->time))
 			{
-				slot = malloc(sizeof(*slot));
-				if (!slot) ; // TODO
-				slot->unit = region->train[0];
-				slot->count = SLOT_UNITS;
-				slot->player = region->owner;
-
-				slot->_prev = 0;
-				slot->_next = region->troops;
-				if (region->troops) region->troops->_prev = slot;
-				region->troops = slot;
-				slot->move = slot->location = region;
+				if (troop_spawn(region, &region->troops, region->train[0], SLOT_UNITS, region->owner) < 0) ; // TODO
 
 				region->train_time = 0;
 				for(i = 1; i < TRAIN_QUEUE; ++i)
@@ -181,17 +171,17 @@ static int play(struct game *restrict game)
 			}
 
 			// Move each troop for which movement is specified.
-			slot = region->troops;
-			while (slot)
+			troop = region->troops;
+			while (troop)
 			{
-				next = slot->_next;
-				if (slot->move != slot->location)
+				next = troop->_next;
+				if (troop->move != troop->location)
 				{
-					// Move the slot to its new location.
-					troop_detach(&region->troops, slot);
-					troop_attach(&slot->move->troops, slot);
+					// Move the troop to its new location.
+					troop_detach(&region->troops, troop);
+					troop_attach(&troop->move->troops, troop);
 				}
-				slot = next;
+				troop = next;
 			}
 		}
 
@@ -203,9 +193,9 @@ static int play(struct game *restrict game)
 			region = game->regions + index;
 
 			// If slots of two different alliances occupy the region, start a battle.
-			for(slot = region->troops; slot; slot = slot->_next)
+			for(troop = region->troops; troop; troop = troop->_next)
 			{
-				alliance = game->players[slot->player].alliance;
+				alliance = game->players[troop->owner].alliance;
 
 				if (winner == WINNER_NOBODY) winner = alliance;
 				else if (winner != alliance) winner = WINNER_BATTLE;
@@ -213,36 +203,36 @@ static int play(struct game *restrict game)
 			if (winner == WINNER_BATTLE) winner = battle(game, region);
 
 			// Only slots of a single alliance are allowed to stay in the region.
-			// If there are slots of more than one alliance, return any slot owned by enemy of the region's owner to its initial location.
-			// If there are slots of just one alliance and the region's owner is not in it, change region's owner to the owner of a random slot.
+			// If there are slots of more than one alliance, return any troop owned by enemy of the region's owner to its initial location.
+			// If there are slots of just one alliance and the region's owner is not in it, change region's owner to the owner of a random troop.
 
 			// TODO is it a good idea to choose owner based on number of troops?
 
 			slots = 0;
 
 			// Set the location of each troop and count the troops in the region.
-			for(slot = region->troops; slot; slot = slot->_next)
+			for(troop = region->troops; troop; troop = troop->_next)
 			{
 				// Remove dead slots.
-				if (!slot->count)
+				if (!troop->count)
 				{
-					troop_detach(&region->troops, slot);
-					free(slot);
+					troop_detach(&region->troops, troop);
+					free(troop);
 					continue;
 				}
 
-				if (game->players[slot->player].alliance == winner)
+				if (game->players[troop->owner].alliance == winner)
 				{
 					// Set troop location to the current region.
-					slot->location = region;
+					troop->location = region;
 					slots += 1;
 				}
 				else
 				{
 					// Move the troop back to its original location.
-					troop_detach(&region->troops, slot);
-					troop_attach(&slot->location->troops, slot);
-					slot->move = slot->location;
+					troop_detach(&region->troops, troop);
+					troop_attach(&troop->location->troops, troop);
+					troop->move = troop->location;
 				}
 			}
 
@@ -254,14 +244,14 @@ static int play(struct game *restrict game)
 					owner_troop = random() % slots;
 
 					slots = 0;
-					for(slot = region->troops; slot; slot = slot->_next)
+					for(troop = region->troops; troop; troop = troop->_next)
 					{
 						if (slots == owner_troop)
 						{
 							// Set new region owner.
-							region->owner = slot->player;
+							region->owner = troop->owner;
 							region->garrison.siege = 0;
-							if (!region->garrison.troops) region->garrison.owner = slot->player;
+							if (!region->garrison.troops) region->garrison.owner = troop->owner;
 							break;
 						}
 						slots += 1;
@@ -296,13 +286,13 @@ static int play(struct game *restrict game)
 					region->garrison.owner = region->owner;
 					region->garrison.siege = 0;
 
-					slot = region->garrison.troops;
-					while (slot)
+					troop = region->garrison.troops;
+					while (troop)
 					{
-						next = slot->_next;
-						troop_detach(&region->garrison.troops, slot);
-						free(slot);
-						slot = next;
+						next = troop->_next;
+						troop_detach(&region->garrison.troops, troop);
+						free(troop);
+						troop = next;
 					}
 				}
 			}
@@ -338,7 +328,6 @@ int main(int argc, char *argv[])
 	struct stat info;
 	int file;
 	char *buffer;
-	struct string dump;
 	union json *json;
 	int success;
 
@@ -358,8 +347,7 @@ int main(int argc, char *argv[])
 	close(file);
 	if (buffer == MAP_FAILED) return -1;
 
-	dump = string(buffer, info.st_size);
-	json = json_parse(&dump);
+	json = json_parse(buffer, info.st_size);
 	munmap(buffer, info.st_size);
 
 	if (!json)

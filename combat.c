@@ -19,7 +19,7 @@ void battlefield_fight(const struct game *restrict game, struct battle *restrict
 	for(i = 0; i < battle->pawns_count; ++i)
 	{
 		struct pawn *fighter = battle->pawns + i;
-		unsigned char fighter_alliance = game->players[fighter->slot->player].alliance;
+		unsigned char fighter_alliance = game->players[fighter->slot->owner].alliance;
 
 		if (!fighter->slot->count) continue;
 
@@ -33,13 +33,13 @@ void battlefield_fight(const struct game *restrict game, struct battle *restrict
 
 		// Look for pawns to fight at the neighboring fields.
 		enemies_count = 0;
-		if ((x > 0) && (victim = battle->field[y][x - 1].pawn) && (game->players[victim->slot->player].alliance != fighter_alliance))
+		if ((x > 0) && (victim = battle->field[y][x - 1].pawn) && (game->players[victim->slot->owner].alliance != fighter_alliance))
 			victims[enemies_count++] = victim;
-		if ((x < (BATTLEFIELD_WIDTH - 1)) && (victim = battle->field[y][x + 1].pawn) && (game->players[victim->slot->player].alliance != fighter_alliance))
+		if ((x < (BATTLEFIELD_WIDTH - 1)) && (victim = battle->field[y][x + 1].pawn) && (game->players[victim->slot->owner].alliance != fighter_alliance))
 			victims[enemies_count++] = victim;
-		if ((y > 0) && (victim = battle->field[y - 1][x].pawn) && (game->players[victim->slot->player].alliance != fighter_alliance))
+		if ((y > 0) && (victim = battle->field[y - 1][x].pawn) && (game->players[victim->slot->owner].alliance != fighter_alliance))
 			victims[enemies_count++] = victim;
-		if ((y < (BATTLEFIELD_HEIGHT - 1)) && (victim = battle->field[y + 1][x].pawn) && (game->players[victim->slot->player].alliance != fighter_alliance))
+		if ((y < (BATTLEFIELD_HEIGHT - 1)) && (victim = battle->field[y + 1][x].pawn) && (game->players[victim->slot->owner].alliance != fighter_alliance))
 			victims[enemies_count++] = victim;
 		if (!enemies_count) continue; // nothing to fight
 

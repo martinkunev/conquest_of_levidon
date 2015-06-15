@@ -22,6 +22,9 @@ struct battlefield
 	struct point location;
 	enum {OBSTACLE_NONE, OBSTACLE_FIXED, OBSTACLE_GATE, OBSTACLE_WALL} obstacle;
 
+	unsigned char owner; // used for gate
+	unsigned strength; // used for gate and wall
+
 	struct pawn *pawn;
 };
 

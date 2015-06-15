@@ -41,7 +41,7 @@ static int input_region(int code, unsigned x, unsigned y, uint16_t modifiers, co
 
 	if (code == -1)
 	{
-		struct troop *slot;
+		struct troop *troop;
 
 		if (region_index < 0) state->region = REGION_NONE;
 		else state->region = region_index;
@@ -53,14 +53,14 @@ static int input_region(int code, unsigned x, unsigned y, uint16_t modifiers, co
 
 		state->self_count = 0;
 		state->other_count = 0;
-		for(slot = game->regions[state->region].troops; slot; slot = slot->_next)
-			if (slot->player == state->player) state->self_count++;
+		for(troop = game->regions[state->region].troops; troop; troop = troop->_next)
+			if (troop->owner == state->player) state->self_count++;
 			else state->other_count++;
 	}
 	else if (code == -3)
 	{
 		struct region *region = game->regions + state->region;
-		struct troop *slot;
+		struct troop *troop;
 
 		if (region_index < 0) return 0;
 
@@ -76,16 +76,16 @@ valid:
 		if (state->troop)
 		{
 			// Set the move destination of the selected troop.
-			slot = state->troop;
-			if (state->player == slot->player)
-				slot->move = game->regions + region_index;
+			troop = state->troop;
+			if (state->player == troop->owner)
+				troop->move = game->regions + region_index;
 		}
 		else
 		{
 			// Set the move destination of all slots in the region.
-			for(slot = region->troops; slot; slot = slot->_next)
-				if (state->player == slot->player)
-					slot->move = game->regions + region_index;
+			for(troop = region->troops; troop; troop = troop->_next)
+				if (state->player == troop->owner)
+					troop->move = game->regions + region_index;
 		}
 	}
 
@@ -244,8 +244,7 @@ static int input_scroll_self(int code, unsigned x, unsigned y, uint16_t modifier
 	if (code != -1) return INPUT_NOTME; // handle only left mouse clicks
 
 	if (state->region == REGION_NONE) return 0; // no region selected
-	struct troop *slot = game->regions[state->region].troops;
-	if (!slot) return 0; // no slots in this region
+	if (!game->regions[state->region].troops) return 0; // no slots in this region
 
 	if (x <= object_group[TroopSelf].left - 1) // scroll left
 	{
@@ -272,8 +271,7 @@ static int input_scroll_ally(int code, unsigned x, unsigned y, uint16_t modifier
 	if (code != -1) return INPUT_NOTME; // handle only left mouse clicks
 
 	if (state->region == REGION_NONE) return 0; // no region selected
-	struct troop *slot = game->regions[state->region].troops;
-	if (!slot) return 0; // no slots in this region
+	if (!game->regions[state->region].troops) return 0; // no slots in this region
 
 	if (x <= object_group[TroopOther].left - 1) // scroll left
 	{
@@ -318,7 +316,7 @@ static int input_troop(int code, unsigned x, unsigned y, uint16_t modifiers, con
 	// Find the clicked troop in the linked list.
 	while (1)
 	{
-		found = (troop->player == state->player);
+		found = (troop->owner == state->player);
 		if (!found || offset)
 		{
 			troop = troop->_next;

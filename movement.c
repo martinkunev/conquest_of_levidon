@@ -297,9 +297,9 @@ static void battlefield_collision_resolve(const struct player *restrict players,
 
 	struct pawn *pawns[] = {occupied[y][x][0], occupied[y][x][1], occupied[y][x][2], occupied[y][x][3]}; // TODO this hardcodes OVERLAP_LIMIT == 4
 
-	unsigned char alliance = players[pawns[0]->slot->player].alliance;
+	unsigned char alliance = players[pawns[0]->slot->owner].alliance;
 	for(i = 1; (i < OVERLAP_LIMIT) && pawns[i]; ++i)
-		if (players[pawns[i]->slot->player].alliance != alliance)
+		if (players[pawns[i]->slot->owner].alliance != alliance)
 		{
 			// There are enemies on the square.
 			for(i = 0; (i < OVERLAP_LIMIT) && pawns[i]; ++i)

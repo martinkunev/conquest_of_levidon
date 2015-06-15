@@ -1,3 +1,4 @@
+#include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -18,6 +19,25 @@ static inline double distance(const double *restrict origin, const double *restr
 	return sqrt(dx * dx + dy * dy);
 }
 
+static struct polygon *region_create(size_t count, ...)
+{
+	size_t index;
+	va_list vertices;
+
+	// Allocate memory for the region and its vertices.
+	struct polygon *polygon = malloc(offsetof(struct polygon, points) + count * sizeof(struct point));
+	if (!polygon) return 0;
+	polygon->vertices_count = count;
+
+	// Initialize region vertices.
+	va_start(vertices, count);
+	for(index = 0; index < count; ++index)
+		polygon->points[index] = va_arg(vertices, struct point);
+	va_end(vertices);
+
+	return polygon;
+}
+
 // Returns whether the troop can be placed at the given field.
 size_t formation_reachable(const struct game *restrict game, const struct region *restrict region, const struct troop *restrict troop, struct point reachable[REACHABLE_LIMIT])
 {
@@ -31,7 +51,7 @@ size_t formation_reachable(const struct game *restrict game, const struct region
 
 	if (troop->location == region)
 	{
-		if (game->players[region->owner].alliance == game->players[troop->player].alliance)
+		if (game->players[region->owner].alliance == game->players[troop->owner].alliance)
 		{
 			for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
 				for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
@@ -88,10 +108,10 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 
 	// Initialize count for the pawns array and for the player-specific pawns arrays.
 	pawns_count = 0;
-	for(i = 0; i < PLAYERS_LIMIT; ++i) battle->players[troop->player].pawns_count = 0;
+	for(i = 0; i < PLAYERS_LIMIT; ++i) battle->players[troop->owner].pawns_count = 0;
 	for(troop = region->troops; troop; troop = troop->_next)
 	{
-		battle->players[troop->player].pawns_count += 1;
+		battle->players[troop->owner].pawns_count += 1;
 		pawns_count += 1;
 	}
 
@@ -136,7 +156,7 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 
 		pawns[i].moves[0].location = POINT_NONE; // TODO this is supposed to set the position of pawns for which there is no place on the battlefield; is this okay?
 
-		battle->players[troop->player].pawns[pawn_offset[troop->player]++] = pawns + i;
+		battle->players[troop->owner].pawns[pawn_offset[troop->owner]++] = pawns + i;
 	}
 
 	struct point reachable[REACHABLE_LIMIT];
@@ -149,14 +169,15 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 		reachable_count = formation_reachable(game, region, pawns[i].slot, reachable);
 		for(j = 0; j < reachable_count; ++j)
 		{
-			if (!battle->field[reachable[j].y][reachable[j].x].pawn)
+			struct battlefield *field = &battle->field[reachable[j].y][reachable[j].x];
+			if (!field->obstacle && !field->pawn)
 			{
 				pawns[i].moves = malloc(32 * sizeof(*pawns[i].moves)); // TODO fix this
 				pawns[i].moves[0].location = reachable[j];
 				pawns[i].moves[0].time = 0.0;
 				pawns[i].moves_count = 1;
 
-				battle->field[reachable[j].y][reachable[j].x].pawn = pawns + i;
+				field->pawn = pawns + i;
 
 				break;
 			}
@@ -166,6 +187,128 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 	battle->pawns = pawns;
 	battle->pawns_count = pawns_count;
 	return 0;
+}
+
+static inline int allies(const struct game *game, unsigned player0, unsigned player1)
+{
+	return (game->players[player0].alliance == game->players[player1].alliance);
+}
+
+/*static unsigned obstacles_count(const struct battle *battle, struct point p0, struct point p1)
+{
+	int x = p0.x, y = p0.y;
+	int step;
+
+	int in_wall = 0;
+
+	unsigned count = 0;
+
+	if (p0.x == p1.x) // vertical wall
+	{
+		step = ((p1.y >= p0.y) ? +1 : -1);
+		while (1)
+		{
+			if (battle->field[y][x].strength) in_wall = 1;
+			else if (in_wall)
+			{
+				in_wall = 0;
+				count += 1;
+			}
+
+			if (y == p1.y) break;
+			y += step;
+		}
+	}
+	else // horizontal wall
+	{
+		// assert(p0.y == p1.y)
+
+		step = ((p1.x >= p0.x) ? +1 : -1);
+		while (1)
+		{
+			if (battle->field[y][x].strength) in_wall = 1;
+			else if (in_wall)
+			{
+				in_wall = 0;
+				count += 1;
+			}
+
+			if (x == p1.x) break;
+			x += step;
+		}
+	}
+
+	if (in_wall) count += 1;
+	return count;
+}
+
+int assault_obstacles(const struct game *restrict game, struct region *restrict region, unsigned char player)
+{
+	if (allies(game, player, region->garrison.owner))
+	{
+		//obstacles = region_create(2, (struct point){0, 9}, (struct point){0, 9});
+	}
+	else
+	{
+		// TODO don't create the destroyed walls
+		//
+	}
+}*/
+
+void assault_init(const struct game *restrict game, struct battle *restrict battle, struct region *restrict region)
+{
+	size_t index;
+
+	if (region_built(region, BuildingFortress)) index = FORTRESS;
+	else if (region_built(region, BuildingPalisade)) index = PALISADE;
+
+	// Place the garrison at the top part of the battlefield.
+	// #     #
+	// .     .
+	// #     #
+	// ###.###
+
+	battle->field[0][9].obstacle = OBSTACLE_WALL;
+	battle->field[0][9].strength = garrison_info[index].strength_wall;
+
+	battle->field[1][9].obstacle = OBSTACLE_GATE;
+	battle->field[1][9].strength = garrison_info[index].strength_gate;
+	battle->field[1][9].owner = region->garrison.owner;
+
+	battle->field[2][9].obstacle = OBSTACLE_WALL;
+	battle->field[2][9].strength = garrison_info[index].strength_wall;
+
+	battle->field[3][9].obstacle = OBSTACLE_WALL;
+	battle->field[3][9].strength = garrison_info[index].strength_wall;
+
+	battle->field[3][10].obstacle = OBSTACLE_WALL;
+	battle->field[3][10].strength = garrison_info[index].strength_wall;
+
+	battle->field[3][11].obstacle = OBSTACLE_WALL;
+	battle->field[3][11].strength = garrison_info[index].strength_wall;
+
+	battle->field[3][12].obstacle = OBSTACLE_GATE;
+	battle->field[3][12].strength = garrison_info[index].strength_gate;
+	battle->field[3][12].owner = region->garrison.owner;
+
+	battle->field[3][13].obstacle = OBSTACLE_WALL;
+	battle->field[3][13].strength = garrison_info[index].strength_wall;
+
+	battle->field[3][14].obstacle = OBSTACLE_WALL;
+	battle->field[3][14].strength = garrison_info[index].strength_wall;
+
+	battle->field[3][15].obstacle = OBSTACLE_WALL;
+	battle->field[3][15].strength = garrison_info[index].strength_wall;
+
+	battle->field[2][15].obstacle = OBSTACLE_WALL;
+	battle->field[2][15].strength = garrison_info[index].strength_wall;
+
+	battle->field[1][15].obstacle = OBSTACLE_GATE;
+	battle->field[1][15].strength = garrison_info[index].strength_gate;
+	battle->field[1][15].owner = region->garrison.owner;
+
+	battle->field[0][15].obstacle = OBSTACLE_WALL;
+	battle->field[0][15].strength = garrison_info[index].strength_wall;
 }
 
 void battlefield_term(const struct game *restrict game, struct battle *restrict battle)
