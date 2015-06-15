@@ -24,7 +24,7 @@
 #define WINNER_NOBODY -1
 #define WINNER_BATTLE -2
 
-#define MAP_DEFAULT "maps/balkans"
+#define WORLD_DEFAULT "worlds/balkans"
 
 static int battle(struct game *restrict game, struct region *restrict region)
 {
@@ -325,6 +325,8 @@ static int play(struct game *restrict game)
 
 int main(int argc, char *argv[])
 {
+	const char *world;
+
 	struct stat info;
 	int file;
 	char *buffer;
@@ -334,9 +336,10 @@ int main(int argc, char *argv[])
 	struct game game;
 	int winner;
 
-	if (argc < 2) argv[1] = MAP_DEFAULT;
+	if (argc < 2) world = WORLD_DEFAULT;
+	else world = argv[1];
 
-	file = open(argv[1], O_RDONLY);
+	file = open(world, O_RDONLY);
 	if (file < 0) return -1;
 	if (fstat(file, &info) < 0)
 	{
