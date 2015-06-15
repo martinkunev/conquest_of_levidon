@@ -272,16 +272,13 @@ static int play(struct game *restrict game)
 				region_income(region, &income);
 				resource_add(&game->players[region->owner].treasury, &income);
 			}
-			else
+			else // siege
 			{
-				size_t index;
-
-				if (region_built(region, BuildingFortress)) index = FORTRESS;
-				else if (region_built(region, BuildingPalisade)) index = PALISADE;
+				const struct garrison_info *restrict garrison = garrison_info(region);
 
 				// If the garrison has no more provisions, finish the siege.
 				region->garrison.siege += 1;
-				if (region->garrison.siege > garrison_info[index].provisions)
+				if (region->garrison.siege > garrison->provisions)
 				{
 					region->garrison.owner = region->owner;
 					region->garrison.siege = 0;

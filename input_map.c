@@ -365,7 +365,7 @@ static int input_garrison(int code, unsigned x, unsigned y, uint16_t modifiers, 
 {
 	struct region *region;
 	struct troop *troop;
-	size_t garrison;
+	const struct garrison_info *restrict garrison;
 	ssize_t index;
 
 	struct state_map *state = argument;
@@ -377,9 +377,8 @@ static int input_garrison(int code, unsigned x, unsigned y, uint16_t modifiers, 
 	region = game->regions + state->region;
 	if (state->player != region->garrison.owner) return 0; // current player does not control the garrison
 
-	if (region_built(region, BuildingFortress)) garrison = FORTRESS;
-	else if (region_built(region, BuildingPalisade)) garrison = PALISADE;
-	else return 0; // no garrison in this region
+	garrison = garrison_info(region);
+	if (!garrison) return 0; // no garrison in this region
 
 	if (code == -1)
 	{
@@ -411,7 +410,7 @@ static int input_garrison(int code, unsigned x, unsigned y, uint16_t modifiers, 
 		for(troop = region->garrison.troops; troop; troop = troop->_next)
 			count += 1;
 
-		if (count < garrison_info[garrison].troops) // if there is place for one more troop
+		if (count < garrison->troops) // if there is place for one more troop
 		{
 			// Move the selected troop to the garrison.
 			troop_detach(&region->troops, state->troop);

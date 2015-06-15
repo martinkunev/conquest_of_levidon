@@ -257,10 +257,7 @@ int assault_obstacles(const struct game *restrict game, struct region *restrict 
 
 void assault_init(const struct game *restrict game, struct battle *restrict battle, struct region *restrict region)
 {
-	size_t index;
-
-	if (region_built(region, BuildingFortress)) index = FORTRESS;
-	else if (region_built(region, BuildingPalisade)) index = PALISADE;
+	const struct garrison_info *restrict garrison = garrison_info(region);
 
 	// Place the garrison at the top part of the battlefield.
 	// #     #
@@ -269,46 +266,46 @@ void assault_init(const struct game *restrict game, struct battle *restrict batt
 	// ###.###
 
 	battle->field[0][9].obstacle = OBSTACLE_WALL;
-	battle->field[0][9].strength = garrison_info[index].strength_wall;
+	battle->field[0][9].strength = garrison->strength_wall;
 
 	battle->field[1][9].obstacle = OBSTACLE_GATE;
-	battle->field[1][9].strength = garrison_info[index].strength_gate;
+	battle->field[1][9].strength = garrison->strength_gate;
 	battle->field[1][9].owner = region->garrison.owner;
 
 	battle->field[2][9].obstacle = OBSTACLE_WALL;
-	battle->field[2][9].strength = garrison_info[index].strength_wall;
+	battle->field[2][9].strength = garrison->strength_wall;
 
 	battle->field[3][9].obstacle = OBSTACLE_WALL;
-	battle->field[3][9].strength = garrison_info[index].strength_wall;
+	battle->field[3][9].strength = garrison->strength_wall;
 
 	battle->field[3][10].obstacle = OBSTACLE_WALL;
-	battle->field[3][10].strength = garrison_info[index].strength_wall;
+	battle->field[3][10].strength = garrison->strength_wall;
 
 	battle->field[3][11].obstacle = OBSTACLE_WALL;
-	battle->field[3][11].strength = garrison_info[index].strength_wall;
+	battle->field[3][11].strength = garrison->strength_wall;
 
 	battle->field[3][12].obstacle = OBSTACLE_GATE;
-	battle->field[3][12].strength = garrison_info[index].strength_gate;
+	battle->field[3][12].strength = garrison->strength_gate;
 	battle->field[3][12].owner = region->garrison.owner;
 
 	battle->field[3][13].obstacle = OBSTACLE_WALL;
-	battle->field[3][13].strength = garrison_info[index].strength_wall;
+	battle->field[3][13].strength = garrison->strength_wall;
 
 	battle->field[3][14].obstacle = OBSTACLE_WALL;
-	battle->field[3][14].strength = garrison_info[index].strength_wall;
+	battle->field[3][14].strength = garrison->strength_wall;
 
 	battle->field[3][15].obstacle = OBSTACLE_WALL;
-	battle->field[3][15].strength = garrison_info[index].strength_wall;
+	battle->field[3][15].strength = garrison->strength_wall;
 
 	battle->field[2][15].obstacle = OBSTACLE_WALL;
-	battle->field[2][15].strength = garrison_info[index].strength_wall;
+	battle->field[2][15].strength = garrison->strength_wall;
 
 	battle->field[1][15].obstacle = OBSTACLE_GATE;
-	battle->field[1][15].strength = garrison_info[index].strength_gate;
+	battle->field[1][15].strength = garrison->strength_gate;
 	battle->field[1][15].owner = region->garrison.owner;
 
 	battle->field[0][15].obstacle = OBSTACLE_WALL;
-	battle->field[0][15].strength = garrison_info[index].strength_wall;
+	battle->field[0][15].strength = garrison->strength_wall;
 }
 
 void battlefield_term(const struct game *restrict game, struct battle *restrict battle)

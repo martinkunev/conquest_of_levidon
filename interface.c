@@ -76,7 +76,7 @@ size_t regions_count;
 
 static struct image image_move_destination, image_shoot_destination, image_selected, image_flag, image_panel, image_construction;
 static struct image image_terrain[1];
-static struct image image_palisade, image_fortress;
+static struct image image_garrison[2]; // TODO this must be big enough for all garrison types
 static struct image image_gold, image_food, image_wood, image_stone, image_iron, image_time;
 static struct image image_scroll_left, image_scroll_right;
 static struct image image_units[4]; // TODO the array must be enough to hold units_count units
@@ -268,8 +268,8 @@ int if_init(const struct game *game)
 
 	image_load_png(&image_terrain[0], "img/terrain_grass.png", 0);
 
-	image_load_png(&image_palisade, "img/garrison_palisade.png", 0);
-	image_load_png(&image_fortress, "img/garrison_fortress.png", 0);
+	image_load_png(&image_garrison[PALISADE], "img/garrison_palisade.png", 0);
+	image_load_png(&image_garrison[FORTRESS], "img/garrison_fortress.png", 0);
 
 	image_load_png(&image_scroll_left, "img/scroll_left.png", 0);
 	image_load_png(&image_scroll_right, "img/scroll_right.png", 0);
@@ -923,21 +923,11 @@ static void if_map_region(const struct region *region, const struct state_map *s
 
 		// Display garrison and garrison troops.
 		{
-			ssize_t garrison = -1;
+			const struct garrison_info *restrict garrison = garrison_info(region);
+			if (garrison)
+			{
+				image_draw(&image_garrison[garrison->index], GARRISON_X, GARRISON_Y);
 
-			if (region_built(region, BuildingFortress))
-			{
-				garrison = FORTRESS;
-				image_draw(&image_fortress, GARRISON_X, GARRISON_Y);
-			}
-			else if (region_built(region, BuildingPalisade))
-			{
-				garrison = PALISADE;
-				image_draw(&image_palisade, GARRISON_X, GARRISON_Y);
-			}
-
-			if (garrison >= 0)
-			{
 				display_rectangle(GARRISON_X + 4, GARRISON_Y - GARRISON_MARGIN + 4, 24, 12, Player + region->garrison.owner);
 				image_draw(&image_flag, GARRISON_X, GARRISON_Y - GARRISON_MARGIN);
 
@@ -952,7 +942,7 @@ static void if_map_region(const struct region *region, const struct state_map *s
 				// If the garrison is under siege, display siege information.
 				if (siege)
 				{
-					unsigned provisions = garrison_info[garrison].provisions - region->garrison.siege;
+					unsigned provisions = garrison->provisions - region->garrison.siege;
 					for(i = 0; i < provisions; ++i)
 						image_draw(&image_food, object_group[TroopGarrison].right + 9, object_group[TroopGarrison].bottom - (i + 1) * image_food.height);
 				}

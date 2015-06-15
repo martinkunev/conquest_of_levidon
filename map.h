@@ -110,19 +110,28 @@ struct game
 	size_t regions_count;
 };
 
-#define PALISADE 0
-#define FORTRESS 1
-
-static const struct
+enum {PALISADE, FORTRESS};
+struct garrison_info
 {
+	size_t index;
+
 	unsigned troops;
 	unsigned provisions;
 	unsigned strength_wall, strength_gate;
-} garrison_info[] =
-{
-	[PALISADE] = {.troops = 3, .provisions = 2, .strength_wall = 50, .strength_gate = 25},
-	[FORTRESS] = {.troops = 6, .provisions = 5, .strength_wall = 100, .strength_gate = 40},
 };
+
+static inline const struct garrison_info *garrison_info(const struct region *restrict region)
+{
+	static const struct garrison_info info[] =
+	{
+		[PALISADE] = {.index = PALISADE, .troops = 3, .provisions = 2, .strength_wall = 50, .strength_gate = 25},
+		[FORTRESS] = {.index = FORTRESS, .troops = 6, .provisions = 5, .strength_wall = 100, .strength_gate = 40},
+	};
+
+	if (region_built(region, BuildingFortress)) return info + FORTRESS;
+	else if (region_built(region, BuildingPalisade)) return info + PALISADE;
+	else return 0;
+}
 
 extern const struct unit UNITS[];
 extern const size_t UNITS_COUNT;
