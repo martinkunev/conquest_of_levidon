@@ -20,7 +20,7 @@ union json
 	bool boolean;
 	long long integer;
 	double real;
-	struct
+	struct string
 	{
 		size_t size;
 		char *data;
