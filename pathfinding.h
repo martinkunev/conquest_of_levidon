@@ -1,7 +1,7 @@
 #include <math.h>
 
-#define BATTLEFIELD_WIDTH 24
-#define BATTLEFIELD_HEIGHT 24
+#define BATTLEFIELD_WIDTH 25
+#define BATTLEFIELD_HEIGHT 25
 
 struct move
 {

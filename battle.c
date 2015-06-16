@@ -93,7 +93,7 @@ static void battlefield_init_formation(const struct game *restrict game, struct 
 {
 	unsigned players_count = 0;
 	signed char locations[PLAYERS_LIMIT]; // startup locations of the players participating in the battle
-	signed char players[NEIGHBORS_LIMIT]; // players occupying the startup locations
+	signed char players[NEIGHBORS_LIMIT + 1]; // players occupying the startup locations
 
 	size_t i, j;
 
@@ -114,13 +114,18 @@ static void battlefield_init_formation(const struct game *restrict game, struct 
 		// Find the prefered startup position for the pawn.
 		if (troop->location == battle->region)
 		{
-			if (!allies(game, owner, battle->region->owner)) continue; // skip troops attacking from the garrison
+			if (!allies(game, owner, battle->region->owner))
+			{
+				battle->pawns[i].startup = NEIGHBOR_SELF;
+				continue; // skip troops attacking from the garrison
+			}
 			startup = NEIGHBOR_SELF;
 		}
 		else for(j = 0; j < NEIGHBORS_LIMIT; ++j)
 		{
 			if (troop->location != battle->region->neighbors[j]) continue;
 			startup = j;
+			break;
 		}
 		// else assert(0);
 
@@ -189,6 +194,8 @@ static void battlefield_init_formation(const struct game *restrict game, struct 
 				break;
 			}
 		}
+
+		// TODO handle the case when all the place in the location is already taken
 	}
 }
 
@@ -262,8 +269,6 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 		pawns[i].hurt = 0;
 		pawns[i].fight = POINT_NONE;
 		pawns[i].shoot = POINT_NONE;
-
-		pawns[i].moves[0].location = POINT_NONE; // TODO this is supposed to set the position of pawns for which there is no place on the battlefield; is this okay?
 
 		battle->players[troop->owner].pawns[pawn_offset[troop->owner]++] = pawns + i;
 	}

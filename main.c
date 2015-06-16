@@ -293,9 +293,8 @@ static int play(struct game *restrict game)
 			{
 				const struct garrison_info *restrict garrison = garrison_info(region);
 
-				// If the garrison has no more provisions, finish the siege.
-				region->garrison.siege += 1;
-				if (region->garrison.siege > garrison->provisions)
+				// If the garrison has no more troops or no more provisions, finish the siege.
+				if (!region->garrison.troops || (++region->garrison.siege > garrison->provisions))
 				{
 					region->garrison.owner = region->owner;
 					region->garrison.siege = 0;

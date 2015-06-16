@@ -1,6 +1,6 @@
 #define PAWNS_LIMIT 12
 
-#define REACHABLE_LIMIT 100
+#define REACHABLE_LIMIT 625 /* TODO fix this */
 
 struct pawn
 {

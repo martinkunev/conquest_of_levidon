@@ -163,10 +163,10 @@ int input_formation(const struct game *restrict game, struct battle *restrict ba
 			.callback = input_round
 		},
 		{
-			.left = 0,
-			.right = BATTLEFIELD_WIDTH * FIELD_SIZE - 1,
-			.top = 0,
-			.bottom = BATTLEFIELD_HEIGHT * FIELD_SIZE - 1,
+			.left = object_group[Battlefield].left,
+			.right = object_group[Battlefield].right,
+			.top = object_group[Battlefield].top,
+			.bottom = object_group[Battlefield].bottom,
 			.callback = input_place
 		},
 	};

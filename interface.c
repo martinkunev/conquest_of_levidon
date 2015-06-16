@@ -4,13 +4,10 @@
 
 #define GL_GLEXT_PROTOTYPES
 
-//#include <GL/gl.h>
 #include <GL/glx.h>
 #include <GL/glext.h>
 
 #include <xcb/xcb.h>
-
-//#include <X11/Xlib-xcb.h>
 
 #include "types.h"
 #include "format.h"
@@ -528,8 +525,7 @@ static int if_animation(const struct player *restrict players, const struct batt
 		if (movement_location(pawn, progress, &x, &y) < pawn->moves_count)
 			finished = 0;
 
-		display_rectangle(x * FIELD_SIZE, y * FIELD_SIZE, FIELD_SIZE, FIELD_SIZE, Player + pawn->troop->owner);
-		image_draw(&image_units[pawn->troop->unit->index], x * FIELD_SIZE, y * FIELD_SIZE);
+		display_unit(pawn->troop->unit->index, BATTLE_X + x * FIELD_SIZE, BATTLE_Y + y * FIELD_SIZE, Player + pawn->troop->owner, 0, 0);
 	}
 
 	glFlush();
@@ -568,7 +564,7 @@ static void if_battlefield(const struct state_battle *state, const struct game *
 	display_rectangle(CTRL_X, CTRL_Y, 256, 16, Player + state->player);
 
 	// show the control section in gray
-	display_rectangle(CTRL_X, CTRL_Y + CTRL_MARGIN, 256, 768, Gray);
+	display_rectangle(CTRL_X, CTRL_Y + CTRL_MARGIN, CTRL_WIDTH, CTRL_HEIGHT - CTRL_MARGIN, Gray);
 }
 
 void if_formation(const void *argument, const struct game *game)
@@ -1024,8 +1020,8 @@ void if_map(const void *argument, const struct game *game)
 	display_rectangle(MAP_X, MAP_Y, MAP_WIDTH, MAP_HEIGHT, Black);
 
 	// TODO remove this color display box
-	for(i = 0; i < PLAYERS_LIMIT; ++i)
-		display_rectangle(PANEL_X + (i % 4) * 32, PANEL_Y + 300 + (i / 4) * 32, 32, 32, Player + i);
+	/*for(i = 0; i < PLAYERS_LIMIT; ++i)
+		display_rectangle(PANEL_X + (i % 4) * 32, PANEL_Y + 300 + (i / 4) * 32, 32, 32, Player + i);*/
 
 	// Map
 
