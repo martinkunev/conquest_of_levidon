@@ -522,14 +522,14 @@ static int if_animation(const struct player *restrict players, const struct batt
 		struct pawn *pawn = battle->pawns + p;
 		double x, y;
 
-		if (!pawn->slot->count) continue;
+		if (!pawn->troop->count) continue;
 
 		// TODO improve this check
 		if (movement_location(pawn, progress, &x, &y) < pawn->moves_count)
 			finished = 0;
 
-		display_rectangle(x * FIELD_SIZE, y * FIELD_SIZE, FIELD_SIZE, FIELD_SIZE, Player + pawn->slot->owner);
-		image_draw(&image_units[pawn->slot->unit->index], x * FIELD_SIZE, y * FIELD_SIZE);
+		display_rectangle(x * FIELD_SIZE, y * FIELD_SIZE, FIELD_SIZE, FIELD_SIZE, Player + pawn->troop->owner);
+		image_draw(&image_units[pawn->troop->unit->index], x * FIELD_SIZE, y * FIELD_SIZE);
 	}
 
 	glFlush();
@@ -584,7 +584,7 @@ void if_formation(const void *argument, const struct game *game)
 	size_t pawns_count = battle->players[state->player].pawns_count;
 	for(i = 0; i < pawns_count; ++i)
 	{
-		const struct troop *troop = pawns[i]->slot;
+		const struct troop *troop = pawns[i]->troop;
 
 		if (pawns[i] == state->pawn)
 		{
@@ -630,11 +630,11 @@ void if_battle(const void *argument, const struct game *game)
 			if (pawn = battlefield[y][x].pawn)
 			{
 				enum color color;
-				if (pawn->slot->owner == state->player) color = Self;
-				else if (game->players[pawn->slot->owner].alliance == game->players[state->player].alliance) color = Ally;
+				if (pawn->troop->owner == state->player) color = Self;
+				else if (game->players[pawn->troop->owner].alliance == game->players[state->player].alliance) color = Ally;
 				else color = Enemy;
 
-				display_unit(pawn->slot->unit->index, BATTLE_X + x * FIELD_SIZE, BATTLE_Y + y * FIELD_SIZE, color, 0, 0);
+				display_unit(pawn->troop->unit->index, BATTLE_X + x * FIELD_SIZE, BATTLE_Y + y * FIELD_SIZE, color, 0, 0);
 			}
 		}
 
@@ -650,7 +650,7 @@ void if_battle(const void *argument, const struct game *game)
 
 		pawn = battlefield[state->y][state->x].pawn;
 
-		if (pawn->slot->owner == state->player)
+		if (pawn->troop->owner == state->player)
 		{
 			// Show which fields are reachable by the pawn.
 			// TODO obstacles
@@ -662,16 +662,16 @@ void if_battle(const void *argument, const struct game *game)
 		}
 
 		// Display pawn information in the control section.
-		if (pawn->slot->owner == state->player) color = Self;
-		else if (game->players[pawn->slot->owner].alliance == game->players[state->player].alliance) color = Ally;
+		if (pawn->troop->owner == state->player) color = Self;
+		else if (game->players[pawn->troop->owner].alliance == game->players[state->player].alliance) color = Ally;
 		else color = Enemy;
 		display_rectangle(CTRL_X, CTRL_Y + CTRL_MARGIN, FIELD_SIZE + MARGIN * 2, FIELD_SIZE + font12.height + MARGIN * 2, color);
-		display_unit(pawn->slot->unit->index, CTRL_X + MARGIN, CTRL_Y + CTRL_MARGIN + MARGIN, Player + pawn->slot->owner, Black, pawn->slot->count);
+		display_unit(pawn->troop->unit->index, CTRL_X + MARGIN, CTRL_Y + CTRL_MARGIN + MARGIN, Player + pawn->troop->owner, Black, pawn->troop->count);
 
 		image_draw(&image_selected, BATTLE_X + state->x * FIELD_SIZE - 1, BATTLE_Y + state->y * FIELD_SIZE - 1);
 
 		// Show pawn task (if any).
-		if (pawn->slot->owner == state->player)
+		if (pawn->troop->owner == state->player)
 		{
 			size_t i;
 			for(i = 1; i < pawn->moves_count; ++i)

@@ -82,7 +82,7 @@ valid:
 		}
 		else
 		{
-			// Set the move destination of all slots in the region.
+			// Set the move destination of all troops in the region.
 			for(troop = region->troops; troop; troop = troop->_next)
 				if (state->player == troop->owner)
 					troop->move = game->regions + region_index;
@@ -244,7 +244,7 @@ static int input_scroll_self(int code, unsigned x, unsigned y, uint16_t modifier
 	if (code != -1) return INPUT_NOTME; // handle only left mouse clicks
 
 	if (state->region == REGION_NONE) return 0; // no region selected
-	if (!game->regions[state->region].troops) return 0; // no slots in this region
+	if (!game->regions[state->region].troops) return 0; // no troops in this region
 
 	if (x <= object_group[TroopSelf].left - 1) // scroll left
 	{
@@ -271,7 +271,7 @@ static int input_scroll_ally(int code, unsigned x, unsigned y, uint16_t modifier
 	if (code != -1) return INPUT_NOTME; // handle only left mouse clicks
 
 	if (state->region == REGION_NONE) return 0; // no region selected
-	if (!game->regions[state->region].troops) return 0; // no slots in this region
+	if (!game->regions[state->region].troops) return 0; // no troops in this region
 
 	if (x <= object_group[TroopOther].left - 1) // scroll left
 	{
@@ -356,7 +356,7 @@ static int input_troop(int code, unsigned x, unsigned y, uint16_t modifiers, con
 	return 0;
 
 reset:
-	// Make sure no slot is selected.
+	// Make sure no troop is selected.
 	state->troop = 0;
 	return 0;
 }

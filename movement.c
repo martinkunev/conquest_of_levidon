@@ -191,7 +191,7 @@ static int pawn_wait(struct pawn *occupied[BATTLEFIELD_HEIGHT * 2][BATTLEFIELD_W
 		pawn->moves_count += 1;
 		pawn->moves[index].location = location_field(location);
 		distance = battlefield_distance(pawn->moves[index - 1].location, pawn->moves[index].location);
-		pawn->moves[index].time = pawn->moves[index - 1].time + distance / pawn->slot->unit->speed;
+		pawn->moves[index].time = pawn->moves[index - 1].time + distance / pawn->troop->unit->speed;
 
 		index += 1;
 
@@ -206,7 +206,7 @@ static int pawn_wait(struct pawn *occupied[BATTLEFIELD_HEIGHT * 2][BATTLEFIELD_W
 		for(index += 1; index < pawn->moves_count; ++index)
 		{
 			distance = battlefield_distance(pawn->moves[index - 1].location, pawn->moves[index].location);
-			pawn->moves[index].time = pawn->moves[index - 1].time + distance / pawn->slot->unit->speed;
+			pawn->moves[index].time = pawn->moves[index - 1].time + distance / pawn->troop->unit->speed;
 		}
 	}
 	else
@@ -297,9 +297,9 @@ static void battlefield_collision_resolve(const struct player *restrict players,
 
 	struct pawn *pawns[] = {occupied[y][x][0], occupied[y][x][1], occupied[y][x][2], occupied[y][x][3]}; // TODO this hardcodes OVERLAP_LIMIT == 4
 
-	unsigned char alliance = players[pawns[0]->slot->owner].alliance;
+	unsigned char alliance = players[pawns[0]->troop->owner].alliance;
 	for(i = 1; (i < OVERLAP_LIMIT) && pawns[i]; ++i)
-		if (players[pawns[i]->slot->owner].alliance != alliance)
+		if (players[pawns[i]->troop->owner].alliance != alliance)
 		{
 			// There are enemies on the square.
 			for(i = 0; (i < OVERLAP_LIMIT) && pawns[i]; ++i)
@@ -382,7 +382,7 @@ int battlefield_movement_plan(const struct player *restrict players, size_t play
 		for(i = 1; i < pawns[p].moves_count; ++i)
 		{
 			double distance = battlefield_distance(pawns[p].moves[i - 1].location, pawns[p].moves[i].location);
-			pawns[p].moves[i].time = pawns[p].moves[i - 1].time + distance / pawns[p].slot->unit->speed;
+			pawns[p].moves[i].time = pawns[p].moves[i - 1].time + distance / pawns[p].troop->unit->speed;
 		}
 	}
 
@@ -457,7 +457,7 @@ void battlefield_movement_perform(struct battlefield battlefield[][BATTLEFIELD_H
 	for(p = 0; p < pawns_count; ++p)
 	{
 		struct pawn *pawn = pawns + p;
-		if (!pawn->slot->count) continue;
+		if (!pawn->troop->count) continue;
 
 		size_t index = pawn_position(pawn, 1.0, &pawn->step);
 
@@ -484,7 +484,7 @@ void battlefield_movement_perform(struct battlefield battlefield[][BATTLEFIELD_H
 			for(i = 1; i < pawn->moves_count; ++i)
 			{
 				double distance = battlefield_distance(pawn->moves[i - 1].location, pawn->moves[i].location);
-				pawn->moves[i].time = pawn->moves[i - 1].time + distance / pawn->slot->unit->speed;
+				pawn->moves[i].time = pawn->moves[i - 1].time + distance / pawn->troop->unit->speed;
 			}
 		}
 		else

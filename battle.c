@@ -56,7 +56,7 @@ size_t formation_reachable(const struct game *restrict game, const struct region
 
 	if (pawn->startup == NEIGHBOR_SELF)
 	{
-		if (allies(game, region->owner, pawn->slot->owner))
+		if (allies(game, region->owner, pawn->troop->owner))
 		{
 			for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
 				for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
@@ -107,7 +107,7 @@ static void battlefield_init_formation(const struct game *restrict game, struct 
 
 	for(i = 0; i < battle->pawns_count; ++i)
 	{
-		const struct troop *troop = battle->pawns[i].slot;
+		const struct troop *troop = battle->pawns[i].troop;
 		unsigned owner = troop->owner;
 		signed char startup;
 
@@ -164,7 +164,7 @@ static void battlefield_init_formation(const struct game *restrict game, struct 
 		// Update the startup location of each pawn.
 		for(i = 0; i < battle->pawns_count; ++i)
 		{
-			unsigned owner = battle->pawns[i].slot->owner;
+			unsigned owner = battle->pawns[i].troop->owner;
 			if (!allies(game, owner, battle->region->owner)) continue; // skip troops attacking from the garrison
 			battle->pawns[i].startup = locations[owner];
 		}
@@ -258,7 +258,7 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 	{
 		i = offset[troop->unit->speed]++;
 
-		pawns[i].slot = troop;
+		pawns[i].troop = troop;
 		pawns[i].hurt = 0;
 		pawns[i].fight = POINT_NONE;
 		pawns[i].shoot = POINT_NONE;
@@ -421,7 +421,7 @@ int battle_end(const struct game *restrict game, struct battle *restrict battle,
 		for(j = 0; j < battle->players[i].pawns_count; ++j)
 		{
 			pawn = battle->players[i].pawns[j];
-			if (pawn->slot->count)
+			if (pawn->troop->count)
 			{
 				alive = 1;
 

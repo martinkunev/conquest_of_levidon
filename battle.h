@@ -4,7 +4,7 @@
 
 struct pawn
 {
-	struct troop *slot;
+	struct troop *troop;
 	unsigned hurt;
 
 	struct move *moves; // TODO allocate this

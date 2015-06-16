@@ -383,7 +383,7 @@ int path_reachable(const struct pawn *restrict pawn, struct adjacency_list *rest
 		traverse_info[i].distance = INFINITY;
 		traverse_info[i].origin = 0;
 	}
-	traverse_info[vertex_origin].distance = (pawn->moves[pawn->moves_count - 1].time * pawn->slot->unit->speed);
+	traverse_info[vertex_origin].distance = (pawn->moves[pawn->moves_count - 1].time * pawn->troop->unit->speed);
 	traverse_info[vertex_origin].origin = 0;
 
 	// Find the shortest path to each vertex using Dijkstra's algorithm.
@@ -422,7 +422,7 @@ int path_reachable(const struct pawn *restrict pawn, struct adjacency_list *rest
 			{
 				struct point target = {x, y};
 				if (path_visible(graph->list[i].location, target, obstacles, obstacles_count))
-					if (traverse_info[i].distance + battlefield_distance(graph->list[i].location, target) <= pawn->slot->unit->speed)
+					if (traverse_info[i].distance + battlefield_distance(graph->list[i].location, target) <= pawn->troop->unit->speed)
 						reachable[y][x] = 1;
 			}
 		}
@@ -477,7 +477,7 @@ int path_queue(struct pawn *restrict pawn, struct point target, struct adjacency
 		traverse_info[i].distance = INFINITY;
 		traverse_info[i].origin = 0;
 	}
-	traverse_info[vertex_origin].distance = (pawn->moves[pawn->moves_count - 1].time * pawn->slot->unit->speed); // TODO this is ugly
+	traverse_info[vertex_origin].distance = (pawn->moves[pawn->moves_count - 1].time * pawn->troop->unit->speed); // TODO this is ugly
 	traverse_info[vertex_origin].origin = 0;
 
 	// Find the shortest path to target using Dijkstra's algorithm.
@@ -528,7 +528,7 @@ int path_queue(struct pawn *restrict pawn, struct point target, struct adjacency
 		double distance;
 		pawn->moves[pawn->moves_count].location = graph->list[next - traverse_info].location;
 		distance = battlefield_distance(pawn->moves[pawn->moves_count - 1].location, pawn->moves[pawn->moves_count].location);
-		pawn->moves[pawn->moves_count].time = pawn->moves[pawn->moves_count - 1].time + distance / pawn->slot->unit->speed;
+		pawn->moves[pawn->moves_count].time = pawn->moves[pawn->moves_count - 1].time + distance / pawn->troop->unit->speed;
 		pawn->moves_count += 1;
 	}
 

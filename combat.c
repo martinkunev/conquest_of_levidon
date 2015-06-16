@@ -19,13 +19,13 @@ void battlefield_fight(const struct game *restrict game, struct battle *restrict
 	for(i = 0; i < battle->pawns_count; ++i)
 	{
 		struct pawn *fighter = battle->pawns + i;
-		unsigned char fighter_alliance = game->players[fighter->slot->owner].alliance;
+		unsigned char fighter_alliance = game->players[fighter->troop->owner].alliance;
 
-		if (!fighter->slot->count) continue;
+		if (!fighter->troop->count) continue;
 
 		int x = fighter->moves[0].location.x;
 		int y = fighter->moves[0].location.y;
-		unsigned damage_total = fighter->slot->unit->damage * fighter->slot->count;
+		unsigned damage_total = fighter->troop->unit->damage * fighter->troop->count;
 		unsigned damage;
 
 		struct pawn *victims[4], *victim;
@@ -33,13 +33,13 @@ void battlefield_fight(const struct game *restrict game, struct battle *restrict
 
 		// Look for pawns to fight at the neighboring fields.
 		enemies_count = 0;
-		if ((x > 0) && (victim = battle->field[y][x - 1].pawn) && (game->players[victim->slot->owner].alliance != fighter_alliance))
+		if ((x > 0) && (victim = battle->field[y][x - 1].pawn) && (game->players[victim->troop->owner].alliance != fighter_alliance))
 			victims[enemies_count++] = victim;
-		if ((x < (BATTLEFIELD_WIDTH - 1)) && (victim = battle->field[y][x + 1].pawn) && (game->players[victim->slot->owner].alliance != fighter_alliance))
+		if ((x < (BATTLEFIELD_WIDTH - 1)) && (victim = battle->field[y][x + 1].pawn) && (game->players[victim->troop->owner].alliance != fighter_alliance))
 			victims[enemies_count++] = victim;
-		if ((y > 0) && (victim = battle->field[y - 1][x].pawn) && (game->players[victim->slot->owner].alliance != fighter_alliance))
+		if ((y > 0) && (victim = battle->field[y - 1][x].pawn) && (game->players[victim->troop->owner].alliance != fighter_alliance))
 			victims[enemies_count++] = victim;
-		if ((y < (BATTLEFIELD_HEIGHT - 1)) && (victim = battle->field[y + 1][x].pawn) && (game->players[victim->slot->owner].alliance != fighter_alliance))
+		if ((y < (BATTLEFIELD_HEIGHT - 1)) && (victim = battle->field[y + 1][x].pawn) && (game->players[victim->troop->owner].alliance != fighter_alliance))
 			victims[enemies_count++] = victim;
 		if (!enemies_count) continue; // nothing to fight
 
@@ -60,19 +60,19 @@ void battlefield_shoot(struct battle *battle)
 	{
 		struct pawn *shooter = battle->pawns + i;
 
-		if (!shooter->slot->count) continue;
+		if (!shooter->troop->count) continue;
 		if (point_eq(shooter->shoot, POINT_NONE)) continue;
 
 		int x = shooter->shoot.x;
 		int y = shooter->shoot.y;
-		unsigned damage_total = shooter->slot->unit->shoot * shooter->slot->count;
+		unsigned damage_total = shooter->troop->unit->shoot * shooter->troop->count;
 		unsigned damage;
 
 		unsigned target_index;
 		double distance, miss, on_target;
 
 		distance = battlefield_distance(shooter->moves[0].location, shooter->shoot);
-		miss = distance / shooter->slot->unit->range;
+		miss = distance / shooter->troop->unit->range;
 
 		// Shooters have some chance to hit a field adjacent to the target, depending on the distance.
 		// Damage is dealt to the target field and to its neighbors.
@@ -145,31 +145,31 @@ void battlefield_clean_corpses(struct battle *battle)
 {
 	size_t p;
 	struct pawn *pawn;
-	struct troop *slot;
+	struct troop *troop;
 	for(p = 0; p < battle->pawns_count; ++p)
 	{
 		pawn = battle->pawns + p;
-		slot = pawn->slot;
+		troop = pawn->troop;
 
-		if (!slot->count) continue;
+		if (!troop->count) continue;
 
-		if ((slot->count * slot->unit->health) <= pawn->hurt)
+		if ((troop->count * troop->unit->health) <= pawn->hurt)
 		{
 			// All units in this pawn are killed.
-			slot->count = 0;
+			troop->count = 0;
 			battle->field[pawn->moves[0].location.y][pawn->moves[0].location.x].pawn = 0;
 		}
 		else
 		{
 			// Find the minimum and maximum of units that can be killed.
-			unsigned max = pawn->hurt / slot->unit->health;
+			unsigned max = pawn->hurt / troop->unit->health;
 			unsigned min;
-			if ((slot->unit->health - 1) * slot->count >= pawn->hurt) min = 0;
-			else min = pawn->hurt % slot->count;
+			if ((troop->unit->health - 1) * troop->count >= pawn->hurt) min = 0;
+			else min = pawn->hurt % troop->count;
 
 			unsigned victims = pawn_victims(min, max);
-			slot->count -= victims;
-			pawn->hurt -= victims * slot->unit->health;
+			troop->count -= victims;
+			pawn->hurt -= victims * troop->unit->health;
 		}
 	}
 }
@@ -177,10 +177,10 @@ void battlefield_clean_corpses(struct battle *battle)
 int battlefield_shootable(const struct pawn *restrict pawn, struct point target)
 {
 	// Only ranged units can shoot.
-	if (!pawn->slot->unit->shoot) return 0;
+	if (!pawn->troop->unit->shoot) return 0;
 
 	// TODO decrease range by 1 if there is a wall on the way or if target is on a wall
 
 	unsigned distance = round(battlefield_distance(pawn->moves[0].location, target));
-	return (distance <= pawn->slot->unit->range);
+	return (distance <= pawn->troop->unit->range);
 }

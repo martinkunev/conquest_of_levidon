@@ -67,7 +67,7 @@ static int input_round(int code, unsigned x, unsigned y, uint16_t modifiers, con
 			struct pawn *const *pawns = battle->players[state->player].pawns;
 			size_t pawns_count = battle->players[state->player].pawns_count;
 			for(i = 0; i < pawns_count; ++i)
-				pawns[i]->slot->count = 0;
+				pawns[i]->troop->count = 0;
 		}
 	case 'n':
 		return INPUT_DONE;
@@ -99,7 +99,7 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 	{
 		struct pawn *pawn = state->pawn;
 		if (!pawn) return 0;
-		if (pawn->slot->owner != state->player) return 0;
+		if (pawn->troop->owner != state->player) return 0;
 
 		struct point target = {x, y};
 		if (point_eq(target, pawn->moves[0].location))
