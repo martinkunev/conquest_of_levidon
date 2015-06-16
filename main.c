@@ -47,7 +47,7 @@ static int battle_open(struct game *restrict game, struct region *restrict regio
 			continue;
 
 		case Local:
-			if (input_formation(game, region, &battle, player) < 0)
+			if (input_formation(game, &battle, player) < 0)
 			{
 				status = -1;
 				goto finally;

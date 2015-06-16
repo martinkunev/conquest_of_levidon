@@ -150,7 +150,7 @@ static int input_place(int code, unsigned x, unsigned y, uint16_t modifiers, con
 	return 0;
 }
 
-int input_formation(const struct game *restrict game, const struct region *restrict region, struct battle *restrict battle, unsigned char player)
+int input_formation(const struct game *restrict game, struct battle *restrict battle, unsigned char player)
 {
 	if_set(battle->field, battle);
 
@@ -177,8 +177,6 @@ int input_formation(const struct game *restrict game, const struct region *restr
 
 	state.pawn = 0;
 	state.hover = POINT_NONE;
-
-	state.region = region - game->regions;
 
 	return input_local(areas, sizeof(areas) / sizeof(*areas), if_formation, game, &state);
 }

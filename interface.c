@@ -583,8 +583,6 @@ void if_formation(const void *argument, const struct game *game)
 	if (!point_eq(state->hover, POINT_NONE))
 		display_rectangle(BATTLE_X + state->hover.x * FIELD_SIZE, BATTLE_Y + state->hover.y * FIELD_SIZE, FIELD_SIZE, FIELD_SIZE, Hover);
 
-	const struct region *region = game->regions + state->region;
-
 	size_t i;
 	struct pawn *const *pawns = battle->players[state->player].pawns;
 	size_t pawns_count = battle->players[state->player].pawns_count;
@@ -596,7 +594,7 @@ void if_formation(const void *argument, const struct game *game)
 		{
 			// Display at which fields the pawn can be placed.
 			struct point positions[REACHABLE_LIMIT];
-			size_t reachable_count = formation_reachable(game, region, troop, positions);
+			size_t reachable_count = formation_reachable(game, battle->region, pawns[i], positions);
 			for(i = 0; i < reachable_count; ++i)
 				if (!battlefield[positions[i].y][positions[i].x].pawn)
 					display_rectangle(BATTLE_X + positions[i].x * FIELD_SIZE, BATTLE_Y + positions[i].y * FIELD_SIZE, FIELD_SIZE, FIELD_SIZE, FieldReachable);
