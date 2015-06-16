@@ -567,7 +567,7 @@ static void if_battlefield(const struct state_battle *state, const struct game *
 	// draw rectangle with current player's color
 	display_rectangle(CTRL_X, CTRL_Y, 256, 16, Player + state->player);
 
-	// show the right panel in gray
+	// show the control section in gray
 	display_rectangle(CTRL_X, CTRL_Y + CTRL_MARGIN, 256, 768, Gray);
 }
 
@@ -577,11 +577,7 @@ void if_formation(const void *argument, const struct game *game)
 
 	if_battlefield((const struct state_battle *)state, game); // TODO fix this cast
 
-	// TODO show somehow that only self pawns are displayed
-
-	// Display hovered field in color.
-	if (!point_eq(state->hover, POINT_NONE))
-		display_rectangle(BATTLE_X + state->hover.x * FIELD_SIZE, BATTLE_Y + state->hover.y * FIELD_SIZE, FIELD_SIZE, FIELD_SIZE, Hover);
+	// TODO mark somehow that only self pawns are displayed
 
 	size_t i;
 	struct pawn *const *pawns = battle->players[state->player].pawns;
@@ -599,7 +595,7 @@ void if_formation(const void *argument, const struct game *game)
 				if (!battlefield[positions[i].y][positions[i].x].pawn)
 					display_rectangle(BATTLE_X + positions[i].x * FIELD_SIZE, BATTLE_Y + positions[i].y * FIELD_SIZE, FIELD_SIZE, FIELD_SIZE, FieldReachable);
 
-			// Display the selected pawn in the control panel.
+			// Display the selected pawn in the control section.
 			display_unit(troop->unit->index, CTRL_X, CTRL_Y + CTRL_MARGIN, Player + state->player, White, troop->count);
 		}
 		else
@@ -609,6 +605,10 @@ void if_formation(const void *argument, const struct game *game)
 			display_unit(troop->unit->index, BATTLE_X + location.x * FIELD_SIZE, BATTLE_Y + location.y * FIELD_SIZE, Player + state->player, 0, 0);
 		}
 	}
+
+	// Display hovered field in color.
+	if (!point_eq(state->hover, POINT_NONE))
+		display_rectangle(BATTLE_X + state->hover.x * FIELD_SIZE, BATTLE_Y + state->hover.y * FIELD_SIZE, FIELD_SIZE, FIELD_SIZE, Hover);
 
 	glFlush();
 	glXSwapBuffers(display, drawable);
@@ -684,9 +684,9 @@ void if_battle(const void *argument, const struct game *game)
 				to.x = BATTLE_Y + to.x * FIELD_SIZE + FIELD_SIZE / 2;
 				to.y = BATTLE_Y + to.y * FIELD_SIZE + FIELD_SIZE / 2;
 
-				if (pawn->moves[i].time <= 1.0) color = Reachable;
-				else if (pawn->moves[i - 1].time <= 1.0) color = Partial;
-				else color = Unreachable;
+				if (pawn->moves[i].time <= 1.0) color = PathReachable;
+				else if (pawn->moves[i - 1].time <= 1.0) color = PathPartial;
+				else color = PathUnreachable;
 				display_arrow(from, to, BATTLE_X, BATTLE_Y, color);
 			}
 

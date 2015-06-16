@@ -31,12 +31,12 @@ unsigned char display_colors[][4] = {
 	[Ally] = {0, 0, 255, 255},
 	[Enemy] = {255, 0, 0, 255},
 
-	[Reachable] = {0, 192, 0, 255},
-	[Partial] = {192, 192, 0, 255},
-	[Unreachable] = {192, 0, 0, 255},
+	[PathReachable] = {0, 192, 0, 255},
+	[PathPartial] = {192, 192, 0, 255},
+	[PathUnreachable] = {192, 0, 0, 255},
 
-	[Hover] = {0, 0, 0, 128},
-	[FieldReachable] = {0, 0, 0, 64},
+	[Hover] = {0, 0, 0, 192},
+	[FieldReachable] = {0, 0, 0, 128},
 
 	[Player + 0] = {192, 192, 192, 255},
 	[Player + 1] = {0, 96, 0, 255},

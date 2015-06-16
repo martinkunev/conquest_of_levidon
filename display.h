@@ -28,7 +28,7 @@ struct box
 	unsigned width, height;
 };
 
-enum color {White, Gray, Black, Unexplored, Progress, Select, Self, Ally, Enemy, Reachable, Partial, Unreachable, Hover, FieldReachable, Player};
+enum color {White, Gray, Black, Unexplored, Progress, Select, Self, Ally, Enemy, PathReachable, PathPartial, PathUnreachable, Hover, FieldReachable, Player};
 extern unsigned char display_colors[][4]; // TODO remove this
 
 void draw_rectangle(unsigned x, unsigned y, unsigned width, unsigned height, enum color color);
