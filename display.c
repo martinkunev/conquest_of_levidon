@@ -32,7 +32,6 @@ unsigned char display_colors[][4] = {
 	[Enemy] = {255, 0, 0, 255},
 
 	[PathReachable] = {0, 192, 0, 255},
-	[PathPartial] = {192, 192, 0, 255},
 	[PathUnreachable] = {192, 0, 0, 255},
 
 	[Hover] = {0, 0, 0, 192},
@@ -54,6 +53,7 @@ unsigned char display_colors[][4] = {
 	[Player + 13] = {0, 144, 144, 255},
 	[Player + 14] = {240, 160, 0, 255},
 	[Player + 15] = {224, 224, 224, 255},
+//	[] = {192, 192, 0, 255},
 };
 
 static inline long cross_product(int fx, int fy, int sx, int sy)

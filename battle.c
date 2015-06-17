@@ -47,8 +47,8 @@ static struct polygon *region_create(size_t count, ...)
 // Returns whether the troop can be placed at the given field.
 size_t formation_reachable(const struct game *restrict game, const struct region *restrict region, const struct pawn *restrict pawn, struct point reachable[REACHABLE_LIMIT])
 {
-	const double defend[2] = {12.0, 12.0};
-	const double attack[NEIGHBORS_LIMIT][2] = {{24.0, 12.0}, {20.5, 3.5}, {12.0, 0.0}, {3.5, 3.5}, {0.0, 12.0}, {3.5, 20.5}, {12.0, 24.0}, {20.5, 20.5}};
+	const double defend[2] = {12.5, 12.5};
+	const double attack[NEIGHBORS_LIMIT][2] = {{25.0, 12.5}, {21.5, 3.5}, {12.5, 0.0}, {3.5, 3.5}, {0.0, 12.5}, {3.5, 21.5}, {12.5, 25.0}, {21.5, 21.5}};
 
 	size_t x, y;
 

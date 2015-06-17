@@ -681,7 +681,6 @@ void if_battle(const void *argument, const struct game *game)
 				to.y = BATTLE_Y + to.y * FIELD_SIZE + FIELD_SIZE / 2;
 
 				if (pawn->moves[i].time <= 1.0) color = PathReachable;
-				else if (pawn->moves[i - 1].time <= 1.0) color = PathPartial;
 				else color = PathUnreachable;
 				display_arrow(from, to, BATTLE_X, BATTLE_Y, color);
 			}
