@@ -23,17 +23,21 @@ struct path_node
 //  Build visibility graph with vertices: the corners of the obstacles, the origin point and the target point.
 //  Use Dijkstra's algorithm to find the shortest path in the graph from origin to target.
 
-// The obstacles are represented as a sequence of directed line segments (each one representing a wall).
+// Obstacles represents blocking objects, coastlines and fortresses on the battlefield.
+// Obstacles are represented as a sequence of directed line segments (each one representing a wall).
+// Coordinates of the obstacles are inclusive (the end points are part of the obstacle).
 
-// TODO polygons surrounding the blocked area. The coordinates are inclusive (limit fields are not passable).
 // TODO The fields are represented by their top left coordinates (in order to facilitate computations).
+// left->right: direction_x < 0: move y coordinates up
+// right->left: direction_x > 0: move y coordinates down
+// top->bottom: direction_y < 0: move x coordinates right
+// bottom->top: direction_y > 0: move x coordinates left
+// the surrounded area is shrunk
 
-// TODO obstacles: rectangles, coastlines, fortresses
 // TODO use bitmap to filter duplicated vertices
 // TODO do I need non-symmetric distance?
 
 // TODO there must be obstacles applicable only for some units (horses and balistas can not climb walls)
-// TODO there must be obstacles applicable only for some players (gates can be opened only by owner's alliance)
 
 // TODO path_reachable should be refactored to not depend on battlefield size
 
@@ -54,25 +58,27 @@ static int blocks(struct point p0, struct point p1, struct point w0, struct poin
 
 	long cross;
 
-	int direction_x = sign(w1.x - w0.x);
-	int direction_y = sign(w1.y - w0.y);
+	{
+		int direction_x = sign(w1.x - w0.x);
+		int direction_y = sign(w1.y - w0.y);
 
-	// Treat the wall as being located at the middle of the field.
-	// Double the coordinates in order to use integers for the calculations.
-	w0.x = w0.x * 2 - direction_y;
-	w0.y = w0.y * 2 + direction_x;
-	w1.x = w1.x * 2 - direction_y;
-	w1.y = w1.y * 2 + direction_x;
-	p0.x *= 2;
-	p0.y *= 2;
-	p1.x *= 2;
-	p1.y *= 2;
+		// Treat the wall as being located at the middle of the field.
+		// Double the coordinates in order to use integers for the calculations.
+		w0.x = w0.x * 2 - direction_y;
+		w0.y = w0.y * 2 + direction_x;
+		w1.x = w1.x * 2 - direction_y;
+		w1.y = w1.y * 2 + direction_x;
+		p0.x *= 2;
+		p0.y *= 2;
+		p1.x *= 2;
+		p1.y *= 2;
 
-	// Expand wall coordinates to span all the length of its boundary fields.
-	w0.x -= direction_x;
-	w0.y -= direction_y;
-	w1.x += direction_x;
-	w1.y += direction_y;
+		// Expand wall coordinates to span all the length of its boundary fields.
+		w0.x -= direction_x;
+		w0.y -= direction_y;
+		w1.x += direction_x;
+		w1.y += direction_y;
+	}
 
 	// Express end coordinates as relative to their start coordinates.
 	p1.x -= p0.x;
@@ -81,7 +87,6 @@ static int blocks(struct point p0, struct point p1, struct point w0, struct poin
 	w1.y -= w0.y;
 
 	cross = cross_product(p1, w1);
-
 	if (cross) // the lines intersect
 	{
 		// the lines intersect where
@@ -118,8 +123,11 @@ int path_visible(struct point origin, struct point target, const struct polygon 
 	{
 		obstacle = obstacles + i;
 		for(j = 1; j < obstacle->vertices_count; ++j)
+		{
+			// TODO here we should know whether the obstacle is horizontal or vertical (in order to support single-field obstacles for which the coordinates are equal)
 			if (blocks(origin, target, obstacle->points[j - 1], obstacle->points[j]))
 				return 0;
+		}
 	}
 
 	return 1;
@@ -178,9 +186,10 @@ static int graph_attach(struct adjacency_list *restrict nodes, size_t index, con
 	struct neighbor *neighbor;
 	double distance;
 
+	from = nodes->list[index].location;
+
 	for(node = 0; node < index; ++node)
 	{
-		from = nodes->list[index].location;
 		to = nodes->list[node].location;
 		if (path_visible(from, to, obstacles, obstacles_count))
 		{

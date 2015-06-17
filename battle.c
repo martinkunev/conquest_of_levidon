@@ -182,7 +182,7 @@ static void battlefield_init_formation(const struct game *restrict game, struct 
 		for(j = 0; j < reachable_count; ++j)
 		{
 			struct battlefield *field = &battle->field[reachable[j].y][reachable[j].x];
-			if (!field->obstacle && !field->pawn)
+			if (!field->blockage && !field->pawn)
 			{
 				battle->pawns[i].moves = malloc(32 * sizeof(*battle->pawns[i].moves)); // TODO fix this
 				battle->pawns[i].moves[0].location = reachable[j];
@@ -216,7 +216,7 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 		for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
 		{
 			battle->field[y][x].location = (struct point){x, y};
-			battle->field[y][x].obstacle = OBSTACLE_NONE;
+			battle->field[y][x].blockage = BLOCKAGE_NONE;
 			battle->field[y][x].pawn = 0;
 		}
 	}
@@ -353,47 +353,71 @@ void assault_init(const struct game *restrict game, struct battle *restrict batt
 	// #     #
 	// ###.###
 
-	battle->field[0][9].obstacle = OBSTACLE_WALL;
+	battle->field[0][9].blockage = BLOCKAGE_WALL_TB;
 	battle->field[0][9].strength = garrison->strength_wall;
 
-	battle->field[1][9].obstacle = OBSTACLE_GATE;
+	battle->field[1][9].blockage = BLOCKAGE_GATE_TB;
 	battle->field[1][9].strength = garrison->strength_gate;
 	battle->field[1][9].owner = region->garrison.owner;
 
-	battle->field[2][9].obstacle = OBSTACLE_WALL;
+	battle->field[2][9].blockage = BLOCKAGE_WALL_TB;
 	battle->field[2][9].strength = garrison->strength_wall;
 
-	battle->field[3][9].obstacle = OBSTACLE_WALL;
+	battle->field[3][9].blockage = BLOCKAGE_WALL_TR;
 	battle->field[3][9].strength = garrison->strength_wall;
 
-	battle->field[3][10].obstacle = OBSTACLE_WALL;
+	battle->field[3][10].blockage = BLOCKAGE_WALL_LR;
 	battle->field[3][10].strength = garrison->strength_wall;
 
-	battle->field[3][11].obstacle = OBSTACLE_WALL;
+	battle->field[3][11].blockage = BLOCKAGE_WALL_LR;
 	battle->field[3][11].strength = garrison->strength_wall;
 
-	battle->field[3][12].obstacle = OBSTACLE_GATE;
+	battle->field[3][12].blockage = BLOCKAGE_GATE_LR;
 	battle->field[3][12].strength = garrison->strength_gate;
 	battle->field[3][12].owner = region->garrison.owner;
 
-	battle->field[3][13].obstacle = OBSTACLE_WALL;
+	battle->field[3][13].blockage = BLOCKAGE_WALL_LR;
 	battle->field[3][13].strength = garrison->strength_wall;
 
-	battle->field[3][14].obstacle = OBSTACLE_WALL;
+	battle->field[3][14].blockage = BLOCKAGE_WALL_LR;
 	battle->field[3][14].strength = garrison->strength_wall;
 
-	battle->field[3][15].obstacle = OBSTACLE_WALL;
+	battle->field[3][15].blockage = BLOCKAGE_WALL_TL;
 	battle->field[3][15].strength = garrison->strength_wall;
 
-	battle->field[2][15].obstacle = OBSTACLE_WALL;
+	battle->field[2][15].blockage = BLOCKAGE_WALL_TB;
 	battle->field[2][15].strength = garrison->strength_wall;
 
-	battle->field[1][15].obstacle = OBSTACLE_GATE;
+	battle->field[1][15].blockage = BLOCKAGE_GATE_TB;
 	battle->field[1][15].strength = garrison->strength_gate;
 	battle->field[1][15].owner = region->garrison.owner;
 
-	battle->field[0][15].obstacle = OBSTACLE_WALL;
+	battle->field[0][15].blockage = BLOCKAGE_WALL_TB;
 	battle->field[0][15].strength = garrison->strength_wall;
+}
+
+static const struct polygon *battle_obstacles(size_t *obstacles_count)
+{
+	unsigned vertical[BATTLEFIELD_WIDTH][2] = {0}; // coordinates of the last detected vertical walls
+	unsigned horizontal[2] = {0}; // coordinates of the last detected horizontal wall
+
+	size_t x, y;
+
+	for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
+		for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
+		{
+			//
+		}
+
+	// TODO count
+
+	//
+
+	struct polygon *obstacles;
+
+	// TODO
+
+	return obstacles;
 }
 
 void battlefield_term(const struct game *restrict game, struct battle *restrict battle)

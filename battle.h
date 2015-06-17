@@ -22,12 +22,11 @@ struct pawn
 struct battlefield
 {
 	struct point location;
-	enum {OBSTACLE_NONE, OBSTACLE_FIXED, OBSTACLE_GATE, OBSTACLE_WALL} obstacle;
+	enum {BLOCKAGE_NONE, BLOCKAGE_GATE_LR, BLOCKAGE_GATE_TB, BLOCKAGE_WALL_LR, BLOCKAGE_WALL_TB, BLOCKAGE_WALL_TL, BLOCKAGE_WALL_TR, BLOCKAGE_WALL_BL, BLOCKAGE_WALL_BR} blockage;
 
-	unsigned char owner; // used for gate
-	unsigned strength; // used for gate and wall
-
-	struct pawn *pawn;
+	unsigned char owner; // used for BLOCKAGE_GATE_*
+	unsigned strength; // used for BLOCKAGE_GATE_* and BLOCKAGE_WALL_*
+	struct pawn *pawn; // used for BLOCKAGE_NONE
 };
 
 struct battle
