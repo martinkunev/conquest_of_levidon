@@ -40,25 +40,6 @@ const size_t buildings_count = sizeof(buildings) / sizeof(*buildings);
 
 #undef NAME
 
-/*static struct polygon *region_create(size_t count, ...)
-{
-	size_t index;
-	va_list vertices;
-
-	// Allocate memory for the region and its vertices.
-	struct polygon *polygon = malloc(sizeof(struct polygon) + count * sizeof(struct point));
-	if (!polygon) return 0;
-	polygon->vertices_count = count;
-
-	// Initialize region vertices.
-	va_start(vertices, count);
-	for(index = 0; index < count; ++index)
-		polygon->points[index] = va_arg(vertices, struct point);
-	va_end(vertices);
-
-	return polygon;
-}*/
-
 static int region_build(uint32_t *restrict built, const struct array *restrict list)
 {
 	size_t i, j;

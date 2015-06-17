@@ -17,6 +17,8 @@ struct path_node
 #define heap_update(heap, position) ((heap)->data[position]->heap_index = (position))
 #include "heap.g"
 
+// TODO support obstacles that are single points
+
 // Find the shortest path from an origin field to a target field.
 // The path consists of a sequence of straight lines with each intermediate point being at the corner of an obstacle.
 // steps:
@@ -26,6 +28,7 @@ struct path_node
 // Obstacles represents blocking objects, coastlines and fortresses on the battlefield.
 // Obstacles are represented as a sequence of directed line segments (each one representing a wall).
 // Coordinates of the obstacles are inclusive (the end points are part of the obstacle).
+// An obstacle can consist of a single point, line segment or line loop.
 
 // TODO The fields are represented by their top left coordinates (in order to facilitate computations).
 // left->right: direction_x < 0: move y coordinates up
@@ -57,28 +60,6 @@ static int blocks(struct point p0, struct point p1, struct point w0, struct poin
 	// http://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect
 
 	long cross;
-
-	{
-		int direction_x = sign(w1.x - w0.x);
-		int direction_y = sign(w1.y - w0.y);
-
-		// Treat the wall as being located at the middle of the field.
-		// Double the coordinates in order to use integers for the calculations.
-		w0.x = w0.x * 2 - direction_y;
-		w0.y = w0.y * 2 + direction_x;
-		w1.x = w1.x * 2 - direction_y;
-		w1.y = w1.y * 2 + direction_x;
-		p0.x *= 2;
-		p0.y *= 2;
-		p1.x *= 2;
-		p1.y *= 2;
-
-		// Expand wall coordinates to span all the length of its boundary fields.
-		w0.x -= direction_x;
-		w0.y -= direction_y;
-		w1.x += direction_x;
-		w1.y += direction_y;
-	}
 
 	// Express end coordinates as relative to their start coordinates.
 	p1.x -= p0.x;
@@ -113,20 +94,67 @@ static int blocks(struct point p0, struct point p1, struct point w0, struct poin
 }
 
 // Checks whether the field target can be seen from origin (there are no obstacles in-between).
-int path_visible(struct point origin, struct point target, const struct polygon *restrict obstacles, size_t obstacles_count)
+int path_visible(struct point origin, struct point target, const struct obstacle *restrict obstacles, size_t obstacles_count)
 {
-	const struct polygon *restrict obstacle;
+	const struct obstacle *restrict obstacle;
 	size_t i, j;
+
+	// Double the coordinates in order to use integers for the calculations.
+	origin.x *= 2;
+	origin.y *= 2;
+	target.x *= 2;
+	target.y *= 2;
 
 	// Check if there is a wall that blocks the path from origin to target.
 	for(i = 0; i < obstacles_count; ++i)
 	{
+		struct point w0, w1;
+
 		obstacle = obstacles + i;
-		for(j = 1; j < obstacle->vertices_count; ++j)
+
+		if (obstacle->vertices_count == 1)
 		{
-			// TODO here we should know whether the obstacle is horizontal or vertical (in order to support single-field obstacles for which the coordinates are equal)
-			if (blocks(origin, target, obstacle->points[j - 1], obstacle->points[j]))
-				return 0;
+			w0 = obstacle->points[0];
+			w1 = obstacle->points[0];
+
+			if (obstacle->orientation == OBSTACLE_HORIZONTAL)
+			{
+				w0.x = w0.x * 2 - 1;
+				w0.y = w0.y * 2 + 1;
+			}
+			else // obstacle->orientation == OBSTACLE_VERTICAL
+			{
+				w0.x = w0.x * 2 + 1;
+				w0.y = w0.y * 2 - 1;
+			}
+			w1.x = w1.x * 2 + 1;
+			w1.y = w1.y * 2 + 1;
+
+			if (blocks(origin, target, w0, w1)) return 0;
+		}
+		else for(j = 1; j < obstacle->vertices_count; ++j)
+		{
+			int direction_x, direction_y;
+
+			w0 = obstacle->points[j - 1];
+			w1 = obstacle->points[j];
+			direction_x = sign(w1.x - w0.x);
+			direction_y = sign(w1.y - w0.y);
+
+			// Double the coordinates in order to use integers for the calculations.
+			// Treat the wall as being located at the middle of the field.
+			w0.x = w0.x * 2 - direction_y;
+			w0.y = w0.y * 2 + direction_x;
+			w1.x = w1.x * 2 - direction_y;
+			w1.y = w1.y * 2 + direction_x;
+
+			// Expand wall coordinates to span all the length of its boundary fields.
+			w0.x -= direction_x;
+			w0.y -= direction_y;
+			w1.x += direction_x;
+			w1.y += direction_y;
+
+			if (blocks(origin, target, w0, w1)) return 0;
 		}
 	}
 
@@ -178,8 +206,34 @@ static void graph_insert_end(struct adjacency_list *nodes, struct point start, s
 	}
 }
 
+// Insert one node at each corner of the point.
+static void graph_insert_point(struct adjacency_list *nodes, struct point point)
+{
+	struct adjacency *node;
+
+	node = &nodes->list[nodes->count++];
+	node->neighbors = 0;
+	node->location.x = point.x + 1;
+	node->location.y = point.y - 1;
+
+	node = &nodes->list[nodes->count++];
+	node->neighbors = 0;
+	node->location.x = point.x - 1;
+	node->location.y = point.y - 1;
+
+	node = &nodes->list[nodes->count++];
+	node->neighbors = 0;
+	node->location.x = point.x - 1;
+	node->location.y = point.y + 1;
+
+	node = &nodes->list[nodes->count++];
+	node->neighbors = 0;
+	node->location.x = point.x + 1;
+	node->location.y = point.y + 1;
+}
+
 // Attach the vertex at position index to the graph by adding the necessary edges.
-static int graph_attach(struct adjacency_list *restrict nodes, size_t index, const struct polygon *restrict obstacles, size_t obstacles_count)
+static int graph_attach(struct adjacency_list *restrict nodes, size_t index, const struct obstacle *restrict obstacles, size_t obstacles_count)
 {
 	size_t node;
 	struct point from, to;
@@ -261,9 +315,9 @@ static void graph_detach(struct adjacency_list *graph, size_t index)
 }
 
 // Stores the vertices of the graph in nodes and returns the adjacency matrix of the graph.
-struct adjacency_list *visibility_graph_build(const struct polygon *restrict obstacles, size_t obstacles_count)
+struct adjacency_list *visibility_graph_build(const struct obstacle *restrict obstacles, size_t obstacles_count)
 {
-	const struct polygon *restrict obstacle;
+	const struct obstacle *restrict obstacle;
 	size_t i, j;
 
 	// Find the number of vertices in the visibility graph.
@@ -273,12 +327,14 @@ struct adjacency_list *visibility_graph_build(const struct polygon *restrict obs
 		for(i = 0; i < obstacles_count; ++i)
 		{
 			obstacle = obstacles + i;
-			if (point_eq(obstacle->points[0], obstacle->points[obstacle->vertices_count - 1]))
+			if (obstacle->vertices_count == 1) // single blockage
+				count += 4;
+			else if (point_eq(obstacle->points[0], obstacle->points[obstacle->vertices_count - 1])) // closed loop
 				count += obstacle->vertices_count - 1;
 			else
 				count += obstacle->vertices_count + 2;
 		}
-		count += 2;
+		count += 2; // origin and target vertices
 
 		nodes = malloc(sizeof(*nodes) + sizeof(*nodes->list) * count);
 		if (!nodes) abort();
@@ -293,7 +349,11 @@ struct adjacency_list *visibility_graph_build(const struct polygon *restrict obs
 		for(j = 2; j < obstacle->vertices_count; ++j)
 			graph_insert_angle(nodes, obstacle->points[j - 2], obstacle->points[j - 1], obstacle->points[j]);
 
-		if (point_eq(obstacle->points[0], obstacle->points[obstacle->vertices_count - 1])) // the obstacle is a closed loop
+		if (obstacle->vertices_count == 1) // single blockage
+		{
+			graph_insert_point(nodes, obstacle->points[0]);
+		}
+		else if (point_eq(obstacle->points[0], obstacle->points[obstacle->vertices_count - 1])) // closed loop
 		{
 			graph_insert_angle(nodes, obstacle->points[obstacle->vertices_count - 2], obstacle->points[0], obstacle->points[1]);
 		}
@@ -362,7 +422,7 @@ static ssize_t find_next(struct heap *restrict closest, struct path_node *restri
 	return next;
 }
 
-int path_reachable(const struct pawn *restrict pawn, struct adjacency_list *restrict graph, const struct polygon *restrict obstacles, size_t obstacles_count, unsigned char reachable[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH])
+int path_reachable(const struct pawn *restrict pawn, struct adjacency_list *restrict graph, const struct obstacle *restrict obstacles, size_t obstacles_count, unsigned char reachable[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH])
 {
 	struct path_node *traverse_info;
 	struct heap closest;
@@ -449,7 +509,7 @@ finally:
 
 // Finds path from the pawn's current final location to a target field. Appends the path to the pawn's movement queue.
 // On error, returns error code and pawn movement queue remains unchanged.
-int path_queue(struct pawn *restrict pawn, struct point target, struct adjacency_list *restrict graph, const struct polygon *restrict obstacles, size_t obstacles_count)
+int path_queue(struct pawn *restrict pawn, struct point target, struct adjacency_list *restrict graph, const struct obstacle *restrict obstacles, size_t obstacles_count)
 {
 	struct path_node *traverse_info;
 	struct heap closest;

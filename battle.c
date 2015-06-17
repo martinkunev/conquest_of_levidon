@@ -396,29 +396,54 @@ void assault_init(const struct game *restrict game, struct battle *restrict batt
 	battle->field[0][15].strength = garrison->strength_wall;
 }
 
-static const struct polygon *battle_obstacles(size_t *obstacles_count)
+static inline int field_passable(const struct battlefield *restrict field, unsigned char player)
 {
-	unsigned vertical[BATTLEFIELD_WIDTH][2] = {0}; // coordinates of the last detected vertical walls
-	unsigned horizontal[2] = {0}; // coordinates of the last detected horizontal wall
+	if (field->blockage == BLOCKAGE_NONE) return 1;
+	return (((field->blockage == BLOCKAGE_GATE_LR) || (field->blockage == BLOCKAGE_GATE_TB)) && (field->owner == player));
+}
 
+/*static void obstacle_continue(restrict struct battle *restrict battle, size_t x, size_t y, const struct battlefield *restrict field, int *restrict horizontal, int *restrict vertical)
+{
+	if (!*horizontal)
+	{
+		// TODO new obstacle starts
+	}
+
+	//if (!x || field_passable(battle->field[y][x - 1], player))
+	//	;
+
+	// TODO finish this
+}
+
+static const struct polygon *battle_obstacles(const struct battle *restrict battle, unsigned char player, size_t *restrict obstacles_count)
+{
 	size_t x, y;
+
+	int horizontal = -1; // start coordinate of the last detected horizontal wall
+	int vertical[BATTLEFIELD_WIDTH]; // start coordinate of the last detected vertical walls
+
+	size_t i;
+
+	for(i = 0; i < BATTLEFIELD_WIDTH; ++i) vertical[i] = -1;
 
 	for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
 		for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
 		{
-			//
+			const struct battlefield *field = &battle->field[y][x];
+			if (field_passable(field, player))
+				obstacle_end(battle, x, y, field, &horizontal, &vertical[y]); // TODO finish this
+			else
+				obstacle_continue(battle, x, y, field, &horizontal, &vertical[y]);
 		}
 
-	// TODO count
-
-	//
+	// TODO finish this
 
 	struct polygon *obstacles;
 
 	// TODO
 
 	return obstacles;
-}
+}*/
 
 void battlefield_term(const struct game *restrict game, struct battle *restrict battle)
 {
