@@ -39,7 +39,7 @@
 #define RESOURCE_IRON 720
 #define RESOURCE_STONE 740
 
-// TODO compatibility with OpenGL 2.1 (used in MacOS X)
+// TODO compatibility with OpenGL 2.1 (necessary in MacOS X)
 #define glGenFramebuffers(...) glGenFramebuffersEXT(__VA_ARGS__)
 #define glGenRenderbuffers(...) glGenRenderbuffersEXT(__VA_ARGS__)
 #define glBindFramebuffer(...) glBindFramebufferEXT(__VA_ARGS__)
@@ -525,7 +525,7 @@ static int if_animation(const struct player *restrict players, const struct batt
 		if (movement_location(pawn, progress, &x, &y) < pawn->moves_count)
 			finished = 0;
 
-		display_unit(pawn->troop->unit->index, BATTLE_X + x * FIELD_SIZE, BATTLE_Y + y * FIELD_SIZE, Player + pawn->troop->owner, 0, 0);
+		display_unit(pawn->troop->unit->index, BATTLE_X + x * object_group[Battlefield].width, BATTLE_Y + y * object_group[Battlefield].height, Player + pawn->troop->owner, 0, 0);
 	}
 
 	glFlush();
@@ -589,7 +589,7 @@ void if_formation(const void *argument, const struct game *game)
 			size_t reachable_count = formation_reachable(game, battle->region, pawns[i], positions);
 			for(i = 0; i < reachable_count; ++i)
 				if (!battlefield[positions[i].y][positions[i].x].pawn)
-					display_rectangle(BATTLE_X + positions[i].x * FIELD_SIZE, BATTLE_Y + positions[i].y * FIELD_SIZE, FIELD_SIZE, FIELD_SIZE, FieldReachable);
+					display_rectangle(BATTLE_X + positions[i].x * object_group[Battlefield].width, BATTLE_Y + positions[i].y * object_group[Battlefield].height, object_group[Battlefield].width, object_group[Battlefield].height, FieldReachable);
 
 			// Display the selected pawn in the control section.
 			display_unit(troop->unit->index, CTRL_X, CTRL_Y + CTRL_MARGIN, Player + state->player, White, troop->count);
@@ -598,13 +598,13 @@ void if_formation(const void *argument, const struct game *game)
 		{
 			// Display the pawn at its present location.
 			struct point location = pawns[i]->moves[0].location;
-			display_unit(troop->unit->index, BATTLE_X + location.x * FIELD_SIZE, BATTLE_Y + location.y * FIELD_SIZE, Player + state->player, 0, 0);
+			display_unit(troop->unit->index, BATTLE_X + location.x * object_group[Battlefield].width, BATTLE_Y + location.y * object_group[Battlefield].height, Player + state->player, 0, 0);
 		}
 	}
 
 	// Display hovered field in color.
 	if (!point_eq(state->hover, POINT_NONE))
-		display_rectangle(BATTLE_X + state->hover.x * FIELD_SIZE, BATTLE_Y + state->hover.y * FIELD_SIZE, FIELD_SIZE, FIELD_SIZE, Hover);
+		display_rectangle(BATTLE_X + state->hover.x * object_group[Battlefield].width, BATTLE_Y + state->hover.y * object_group[Battlefield].height, object_group[Battlefield].width, object_group[Battlefield].height, Hover);
 
 	glFlush();
 	glXSwapBuffers(display, drawable);
@@ -630,13 +630,13 @@ void if_battle(const void *argument, const struct game *game)
 				else if (game->players[pawn->troop->owner].alliance == game->players[state->player].alliance) color = Ally;
 				else color = Enemy;
 
-				display_unit(pawn->troop->unit->index, BATTLE_X + x * FIELD_SIZE, BATTLE_Y + y * FIELD_SIZE, color, 0, 0);
+				display_unit(pawn->troop->unit->index, BATTLE_X + x * object_group[Battlefield].width, BATTLE_Y + y * object_group[Battlefield].height, color, 0, 0);
 			}
 		}
 
 	// Display hovered field in color.
 	if (!point_eq(state->hover, POINT_NONE))
-		display_rectangle(BATTLE_X + state->hover.x * FIELD_SIZE, BATTLE_Y + state->hover.y * FIELD_SIZE, FIELD_SIZE, FIELD_SIZE, Hover);
+		display_rectangle(BATTLE_X + state->hover.x * object_group[Battlefield].width, BATTLE_Y + state->hover.y * object_group[Battlefield].height, object_group[Battlefield].width, object_group[Battlefield].height, Hover);
 
 	// Display information about the selected field.
 	if ((state->x < BATTLEFIELD_WIDTH) && (state->y < BATTLEFIELD_HEIGHT) && battlefield[state->y][state->x].pawn)
@@ -654,7 +654,7 @@ void if_battle(const void *argument, const struct game *game)
 			for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
 				for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
 					if (reachable[y][x] && !battlefield[y][x].pawn)
-						display_rectangle(BATTLE_X + x * FIELD_SIZE, BATTLE_Y + y * FIELD_SIZE, FIELD_SIZE, FIELD_SIZE, FieldReachable);
+						display_rectangle(BATTLE_X + x * object_group[Battlefield].width, BATTLE_Y + y * object_group[Battlefield].height, object_group[Battlefield].width, object_group[Battlefield].height, FieldReachable);
 		}
 
 		// Display pawn information in the control section.

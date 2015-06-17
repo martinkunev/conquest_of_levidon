@@ -96,21 +96,21 @@ static int troop_create(struct troop **restrict troops, struct region *restrict 
 	return -1;
 }
 
-static inline union json *json_get(const struct hashmap *restrict hashmap, const unsigned char *restrict key, size_t size)
+static inline union json *value_get(const struct hashmap *restrict hashmap, const unsigned char *restrict key, size_t size)
 {
 	union json **entry = hashmap_get(hashmap, key, size);
 	if (!entry) return 0;
 	return *entry;
 }
-#define json_get(hashmap, key) (json_get)(hashmap, key, sizeof(key) - 1)
+#define value_get(hashmap, key) (value_get)(hashmap, key, sizeof(key) - 1)
 
-static inline union json *json_get_value(const struct hashmap *restrict hashmap, const unsigned char *restrict key, size_t size, enum json_type type)
+static inline union json *value_get_try(const struct hashmap *restrict hashmap, const unsigned char *restrict key, size_t size, enum json_type type)
 {
 	union json **entry = hashmap_get(hashmap, key, size);
 	if (!entry || (json_type(*entry) != type)) return 0;
 	return *entry;
 }
-#define json_get_value(hashmap, key, type) (json_get_value)(hashmap, key, sizeof(key) - 1, type)
+#define value_get_try(hashmap, key, type) (value_get_try)(hashmap, key, sizeof(key) - 1, type)
 
 static int region_init(struct game *restrict game, struct region *restrict region, const struct hashmap *restrict data)
 {
@@ -121,7 +121,7 @@ static int region_init(struct game *restrict game, struct region *restrict regio
 	const union json *x, *y;
 	struct point *points;
 
-	item = json_get_value(data, "owner", JSON_INTEGER);
+	item = value_get_try(data, "owner", JSON_INTEGER);
 	if (!item) return -1;
 	region->owner = item->integer;
 
@@ -130,19 +130,19 @@ static int region_init(struct game *restrict game, struct region *restrict regio
 	region->garrison.troops = 0;
 	region->garrison.siege = 0;
 
-	if (item = json_get(data, "garrison"))
+	if (item = value_get(data, "garrison"))
 	{
 		if (json_type(item) != JSON_OBJECT) return -1;
 
-		/*field = json_get(&item->object, "position");
+		/*field = value_get(&item->object, "position");
 		if (!field || (json_type(field) != JSON_INTEGER)) return -1;
 		region->owner = field->integer;*/
 
-		field = json_get_value(data, "owner", JSON_INTEGER);
+		field = value_get_try(data, "owner", JSON_INTEGER);
 		if (!field) return -1;
 		region->garrison.owner = field->integer;
 
-		if (field = json_get(&item->object, "troops"))
+		if (field = value_get(&item->object, "troops"))
 		{
 			if (json_type(field) != JSON_ARRAY) return -1;
 			for(j = 0; j < field->array.count; ++j)
@@ -162,7 +162,7 @@ static int region_init(struct game *restrict game, struct region *restrict regio
 	}
 
 	region->troops = 0;
-	if (item = json_get(data, "troops"))
+	if (item = value_get(data, "troops"))
 	{
 		if (json_type(item) != JSON_ARRAY) return -1;
 		for(j = 0; j < item->array.count; ++j)
@@ -186,13 +186,13 @@ static int region_init(struct game *restrict game, struct region *restrict regio
 	region->built = 0;
 	region->construct = -1;
 	region->build_progress = 0;
-	if (item = json_get(data, "built"))
+	if (item = value_get(data, "built"))
 	{
 		if (json_type(item) != JSON_ARRAY) return -1;
 		if (region_build(&region->built, &item->array)) return -1;
 	}
 
-	item = json_get_value(data, "neighbors", JSON_ARRAY);
+	item = value_get_try(data, "neighbors", JSON_ARRAY);
 	if (!item || (item->array.count != NEIGHBORS_LIMIT)) return -1;
 	for(j = 0; j < NEIGHBORS_LIMIT; ++j)
 	{
@@ -202,19 +202,19 @@ static int region_init(struct game *restrict game, struct region *restrict regio
 		else region->neighbors[j] = game->regions + entry->integer;
 	}
 
-	item = json_get_value(data, "center", JSON_ARRAY);
+	item = value_get_try(data, "center", JSON_ARRAY);
 	if (!item || (item->array.count != 2)) return -1;
 	x = item->array.data[0];
 	y = item->array.data[1];
 	if ((json_type(x) != JSON_INTEGER) || (json_type(y) != JSON_INTEGER)) return -1;
 	region->center = (struct point){x->integer, y->integer};
 
-	item = json_get_value(data, "name", JSON_STRING);
+	item = value_get_try(data, "name", JSON_STRING);
 	if (!item || (item->string.size > NAME_LIMIT)) return -1;
 	memcpy(region->name, item->string.data, item->string.size);
 	region->name_length = item->string.size;
 
-	item = json_get_value(data, "location", JSON_ARRAY);
+	item = value_get_try(data, "location", JSON_ARRAY);
 	if (!item || (item->array.count < 3)) return -1;
 	region->location = malloc(offsetof(struct polygon, points) + item->array.count * sizeof(struct point));
 	if (!region->location) return -1;
@@ -252,7 +252,7 @@ int world_init(const union json *restrict json, struct game *restrict game)
 
 	if (json_type(json) != JSON_OBJECT) goto error;
 
-	node = json_get_value(&json->object, "players", JSON_ARRAY);
+	node = value_get_try(&json->object, "players", JSON_ARRAY);
 	if (!node || (node->array.count < 1) || (node->array.count > PLAYERS_LIMIT)) goto error;
 
 	game->players_count = node->array.count;
@@ -263,27 +263,27 @@ int world_init(const union json *restrict json, struct game *restrict game)
 		item = node->array.data[index];
 		if (json_type(item) != JSON_OBJECT) goto error;
 
-		field = json_get_value(&item->object, "alliance", JSON_INTEGER);
+		field = value_get_try(&item->object, "alliance", JSON_INTEGER);
 		if (!field || (field->integer >= PLAYERS_LIMIT)) goto error;
 		game->players[index].alliance = field->integer;
 
-		field = json_get_value(&item->object, "gold", JSON_INTEGER);
+		field = value_get_try(&item->object, "gold", JSON_INTEGER);
 		if (!field) goto error;
 		game->players[index].treasury.gold = field->integer;
 
-		field = json_get_value(&item->object, "food", JSON_INTEGER);
+		field = value_get_try(&item->object, "food", JSON_INTEGER);
 		if (!field) goto error;
 		game->players[index].treasury.food = field->integer;
 
-		field = json_get_value(&item->object, "iron", JSON_INTEGER);
+		field = value_get_try(&item->object, "iron", JSON_INTEGER);
 		if (!field) goto error;
 		game->players[index].treasury.iron = field->integer;
 
-		field = json_get_value(&item->object, "wood", JSON_INTEGER);
+		field = value_get_try(&item->object, "wood", JSON_INTEGER);
 		if (!field) goto error;
 		game->players[index].treasury.wood = field->integer;
 
-		field = json_get_value(&item->object, "stone", JSON_INTEGER);
+		field = value_get_try(&item->object, "stone", JSON_INTEGER);
 		if (!field) goto error;
 		game->players[index].treasury.stone = field->integer;
 
@@ -295,7 +295,7 @@ int world_init(const union json *restrict json, struct game *restrict game)
 	game->players[0].type = Neutral;
 	//game->players[0].input_formation = input_formation_none;
 
-	node = json_get_value(&json->object, "regions", JSON_ARRAY);
+	node = value_get_try(&json->object, "regions", JSON_ARRAY);
 	if (!node || (node->array.count < 1) || (node->array.count > REGIONS_LIMIT)) goto error;
 
 	game->regions_count = node->array.count;
@@ -331,5 +331,5 @@ void world_term(struct game *restrict game)
 	free(game->players);
 }
 
-#undef json_get_value
-#undef json_get
+#undef value_get_try
+#undef value_get
