@@ -71,7 +71,7 @@ struct battlefield (*battlefield)[BATTLEFIELD_WIDTH];
 struct region *restrict regions;
 size_t regions_count;
 
-static struct image image_move_destination, image_shoot_destination, image_selected, image_flag, image_panel, image_construction;
+static struct image image_move_destination, image_fight_destination, image_shoot_destination, image_selected, image_flag, image_panel, image_construction;
 static struct image image_terrain[1];
 static struct image image_garrison[2]; // TODO this must be big enough for all garrison types
 static struct image image_gold, image_food, image_wood, image_stone, image_iron, image_time;
@@ -257,6 +257,7 @@ int if_init(const struct game *game)
 	}
 
 	image_load_png(&image_move_destination, "img/move_destination.png", 0);
+	image_load_png(&image_fight_destination, "img/move_destination.png", 0);
 	image_load_png(&image_shoot_destination, "img/shoot_destination.png", 0);
 	image_load_png(&image_selected, "img/selected.png", 0);
 	image_load_png(&image_flag, "img/flag.png", 0);
@@ -573,24 +574,33 @@ void if_battle(const void *argument, const struct game *game)
 		// Show pawn task (if any).
 		if (pawn->troop->owner == state->player)
 		{
-			size_t i;
-			for(i = 1; i < pawn->moves_count; ++i)
+			if (pawn->action == PAWN_SHOOT)
 			{
-				struct point from = pawn->moves[i - 1].location;
-				from.x = BATTLE_X + from.x * FIELD_SIZE + FIELD_SIZE / 2;
-				from.y = BATTLE_Y + from.y * FIELD_SIZE + FIELD_SIZE / 2;
-
-				struct point to = pawn->moves[i].location;
-				to.x = BATTLE_Y + to.x * FIELD_SIZE + FIELD_SIZE / 2;
-				to.y = BATTLE_Y + to.y * FIELD_SIZE + FIELD_SIZE / 2;
-
-				if (pawn->moves[i].time <= 1.0) color = PathReachable;
-				else color = PathUnreachable;
-				display_arrow(from, to, BATTLE_X, BATTLE_Y, color);
+				image_draw(&image_shoot_destination, BATTLE_X + pawn->target.field.x * FIELD_SIZE, BATTLE_Y + pawn->target.field.y * FIELD_SIZE);
 			}
+			else if (pawn->action == PAWN_FIGHT)
+			{
+				struct point target = pawn->target.pawn->moves[0].location;
+				image_draw(&image_fight_destination, BATTLE_X + target.x * FIELD_SIZE, BATTLE_Y + target.y * FIELD_SIZE);
+			}
+			else
+			{
+				size_t i;
+				for(i = 1; i < pawn->moves_count; ++i)
+				{
+					struct point from = pawn->moves[i - 1].location;
+					from.x = BATTLE_X + from.x * FIELD_SIZE + FIELD_SIZE / 2;
+					from.y = BATTLE_Y + from.y * FIELD_SIZE + FIELD_SIZE / 2;
 
-			if (!point_eq(pawn->shoot, POINT_NONE))
-				image_draw(&image_shoot_destination, BATTLE_X + pawn->shoot.x * FIELD_SIZE, BATTLE_Y + pawn->shoot.y * FIELD_SIZE);
+					struct point to = pawn->moves[i].location;
+					to.x = BATTLE_Y + to.x * FIELD_SIZE + FIELD_SIZE / 2;
+					to.y = BATTLE_Y + to.y * FIELD_SIZE + FIELD_SIZE / 2;
+
+					if (pawn->moves[i].time <= 1.0) color = PathReachable;
+					else color = PathUnreachable;
+					display_arrow(from, to, BATTLE_X, BATTLE_Y, color);
+				}
+			}
 		}
 	}
 

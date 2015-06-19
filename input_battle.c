@@ -18,11 +18,12 @@ extern const struct battle *battle;
 extern struct battlefield (*battlefield)[BATTLEFIELD_WIDTH];
 
 // Sets move destination of a pawn. Returns -1 if the current player is not allowed to move the pawn at the destination.
-static void pawn_move(struct pawn *restrict pawn, unsigned x, unsigned y, struct state_battle *state, int queue)
+static void pawn_move(const struct game *restrict game, struct pawn *restrict pawn, unsigned x, unsigned y, struct state_battle *state, int queue)
 {
 	struct point target = {x, y};
 
-	// TODO ? set pawn->fight
+	if (battle->field[y][x].blockage && !allies(game, pawn->troop->owner, battle->field[y][x].owner))
+		return;
 
 	if (queue)
 	{
@@ -33,21 +34,36 @@ static void pawn_move(struct pawn *restrict pawn, unsigned x, unsigned y, struct
 		if (movement_set(pawn, target, state->graph, state->obstacles)) return;
 	}
 
-	// Reset shoot commands.
-	pawn->shoot = POINT_NONE;
+	pawn->action = 0;
 }
 
-// Sets shoot target of a pawn. Returns -1 if the current player is not allowed to shoot at the target with this pawn.
-static void pawn_shoot(struct pawn *restrict pawn, unsigned x, unsigned y, struct state_battle *state)
+static int pawn_fight(struct pawn *pawn, unsigned x, unsigned y)
+{
+	struct pawn *target = battle->field[y][x].pawn;
+
+	if (!target) return 0;
+	if (!battlefield_fightable(pawn, target->moves[0].location, battle)) return 0;
+
+	movement_stay(pawn);
+	pawn->action = PAWN_FIGHT;
+	pawn->target.pawn = target;
+
+	return 1;
+}
+
+// TODO pawn_assault
+
+static int pawn_shoot(struct pawn *pawn, unsigned x, unsigned y, struct state_battle *state)
 {
 	struct point target = {x, y};
 
-	if (!battlefield_shootable(pawn, target, state->obstacles)) return;
+	if (!battlefield_shootable(pawn, target, battle, state->obstacles)) return 0;
 
-	pawn->shoot = target;
-
-	// Reset move commands.
 	movement_stay(pawn);
+	pawn->action = PAWN_SHOOT;
+	pawn->target.field = target;
+
+	return 1;
 }
 
 static int input_round(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
@@ -86,8 +102,6 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 	x /= FIELD_SIZE;
 	y /= FIELD_SIZE;
 
-	// TODO ? fast move
-
 	if (code == -1)
 	{
 		// Set current field.
@@ -98,21 +112,33 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 	else if (code == -3)
 	{
 		struct pawn *pawn = state->pawn;
-		if (!pawn) return 0;
-		if (pawn->troop->owner != state->player) return 0;
-
+		if (!pawn || (pawn->troop->owner != state->player)) return 0;
 		struct point target = {x, y};
+
+		// Cancel actions if the clicked field is the one on which the pawn stands.
 		if (point_eq(target, pawn->moves[0].location))
 		{
 			movement_stay(pawn);
-			pawn->shoot = POINT_NONE;
+			pawn->action = 0;
 			return 0;
 		}
 
-		// shoot if CONTROL is pressed; move otherwise
+		// TODO ? fast move
+
+		// if CONTROL is pressed, shoot
+		// if SHIFT is pressed, move
 		if (modifiers & XCB_MOD_MASK_CONTROL) pawn_shoot(pawn, x, y, state);
-		else if (modifiers & XCB_MOD_MASK_SHIFT) pawn_move(pawn, x, y, state, 1);
-		else pawn_move(pawn, x, y, state, 0);
+		else if (modifiers & XCB_MOD_MASK_SHIFT) pawn_move(game, pawn, x, y, state, 1);
+		else
+		{
+			// Perform the first possible action: shoot, fight, move
+			if (pawn_shoot(pawn, x, y, state))
+				;
+			else if (pawn_fight(pawn, x, y))
+				;
+			else
+				pawn_move(game, pawn, x, y, state, 0);
+		}
 	}
 	else if (code == EVENT_MOTION) state->hover = (struct point){x, y};
 
@@ -183,7 +209,7 @@ int input_formation(const struct game *restrict game, struct battle *restrict ba
 	return input_local(areas, sizeof(areas) / sizeof(*areas), if_formation, game, &state);
 }
 
-int input_battle(const struct game *restrict game, struct battle *restrict battle, unsigned char player, struct obstacle *restrict obstacles, size_t obstacles_count)
+int input_battle(const struct game *restrict game, struct battle *restrict battle, unsigned char player)
 {
 	if_set(battle->field, battle);
 

@@ -262,8 +262,7 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 
 		pawns[i].troop = troop;
 		pawns[i].hurt = 0;
-		pawns[i].fight = POINT_NONE;
-		pawns[i].shoot = POINT_NONE;
+		pawns[i].action = 0;
 
 		battle->players[troop->owner].pawns[pawn_offset[troop->owner]++] = pawns + i;
 	}
@@ -277,7 +276,7 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 	return 0;
 }
 
-void assault_init(const struct game *restrict game, struct battle *restrict battle, struct region *restrict region)
+static void assault_init(const struct game *restrict game, struct battle *restrict battle, struct region *restrict region)
 {
 	const struct garrison_info *restrict garrison = garrison_info(region);
 

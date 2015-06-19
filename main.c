@@ -71,8 +71,7 @@ static int battle_open(struct game *restrict game, struct region *restrict regio
 				continue;
 
 			case Local:
-				// TODO set obstacles?
-				if (input_battle(game, &battle, player, 0, 0) < 0)
+				if (input_battle(game, &battle, player) < 0)
 				{
 					status = -1;
 					goto finally;

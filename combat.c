@@ -22,26 +22,38 @@ void battlefield_fight(const struct game *restrict game, struct battle *restrict
 		unsigned char fighter_alliance = game->players[fighter->troop->owner].alliance;
 
 		if (!fighter->troop->count) continue;
+		if (fighter->action != PAWN_FIGHT) continue;
 
-		int x = fighter->moves[0].location.x;
-		int y = fighter->moves[0].location.y;
+		// TODO PAWN_ASSAULT
+
 		unsigned damage_total = fighter->troop->unit->damage * fighter->troop->count;
 		unsigned damage;
 
 		struct pawn *victims[4], *victim;
 		unsigned enemies_count = 0;
 
-		// Look for pawns to fight at the neighboring fields.
-		enemies_count = 0;
-		if ((x > 0) && (victim = battle->field[y][x - 1].pawn) && (game->players[victim->troop->owner].alliance != fighter_alliance))
-			victims[enemies_count++] = victim;
-		if ((x < (BATTLEFIELD_WIDTH - 1)) && (victim = battle->field[y][x + 1].pawn) && (game->players[victim->troop->owner].alliance != fighter_alliance))
-			victims[enemies_count++] = victim;
-		if ((y > 0) && (victim = battle->field[y - 1][x].pawn) && (game->players[victim->troop->owner].alliance != fighter_alliance))
-			victims[enemies_count++] = victim;
-		if ((y < (BATTLEFIELD_HEIGHT - 1)) && (victim = battle->field[y + 1][x].pawn) && (game->players[victim->troop->owner].alliance != fighter_alliance))
-			victims[enemies_count++] = victim;
-		if (!enemies_count) continue; // nothing to fight
+		// If the pawn has a specific fight target and is able to fight it, fight only that target.
+		if ((fighter->action == PAWN_FIGHT) && battlefield_fightable(fighter, fighter->target.pawn->moves[0].location, battle))
+		{
+			victims[0] = fighter->target.pawn;
+			enemies_count = 1;
+		}
+		else
+		{
+			int x = fighter->moves[0].location.x;
+			int y = fighter->moves[0].location.y;
+
+			// Look for pawns to fight at the neighboring fields.
+			if ((x > 0) && (victim = battle->field[y][x - 1].pawn) && (game->players[victim->troop->owner].alliance != fighter_alliance))
+				victims[enemies_count++] = victim;
+			if ((x < (BATTLEFIELD_WIDTH - 1)) && (victim = battle->field[y][x + 1].pawn) && (game->players[victim->troop->owner].alliance != fighter_alliance))
+				victims[enemies_count++] = victim;
+			if ((y > 0) && (victim = battle->field[y - 1][x].pawn) && (game->players[victim->troop->owner].alliance != fighter_alliance))
+				victims[enemies_count++] = victim;
+			if ((y < (BATTLEFIELD_HEIGHT - 1)) && (victim = battle->field[y + 1][x].pawn) && (game->players[victim->troop->owner].alliance != fighter_alliance))
+				victims[enemies_count++] = victim;
+			if (!enemies_count) continue; // nothing to fight
+		}
 
 		for(j = 0; j < enemies_count; ++j)
 		{
@@ -61,17 +73,19 @@ void battlefield_shoot(struct battle *battle)
 		struct pawn *shooter = battle->pawns + i;
 
 		if (!shooter->troop->count) continue;
-		if (point_eq(shooter->shoot, POINT_NONE)) continue;
+		if (shooter->action != PAWN_SHOOT) continue;
 
-		int x = shooter->shoot.x;
-		int y = shooter->shoot.y;
 		unsigned damage_total = shooter->troop->unit->shoot * shooter->troop->count;
 		unsigned damage;
 
 		unsigned target_index;
 		double distance, miss, on_target;
 
-		distance = battlefield_distance(shooter->moves[0].location, shooter->shoot);
+		int x = shooter->target.field.x;
+		int y = shooter->target.field.y;
+		struct pawn *victim = battle->field[y][x].pawn;
+
+		distance = battlefield_distance(shooter->moves[0].location, shooter->target.field);
 		miss = distance / shooter->troop->unit->range;
 
 		// Shooters have some chance to hit a field adjacent to the target, depending on the distance.
@@ -174,7 +188,21 @@ void battlefield_clean_corpses(struct battle *battle)
 	}
 }
 
-int battlefield_shootable(const struct pawn *restrict pawn, struct point target, const struct obstacles *restrict obstacles)
+int battlefield_fightable(const struct pawn *restrict pawn, struct point target, const struct battle *restrict battle)
+{
+	struct point position = pawn->moves[0].location;
+	int distance;
+
+	// TODO what if one of the pawns is on a tower
+
+	if (position.x == target.x) distance = (int)target.y - (int)position.y;
+	else if (position.y == target.y) distance = (int)target.x - (int)position.x;
+	else return 0;
+
+	return ((distance == -1) || (distance == 1));
+}
+
+int battlefield_shootable(const struct pawn *restrict pawn, struct point target, const struct battle *restrict battle, const struct obstacles *restrict obstacles)
 {
 	unsigned range;
 
@@ -183,7 +211,10 @@ int battlefield_shootable(const struct pawn *restrict pawn, struct point target,
 
 	range = pawn->troop->unit->range;
 
+	// TODO don't allow sooting if there is an enemy on a neighboring field
+
 	// If there is an obstacle between the pawn and its target, decrease shooting range by 1.
+	// TODO also decrease range if the pawn is in a tower
 	if (!path_visible(pawn->moves[0].location, target, obstacles))
 		range -= 1;
 

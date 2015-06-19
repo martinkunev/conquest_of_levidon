@@ -11,7 +11,12 @@ struct pawn
 	size_t moves_size; // TODO rename this
 	size_t moves_count;
 
-	struct point fight, shoot;
+	enum {PAWN_FIGHT, PAWN_SHOOT, PAWN_ASSAULT} action;
+	union
+	{
+		struct pawn *pawn;
+		struct point field;
+	} target;
 
 	// used for movement computation
 	struct point failback, step;
