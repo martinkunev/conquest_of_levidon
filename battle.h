@@ -19,13 +19,15 @@ struct pawn
 	unsigned startup;
 };
 
+enum {POSITION_RIGHT = 0x1, POSITION_TOP = 0x2, POSITION_LEFT = 0x4, POSITION_BOTTOM = 0x8};
 struct battlefield
 {
 	struct point location;
-	enum {BLOCKAGE_NONE, BLOCKAGE_GATE_LR, BLOCKAGE_GATE_TB, BLOCKAGE_WALL_LR, BLOCKAGE_WALL_TB, BLOCKAGE_WALL_TL, BLOCKAGE_WALL_TR, BLOCKAGE_WALL_BL, BLOCKAGE_WALL_BR} blockage;
+	enum {BLOCKAGE_NONE, BLOCKAGE_TERRAIN, BLOCKAGE_OBSTACLE} blockage;
+	unsigned char position;
 
-	unsigned char owner; // used for BLOCKAGE_GATE_*
-	unsigned strength; // used for BLOCKAGE_GATE_* and BLOCKAGE_WALL_*
+	unsigned char owner; // used for BLOCKAGE_OBSTACLE
+	unsigned strength; // used for BLOCKAGE_OBSTACLE
 	struct pawn *pawn; // used for BLOCKAGE_NONE
 };
 

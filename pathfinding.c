@@ -17,31 +17,22 @@ struct path_node
 #define heap_update(heap, position) ((heap)->data[position]->heap_index = (position))
 #include "heap.g"
 
-// TODO support obstacles that are single points
-
 // Find the shortest path from an origin field to a target field.
 // The path consists of a sequence of straight lines with each intermediate point being at the corner of an obstacle.
 // steps:
 //  Build visibility graph with vertices: the corners of the obstacles, the origin point and the target point.
 //  Use Dijkstra's algorithm to find the shortest path in the graph from origin to target.
 
-// Obstacles represents blocking objects, coastlines and fortresses on the battlefield.
-// Obstacles are represented as a sequence of directed line segments (each one representing a wall).
+// Obstacles represent blocking objects, coastlines and fortresses on the battlefield.
+// Each obstacle is represented as a line segment (start and end point).
+// Only horizontal and vertical (not diagonal) obstacles are supported.
 // Coordinates of the obstacles are inclusive (the end points are part of the obstacle).
-// An obstacle can consist of a single point, line segment or line loop.
 
-// TODO The fields are represented by their top left coordinates (in order to facilitate computations).
-// left->right: direction_x < 0: move y coordinates up
-// right->left: direction_x > 0: move y coordinates down
-// top->bottom: direction_y < 0: move x coordinates right
-// bottom->top: direction_y > 0: move x coordinates left
-// the surrounded area is shrunk
+// Internally, each field has size 2x2. Pawns are considered to be at the center of the corresponding field.
+// The internal representation is used in obstacles and visibility graph.
 
-// TODO use bitmap to filter duplicated vertices
 // TODO do I need non-symmetric distance?
-
 // TODO there must be obstacles applicable only for some units (horses and balistas can not climb walls)
-
 // TODO path_reachable should be refactored to not depend on battlefield size
 
 static inline int sign(int number)
@@ -94,158 +85,41 @@ static int blocks(struct point p0, struct point p1, struct point w0, struct poin
 }
 
 // Checks whether the field target can be seen from origin (there are no obstacles in-between).
-int path_visible(struct point origin, struct point target, const struct obstacle *restrict obstacles, size_t obstacles_count)
+int path_visible(struct point origin, struct point target, const struct obstacles *restrict obstacles)
 {
-	const struct obstacle *restrict obstacle;
-	size_t i, j;
+	size_t i;
 
 	// Double the coordinates in order to use integers for the calculations.
-	origin.x *= 2;
-	origin.y *= 2;
-	target.x *= 2;
-	target.y *= 2;
+	origin.x = origin.x * 2 + 1;
+	origin.y = origin.y * 2 + 1;
+	target.x = target.x * 2 + 1;
+	target.y = target.y * 2 + 1;
 
 	// Check if there is a wall that blocks the path from origin to target.
-	for(i = 0; i < obstacles_count; ++i)
+	for(i = 0; i < obstacles->count; ++i)
 	{
-		struct point w0, w1;
-
-		obstacle = obstacles + i;
-
-		if (obstacle->vertices_count == 1)
-		{
-			w0 = obstacle->points[0];
-			w1 = obstacle->points[0];
-
-			if (obstacle->orientation == OBSTACLE_HORIZONTAL)
-			{
-				w0.x = w0.x * 2 - 1;
-				w0.y = w0.y * 2 + 1;
-			}
-			else // obstacle->orientation == OBSTACLE_VERTICAL
-			{
-				w0.x = w0.x * 2 + 1;
-				w0.y = w0.y * 2 - 1;
-			}
-			w1.x = w1.x * 2 + 1;
-			w1.y = w1.y * 2 + 1;
-
-			if (blocks(origin, target, w0, w1)) return 0;
-		}
-		else for(j = 1; j < obstacle->vertices_count; ++j)
-		{
-			int direction_x, direction_y;
-
-			w0 = obstacle->points[j - 1];
-			w1 = obstacle->points[j];
-			direction_x = sign(w1.x - w0.x);
-			direction_y = sign(w1.y - w0.y);
-
-			// Double the coordinates in order to use integers for the calculations.
-			// Treat the wall as being located at the middle of the field.
-			w0.x = w0.x * 2 - direction_y;
-			w0.y = w0.y * 2 + direction_x;
-			w1.x = w1.x * 2 - direction_y;
-			w1.y = w1.y * 2 + direction_x;
-
-			// Expand wall coordinates to span all the length of its boundary fields.
-			w0.x -= direction_x;
-			w0.y -= direction_y;
-			w1.x += direction_x;
-			w1.y += direction_y;
-
-			if (blocks(origin, target, w0, w1)) return 0;
-		}
+		const struct obstacle *restrict obstacle = obstacles->obstacle + i;
+		if (blocks(origin, target, obstacle->p[0], obstacle->p[1]))
+			return 0;
 	}
 
 	return 1;
 }
 
-static void graph_insert_angle(struct adjacency_list *nodes, struct point a, struct point b, struct point c)
-{
-	struct adjacency *node = &nodes->list[nodes->count++];
-	node->neighbors = 0;
-
-	// Calculate the coordinates of the inserted vertex.
-	node->location.x = b.x + sign(b.x - a.x) + sign(b.x - c.x);
-	node->location.y = b.y + sign(b.y - a.y) + sign(b.y - c.y);
-}
-
-static void graph_insert_end(struct adjacency_list *nodes, struct point start, struct point end)
-{
-	struct adjacency *node;
-
-	// Calculate the coordinates of the inserted vertex.
-	int direction_x = sign(end.x - start.x);
-	int direction_y = sign(end.y - start.y);
-
-	// Insert one node at each corner of the end point.
-	if (direction_x)
-	{
-		node = &nodes->list[nodes->count++];
-		node->neighbors = 0;
-		node->location.x = end.x + direction_x;
-		node->location.y = end.y + direction_y + 1;
-
-		node = &nodes->list[nodes->count++];
-		node->neighbors = 0;
-		node->location.x = end.x + direction_x;
-		node->location.y = end.y + direction_y - 1;
-	}
-	else // direction_y
-	{
-		node = &nodes->list[nodes->count++];
-		node->neighbors = 0;
-		node->location.x = end.x + direction_x + 1;
-		node->location.y = end.y + direction_y;
-
-		node = &nodes->list[nodes->count++];
-		node->neighbors = 0;
-		node->location.x = end.x + direction_x - 1;
-		node->location.y = end.y + direction_y;
-	}
-}
-
-// Insert one node at each corner of the point.
-static void graph_insert_point(struct adjacency_list *nodes, struct point point)
-{
-	struct adjacency *node;
-
-	node = &nodes->list[nodes->count++];
-	node->neighbors = 0;
-	node->location.x = point.x + 1;
-	node->location.y = point.y - 1;
-
-	node = &nodes->list[nodes->count++];
-	node->neighbors = 0;
-	node->location.x = point.x - 1;
-	node->location.y = point.y - 1;
-
-	node = &nodes->list[nodes->count++];
-	node->neighbors = 0;
-	node->location.x = point.x - 1;
-	node->location.y = point.y + 1;
-
-	node = &nodes->list[nodes->count++];
-	node->neighbors = 0;
-	node->location.x = point.x + 1;
-	node->location.y = point.y + 1;
-}
-
 // Attach the vertex at position index to the graph by adding the necessary edges.
-static int graph_attach(struct adjacency_list *restrict nodes, size_t index, const struct obstacle *restrict obstacles, size_t obstacles_count)
+static int graph_attach(struct adjacency_list *restrict graph, size_t index, const struct obstacles *restrict obstacles)
 {
 	size_t node;
 	struct point from, to;
 	struct neighbor *neighbor;
 	double distance;
 
-	from = nodes->list[index].location;
+	from = graph->list[index].location;
 
 	for(node = 0; node < index; ++node)
 	{
-		to = nodes->list[node].location;
-		if (path_visible(from, to, obstacles, obstacles_count))
+		to = graph->list[node].location;
+		if (path_visible(from, to, obstacles))
 		{
 			distance = battlefield_distance(from, to);
 
@@ -253,15 +127,15 @@ static int graph_attach(struct adjacency_list *restrict nodes, size_t index, con
 			if (!neighbor) return ERROR_MEMORY;
 			neighbor->index = node;
 			neighbor->distance = distance;
-			neighbor->next = nodes->list[index].neighbors;
-			nodes->list[index].neighbors = neighbor;
+			neighbor->next = graph->list[index].neighbors;
+			graph->list[index].neighbors = neighbor;
 
 			neighbor = malloc(sizeof(*neighbor));
 			if (!neighbor) return ERROR_MEMORY;
 			neighbor->index = index;
 			neighbor->distance = distance;
-			neighbor->next = nodes->list[node].neighbors;
-			nodes->list[node].neighbors = neighbor;
+			neighbor->next = graph->list[node].neighbors;
+			graph->list[node].neighbors = neighbor;
 		}
 	}
 
@@ -314,80 +188,100 @@ static void graph_detach(struct adjacency_list *graph, size_t index)
 	}
 }
 
-// Stores the vertices of the graph in nodes and returns the adjacency matrix of the graph.
-struct adjacency_list *visibility_graph_build(const struct obstacle *restrict obstacles, size_t obstacles_count)
+static void vertex_insert(struct adjacency_list *graph, const struct obstacle *restrict obstacle, int x, int y, unsigned char occupied[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH])
 {
-	const struct obstacle *restrict obstacle;
+	struct adjacency *node;
+
+	// Don't insert a vertex if the coordinates are outside the battlefield.
+	if ((x < 0) || (x >= BATTLEFIELD_WIDTH) || (y < 0) || (y >= BATTLEFIELD_HEIGHT))
+		return;
+
+	// Don't insert a vertex if the field is occupied.
+	if (occupied[y][x])
+		return;
+
+	occupied[y][x] = 1;
+
+	node = &graph->list[graph->count++];
+	node->neighbors = 0;
+	node->location.x = x;
+	node->location.y = y;
+}
+
+// Returns the visibility graph as adjacency list.
+struct adjacency_list *visibility_graph_build(const struct battle *restrict battle, const struct obstacles *restrict obstacles)
+{
+	unsigned char occupied[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH] = {0};
+
 	size_t i, j;
 
-	// Find the number of vertices in the visibility graph.
-	struct adjacency_list *nodes;
-	{
-		size_t count = 0;
-		for(i = 0; i < obstacles_count; ++i)
-		{
-			obstacle = obstacles + i;
-			if (obstacle->vertices_count == 1) // single blockage
-				count += 4;
-			else if (point_eq(obstacle->points[0], obstacle->points[obstacle->vertices_count - 1])) // closed loop
-				count += obstacle->vertices_count - 1;
-			else
-				count += obstacle->vertices_count + 2;
-		}
-		count += 2; // origin and target vertices
+	struct adjacency_list *graph, *graph_resized;
 
-		nodes = malloc(sizeof(*nodes) + sizeof(*nodes->list) * count);
-		if (!nodes) abort();
-		nodes->count = 0;
+	for(i = 0; i < BATTLEFIELD_HEIGHT; ++i)
+		for(j = 0; j < BATTLEFIELD_WIDTH; ++j)
+			if (battle->field[i][j].blockage)
+				occupied[i][j] = 1;
+
+	// Allocate enough memory for the maximum size of the adjacency graph.
+	// 4 vertices for the corners around each obstacle and 2 vertices for origin and target
+	graph = malloc(sizeof(*graph) + sizeof(*graph->list) * (obstacles->count * 4 + 2));
+	if (!graph) return 0;
+	graph->count = 0;
+
+	for(i = 0; i < obstacles->count; ++i)
+	{
+		const struct obstacle *restrict obstacle = obstacles->obstacle + i;
+
+		int direction_x = sign(obstacle->p[1].x - obstacle->p[0].x);
+		int direction_y = sign(obstacle->p[1].y - obstacle->p[0].y);
+
+		// Insert one node at each corner of each end point.
+		if (direction_x)
+		{
+			int direction_x0 = ((obstacle->p[0].x % 2) ? (direction_x * 2) : direction_x);
+			int direction_x1 = ((obstacle->p[1].x % 2) ? (direction_x * 2) : direction_x);
+			vertex_insert(graph, obstacle, obstacle->p[0].x - direction_x0, obstacle->p[0].y - 2, occupied);
+			vertex_insert(graph, obstacle, obstacle->p[0].x - direction_x0, obstacle->p[0].y + 2, occupied);
+			vertex_insert(graph, obstacle, obstacle->p[1].x + direction_x1, obstacle->p[1].y - 2, occupied);
+			vertex_insert(graph, obstacle, obstacle->p[1].x + direction_x1, obstacle->p[1].y + 2, occupied);
+		}
+		else // direction_y
+		{
+			int direction_y0 = ((obstacle->p[0].y % 2) ? (direction_y * 2) : direction_y);
+			int direction_y1 = ((obstacle->p[1].y % 2) ? (direction_y * 2) : direction_y);
+			vertex_insert(graph, obstacle, obstacle->p[0].x - 2, obstacle->p[0].y - direction_y0, occupied);
+			vertex_insert(graph, obstacle, obstacle->p[0].x + 2, obstacle->p[0].y - direction_y0, occupied);
+			vertex_insert(graph, obstacle, obstacle->p[1].x - 2, obstacle->p[1].y + direction_y1, occupied);
+			vertex_insert(graph, obstacle, obstacle->p[1].x + 2, obstacle->p[1].y + direction_y1, occupied);
+		}
 	}
 
-	// For each angle, use its exterior point for the visibility graph.
-	for(i = 0; i < obstacles_count; ++i)
-	{
-		obstacle = obstacles + i;
-
-		for(j = 2; j < obstacle->vertices_count; ++j)
-			graph_insert_angle(nodes, obstacle->points[j - 2], obstacle->points[j - 1], obstacle->points[j]);
-
-		if (obstacle->vertices_count == 1) // single blockage
-		{
-			graph_insert_point(nodes, obstacle->points[0]);
-		}
-		else if (point_eq(obstacle->points[0], obstacle->points[obstacle->vertices_count - 1])) // closed loop
-		{
-			graph_insert_angle(nodes, obstacle->points[obstacle->vertices_count - 2], obstacle->points[0], obstacle->points[1]);
-		}
-		else
-		{
-			graph_insert_end(nodes, obstacle->points[1], obstacle->points[0]);
-			graph_insert_end(nodes, obstacle->points[obstacle->vertices_count - 2], obstacle->points[obstacle->vertices_count - 1]);
-		}
-	}
+	// Free the unused part of the adjacency graph buffer.
+	// Leave space for origin and target vertices.
+	graph_resized = realloc(graph, sizeof(*graph) + sizeof(*graph->list) * (graph->count + 2));
+	if (!graph_resized) graph_resized = graph;
 
 	// Fill the adjacency list of the visibility graph.
 	// Consider that no vertex is connected to itself.
-	for(i = 1; i < nodes->count; ++i)
-		if (graph_attach(nodes, i, obstacles, obstacles_count) < 0)
-			goto error;
+	for(i = 1; i < graph_resized->count; ++i)
+		if (graph_attach(graph_resized, i, obstacles) < 0)
+		{
+			visibility_graph_free(graph_resized);
+			return 0;
+		}
 
-	// The adjacency list has place for two more vertices.
-	// They will be used by pathfinding functions for origin and target vertices.
-
-	return nodes;
-
-error:
-	visibility_graph_free(nodes);
-	return 0;
+	// The origin and target vertices will be set by pathfinding functions.
+	return graph_resized;
 }
 
-void visibility_graph_free(struct adjacency_list *nodes)
+void visibility_graph_free(struct adjacency_list *graph)
 {
 	size_t i;
 	struct neighbor *item, *next;
 
-	for(i = 0; i < nodes->count; ++i)
+	for(i = 0; i < graph->count; ++i)
 	{
-		item = nodes->list[i].neighbors;
+		item = graph->list[i].neighbors;
 		while (item)
 		{
 			next = item->next;
@@ -395,7 +289,7 @@ void visibility_graph_free(struct adjacency_list *nodes)
 			item = next;
 		}
 	}
-	free(nodes);
+	free(graph);
 }
 
 static ssize_t find_next(struct heap *restrict closest, struct path_node *restrict traverse_info, struct neighbor *restrict neighbor, size_t last)
@@ -422,7 +316,7 @@ static ssize_t find_next(struct heap *restrict closest, struct path_node *restri
 	return next;
 }
 
-int path_reachable(const struct pawn *restrict pawn, struct adjacency_list *restrict graph, const struct obstacle *restrict obstacles, size_t obstacles_count, unsigned char reachable[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH])
+int path_reachable(const struct pawn *restrict pawn, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles, unsigned char reachable[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH])
 {
 	struct path_node *traverse_info;
 	struct heap closest;
@@ -438,7 +332,7 @@ int path_reachable(const struct pawn *restrict pawn, struct adjacency_list *rest
 	vertex_origin = graph->count++;
 	graph->list[vertex_origin].location = pawn->moves[pawn->moves_count - 1].location;
 	graph->list[vertex_origin].neighbors = 0;
-	graph_attach(graph, vertex_origin, obstacles, obstacles_count);
+	graph_attach(graph, vertex_origin, obstacles);
 
 	// Initialize traversal information.
 	traverse_info = malloc(graph->count * sizeof(*traverse_info));
@@ -490,7 +384,7 @@ int path_reachable(const struct pawn *restrict pawn, struct adjacency_list *rest
 			for(i = 0; i < graph->count; ++i)
 			{
 				struct point target = {x, y};
-				if (path_visible(graph->list[i].location, target, obstacles, obstacles_count))
+				if (path_visible(graph->list[i].location, target, obstacles))
 					if (traverse_info[i].distance + battlefield_distance(graph->list[i].location, target) <= pawn->troop->unit->speed)
 						reachable[y][x] = 1;
 			}
@@ -509,7 +403,7 @@ finally:
 
 // Finds path from the pawn's current final location to a target field. Appends the path to the pawn's movement queue.
 // On error, returns error code and pawn movement queue remains unchanged.
-int path_queue(struct pawn *restrict pawn, struct point target, struct adjacency_list *restrict graph, const struct obstacle *restrict obstacles, size_t obstacles_count)
+int path_queue(struct pawn *restrict pawn, struct point target, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles)
 {
 	struct path_node *traverse_info;
 	struct heap closest;
@@ -526,13 +420,13 @@ int path_queue(struct pawn *restrict pawn, struct point target, struct adjacency
 	vertex_target = graph->count++;
 	graph->list[vertex_target].location = target;
 	graph->list[vertex_target].neighbors = 0;
-	graph_attach(graph, vertex_target, obstacles, obstacles_count);
+	graph_attach(graph, vertex_target, obstacles);
 
 	// Add vertex for the origin.
 	vertex_origin = graph->count++;
 	graph->list[vertex_origin].location = pawn->moves[pawn->moves_count - 1].location;
 	graph->list[vertex_origin].neighbors = 0;
-	graph_attach(graph, vertex_origin, obstacles, obstacles_count);
+	graph_attach(graph, vertex_origin, obstacles);
 
 	// Initialize traversal information.
 	traverse_info = malloc(graph->count * sizeof(*traverse_info));
@@ -610,4 +504,161 @@ finally:
 	graph->count -= 2;
 
 	return status;
+}
+
+static void obstacle_insert(struct obstacles *obstacles, unsigned x0, unsigned y0, unsigned x1, unsigned y1)
+{
+	obstacles->obstacle[obstacles->count].p[0] = (struct point){x0, y0};
+	obstacles->obstacle[obstacles->count].p[1] = (struct point){x1, y1};
+	obstacles->count += 1;
+}
+
+// Finds the obstacles on the battlefield. Constructs and returns a list of the obstacles.
+struct obstacles *path_obstacles(const struct game *restrict game, const struct battle *restrict battle, unsigned char player)
+{
+	size_t x, y;
+
+	struct obstacles *obstacles;
+	size_t obstacles_count = 0;
+
+	size_t i;
+	int horizontal = -1; // start coordinate of the last detected horizontal wall
+	int vertical[BATTLEFIELD_WIDTH]; // start coordinate of the last detected vertical walls
+	for(i = 0; i < BATTLEFIELD_WIDTH; ++i) vertical[i] = -1;
+
+	// Count the obstacles.
+	for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
+	{
+		for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
+		{
+			const struct battlefield *field = &battle->field[y][x];
+			if (field->blockage && !allies(game, field->owner, player))
+			{
+				if (horizontal >= 0)
+				{
+					if (field->position != (field->position | POSITION_LEFT | POSITION_RIGHT))
+						obstacles_count += 1;
+					if (!(field->position & POSITION_RIGHT)) horizontal = -1;
+				}
+				else
+				{
+					if (field->position & POSITION_RIGHT)
+						horizontal = x * 2 + !(field->position & POSITION_LEFT);
+					else if (field->position & POSITION_LEFT)
+						obstacles_count += 1;
+				}
+				if (vertical[x] >= 0)
+				{
+					if (field->position != (field->position | POSITION_TOP | POSITION_BOTTOM))
+						obstacles_count += 1;
+					if (!(field->position & POSITION_BOTTOM)) vertical[x] = -1;
+				}
+				else
+				{
+					if (field->position & POSITION_BOTTOM)
+						vertical[x] = y * 2 + !(field->position & POSITION_TOP);
+					else if (field->position & POSITION_TOP)
+						obstacles_count += 1;
+				}
+			}
+			else
+			{
+				if (horizontal >= 0)
+				{
+					obstacles_count += 1;
+					horizontal = -1;
+				}
+				if (vertical[x] >= 0)
+				{
+					obstacles_count += 1;
+					vertical[x] = -1;
+				}
+			}
+		}
+
+		if (horizontal >= 0)
+		{
+			obstacles_count += 1;
+			horizontal = -1;
+		}
+	}
+	for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
+	{
+		if (vertical[x] >= 0)
+		{
+			obstacles_count += 1;
+			vertical[x] = -1;
+		}
+	}
+
+	obstacles = malloc(sizeof(*obstacles) + obstacles_count * sizeof(*obstacles->obstacle));
+	if (!obstacles) return 0;
+	obstacles->count = 0;
+
+	// Insert the obstacles.
+	for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
+	{
+		for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
+		{
+			const struct battlefield *field = &battle->field[y][x];
+			if (field->blockage && !allies(game, field->owner, player))
+			{
+				if (horizontal >= 0)
+				{
+					if (field->position != (field->position | POSITION_LEFT | POSITION_RIGHT))
+						obstacle_insert(obstacles, horizontal, y * 2 + 1, x * 2 + (field->position & POSITION_LEFT), y * 2 + 1);
+					if (!(field->position & POSITION_RIGHT)) horizontal = -1;
+				}
+				else
+				{
+					if (field->position & POSITION_RIGHT)
+						horizontal = x * 2 + !(field->position & POSITION_LEFT);
+					else if (field->position & POSITION_LEFT)
+						obstacle_insert(obstacles, x * 2, y * 2 + 1, x * 2 + 1, y * 2 + 1);
+				}
+				if (vertical[x] >= 0)
+				{
+					if (field->position != (field->position | POSITION_TOP | POSITION_BOTTOM))
+						obstacle_insert(obstacles, x * 2 + 1, vertical[x], x * 2 + 1, y * 2 + (field->position & POSITION_TOP));
+					if (!(field->position & POSITION_BOTTOM)) vertical[x] = -1;
+				}
+				else
+				{
+					if (field->position & POSITION_BOTTOM)
+						vertical[x] = y * 2 + !(field->position & POSITION_TOP);
+					else if (field->position & POSITION_TOP)
+						obstacle_insert(obstacles, x * 2 + 1, y * 2, x * 2 + 1, y * 2 + 1);
+				}
+			}
+			else
+			{
+				if (horizontal >= 0)
+				{
+					obstacle_insert(obstacles, horizontal, y * 2 + 1, x * 2, y * 2 + 1);
+					horizontal = -1;
+				}
+				if (vertical[x] >= 0)
+				{
+					obstacle_insert(obstacles, x * 2 + 1, vertical[x], x * 2 + 1, y * 2);
+					vertical[x] = -1;
+				}
+			}
+		}
+
+		if (horizontal >= 0)
+		{
+			obstacle_insert(obstacles, horizontal, y * 2 + 1, BATTLEFIELD_WIDTH * 2, y * 2 + 1);
+			horizontal = -1;
+		}
+	}
+	for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
+	{
+		if (vertical[x] >= 0)
+		{
+			obstacle_insert(obstacles, x * 2 + 1, vertical[x], x * 2 + 1, BATTLEFIELD_HEIGHT * 2);
+			vertical[x] = -1;
+		}
+	}
+
+	return obstacles;
 }

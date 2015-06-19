@@ -9,6 +9,7 @@ struct state_battle
 
 	int region;
 
+	struct obstacles *obstacles; // obstacles on the battlefield
 	struct adjacency_list *graph; // graph used for pathfinding
 };
 
@@ -23,4 +24,4 @@ struct state_formation
 
 int input_formation(const struct game *restrict game, struct battle *restrict battle, unsigned char player);
 
-int input_battle(const struct game *restrict game, struct battle *restrict battle, unsigned char player);
+int input_battle(const struct game *restrict game, struct battle *restrict battle, unsigned char player, struct obstacle *restrict obstacles, size_t obstacles_count);

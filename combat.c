@@ -174,13 +174,19 @@ void battlefield_clean_corpses(struct battle *battle)
 	}
 }
 
-int battlefield_shootable(const struct pawn *restrict pawn, struct point target)
+int battlefield_shootable(const struct pawn *restrict pawn, struct point target, const struct obstacles *restrict obstacles)
 {
+	unsigned range;
+
 	// Only ranged units can shoot.
 	if (!pawn->troop->unit->shoot) return 0;
 
-	// TODO decrease range by 1 if there is a wall on the way or if target is on a wall
+	range = pawn->troop->unit->range;
+
+	// If there is an obstacle between the pawn and its target, decrease shooting range by 1.
+	if (!path_visible(pawn->moves[0].location, target, obstacles))
+		range -= 1;
 
 	unsigned distance = round(battlefield_distance(pawn->moves[0].location, target));
-	return (distance <= pawn->troop->unit->range);
+	return (distance <= range);
 }

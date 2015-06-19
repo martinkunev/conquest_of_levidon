@@ -11,6 +11,8 @@
 
 #define UNIT_SPEED_LIMIT 16
 
+#define OWNER_NONE 0 /* TODO fix this */
+
 #include "resources.h"
 #include "display.h"
 
@@ -146,3 +148,8 @@ void troop_detach(struct troop **troops, struct troop *troop);
 void troop_remove(struct troop **troops, struct troop *troop);
 
 int troop_spawn(struct region *restrict region, struct troop **restrict troops, const struct unit *restrict unit, unsigned count, unsigned char owner);
+
+static inline int allies(const struct game *game, unsigned player0, unsigned player1)
+{
+	return (game->players[player0].alliance == game->players[player1].alliance);
+}

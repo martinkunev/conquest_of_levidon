@@ -26,11 +26,11 @@ static void pawn_move(struct pawn *restrict pawn, unsigned x, unsigned y, struct
 
 	if (queue)
 	{
-		if (movement_queue(pawn, target, state->graph)) return;
+		if (movement_queue(pawn, target, state->graph, state->obstacles)) return;
 	}
 	else
 	{
-		if (movement_set(pawn, target, state->graph)) return;
+		if (movement_set(pawn, target, state->graph, state->obstacles)) return;
 	}
 
 	// Reset shoot commands.
@@ -38,11 +38,11 @@ static void pawn_move(struct pawn *restrict pawn, unsigned x, unsigned y, struct
 }
 
 // Sets shoot target of a pawn. Returns -1 if the current player is not allowed to shoot at the target with this pawn.
-static void pawn_shoot(struct pawn *restrict pawn, unsigned x, unsigned y)
+static void pawn_shoot(struct pawn *restrict pawn, unsigned x, unsigned y, struct state_battle *state)
 {
 	struct point target = {x, y};
 
-	if (!battlefield_shootable(pawn, target)) return;
+	if (!battlefield_shootable(pawn, target, state->obstacles)) return;
 
 	pawn->shoot = target;
 
@@ -110,7 +110,7 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 		}
 
 		// shoot if CONTROL is pressed; move otherwise
-		if (modifiers & XCB_MOD_MASK_CONTROL) pawn_shoot(pawn, x, y);
+		if (modifiers & XCB_MOD_MASK_CONTROL) pawn_shoot(pawn, x, y, state);
 		else if (modifiers & XCB_MOD_MASK_SHIFT) pawn_move(pawn, x, y, state, 1);
 		else pawn_move(pawn, x, y, state, 0);
 	}
@@ -127,6 +127,8 @@ static int input_place(int code, unsigned x, unsigned y, uint16_t modifiers, con
 
 	x /= FIELD_SIZE;
 	y /= FIELD_SIZE;
+
+	// TODO make sure there is no obstacle on the field
 
 	if (code == -1)
 	{
@@ -181,7 +183,7 @@ int input_formation(const struct game *restrict game, struct battle *restrict ba
 	return input_local(areas, sizeof(areas) / sizeof(*areas), if_formation, game, &state);
 }
 
-int input_battle(const struct game *restrict game, struct battle *restrict battle, unsigned char player)
+int input_battle(const struct game *restrict game, struct battle *restrict battle, unsigned char player, struct obstacle *restrict obstacles, size_t obstacles_count)
 {
 	if_set(battle->field, battle);
 
@@ -213,12 +215,15 @@ int input_battle(const struct game *restrict game, struct battle *restrict battl
 	state.pawn = 0;
 	state.hover = POINT_NONE;
 
-	// TODO obstacles
-
-	state.graph = visibility_graph_build(0, 0);
+	state.obstacles = path_obstacles(game, battle, player);
+	if (!state.obstacles) abort();
+	state.graph = visibility_graph_build(battle, state.obstacles);
 	if (!state.graph) abort();
+
 	int status = input_local(areas, sizeof(areas) / sizeof(*areas), if_battle, game, &state);
+
 	visibility_graph_free(state.graph);
+	free(state.obstacles);
 
 	return status;
 }

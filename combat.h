@@ -1,4 +1,4 @@
-int battlefield_shootable(const struct pawn *restrict pawn, struct point target);
+int battlefield_shootable(const struct pawn *restrict pawn, struct point target, const struct obstacles *restrict obstacles);
 
 void battlefield_fight(const struct game *restrict game, struct battle *restrict battle);
 void battlefield_shoot(struct battle *battle);

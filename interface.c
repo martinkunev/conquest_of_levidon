@@ -401,101 +401,6 @@ static void show_progress(unsigned current, unsigned total, unsigned x, unsigned
 	else display_rectangle(x, y, width, height, Progress);
 }
 
-/*
-
-{
-	static size_t obstacles_count = 1;
-	static struct polygon *obstacles = 0;
-	static struct vector_adjacency nodes;
-
-	static struct point from = {0, 0};
-	static struct point to = {BATTLEFIELD_WIDTH, BATTLEFIELD_HEIGHT};
-	static struct queue moves = {0};
-
-	if ((state->x != to.x) || (state->y != to.y))
-	{
-		to.x = state->x;
-		to.y = state->y;
-
-		if (!obstacles)
-		{
-			//obstacles = region_create(5, (struct point){13, 13}, (struct point){13, 9}, (struct point){6, 9}, (struct point){6, 13}, (struct point){13, 13});
-			obstacles = region_create(4, (struct point){13, 13}, (struct point){13, 9}, (struct point){6, 9}, (struct point){6, 13});
-			visibility_graph_build(obstacles, obstacles_count, &nodes);
-		}
-
-		queue_term_free(&moves, free);
-		queue_init(&moves);
-
-		struct move m;
-		m.location = from;
-		m.time = 0;
-		m.distance = 0;
-		queue_push(&moves, m);
-
-		if (path_queue(&moves, to, &nodes, obstacles, obstacles_count) < 0)
-		{
-			//
-		}
-
-		/ *
-		visibility_graph_free(&nodes);
-		free(obstacles);
-		* /
-	}
-
-	if ((state->x != BATTLEFIELD_WIDTH) && (state->y != BATTLEFIELD_HEIGHT))
-	{
-		if (moves.length > 1)
-		{
-			/ *obstacles->points[0].x += 1;
-			obstacles->points[0].y += 1;
-			obstacles->points[1].x += 1;
-			obstacles->points[3].y += 1;
-			obstacles->vertices_count -= 1;
-			for(i = 0; i < obstacles->vertices_count; ++i)
-			{
-				obstacles->points[i].x *= FIELD_SIZE;
-				obstacles->points[i].y *= FIELD_SIZE;
-			}
-
-			glColor4ubv(display_colors[Enemy]);
-			display_polygon(obstacles, BATTLE_X, BATTLE_Y);
-
-			for(i = 0; i < obstacles->vertices_count; ++i)
-			{
-				obstacles->points[i].x /= FIELD_SIZE;
-				obstacles->points[i].y /= FIELD_SIZE;
-			}
-			obstacles->vertices_count += 1;
-			obstacles->points[0].x -= 1;
-			obstacles->points[0].y -= 1;
-			obstacles->points[1].x -= 1;
-			obstacles->points[3].y -= 1;* /
-
-			glColor4ubv(display_colors[Enemy]);
-			glBegin(GL_LINE_STRIP);
-			for(i = 0; i < obstacles->vertices_count; ++i)
-				glVertex2i(obstacles->points[i].x * FIELD_SIZE + 16, obstacles->points[i].y * FIELD_SIZE + 16);
-			glEnd();
-
-			struct queue_item *m;
-			for(m = moves.first; m->next; m = m->next)
-			{
-				struct point from = m->data.location;
-				from.x = from.x * FIELD_SIZE + FIELD_SIZE / 2;
-				from.y = from.y * FIELD_SIZE + FIELD_SIZE / 2;
-
-				struct point to = m->next->data.location;;
-				to.x = to.x * FIELD_SIZE + FIELD_SIZE / 2;
-				to.y = to.y * FIELD_SIZE + FIELD_SIZE / 2;
-
-				display_arrow(from, to, BATTLE_X, BATTLE_Y, Self);
-			}
-		}
-	}
-}*/
-
 // TODO write this better
 static int if_animation(const struct player *restrict players, const struct battle *restrict battle, double progress)
 {
@@ -649,8 +554,7 @@ void if_battle(const void *argument, const struct game *game)
 		if (pawn->troop->owner == state->player)
 		{
 			// Show which fields are reachable by the pawn.
-			// TODO obstacles
-			path_reachable(pawn, state->graph, 0, 0, reachable);
+			path_reachable(pawn, state->graph, state->obstacles, reachable);
 			for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
 				for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
 					if (reachable[y][x] && !battlefield[y][x].pawn)
