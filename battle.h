@@ -11,7 +11,7 @@ struct pawn
 	size_t moves_size; // TODO rename this
 	size_t moves_count;
 
-	enum {PAWN_FIGHT, PAWN_SHOOT, PAWN_ASSAULT} action;
+	enum {PAWN_FIGHT = 1, PAWN_SHOOT, PAWN_ASSAULT} action;
 	union
 	{
 		struct pawn *pawn;
@@ -31,7 +31,7 @@ struct battlefield
 	enum {BLOCKAGE_NONE, BLOCKAGE_TERRAIN, BLOCKAGE_OBSTACLE} blockage;
 	unsigned char position;
 
-	unsigned char owner; // used for BLOCKAGE_OBSTACLE
+	signed char owner; // used for BLOCKAGE_OBSTACLE
 	unsigned strength; // used for BLOCKAGE_OBSTACLE
 	struct pawn *pawn; // used for BLOCKAGE_NONE
 };
@@ -39,6 +39,7 @@ struct battlefield
 struct battle
 {
 	const struct region *region;
+	int assault;
 
 	struct battlefield field[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH];
 	size_t pawns_count;
@@ -56,9 +57,10 @@ static inline int point_eq(struct point a, struct point b)
 	return ((a.x == b.x) && (a.y == b.y));
 }
 
-size_t formation_reachable(const struct game *restrict game, const struct region *restrict region, const struct pawn *restrict pawn, struct point reachable[REACHABLE_LIMIT]);
+size_t formation_reachable_open(const struct game *restrict game, const struct battle *restrict battle, const struct pawn *restrict pawn, struct point reachable[REACHABLE_LIMIT]);
+size_t formation_reachable_assault(const struct game *restrict game, const struct battle *restrict battle, const struct pawn *restrict pawn, struct point reachable[REACHABLE_LIMIT]);
 
-int battlefield_init(const struct game *restrict game, struct battle *restrict battle, struct region *restrict region);
+int battlefield_init(const struct game *restrict game, struct battle *restrict battle, struct region *restrict region, int assault);
 void battlefield_term(const struct game *restrict game, struct battle *restrict battle);
 
 int battle_end(const struct game *restrict game, struct battle *restrict battle, unsigned char defender);

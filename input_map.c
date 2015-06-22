@@ -375,13 +375,14 @@ static int input_garrison(int code, unsigned x, unsigned y, uint16_t modifiers, 
 
 	if (state->region == REGION_NONE) return 0;
 	region = game->regions + state->region;
-	if (state->player != region->garrison.owner) return 0; // current player does not control the garrison
 
 	garrison = garrison_info(region);
 	if (!garrison) return 0; // no garrison in this region
 
 	if (code == -1)
 	{
+		if (state->player != region->garrison.owner) return 0; // current player does not control the garrison
+
 		troop = region->garrison.troops;
 		if (!troop) return 0; // no troops in the garrison
 
@@ -403,21 +404,29 @@ static int input_garrison(int code, unsigned x, unsigned y, uint16_t modifiers, 
 	}
 	else if (code == -3)
 	{
-		if (!state->troop) return 0; // no troop selected
-
-		// Count how many units are in the garrison.
-		unsigned count = 0;
-		for(troop = region->garrison.troops; troop; troop = troop->_next)
-			count += 1;
-
-		if (count < garrison->troops) // if there is place for one more troop
+		if (state->player == region->garrison.owner)
 		{
-			// Move the selected troop to the garrison.
-			troop_detach(&region->troops, state->troop);
-			troop_attach(&region->garrison.troops, state->troop);
-		}
+			if (!state->troop) return 0; // no troop selected
 
-		state->troop = 0;
+			// Count how many units are in the garrison.
+			unsigned count = 0;
+			for(troop = region->garrison.troops; troop; troop = troop->_next)
+				count += 1;
+
+			if (count < garrison->troops) // if there is place for one more troop
+			{
+				// Move the selected troop to the garrison.
+				troop_detach(&region->troops, state->troop);
+				troop_attach(&region->garrison.troops, state->troop);
+			}
+
+			state->troop = 0;
+		}
+		else if (!allies(game, state->player, region->garrison.owner))
+		{
+			// TODO support only some troops/players participating in the assault
+			region->garrison.assault = !region->garrison.assault;
+		}
 	}
 
 	return 0;

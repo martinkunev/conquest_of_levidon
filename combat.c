@@ -33,7 +33,7 @@ void battlefield_fight(const struct game *restrict game, struct battle *restrict
 		unsigned enemies_count = 0;
 
 		// If the pawn has a specific fight target and is able to fight it, fight only that target.
-		if ((fighter->action == PAWN_FIGHT) && battlefield_fightable(fighter, fighter->target.pawn->moves[0].location, battle))
+		if ((fighter->action == PAWN_FIGHT) && battlefield_fightable(fighter, fighter->target.pawn, battle))
 		{
 			victims[0] = fighter->target.pawn;
 			enemies_count = 1;
@@ -188,30 +188,48 @@ void battlefield_clean_corpses(struct battle *battle)
 	}
 }
 
-int battlefield_fightable(const struct pawn *restrict pawn, struct point target, const struct battle *restrict battle)
+int battlefield_fightable(const struct pawn *restrict pawn, const struct pawn *restrict target, const struct battle *restrict battle)
 {
 	struct point position = pawn->moves[0].location;
+	struct point target_position = target->moves[0].location;
 	int distance;
 
 	// TODO what if one of the pawns is on a tower
 
-	if (position.x == target.x) distance = (int)target.y - (int)position.y;
-	else if (position.y == target.y) distance = (int)target.x - (int)position.x;
+	if (!target || !target->troop->count) return 0;
+
+	if (position.x == target_position.x) distance = (int)target_position.y - (int)position.y;
+	else if (position.y == target_position.y) distance = (int)target_position.x - (int)position.x;
 	else return 0;
 
 	return ((distance == -1) || (distance == 1));
 }
 
-int battlefield_shootable(const struct pawn *restrict pawn, struct point target, const struct battle *restrict battle, const struct obstacles *restrict obstacles)
+int battlefield_shootable(const struct pawn *restrict pawn, struct point target, const struct game *restrict game, const struct battle *restrict battle, const struct obstacles *restrict obstacles)
 {
 	unsigned range;
 
 	// Only ranged units can shoot.
 	if (!pawn->troop->unit->shoot) return 0;
 
-	range = pawn->troop->unit->range;
+	// Don't allow sooting if there is a neighbor enemy pawn.
+	{
+		int x = pawn->moves[0].location.x;
+		int y = pawn->moves[0].location.y;
 
-	// TODO don't allow sooting if there is an enemy on a neighboring field
+		struct pawn *neighbor;
+
+		if ((x > 0) && (neighbor = battle->field[y][x - 1].pawn) && !allies(game, pawn->troop->owner, neighbor->troop->owner))
+			return 0;
+		if ((x < (BATTLEFIELD_WIDTH - 1)) && (neighbor = battle->field[y][x + 1].pawn) && !allies(game, pawn->troop->owner, neighbor->troop->owner))
+			return 0;
+		if ((y > 0) && (neighbor = battle->field[y - 1][x].pawn) && !allies(game, pawn->troop->owner, neighbor->troop->owner))
+			return 0;
+		if ((y < (BATTLEFIELD_HEIGHT - 1)) && (neighbor = battle->field[y + 1][x].pawn) && !allies(game, pawn->troop->owner, neighbor->troop->owner))
+			return 0;
+	}
+
+	range = pawn->troop->unit->range;
 
 	// If there is an obstacle between the pawn and its target, decrease shooting range by 1.
 	// TODO also decrease range if the pawn is in a tower

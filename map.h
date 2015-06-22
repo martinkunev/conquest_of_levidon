@@ -11,8 +11,6 @@
 
 #define UNIT_SPEED_LIMIT 16
 
-#define OWNER_NONE 0 /* TODO fix this */
-
 #include "resources.h"
 #include "display.h"
 
@@ -90,6 +88,8 @@ struct region
 		struct troop *troops;
 
 		unsigned siege;
+
+		int assault;
 	} garrison;
 
 	size_t index;

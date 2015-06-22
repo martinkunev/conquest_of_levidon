@@ -491,11 +491,9 @@ void if_formation(const void *argument, const struct game *game)
 		if (pawns[i] == state->pawn)
 		{
 			// Display at which fields the pawn can be placed.
-			struct point positions[REACHABLE_LIMIT];
-			size_t reachable_count = formation_reachable(game, battle->region, pawns[i], positions);
-			for(i = 0; i < reachable_count; ++i)
-				if (!battlefield[positions[i].y][positions[i].x].pawn)
-					display_rectangle(BATTLE_X + positions[i].x * object_group[Battlefield].width, BATTLE_Y + positions[i].y * object_group[Battlefield].height, object_group[Battlefield].width, object_group[Battlefield].height, FieldReachable);
+			for(i = 0; i < state->reachable_count; ++i)
+				if (!battlefield[state->reachable[i].y][state->reachable[i].x].pawn)
+					display_rectangle(BATTLE_X + state->reachable[i].x * object_group[Battlefield].width, BATTLE_Y + state->reachable[i].y * object_group[Battlefield].height, object_group[Battlefield].width, object_group[Battlefield].height, FieldReachable);
 
 			// Display the selected pawn in the control section.
 			display_unit(troop->unit->index, CTRL_X, CTRL_Y + CTRL_MARGIN, Player + state->player, White, troop->count);
@@ -854,6 +852,11 @@ static void if_map_region(const struct region *region, const struct state_map *s
 					for(i = 0; i < provisions; ++i)
 						image_draw(&image_food, object_group[TroopGarrison].right + 9, object_group[TroopGarrison].bottom - (i + 1) * image_food.height);
 				}
+			}
+
+			if (region->garrison.assault && (state->player == region->owner))
+			{
+				// TODO
 			}
 		}
 	}

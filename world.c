@@ -110,6 +110,7 @@ static int region_init(struct game *restrict game, struct region *restrict regio
 	region->garrison.owner = region->owner;
 	region->garrison.troops = 0;
 	region->garrison.siege = 0;
+	region->garrison.assault = 0;
 
 	if (item = value_get(data, "garrison"))
 	{

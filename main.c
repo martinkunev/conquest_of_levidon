@@ -26,20 +26,16 @@
 
 #define WORLD_DEFAULT "worlds/balkans"
 
-static int battle_open(struct game *restrict game, struct region *restrict region)
+static int play_battle(struct game *restrict game, struct battle *restrict battle)
 {
-	struct battle battle;
 	unsigned char player;
 
 	int status;
 
-	if (battlefield_init(game, &battle, region) < 0) return -1;
-
 	// Ask each player to position their pawns.
-	// TODO ?this should be done on 2 stages (for region owners and for allies if there is an owner at the same location)
 	for(player = 0; player < game->players_count; ++player)
 	{
-		if (!battle.players[player].pawns_count) continue; // skip players with no pawns
+		if (!battle->players[player].pawns_count) continue; // skip players with no pawns
 
 		switch (game->players[player].type)
 		{
@@ -47,23 +43,19 @@ static int battle_open(struct game *restrict game, struct region *restrict regio
 			continue;
 
 		case Local:
-			if (input_formation(game, &battle, player) < 0)
-			{
-				status = -1;
-				goto finally;
-			}
+			if (input_formation(game, battle, player) < 0)
+				return -1;
 			break;
 		}
 	}
-	// TODO formation for garrison
 
-	while ((status = battle_end(game, &battle, game->players[region->owner].alliance)) < 0)
+	while ((status = battle_end(game, battle, game->players[battle->region->owner].alliance)) < 0)
 	{
 		// Ask each player to perform battle actions.
 		// TODO implement Computer and Remote
 		for(player = 0; player < game->players_count; ++player)
 		{
-			if (!battle.players[player].pawns_count) continue; // skip players with no pawns
+			if (!battle->players[player].pawns_count) continue; // skip players with no pawns
 
 			switch (game->players[player].type)
 			{
@@ -71,11 +63,8 @@ static int battle_open(struct game *restrict game, struct region *restrict regio
 				continue;
 
 			case Local:
-				if (input_battle(game, &battle, player) < 0)
-				{
-					status = -1;
-					goto finally;
-				}
+				if (input_battle(game, battle, player) < 0)
+					return -1;
 				break;
 			}
 		}
@@ -83,26 +72,24 @@ static int battle_open(struct game *restrict game, struct region *restrict regio
 		// TODO shoot animation // TODO this should be part of player-specific input
 
 		// TODO Deal damage to each pawn escaping from enemy pawns.
-		battlefield_shoot(&battle);
-		battlefield_clean_corpses(&battle);
+		battlefield_shoot(battle);
+		battlefield_clean_corpses(battle);
 
-		battlefield_movement_plan(game->players, game->players_count, battle.field, battle.pawns, battle.pawns_count);
+		battlefield_movement_plan(game->players, game->players_count, battle->field, battle->pawns, battle->pawns_count);
 
-		input_animation(game, &battle); // TODO this should be part of player-specific input
+		input_animation(game, battle); // TODO this should be part of player-specific input
 
-		battlefield_movement_perform(battle.field, battle.pawns, battle.pawns_count);
+		battlefield_movement_perform(battle->field, battle->pawns, battle->pawns_count);
 
 		// TODO fight animation // TODO this should be part of player-specific input
 
-		battlefield_fight(game, &battle);
-		battlefield_clean_corpses(&battle);
+		battlefield_fight(game, battle);
+		battlefield_clean_corpses(battle);
 	}
 
 	// TODO show battle overview // this is player-specific
 	// winner team is status
 
-finally:
-	battlefield_term(game, &battle);
 	return status;
 }
 
@@ -200,10 +187,10 @@ static int play(struct game *restrict game)
 			}
 		}
 
-		// TODO battle_assault()
-
 		for(index = 0; index < game->regions_count; ++index)
 		{
+			int assault = 0;
+
 			signed char winner; // alliance of the new owner of the region (WINNER_BATTLE if it has to be determined by battle)
 			winner = WINNER_NOBODY;
 
@@ -217,13 +204,27 @@ static int play(struct game *restrict game)
 				if (winner == WINNER_NOBODY) winner = alliance;
 				else if (winner != alliance) winner = WINNER_BATTLE;
 			}
-			if (winner == WINNER_BATTLE) winner = battle_open(game, region);
+			if (winner == WINNER_BATTLE) // open battle
+			{
+				struct battle battle;
+				if (battlefield_init(game, &battle, region, 0) < 0) ; // TODO
+				winner = play_battle(game, &battle);
+				battlefield_term(game, &battle);
+			}
+			else if (region->garrison.assault) // assault
+			{
+				struct battle battle;
+				if (battlefield_init(game, &battle, region, 1) < 0) ; // TODO
+				winner = play_battle(game, &battle);
+				battlefield_term(game, &battle);
+
+				assault = 1;
+			}
+			region->garrison.assault = 0;
 
 			// Only troops of a single alliance are allowed to stay in the region.
 			// If there are troops of more than one alliance, return any troop owned by enemy of the region's owner to its initial location.
 			// If there are troops of just one alliance and the region's owner is not in it, change region's owner to the owner of a random troop.
-
-			// TODO is it a good idea to choose owner based on number of troops?
 
 			slots = 0;
 
@@ -255,15 +256,30 @@ static int play(struct game *restrict game)
 
 			if (winner != WINNER_NOBODY)
 			{
-				if (winner != game->players[region->owner].alliance)
+				if (assault)
+				{
+					if (winner == game->players[region->garrison.owner].alliance)
+					{
+						if (!region->troops)
+						{
+							region->garrison.siege = 0;
+							region->owner = region->garrison.owner;
+						}
+					}
+					else
+					{
+						region->garrison.owner = troop->owner;
+						region->garrison.siege = 0;
+					}
+				}
+				else if (winner != game->players[region->owner].alliance)
 				{
 					// assert(slots);
 					owner_troop = random() % slots;
-
-					slots = 0;
 					for(troop = region->troops; troop; troop = troop->_next)
 					{
-						if (slots == owner_troop)
+						if (owner_troop) owner_troop -= 1;
+						else
 						{
 							// Set new region owner.
 							region->owner = troop->owner;
@@ -271,7 +287,6 @@ static int play(struct game *restrict game)
 							if (!region->garrison.troops) region->garrison.owner = troop->owner;
 							break;
 						}
-						slots += 1;
 					}
 
 					// Cancel all constructions and trainings.

@@ -18,6 +18,9 @@ struct state_formation
 	struct point hover; // position of the hovered field
 
 	struct pawn *pawn; // selected pawn
+
+	struct point reachable[REACHABLE_LIMIT];
+	size_t reachable_count;
 };
 
 int input_formation(const struct game *restrict game, struct battle *restrict battle, unsigned char player);

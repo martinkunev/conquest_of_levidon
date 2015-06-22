@@ -41,8 +41,7 @@ static int pawn_fight(struct pawn *pawn, unsigned x, unsigned y)
 {
 	struct pawn *target = battle->field[y][x].pawn;
 
-	if (!target) return 0;
-	if (!battlefield_fightable(pawn, target->moves[0].location, battle)) return 0;
+	if (!battlefield_fightable(pawn, target, battle)) return 0;
 
 	movement_stay(pawn);
 	pawn->action = PAWN_FIGHT;
@@ -53,11 +52,11 @@ static int pawn_fight(struct pawn *pawn, unsigned x, unsigned y)
 
 // TODO pawn_assault
 
-static int pawn_shoot(struct pawn *pawn, unsigned x, unsigned y, struct state_battle *state)
+static int pawn_shoot(const struct game *restrict game, struct pawn *pawn, unsigned x, unsigned y, struct state_battle *state)
 {
 	struct point target = {x, y};
 
-	if (!battlefield_shootable(pawn, target, battle, state->obstacles)) return 0;
+	if (!battlefield_shootable(pawn, target, game, battle, state->obstacles)) return 0;
 
 	movement_stay(pawn);
 	pawn->action = PAWN_SHOOT;
@@ -108,6 +107,10 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 		state->x = x;
 		state->y = y;
 		state->pawn = battlefield[y][x].pawn;
+
+		// Remove fight target if the target is dead.
+		if ((state->pawn->action == PAWN_FIGHT) && state->pawn->target.pawn && !state->pawn->target.pawn->troop->count)
+			state->pawn->action = 0;
 	}
 	else if (code == -3)
 	{
@@ -127,12 +130,12 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 
 		// if CONTROL is pressed, shoot
 		// if SHIFT is pressed, move
-		if (modifiers & XCB_MOD_MASK_CONTROL) pawn_shoot(pawn, x, y, state);
+		if (modifiers & XCB_MOD_MASK_CONTROL) pawn_shoot(game, pawn, x, y, state);
 		else if (modifiers & XCB_MOD_MASK_SHIFT) pawn_move(game, pawn, x, y, state, 1);
 		else
 		{
 			// Perform the first possible action: shoot, fight, move
-			if (pawn_shoot(pawn, x, y, state))
+			if (pawn_shoot(game, pawn, x, y, state))
 				;
 			else if (pawn_fight(pawn, x, y))
 				;
@@ -172,6 +175,14 @@ static int input_place(int code, unsigned x, unsigned y, uint16_t modifiers, con
 
 		battlefield[y][x].pawn = selected;
 		state->pawn = new;
+
+		if (new)
+		{
+			if (battle->assault)
+				state->reachable_count = formation_reachable_assault(game, battle, new, state->reachable);
+			else
+				state->reachable_count = formation_reachable_open(game, battle, new, state->reachable);
+		}
 	}
 	else if (code == EVENT_MOTION) state->hover = (struct point){x, y};
 
