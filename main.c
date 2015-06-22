@@ -26,7 +26,7 @@
 
 #define WORLD_DEFAULT "worlds/balkans"
 
-static int play_battle(struct game *restrict game, struct battle *restrict battle)
+static int play_battle(struct game *restrict game, struct battle *restrict battle, unsigned char defender)
 {
 	unsigned char player;
 
@@ -49,7 +49,7 @@ static int play_battle(struct game *restrict game, struct battle *restrict battl
 		}
 	}
 
-	while ((status = battle_end(game, battle, game->players[battle->region->owner].alliance)) < 0)
+	while ((status = battle_end(game, battle, defender)) < 0)
 	{
 		// Ask each player to perform battle actions.
 		// TODO implement Computer and Remote
@@ -208,14 +208,14 @@ static int play(struct game *restrict game)
 			{
 				struct battle battle;
 				if (battlefield_init(game, &battle, region, 0) < 0) ; // TODO
-				winner = play_battle(game, &battle);
+				winner = play_battle(game, &battle, game->players[battle.region->owner].alliance);
 				battlefield_term(game, &battle);
 			}
 			else if (region->garrison.assault) // assault
 			{
 				struct battle battle;
 				if (battlefield_init(game, &battle, region, 1) < 0) ; // TODO
-				winner = play_battle(game, &battle);
+				winner = play_battle(game, &battle, game->players[battle.region->garrison.owner].alliance);
 				battlefield_term(game, &battle);
 
 				assault = 1;
@@ -268,7 +268,7 @@ static int play(struct game *restrict game)
 					}
 					else
 					{
-						region->garrison.owner = troop->owner;
+						region->garrison.owner = region->owner;
 						region->garrison.siege = 0;
 					}
 				}

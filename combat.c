@@ -22,7 +22,7 @@ void battlefield_fight(const struct game *restrict game, struct battle *restrict
 		unsigned char fighter_alliance = game->players[fighter->troop->owner].alliance;
 
 		if (!fighter->troop->count) continue;
-		if (fighter->action != PAWN_FIGHT) continue;
+		if (fighter->action == PAWN_SHOOT) continue;
 
 		// TODO PAWN_ASSAULT
 
@@ -30,13 +30,13 @@ void battlefield_fight(const struct game *restrict game, struct battle *restrict
 		unsigned damage;
 
 		struct pawn *victims[4], *victim;
-		unsigned enemies_count = 0;
+		unsigned victims_count = 0;
 
 		// If the pawn has a specific fight target and is able to fight it, fight only that target.
 		if ((fighter->action == PAWN_FIGHT) && battlefield_fightable(fighter, fighter->target.pawn, battle))
 		{
 			victims[0] = fighter->target.pawn;
-			enemies_count = 1;
+			victims_count = 1;
 		}
 		else
 		{
@@ -45,19 +45,19 @@ void battlefield_fight(const struct game *restrict game, struct battle *restrict
 
 			// Look for pawns to fight at the neighboring fields.
 			if ((x > 0) && (victim = battle->field[y][x - 1].pawn) && (game->players[victim->troop->owner].alliance != fighter_alliance))
-				victims[enemies_count++] = victim;
+				victims[victims_count++] = victim;
 			if ((x < (BATTLEFIELD_WIDTH - 1)) && (victim = battle->field[y][x + 1].pawn) && (game->players[victim->troop->owner].alliance != fighter_alliance))
-				victims[enemies_count++] = victim;
+				victims[victims_count++] = victim;
 			if ((y > 0) && (victim = battle->field[y - 1][x].pawn) && (game->players[victim->troop->owner].alliance != fighter_alliance))
-				victims[enemies_count++] = victim;
+				victims[victims_count++] = victim;
 			if ((y < (BATTLEFIELD_HEIGHT - 1)) && (victim = battle->field[y + 1][x].pawn) && (game->players[victim->troop->owner].alliance != fighter_alliance))
-				victims[enemies_count++] = victim;
-			if (!enemies_count) continue; // nothing to fight
+				victims[victims_count++] = victim;
+			if (!victims_count) continue; // nothing to fight
 		}
 
-		for(j = 0; j < enemies_count; ++j)
+		for(j = 0; j < victims_count; ++j)
 		{
-			damage = (unsigned)((double)damage_total / enemies_count + 0.5);
+			damage = (unsigned)((double)damage_total / victims_count + 0.5);
 			pawn_deal(victims[j], damage);
 		}
 	}
@@ -190,13 +190,13 @@ void battlefield_clean_corpses(struct battle *battle)
 
 int battlefield_fightable(const struct pawn *restrict pawn, const struct pawn *restrict target, const struct battle *restrict battle)
 {
+	if (!target || !target->troop->count) return 0;
+
 	struct point position = pawn->moves[0].location;
 	struct point target_position = target->moves[0].location;
 	int distance;
 
 	// TODO what if one of the pawns is on a tower
-
-	if (!target || !target->troop->count) return 0;
 
 	if (position.x == target_position.x) distance = (int)target_position.y - (int)position.y;
 	else if (position.y == target_position.y) distance = (int)target_position.x - (int)position.x;

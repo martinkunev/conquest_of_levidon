@@ -591,7 +591,7 @@ void if_battle(const void *argument, const struct game *game)
 					from.y = BATTLE_Y + from.y * FIELD_SIZE + FIELD_SIZE / 2;
 
 					struct point to = pawn->moves[i].location;
-					to.x = BATTLE_Y + to.x * FIELD_SIZE + FIELD_SIZE / 2;
+					to.x = BATTLE_X + to.x * FIELD_SIZE + FIELD_SIZE / 2;
 					to.y = BATTLE_Y + to.y * FIELD_SIZE + FIELD_SIZE / 2;
 
 					if (pawn->moves[i].time <= 1.0) color = PathReachable;
@@ -854,9 +854,15 @@ static void if_map_region(const struct region *region, const struct state_map *s
 				}
 			}
 
-			if (region->garrison.assault && (state->player == region->owner))
+			if (region->garrison.assault && (state->player == region->owner)) // current player is doing an assault
 			{
-				// TODO
+				i = 0;
+				for(troop = region->garrison.troops; troop; troop = troop->_next)
+				{
+					struct point position = if_position(TroopGarrison, i);
+					image_draw(&image_move_destination, position.x, position.y);
+					i += 1;
+				}
 			}
 		}
 	}

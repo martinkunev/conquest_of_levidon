@@ -9,6 +9,8 @@ struct state_battle
 
 	unsigned char x, y; // position of the current field
 	struct pawn *pawn; // selected pawn
+
+	// TODO store reachable and reachable_count here
 };
 
 struct state_formation

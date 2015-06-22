@@ -135,7 +135,7 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 		else
 		{
 			// Perform the first possible action: shoot, fight, move
-			if (pawn_shoot(game, pawn, x, y, state))
+			if (pawn_shoot(game, pawn, x, y, state)) // TODO shoot only if there is a pawn on that position
 				;
 			else if (pawn_fight(pawn, x, y))
 				;
@@ -169,7 +169,15 @@ static int input_place(int code, unsigned x, unsigned y, uint16_t modifiers, con
 
 		if (selected)
 		{
-			selected->moves[0].location = (struct point){x, y};
+			size_t i = 0;
+			struct point location = {x, y};
+			for(i = 0; i < state->reachable_count; ++i)
+				if ((state->reachable[i].x == location.x) && (state->reachable[i].y == location.y))
+					goto reachable;
+			return 0;
+
+reachable:
+			selected->moves[0].location = location;
 			selected->moves[0].time = 0.0;
 		}
 
