@@ -76,9 +76,10 @@ static struct image image_terrain[1];
 static struct image image_garrison[2]; // TODO this must be big enough for all garrison types
 static struct image image_gold, image_food, image_wood, image_stone, image_iron, image_time;
 static struct image image_scroll_left, image_scroll_right;
-static struct image image_units[4]; // TODO the array must be enough to hold units_count units
+static struct image image_units[5]; // TODO the array must be enough to hold units_count units
 static struct image image_buildings[12]; // TODO the array must be big enough to hold buildings_count elements
 static struct image image_buildings_gray[12]; // TODO the array must be big enough to hold buildings_count elements
+static struct image image_palisade[16], image_palisade_gate[2], image_fortress[16], image_fortress_gate[2];
 
 static GLuint map_renderbuffer;
 
@@ -146,6 +147,87 @@ int if_storage_get(unsigned x, unsigned y)
 
 	if (!pixel[0]) return -1;
 	return pixel[1] * 256 + pixel[2];
+}
+
+static void if_load_images(void)
+{
+	image_load_png(&image_move_destination, "img/move_destination.png", 0);
+	image_load_png(&image_fight_destination, "img/move_destination.png", 0);
+	image_load_png(&image_shoot_destination, "img/shoot_destination.png", 0);
+	image_load_png(&image_selected, "img/selected.png", 0);
+	image_load_png(&image_flag, "img/flag.png", 0);
+	image_load_png(&image_panel, "img/panel.png", 0);
+	image_load_png(&image_construction, "img/construction.png", 0);
+
+	image_load_png(&image_garrison[PALISADE], "img/garrison_palisade.png", 0);
+	image_load_png(&image_garrison[FORTRESS], "img/garrison_fortress.png", 0);
+
+	image_load_png(&image_scroll_left, "img/scroll_left.png", 0);
+	image_load_png(&image_scroll_right, "img/scroll_right.png", 0);
+
+	image_load_png(&image_gold, "img/gold.png", 0);
+	image_load_png(&image_food, "img/food.png", 0);
+	image_load_png(&image_wood, "img/wood.png", 0);
+	image_load_png(&image_stone, "img/stone.png", 0);
+	image_load_png(&image_iron, "img/iron.png", 0);
+	image_load_png(&image_time, "img/time.png", 0);
+
+	image_load_png(&image_units[0], "img/peasant.png", 0);
+	image_load_png(&image_units[1], "img/archer.png", 0);
+	image_load_png(&image_units[2], "img/pikeman.png", 0);
+	image_load_png(&image_units[3], "img/horse_rider.png", 0);
+	image_load_png(&image_units[4], "img/battering_ram.png", 0);
+
+	image_load_png(&image_buildings[0], "img/farm.png", 0);
+	image_load_png(&image_buildings[1], "img/irrigation.png", 0);
+	image_load_png(&image_buildings[2], "img/sawmill.png", 0);
+	image_load_png(&image_buildings[3], "img/mine.png", 0);
+	image_load_png(&image_buildings[4], "img/blast_furnace.png", 0);
+	image_load_png(&image_buildings[5], "img/barracks.png", 0);
+	image_load_png(&image_buildings[6], "img/archery_range.png", 0);
+	image_load_png(&image_buildings[7], "img/stables.png", 0);
+	image_load_png(&image_buildings[8], "img/watch_tower.png", 0);
+	image_load_png(&image_buildings[9], "img/palisade.png", 0);
+	image_load_png(&image_buildings[10], "img/fortress.png", 0);
+	image_load_png(&image_buildings[11], "img/workshop.png", 0);
+
+	image_load_png(&image_buildings_gray[0], "img/farm.png", 1);
+	image_load_png(&image_buildings_gray[1], "img/irrigation.png", 1);
+	image_load_png(&image_buildings_gray[2], "img/sawmill.png", 1);
+	image_load_png(&image_buildings_gray[3], "img/mine.png", 1);
+	image_load_png(&image_buildings_gray[4], "img/blast_furnace.png", 1);
+	image_load_png(&image_buildings_gray[5], "img/barracks.png", 1);
+	image_load_png(&image_buildings_gray[6], "img/archery_range.png", 1);
+	image_load_png(&image_buildings_gray[7], "img/stables.png", 1);
+	image_load_png(&image_buildings_gray[8], "img/watch_tower.png", 1);
+	image_load_png(&image_buildings_gray[9], "img/palisade.png", 1);
+	image_load_png(&image_buildings_gray[10], "img/fortress.png", 1);
+	image_load_png(&image_buildings_gray[11], "img/workshop.png", 1);
+
+	image_load_png(&image_terrain[0], "img/terrain_grass.png", 0);
+
+	// Load battlefield images.
+	size_t i;
+	for(i = 0; i < 16; ++i) // TODO fix this 16
+	{
+		char buffer[64], *end; // TODO make sure this is enough
+
+		end = format_bytes(buffer, S("img/palisade"));
+		end = format_uint(end, i, 10);
+		end = format_bytes(end, S(".png"));
+		*end = 0;
+		image_load_png(&image_palisade[i], buffer, 0);
+
+		end = format_bytes(buffer, S("img/fortress"));
+		end = format_uint(end, i, 10);
+		end = format_bytes(end, S(".png"));
+		*end = 0;
+		image_load_png(&image_fortress[i], buffer, 0);
+	}
+	image_load_png(&image_palisade_gate[0], "img/palisade_gate0.png", 0);
+	image_load_png(&image_fortress_gate[0], "img/fortress_gate0.png", 0);
+	image_load_png(&image_palisade_gate[1], "img/palisade_gate1.png", 0);
+	image_load_png(&image_fortress_gate[1], "img/fortress_gate1.png", 0);
 }
 
 int if_init(const struct game *game)
@@ -256,59 +338,7 @@ int if_init(const struct game *game)
 		XFlush(display);
 	}
 
-	image_load_png(&image_move_destination, "img/move_destination.png", 0);
-	image_load_png(&image_fight_destination, "img/move_destination.png", 0);
-	image_load_png(&image_shoot_destination, "img/shoot_destination.png", 0);
-	image_load_png(&image_selected, "img/selected.png", 0);
-	image_load_png(&image_flag, "img/flag.png", 0);
-	image_load_png(&image_panel, "img/panel.png", 0);
-	image_load_png(&image_construction, "img/construction.png", 0);
-
-	image_load_png(&image_terrain[0], "img/terrain_grass.png", 0);
-
-	image_load_png(&image_garrison[PALISADE], "img/garrison_palisade.png", 0);
-	image_load_png(&image_garrison[FORTRESS], "img/garrison_fortress.png", 0);
-
-	image_load_png(&image_scroll_left, "img/scroll_left.png", 0);
-	image_load_png(&image_scroll_right, "img/scroll_right.png", 0);
-
-	image_load_png(&image_gold, "img/gold.png", 0);
-	image_load_png(&image_food, "img/food.png", 0);
-	image_load_png(&image_wood, "img/wood.png", 0);
-	image_load_png(&image_stone, "img/stone.png", 0);
-	image_load_png(&image_iron, "img/iron.png", 0);
-	image_load_png(&image_time, "img/time.png", 0);
-
-	image_load_png(&image_units[0], "img/peasant.png", 0);
-	image_load_png(&image_units[1], "img/archer.png", 0);
-	image_load_png(&image_units[2], "img/pikeman.png", 0);
-	image_load_png(&image_units[3], "img/horse_rider.png", 0);
-
-	image_load_png(&image_buildings[0], "img/farm.png", 0);
-	image_load_png(&image_buildings[1], "img/irrigation.png", 0);
-	image_load_png(&image_buildings[2], "img/sawmill.png", 0);
-	image_load_png(&image_buildings[3], "img/mine.png", 0);
-	image_load_png(&image_buildings[4], "img/blast_furnace.png", 0);
-	image_load_png(&image_buildings[5], "img/barracks.png", 0);
-	image_load_png(&image_buildings[6], "img/archery_range.png", 0);
-	image_load_png(&image_buildings[7], "img/stables.png", 0);
-	image_load_png(&image_buildings[8], "img/watch_tower.png", 0);
-	image_load_png(&image_buildings[9], "img/palisade.png", 0);
-	image_load_png(&image_buildings[10], "img/fortress.png", 0);
-	//image_load_png(&image_buildings[11], "img/moat.png", 0);
-
-	image_load_png(&image_buildings_gray[0], "img/farm.png", 1);
-	image_load_png(&image_buildings_gray[1], "img/irrigation.png", 1);
-	image_load_png(&image_buildings_gray[2], "img/sawmill.png", 1);
-	image_load_png(&image_buildings_gray[3], "img/mine.png", 1);
-	image_load_png(&image_buildings_gray[4], "img/blast_furnace.png", 1);
-	image_load_png(&image_buildings_gray[5], "img/barracks.png", 1);
-	image_load_png(&image_buildings_gray[6], "img/archery_range.png", 1);
-	image_load_png(&image_buildings_gray[7], "img/stables.png", 1);
-	image_load_png(&image_buildings_gray[8], "img/watch_tower.png", 1);
-	image_load_png(&image_buildings_gray[9], "img/palisade.png", 1);
-	image_load_png(&image_buildings_gray[10], "img/fortress.png", 1);
-	//image_load_png(&image_buildings_gray[11], "img/moat.png", 1);
+	if_load_images();
 
 	// TODO handle modifier keys
 	// TODO handle dead keys
@@ -527,7 +557,8 @@ void if_battle(const void *argument, const struct game *game)
 	for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
 		for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
 		{
-			if (pawn = battlefield[y][x].pawn)
+			const struct battlefield *field = &battlefield[y][x];
+			if (pawn = field->pawn)
 			{
 				enum color color;
 				if (pawn->troop->owner == state->player) color = Self;
@@ -535,6 +566,25 @@ void if_battle(const void *argument, const struct game *game)
 				else color = Enemy;
 
 				display_unit(pawn->troop->unit->index, BATTLE_X + x * object_group[Battlefield].width, BATTLE_Y + y * object_group[Battlefield].height, color, 0, 0);
+
+				// TODO towers
+			}
+			else if (field->blockage)
+			{
+				// TODO decide whether to use palisade or fortress
+
+				const struct image *image;
+
+				if (field->owner == OWNER_NONE) image = &image_palisade[field->position];
+				else
+				{
+					if (field->position == (POSITION_LEFT | POSITION_RIGHT))
+						image = &image_palisade_gate[0];
+					else // field->position == (POSITION_TOP | POSITION_BOTTOM)
+						image = &image_palisade_gate[1];
+				}
+
+				image_draw(image, BATTLE_X + x * object_group[Battlefield].width, BATTLE_Y + y * object_group[Battlefield].height);
 			}
 		}
 

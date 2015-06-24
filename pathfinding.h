@@ -43,10 +43,10 @@ static inline double battlefield_distance(struct point a, struct point b)
 	return sqrt(dx * dx + dy * dy);
 }
 
+struct obstacles *path_obstacles(const struct game *restrict game, const struct battle *restrict battle, unsigned char player);
+
 struct adjacency_list *visibility_graph_build(const struct battle *restrict battle, const struct obstacles *restrict obstacles);
 void visibility_graph_free(struct adjacency_list *graph);
-
-struct obstacles *path_obstacles(const struct game *restrict game, const struct battle *restrict battle, unsigned char player);
 
 int path_visible(struct point origin, struct point target, const struct obstacles *restrict obstacles);
 int path_reachable(const struct pawn *restrict pawn, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles, unsigned char reachable[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH]);

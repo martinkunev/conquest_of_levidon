@@ -18,6 +18,7 @@ const struct unit UNITS[] =
 	{NAME("Archer"), .index = 1, .health = 3, .damage = 1, .speed = 4, .cost = {.gold = 1, .wood = 1}, .expense = {.food = 1}, .shoot = 1, .range = 5, .time = 1, .requires = (1 << BuildingArcheryRange)},
 	{NAME("Militia"), .index = 2, .health = 5, .damage = 2, .speed = 5, .cost = {.gold = 1, .iron = 1}, .expense = {.food = 1}, .time = 1, .requires = (1 << BuildingBarracks)},
 	{NAME("Light cavalry"), .index = 3, .health = 8, .damage = 2, .speed = 9, .cost = {.gold = 2, .iron = 1}, .expense = {.food = 3}, .time = 2, .requires = (1 << BuildingStables)},
+	{NAME("Battering Ram"), .index = 4, .health = 25, .damage = 10, .speed = 3, .cost = {.gold = 2, .wood = 5}, .expense = {.food = 2}, .time = 2, .requires = (1 << BuildingWorkshop)},
 };
 const size_t UNITS_COUNT = sizeof(UNITS) / sizeof(*UNITS);
 
@@ -34,7 +35,7 @@ const struct building buildings[] =
 	[BuildingWatchTower] = {NAME("Watch tower"), .cost = {.gold = 3, .wood = 5}, .time = 2},
 	[BuildingPalisade] = {NAME("Palisade"), .cost = {.gold = 10, .wood = 20}, .time = 4},
 	[BuildingFortress] = {NAME("Fortress"), .cost = {.gold = 20, .stone = 20}, .time = 8, .requires = (1 << BuildingPalisade)},
-//	[BuildingMoat] = {NAME("Moat"), .cost = {.gold = 20, .wood = 10, .stone = 10}, .time = 7, .requires = (1 << BuildingPalisade)},
+	[BuildingWorkshop] = {NAME("Workshop"), .cost = {.gold = 8, .wood = 10}, .time = 8, .requires = (1 << BuildingSawmill)},
 };
 const size_t buildings_count = sizeof(buildings) / sizeof(*buildings);
 

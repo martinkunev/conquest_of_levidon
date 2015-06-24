@@ -128,6 +128,8 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 
 		// TODO ? fast move
 
+		// TODO simplify the code below
+
 		// if CONTROL is pressed, shoot
 		// if SHIFT is pressed, move
 		if (modifiers & XCB_MOD_MASK_CONTROL) pawn_shoot(game, pawn, x, y, state);
@@ -135,7 +137,7 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 		else
 		{
 			// Perform the first possible action: shoot, fight, move
-			if (pawn_shoot(game, pawn, x, y, state)) // TODO shoot only if there is a pawn on that position
+			if (battle->field[y][x].pawn && !allies(game, pawn->troop->owner, battle->field[y][x].pawn->troop->owner) && pawn_shoot(game, pawn, x, y, state))
 				;
 			else if (pawn_fight(pawn, x, y))
 				;

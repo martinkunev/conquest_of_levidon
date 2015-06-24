@@ -17,8 +17,6 @@
 
 #define ASSAULT_LIMIT 5
 
-#define OWNER_NONE 0 /* sentinel alliance value used for walls */ /* TODO fix this: there could actually be an alliance with number 0 */
-
 static inline double distance(const double *restrict origin, const double *restrict target)
 {
 	double dx = target[0] - origin[0], dy = target[1] - origin[1];

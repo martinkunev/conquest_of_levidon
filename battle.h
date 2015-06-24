@@ -2,6 +2,8 @@
 
 #define REACHABLE_LIMIT 625 /* TODO fix this */
 
+#define OWNER_NONE 0 /* sentinel alliance value used for walls */ /* TODO fix this: there could actually be an alliance with number 0 */
+
 struct pawn
 {
 	struct troop *troop;
@@ -28,7 +30,7 @@ enum {POSITION_RIGHT = 0x1, POSITION_TOP = 0x2, POSITION_LEFT = 0x4, POSITION_BO
 struct battlefield
 {
 	struct point location;
-	enum {BLOCKAGE_NONE, BLOCKAGE_TERRAIN, BLOCKAGE_OBSTACLE} blockage;
+	enum {BLOCKAGE_NONE, BLOCKAGE_TERRAIN, BLOCKAGE_OBSTACLE} blockage; // TODO BLOCKAGE_TOWER
 	unsigned char position;
 
 	signed char owner; // used for BLOCKAGE_OBSTACLE
