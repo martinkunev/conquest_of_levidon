@@ -526,7 +526,8 @@ void if_formation(const void *argument, const struct game *game)
 					display_rectangle(BATTLE_X + state->reachable[i].x * object_group[Battlefield].width, BATTLE_Y + state->reachable[i].y * object_group[Battlefield].height, object_group[Battlefield].width, object_group[Battlefield].height, FieldReachable);
 
 			// Display the selected pawn in the control section.
-			display_unit(troop->unit->index, CTRL_X, CTRL_Y + CTRL_MARGIN, Player + state->player, White, troop->count);
+			display_rectangle(CTRL_X, CTRL_Y + CTRL_MARGIN, FIELD_SIZE + MARGIN * 2, FIELD_SIZE + font12.height + MARGIN * 2, Self);
+			display_unit(troop->unit->index, CTRL_X + MARGIN, CTRL_Y + CTRL_MARGIN + MARGIN, Player + troop->owner, Black, troop->count);
 		}
 		else
 		{
@@ -596,17 +597,15 @@ void if_battle(const void *argument, const struct game *game)
 	if ((state->x < BATTLEFIELD_WIDTH) && (state->y < BATTLEFIELD_HEIGHT) && battlefield[state->y][state->x].pawn)
 	{
 		enum color color;
-		unsigned char reachable[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH];
 
 		pawn = battlefield[state->y][state->x].pawn;
 
 		if (pawn->troop->owner == state->player)
 		{
 			// Show which fields are reachable by the pawn.
-			path_reachable(pawn, state->graph, state->obstacles, reachable);
 			for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
 				for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
-					if (reachable[y][x] && !battlefield[y][x].pawn)
+					if (state->reachable[y][x] && !battlefield[y][x].pawn)
 						display_rectangle(BATTLE_X + x * object_group[Battlefield].width, BATTLE_Y + y * object_group[Battlefield].height, object_group[Battlefield].width, object_group[Battlefield].height, FieldReachable);
 		}
 

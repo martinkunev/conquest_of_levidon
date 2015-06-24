@@ -108,9 +108,15 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 		state->y = y;
 		state->pawn = battlefield[y][x].pawn;
 
-		// Remove fight target if the target is dead.
-		if ((state->pawn->action == PAWN_FIGHT) && state->pawn->target.pawn && !state->pawn->target.pawn->troop->count)
-			state->pawn->action = 0;
+		if (state->pawn)
+		{
+			// Remove fight target if the target is dead.
+			if ((state->pawn->action == PAWN_FIGHT) && state->pawn->target.pawn && !state->pawn->target.pawn->troop->count)
+				state->pawn->action = 0;
+
+			if (path_reachable(state->pawn, state->graph, state->obstacles, state->reachable) < 0)
+				; // TODO
+		}
 	}
 	else if (code == -3)
 	{

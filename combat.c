@@ -24,13 +24,13 @@ void battlefield_fight(const struct game *restrict game, struct battle *restrict
 		if (!fighter->troop->count) continue;
 		if (fighter->action == PAWN_SHOOT) continue;
 
-		// TODO PAWN_ASSAULT
-
 		unsigned damage_total = fighter->troop->unit->damage * fighter->troop->count;
 		unsigned damage;
 
 		struct pawn *victims[4], *victim;
 		unsigned victims_count = 0;
+
+		// TODO use fighter->target.field for PAWN_ASSAULT
 
 		// If the pawn has a specific fight target and is able to fight it, fight only that target.
 		if ((fighter->action == PAWN_FIGHT) && battlefield_fightable(fighter, fighter->target.pawn, battle))
