@@ -484,7 +484,7 @@ static ssize_t find_next(struct heap *restrict closest, struct path_node *restri
 	return next;
 }
 
-int path_reachable(const struct pawn *restrict pawn, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles, unsigned char reachable[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH])
+int path_reachable(const struct pawn *restrict pawn, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles, double reachable[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH])
 {
 	struct path_node *traverse_info;
 	struct heap closest;
@@ -543,22 +543,22 @@ int path_reachable(const struct pawn *restrict pawn, struct adjacency_list *rest
 		free(closest.data);
 	}
 
-	// Find which fields are visible from any of the graph vertices.
-	// If such field can be reached in one round by the pawn, mark it as reachable.
-	memset(reachable, 0, BATTLEFIELD_HEIGHT * BATTLEFIELD_WIDTH);
-	// TODO check only the fields which are not farther than speed distance from the pawn
+	// Find which fields are visible from a graph vertex.
+	// Store the least distance to each visible field.
+	// TODO is this slow?
 	for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
 	{
 		for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
 		{
+			reachable[y][x] = INFINITY;
 			for(i = 0; i < graph->count; ++i)
 			{
 				struct point target = {x, y};
 				if (visible(graph->list[i].location, field_position(target), obstacles))
 				{
 					struct point field = position_field(graph->list[i].location);
-					if (traverse_info[i].distance + battlefield_distance(field, target) <= pawn->troop->unit->speed)
-						reachable[y][x] = 1;
+					double distance = traverse_info[i].distance + battlefield_distance(field, target);
+					if (distance < reachable[y][x]) reachable[y][x] = distance;
 				}
 			}
 		}

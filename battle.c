@@ -481,3 +481,14 @@ int battle_end(const struct game *restrict game, struct battle *restrict battle,
 	if (end) return ((winner >= 0) ? winner : defender);
 	else return -1;
 }
+
+int battlefield_neighbors(struct point a, struct point b)
+{
+	int distance;
+
+	if (a.x == b.x) distance = (int)b.y - (int)a.y;
+	else if (a.y == b.y) distance = (int)b.x - (int)a.x;
+	else return 0;
+
+	return ((distance == -1) || (distance == 1));
+}

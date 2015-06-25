@@ -17,54 +17,6 @@
 extern const struct battle *battle;
 extern struct battlefield (*battlefield)[BATTLEFIELD_WIDTH];
 
-// Sets move destination of a pawn. Returns -1 if the current player is not allowed to move the pawn at the destination.
-static void pawn_move(const struct game *restrict game, struct pawn *restrict pawn, unsigned x, unsigned y, struct state_battle *state, int queue)
-{
-	struct point target = {x, y};
-
-	if (battle->field[y][x].blockage && !allies(game, pawn->troop->owner, battle->field[y][x].owner))
-		return;
-
-	if (queue)
-	{
-		if (movement_queue(pawn, target, state->graph, state->obstacles)) return;
-	}
-	else
-	{
-		if (movement_set(pawn, target, state->graph, state->obstacles)) return;
-	}
-
-	pawn->action = 0;
-}
-
-static int pawn_fight(struct pawn *pawn, unsigned x, unsigned y)
-{
-	struct pawn *target = battle->field[y][x].pawn;
-
-	if (!battlefield_fightable(pawn, target, battle)) return 0;
-
-	movement_stay(pawn);
-	pawn->action = PAWN_FIGHT;
-	pawn->target.pawn = target;
-
-	return 1;
-}
-
-// TODO pawn_assault
-
-static int pawn_shoot(const struct game *restrict game, struct pawn *pawn, unsigned x, unsigned y, struct state_battle *state)
-{
-	struct point target = {x, y};
-
-	if (!battlefield_shootable(pawn, target, game, battle, state->obstacles)) return 0;
-
-	movement_stay(pawn);
-	pawn->action = PAWN_SHOOT;
-	pawn->target.field = target;
-
-	return 1;
-}
-
 static int input_round(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
 {
 	struct state_battle *state = argument; // TODO sometimes this is state_formation
@@ -111,6 +63,7 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 		if (state->pawn)
 		{
 			// Remove fight target if the target is dead.
+			// TODO this should not be done here
 			if ((state->pawn->action == PAWN_FIGHT) && state->pawn->target.pawn && !state->pawn->target.pawn->troop->count)
 				state->pawn->action = 0;
 
@@ -134,21 +87,74 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 
 		// TODO ? fast move
 
-		// TODO simplify the code below
+		// TODO memory error checks below?
 
 		// if CONTROL is pressed, shoot
 		// if SHIFT is pressed, move
-		if (modifiers & XCB_MOD_MASK_CONTROL) pawn_shoot(game, pawn, x, y, state);
-		else if (modifiers & XCB_MOD_MASK_SHIFT) pawn_move(game, pawn, x, y, state, 1);
+		if (modifiers & XCB_MOD_MASK_CONTROL) combat_shoot(game, battle, state->obstacles, pawn, target);
+		else if (modifiers & XCB_MOD_MASK_SHIFT) movement_queue(pawn, target, state->graph, state->obstacles);
 		else
 		{
-			// Perform the first possible action: shoot, fight, move
-			if (battle->field[y][x].pawn && !allies(game, pawn->troop->owner, battle->field[y][x].pawn->troop->owner) && pawn_shoot(game, pawn, x, y, state))
-				;
-			else if (pawn_fight(pawn, x, y))
+			const struct battlefield *restrict field = &battle->field[y][x];
+
+			// Perform the first reasonable action: shoot, fight, move
+			if (field->pawn)
+			{
+				if (allies(game, pawn->troop->owner, field->pawn->troop->owner))
+				{
+					movement_set(pawn, target, state->graph, state->obstacles);
+				}
+				else
+				{
+					if (combat_shoot(game, battle, state->obstacles, pawn, target))
+						;
+					else
+					{
+						// If the pawn is not next to its target, move before attacking it.
+						if (!battlefield_neighbors((struct point){state->x, state->y}, target))
+						{
+							double move_distance = INFINITY;
+							int move_x, move_y;
+
+							if ((x > 0) && !battle->field[y][x - 1].pawn && (state->reachable[y][x - 1] < move_distance))
+							{
+								move_x = x - 1;
+								move_y = y;
+								move_distance = state->reachable[move_y][move_x];
+							}
+							if ((x < (BATTLEFIELD_WIDTH - 1)) && !battle->field[y][x + 1].pawn && (state->reachable[y][x + 1] < move_distance))
+							{
+								move_x = x + 1;
+								move_y = y;
+								move_distance = state->reachable[move_y][move_x];
+							}
+							if ((y > 0) && !battle->field[y - 1][x].pawn && (state->reachable[y - 1][x] < move_distance))
+							{
+								move_x = x;
+								move_y = y - 1;
+								move_distance = state->reachable[move_y][move_x];
+							}
+							if ((y < (BATTLEFIELD_HEIGHT - 1)) && !battle->field[y + 1][x].pawn && (state->reachable[y + 1][x] < move_distance))
+							{
+								move_x = x;
+								move_y = y + 1;
+								move_distance = state->reachable[move_y][move_x];
+							}
+
+							if (move_distance < INFINITY)
+								movement_set(pawn, (struct point){move_x, move_y}, state->graph, state->obstacles);
+							else
+								return 0; // TODO
+						}
+
+						combat_fight(game, battle, state->obstacles, pawn, field->pawn);
+					}
+				}
+			}
+			else if (combat_assault(game, battle, state->obstacles, pawn, target))
 				;
 			else
-				pawn_move(game, pawn, x, y, state, 0);
+				movement_set(pawn, target, state->graph, state->obstacles);
 		}
 	}
 	else if (code == EVENT_MOTION) state->hover = (struct point){x, y};

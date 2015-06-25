@@ -605,7 +605,7 @@ void if_battle(const void *argument, const struct game *game)
 			// Show which fields are reachable by the pawn.
 			for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
 				for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
-					if (state->reachable[y][x] && !battlefield[y][x].pawn)
+					if ((state->reachable[y][x] <= pawn->troop->unit->speed) && !battlefield[y][x].pawn)
 						display_rectangle(BATTLE_X + x * object_group[Battlefield].width, BATTLE_Y + y * object_group[Battlefield].height, object_group[Battlefield].width, object_group[Battlefield].height, FieldReachable);
 		}
 

@@ -57,7 +57,8 @@ size_t movement_location(const struct pawn *restrict pawn, double time_now, doub
 
 int movement_set(struct pawn *restrict pawn, struct point target, struct adjacency_list *restrict nodes, const struct obstacles *restrict obstacles)
 {
-	// TODO better handling of memory errors
+	// TODO should I check whether the field is blocked
+	// if (battle->field[y][x].blockage && !allies(game, pawn->troop->owner, battle->field[y][x].owner))
 
 	// Erase moves but remember their count so that we can restore them if necessary.
 	size_t moves_count = pawn->moves_count;
@@ -65,36 +66,18 @@ int movement_set(struct pawn *restrict pawn, struct point target, struct adjacen
 
 	int error = path_queue(pawn, target, nodes, obstacles);
 	if (error) pawn->moves_count = moves_count; // restore moves
+	else pawn->action = 0;
 
 	return error;
-
-	/*else
-	{
-		if (pawn->moves[pawn->moves_count - 1].time <= 1.0)
-			return 0; // Success if the pawn can reach its target in one round.
-		else
-		{
-			double x, y;
-			size_t index;
-
-			// TODO this is buggy
-
-			// Keep only the moves that will be done in one round.
-			index = movement_location(pawn, 1.0, &x, &y);
-			pawn->moves[index].location.x = x;
-			pawn->moves[index].location.y = y;
-			pawn->moves_count = index + 1;
-
-			return ERROR_PROGRESS;
-		}
-	}*/
 }
 
 int movement_queue(struct pawn *restrict pawn, struct point target, struct adjacency_list *restrict nodes, const struct obstacles *restrict obstacles)
 {
-	// TODO better handling of memory errors
+	// TODO should I check whether the field is blocked
+	// if (battle->field[y][x].blockage && !allies(game, pawn->troop->owner, battle->field[y][x].owner))
 
 	int error = path_queue(pawn, target, nodes, obstacles);
+	if (!error) pawn->action = 0;
 	return error;
 }
 

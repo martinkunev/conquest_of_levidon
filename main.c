@@ -85,6 +85,7 @@ static int play_battle(struct game *restrict game, struct battle *restrict battl
 
 		battlefield_fight(game, battle);
 		battlefield_clean_corpses(battle);
+		battlefield_clean_ruines(battle);
 	}
 
 	// TODO show battle overview // this is player-specific
