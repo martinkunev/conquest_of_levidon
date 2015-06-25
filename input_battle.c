@@ -82,6 +82,8 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 		{
 			movement_stay(pawn);
 			pawn->action = 0;
+			if (path_reachable(state->pawn, state->graph, state->obstacles, state->reachable) < 0)
+				; // TODO
 			return 0;
 		}
 
@@ -92,7 +94,12 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 		// if CONTROL is pressed, shoot
 		// if SHIFT is pressed, move
 		if (modifiers & XCB_MOD_MASK_CONTROL) combat_shoot(game, battle, state->obstacles, pawn, target);
-		else if (modifiers & XCB_MOD_MASK_SHIFT) movement_queue(pawn, target, state->graph, state->obstacles);
+		else if (modifiers & XCB_MOD_MASK_SHIFT)
+		{
+			movement_queue(pawn, target, state->graph, state->obstacles);
+			if (path_reachable(state->pawn, state->graph, state->obstacles, state->reachable) < 0)
+				; // TODO
+		}
 		else
 		{
 			const struct battlefield *restrict field = &battle->field[y][x];
@@ -103,6 +110,8 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 				if (allies(game, pawn->troop->owner, field->pawn->troop->owner))
 				{
 					movement_set(pawn, target, state->graph, state->obstacles);
+					if (path_reachable(state->pawn, state->graph, state->obstacles, state->reachable) < 0)
+						; // TODO
 				}
 				else
 				{
@@ -142,9 +151,12 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 							}
 
 							if (move_distance < INFINITY)
+							{
 								movement_set(pawn, (struct point){move_x, move_y}, state->graph, state->obstacles);
-							else
-								return 0; // TODO
+								if (path_reachable(state->pawn, state->graph, state->obstacles, state->reachable) < 0)
+									; // TODO
+							}
+							else return 0; // TODO
 						}
 
 						combat_fight(game, battle, state->obstacles, pawn, field->pawn);
@@ -154,7 +166,11 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 			else if (combat_assault(game, battle, state->obstacles, pawn, target))
 				;
 			else
+			{
 				movement_set(pawn, target, state->graph, state->obstacles);
+				if (path_reachable(state->pawn, state->graph, state->obstacles, state->reachable) < 0)
+					; // TODO
+			}
 		}
 	}
 	else if (code == EVENT_MOTION) state->hover = (struct point){x, y};

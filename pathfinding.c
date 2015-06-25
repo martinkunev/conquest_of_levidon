@@ -31,7 +31,7 @@ struct path_node
 // Internally, each field has size 2x2. Pawns are considered to be at the center of the corresponding field.
 // The internal representation is used in obstacles and visibility graph.
 
-// TODO there must be obstacles applicable only for some units (horses and balistas can not climb walls)
+// TODO provide a mechanism to put units in towers (houses and battle machines can not climb/descend towers)
 // TODO path_reachable should be refactored to not depend on battlefield size
 
 static inline int sign(int number)
@@ -243,8 +243,8 @@ static int blocks(struct point p0, struct point p1, struct point w0, struct poin
 
 		// Check if the line segments intersect.
 		// TODO is this good?
-		//if ((0 <= wm) && (wm <= cross) && (0 <= pm) && (pm <= cross))
-		if ((0 < wm) && (wm < cross) && (0 < pm) && (pm < cross))
+		if ((0 <= wm) && (wm <= cross) && (0 <= pm) && (pm <= cross))
+		//if ((0 < wm) && (wm < cross) && (0 < pm) && (pm < cross))
 			return 1;
 	}
 
@@ -558,7 +558,14 @@ int path_reachable(const struct pawn *restrict pawn, struct adjacency_list *rest
 				{
 					struct point field = position_field(graph->list[i].location);
 					double distance = traverse_info[i].distance + battlefield_distance(field, target);
-					if (distance < reachable[y][x]) reachable[y][x] = distance;
+					if (distance < reachable[y][x])
+					{
+						reachable[y][x] = distance;
+						if (distance <= pawn->troop->unit->speed)
+						{
+							int a = 0;
+						}
+					}
 				}
 			}
 		}

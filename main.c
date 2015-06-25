@@ -254,6 +254,18 @@ static int play(struct game *restrict game)
 					troop->move = troop->location;
 				}
 			}
+			if (assault)
+			{
+				for(troop = region->garrison.troops; troop; troop = troop->_next)
+				{
+					// Remove dead troops.
+					if (!troop->count)
+					{
+						troop_detach(&region->troops, troop);
+						free(troop);
+					}
+				}
+			}
 
 			if (winner != WINNER_NOBODY)
 			{

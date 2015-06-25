@@ -208,7 +208,7 @@ static void if_load_images(void)
 
 	// Load battlefield images.
 	size_t i;
-	for(i = 0; i < 16; ++i) // TODO fix this 16
+	for(i = 1; i < 16; ++i) // TODO fix this
 	{
 		char buffer[64], *end; // TODO make sure this is enough
 
@@ -437,6 +437,8 @@ static int if_animation(const struct player *restrict players, const struct batt
 {
 	int finished = 1;
 
+	size_t x, y;
+
 	// TODO in some cases the animation must terminate but it doesn't
 
 	// clear window
@@ -447,6 +449,29 @@ static int if_animation(const struct player *restrict players, const struct batt
 	display_image(&image_terrain[0], BATTLE_X - 8, BATTLE_Y - 8, BATTLEFIELD_WIDTH * FIELD_SIZE + 16, BATTLEFIELD_HEIGHT * FIELD_SIZE + 16);
 
 	// Battlefield
+
+	for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
+		for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
+		{
+			const struct battlefield *field = &battlefield[y][x];
+			if (field->blockage)
+			{
+				// TODO decide whether to use palisade or fortress
+
+				const struct image *image;
+
+				if (field->owner == OWNER_NONE) image = &image_palisade[field->position];
+				else
+				{
+					if (field->position == (POSITION_LEFT | POSITION_RIGHT))
+						image = &image_palisade_gate[0];
+					else // field->position == (POSITION_TOP | POSITION_BOTTOM)
+						image = &image_palisade_gate[1];
+				}
+
+				image_draw(image, BATTLE_X + x * object_group[Battlefield].width, BATTLE_Y + y * object_group[Battlefield].height);
+			}
+		}
 
 	struct point location;
 	size_t p;
@@ -507,9 +532,34 @@ void if_formation(const void *argument, const struct game *game)
 {
 	const struct state_formation *state = argument;
 
+	size_t x, y;
+
 	if_battlefield((const struct state_battle *)state, game); // TODO fix this cast
 
 	// TODO mark somehow that only self pawns are displayed
+
+	for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
+		for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
+		{
+			const struct battlefield *field = &battlefield[y][x];
+			if (field->blockage)
+			{
+				// TODO decide whether to use palisade or fortress
+
+				const struct image *image;
+
+				if (field->owner == OWNER_NONE) image = &image_palisade[field->position];
+				else
+				{
+					if (field->position == (POSITION_LEFT | POSITION_RIGHT))
+						image = &image_palisade_gate[0];
+					else // field->position == (POSITION_TOP | POSITION_BOTTOM)
+						image = &image_palisade_gate[1];
+				}
+
+				image_draw(image, BATTLE_X + x * object_group[Battlefield].width, BATTLE_Y + y * object_group[Battlefield].height);
+			}
+		}
 
 	size_t i;
 	struct pawn *const *pawns = battle->players[state->player].pawns;
@@ -538,8 +588,9 @@ void if_formation(const void *argument, const struct game *game)
 	}
 
 	// Display hovered field in color.
-	if (!point_eq(state->hover, POINT_NONE))
-		display_rectangle(BATTLE_X + state->hover.x * object_group[Battlefield].width, BATTLE_Y + state->hover.y * object_group[Battlefield].height, object_group[Battlefield].width, object_group[Battlefield].height, Hover);
+	// TODO this is buggy
+	/*if (!point_eq(state->hover, POINT_NONE))
+		display_rectangle(BATTLE_X + state->hover.x * object_group[Battlefield].width, BATTLE_Y + state->hover.y * object_group[Battlefield].height, object_group[Battlefield].width, object_group[Battlefield].height, Hover);*/
 
 	glFlush();
 	glXSwapBuffers(display, drawable);
@@ -554,7 +605,7 @@ void if_battle(const void *argument, const struct game *game)
 
 	if_battlefield(state, game);
 
-	// display pawns
+	// Display pawns and obstacles.
 	for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
 		for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
 		{
@@ -590,8 +641,9 @@ void if_battle(const void *argument, const struct game *game)
 		}
 
 	// Display hovered field in color.
-	if (!point_eq(state->hover, POINT_NONE))
-		display_rectangle(BATTLE_X + state->hover.x * object_group[Battlefield].width, BATTLE_Y + state->hover.y * object_group[Battlefield].height, object_group[Battlefield].width, object_group[Battlefield].height, Hover);
+	// TODO this is buggy
+	/*if (!point_eq(state->hover, POINT_NONE))
+		display_rectangle(BATTLE_X + state->hover.x * object_group[Battlefield].width, BATTLE_Y + state->hover.y * object_group[Battlefield].height, object_group[Battlefield].width, object_group[Battlefield].height, Hover);*/
 
 	// Display information about the selected field.
 	if ((state->x < BATTLEFIELD_WIDTH) && (state->y < BATTLEFIELD_HEIGHT) && battlefield[state->y][state->x].pawn)
