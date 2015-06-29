@@ -217,6 +217,17 @@ static int blocks(struct point p0, struct point p1, struct point w0, struct poin
 
 	long cross;
 
+	// A pawn spans a whole field.
+	// Make wall coordinates take acount of that by forbidding positions too close to the wall.
+	{
+		int direction_x = sign(w1.x - w0.x);
+		int direction_y = sign(w1.y - w0.y);
+		w0.x -= direction_x;
+		w0.y -= direction_y;
+		w1.x += direction_x;
+		w1.y += direction_y;
+	}
+
 	// Express end coordinates as relative to their start coordinates.
 	p1.x -= p0.x;
 	p1.y -= p0.y;
@@ -243,8 +254,8 @@ static int blocks(struct point p0, struct point p1, struct point w0, struct poin
 
 		// Check if the line segments intersect.
 		// TODO is this good?
-		if ((0 <= wm) && (wm <= cross) && (0 <= pm) && (pm <= cross))
-		//if ((0 < wm) && (wm < cross) && (0 < pm) && (pm < cross))
+		//if ((0 <= wm) && (wm <= cross) && (0 <= pm) && (pm <= cross))
+		if ((0 < wm) && (wm < cross) && (0 < pm) && (pm < cross))
 			return 1;
 	}
 
