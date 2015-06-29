@@ -26,6 +26,9 @@ struct player
 	unsigned char alliance;
 };
 
+enum weapon {WEAPON_NONE, WEAPON_ARROW, WEAPON_CLEAVING, WEAPON_POLEARM, WEAPON_BLADE, WEAPON_BLUNT};
+enum armor {ARMOR_NONE, ARMOR_LEATHER, ARMOR_CHAINMAIL, ARMOR_PLATE, ARMOR_WOODEN, ARMOR_STONE};
+
 struct unit
 {
 	char name[NAME_LIMIT];
@@ -37,12 +40,21 @@ struct unit
 
 	size_t index;
 
-	unsigned char health;
-	unsigned char damage;
 	unsigned char speed;
+	unsigned char health;
+	enum armor armor;
 
-	unsigned char shoot; // damage when shooting
-	unsigned char range;
+	struct
+	{
+		enum weapon weapon;
+		unsigned char damage;
+	} melee;
+	struct
+	{
+		enum weapon weapon;
+		unsigned char damage;
+		unsigned char range;
+	} ranged;
 };
 
 enum {BuildingFarm, BuildingIrrigation, BuildingSawmill, BuildingMine, BuildingBlastFurnace, BuildingBarracks, BuildingArcheryRange, BuildingStables, BuildingWatchTower, BuildingPalisade, BuildingFortress, BuildingWorkshop};

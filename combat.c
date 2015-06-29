@@ -7,6 +7,17 @@
 #include "movement.h"
 #include "combat.h"
 
+static const double damage_boost[6][6] =
+{
+// ARMOR:					NONE		LEATHER		CHAINMAIL	PLATE		WOODEN		STONE
+	[WEAPON_NONE] =	{		0.0,		0.0,		0.0,		0.0,		0.0,		0.0},
+	[WEAPON_ARROW] = {		1.0,		0.8,		0.7,		0.2,		0.0,		0.0},
+	[WEAPON_CLEAVING] = {	1.0,		0.8,		0.7,		0.3,		0.5,		0.0},
+	[WEAPON_POLEARM] = {	1.0,		1.0,		0.8,		0.4,		0.2,		0.0},
+	[WEAPON_BLADE] = {		1.0,		1.0,		0.9,		0.5,		0.2,		0.0},
+	[WEAPON_BLUNT] = {		1.0,		1.0,		1.0,		0.6,		1.0,		0.7},
+};
+
 // Deals damage to a pawn.
 static void pawn_deal(struct pawn *pawn, unsigned damage)
 {
@@ -41,7 +52,7 @@ void battlefield_fight(const struct game *restrict game, struct battle *restrict
 		if (!fighter->troop->count) continue;
 		if (fighter->action == PAWN_SHOOT) continue;
 
-		unsigned damage_total = fighter->troop->unit->damage * fighter->troop->count;
+		unsigned damage_total = fighter->troop->unit->melee.damage * fighter->troop->count;
 
 		if (fighter->action == PAWN_ASSAULT)
 		{
@@ -96,7 +107,7 @@ void battlefield_shoot(struct battle *battle)
 		if (!shooter->troop->count) continue;
 		if (shooter->action != PAWN_SHOOT) continue;
 
-		unsigned damage_total = shooter->troop->unit->shoot * shooter->troop->count;
+		unsigned damage_total = shooter->troop->unit->ranged.damage * shooter->troop->count;
 		unsigned damage;
 
 		unsigned target_index;
@@ -107,7 +118,7 @@ void battlefield_shoot(struct battle *battle)
 		struct pawn *victim = battle->field[y][x].pawn;
 
 		distance = battlefield_distance(shooter->moves[0].location, shooter->target.field);
-		miss = distance / shooter->troop->unit->range;
+		miss = distance / shooter->troop->unit->ranged.range;
 
 		// Shooters have some chance to hit a field adjacent to the target, depending on the distance.
 		// Damage is dealt to the target field and to its neighbors.
@@ -262,7 +273,7 @@ int combat_assault(const struct game *restrict game, const struct battle *restri
 int combat_shoot(const struct game *restrict game, const struct battle *restrict battle, const struct obstacles *restrict obstacles, struct pawn *restrict shooter, struct point target)
 {
 	// Only ranged units can shoot.
-	if (!shooter->troop->unit->shoot) return 0;
+	if (!shooter->troop->unit->ranged.weapon) return 0;
 
 	struct point shooter_field = shooter->moves[0].location;
 
@@ -285,7 +296,7 @@ int combat_shoot(const struct game *restrict game, const struct battle *restrict
 
 	// Check if the target is in shooting range.
 	{
-		unsigned range = shooter->troop->unit->range;
+		unsigned range = shooter->troop->unit->ranged.range;
 
 		// If there is an obstacle between the pawn and its target, decrease shooting range by 1.
 		// TODO what if there is a tower in one of the fields
