@@ -36,7 +36,6 @@ SOFTWARE.
 #include "format.h"
 
 #include "json.h"
-#include "test/json.h"
 #include "array.c"
 #include "hashmap.c"
 

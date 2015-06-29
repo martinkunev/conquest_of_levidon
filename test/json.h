@@ -1,21 +1,17 @@
-#if defined(TEST)
-
-#include <check.h>
-
-#include <base.h>
+#include <json.h>
 
 #define SIZE 256
 #define OFFSET 16
 
-static void check_buffer(const unsigned char *restrict end, const unsigned char buffer[static restrict SIZE], const unsigned char *restrict result, size_t result_size, const unsigned char canary[static restrict SIZE])
+static void check_buffer_json(const unsigned char *restrict end, const unsigned char buffer[static restrict SIZE], const unsigned char *restrict result, size_t result_size, const unsigned char canary[static restrict SIZE])
 {
-	ck_assert(end == (buffer + OFFSET + result_size));
-	ck_assert(!memcmp(buffer, canary, OFFSET));
-	ck_assert(!memcmp(buffer + OFFSET, result, result_size));
-	ck_assert(!memcmp(end, canary + OFFSET + result_size, SIZE - OFFSET - result_size));
+	assert_ptr_equal(end, buffer + OFFSET + result_size);
+	assert_memory_equal(buffer, canary, OFFSET);
+	assert_memory_equal(buffer + OFFSET, result, result_size);
+	assert_memory_equal(end, canary + OFFSET + result_size, SIZE - OFFSET - result_size);
 }
 
-START_TEST(test_parse)
+static void test_json_parse(void **state)
 {
 	char canary[SIZE];
 	char buffer[SIZE];
@@ -29,7 +25,7 @@ START_TEST(test_parse)
 			union json *json = json_parse(string, sizeof(string) - 1); \
 			memcpy(buffer, canary, SIZE); \
 			end = json_dump(buffer + OFFSET, json); \
-			check_buffer(end, buffer, string, sizeof(string) -1, canary); \
+			check_buffer_json(end, buffer, string, sizeof(string) -1, canary); \
 			json_free(json); \
 		} while (0)
 
@@ -43,9 +39,8 @@ START_TEST(test_parse)
 
 	#undef CASE
 }
-END_TEST
 
-START_TEST(test_dump)
+static void test_json_dump(void **state)
 {
 	char canary[SIZE];
 	char buffer[SIZE];
@@ -68,39 +63,17 @@ START_TEST(test_dump)
 	json = json_object_insert(json_object(), S("entries"), json);
 #undef S
 
-	ck_assert(json_size(json) == output.size);
+	assert_int_equal(json_size(json), output.size);
 
 	// Use 10100101 as canary.
 	memset(canary, '\xa5', SIZE);
 
 	memcpy(buffer, canary, SIZE);
 	end = json_dump(buffer + OFFSET, json);
-	check_buffer(end, buffer, output.data, output.size, canary);
+	check_buffer_json(end, buffer, output.data, output.size, canary);
 
 	// TODO unicode
 }
-END_TEST
 
-int check_json(void)
-{
-	unsigned failed;
-
-	Suite *s = suite_create("json");
-	TCase *tc;
-
-	tc = tcase_create("parse");
-	tcase_add_test(tc, test_parse);
-	suite_add_tcase(s, tc);
-
-	tc = tcase_create("dump");
-	tcase_add_test(tc, test_dump);
-	suite_add_tcase(s, tc);
-
-	SRunner *sr = srunner_create(s);
-	srunner_run_all(sr, CK_VERBOSE);
-	failed = srunner_ntests_failed(sr);
-	srunner_free(sr);
-	return failed;
-}
-
-#endif
+#undef OFFSET
+#undef SIZE

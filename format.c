@@ -1,7 +1,6 @@
 // WARNING: Works only on POSIX-compatible systems
 
 #include "format.h"
-#include "test/format.h"
 
 // TODO: fix dependency on libc
 // TODO: possible future improvements:
