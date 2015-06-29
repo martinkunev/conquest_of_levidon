@@ -44,9 +44,60 @@ static int input_round(int code, unsigned x, unsigned y, uint16_t modifiers, con
 	}
 }
 
+static int attack(const struct game *restrict game, const struct battle *restrict battle, struct state_battle *restrict state, struct point target)
+{
+	int x = target.x, y = target.y;
+
+	// If the pawn is not next to its target, move before attacking it.
+	if (!battlefield_neighbors((struct point){state->x, state->y}, target))
+	{
+		double move_distance = INFINITY;
+		int move_x, move_y;
+
+		if ((x > 0) && !battle->field[y][x - 1].pawn && (state->reachable[y][x - 1] < move_distance))
+		{
+			move_x = x - 1;
+			move_y = y;
+			move_distance = state->reachable[move_y][move_x];
+		}
+		if ((x < (BATTLEFIELD_WIDTH - 1)) && !battle->field[y][x + 1].pawn && (state->reachable[y][x + 1] < move_distance))
+		{
+			move_x = x + 1;
+			move_y = y;
+			move_distance = state->reachable[move_y][move_x];
+		}
+		if ((y > 0) && !battle->field[y - 1][x].pawn && (state->reachable[y - 1][x] < move_distance))
+		{
+			move_x = x;
+			move_y = y - 1;
+			move_distance = state->reachable[move_y][move_x];
+		}
+		if ((y < (BATTLEFIELD_HEIGHT - 1)) && !battle->field[y + 1][x].pawn && (state->reachable[y + 1][x] < move_distance))
+		{
+			move_x = x;
+			move_y = y + 1;
+			move_distance = state->reachable[move_y][move_x];
+		}
+
+		if (move_distance < INFINITY)
+		{
+			movement_set(state->pawn, (struct point){move_x, move_y}, state->graph, state->obstacles);
+			if (path_reachable(state->pawn, state->graph, state->obstacles, state->reachable) < 0)
+				return ERROR_MEMORY;
+		}
+		else return ERROR_MISSING;
+	}
+
+	combat_fight(game, battle, state->obstacles, state->pawn, battle->field[y][x].pawn);
+
+	return 0;
+}
+
 static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
 {
 	struct state_battle *state = argument;
+
+	int status;
 
 	if (code >= 0) return INPUT_NOTME;
 
@@ -67,8 +118,8 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 			if ((state->pawn->action == PAWN_FIGHT) && state->pawn->target.pawn && !state->pawn->target.pawn->troop->count)
 				state->pawn->action = 0;
 
-			if (path_reachable(state->pawn, state->graph, state->obstacles, state->reachable) < 0)
-				; // TODO
+			status = path_reachable(state->pawn, state->graph, state->obstacles, state->reachable);
+			if (status < 0) return status;
 		}
 	}
 	else if (code == -3)
@@ -81,9 +132,9 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 		if (point_eq(target, pawn->moves[0].location))
 		{
 			movement_stay(pawn);
+			status = path_reachable(pawn, state->graph, state->obstacles, state->reachable);
+			if (status < 0) return status;
 			pawn->action = 0;
-			if (path_reachable(state->pawn, state->graph, state->obstacles, state->reachable) < 0)
-				; // TODO
 			return 0;
 		}
 
@@ -97,8 +148,8 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 		else if (modifiers & XCB_MOD_MASK_SHIFT)
 		{
 			movement_queue(pawn, target, state->graph, state->obstacles);
-			if (path_reachable(state->pawn, state->graph, state->obstacles, state->reachable) < 0)
-				; // TODO
+			status = path_reachable(pawn, state->graph, state->obstacles, state->reachable);
+			if (status < 0) return status;
 		}
 		else
 		{
@@ -110,57 +161,15 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 				if (allies(game, pawn->troop->owner, field->pawn->troop->owner))
 				{
 					movement_set(pawn, target, state->graph, state->obstacles);
-					if (path_reachable(state->pawn, state->graph, state->obstacles, state->reachable) < 0)
-						; // TODO
+					status = path_reachable(pawn, state->graph, state->obstacles, state->reachable);
+					if (status < 0) return status;
 				}
 				else
 				{
 					if (combat_shoot(game, battle, state->obstacles, pawn, target))
 						;
 					else
-					{
-						// If the pawn is not next to its target, move before attacking it.
-						if (!battlefield_neighbors((struct point){state->x, state->y}, target))
-						{
-							double move_distance = INFINITY;
-							int move_x, move_y;
-
-							if ((x > 0) && !battle->field[y][x - 1].pawn && (state->reachable[y][x - 1] < move_distance))
-							{
-								move_x = x - 1;
-								move_y = y;
-								move_distance = state->reachable[move_y][move_x];
-							}
-							if ((x < (BATTLEFIELD_WIDTH - 1)) && !battle->field[y][x + 1].pawn && (state->reachable[y][x + 1] < move_distance))
-							{
-								move_x = x + 1;
-								move_y = y;
-								move_distance = state->reachable[move_y][move_x];
-							}
-							if ((y > 0) && !battle->field[y - 1][x].pawn && (state->reachable[y - 1][x] < move_distance))
-							{
-								move_x = x;
-								move_y = y - 1;
-								move_distance = state->reachable[move_y][move_x];
-							}
-							if ((y < (BATTLEFIELD_HEIGHT - 1)) && !battle->field[y + 1][x].pawn && (state->reachable[y + 1][x] < move_distance))
-							{
-								move_x = x;
-								move_y = y + 1;
-								move_distance = state->reachable[move_y][move_x];
-							}
-
-							if (move_distance < INFINITY)
-							{
-								movement_set(pawn, (struct point){move_x, move_y}, state->graph, state->obstacles);
-								if (path_reachable(state->pawn, state->graph, state->obstacles, state->reachable) < 0)
-									; // TODO
-							}
-							else return 0; // TODO
-						}
-
-						combat_fight(game, battle, state->obstacles, pawn, field->pawn);
-					}
+						attack(game, battle, state, target); // TODO error check
 				}
 			}
 			else if (combat_assault(game, battle, state->obstacles, pawn, target))
@@ -168,8 +177,8 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 			else
 			{
 				movement_set(pawn, target, state->graph, state->obstacles);
-				if (path_reachable(state->pawn, state->graph, state->obstacles, state->reachable) < 0)
-					; // TODO
+				status = path_reachable(pawn, state->graph, state->obstacles, state->reachable);
+				if (status < 0) return status;
 			}
 		}
 	}

@@ -84,11 +84,13 @@ int input_local(const struct area *restrict areas, size_t areas_count, void (*di
 				switch (status)
 				{
 				case INPUT_TERMINATE:
-					return -1;
+					return -1; // TODO fix this
 				case INPUT_DONE:
 					return 0;
 				case INPUT_NOTME:
 					continue;
+				default: // runtime error
+					return status;
 				}
 				break;
 			}
