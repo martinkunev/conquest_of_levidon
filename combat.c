@@ -242,7 +242,7 @@ int combat_fight(const struct game *restrict game, const struct battle *restrict
 
 	struct point fighter_field = fighter->moves[fighter->moves_count - 1].location;
 	struct point victim_field = victim->moves[0].location;
-	if (battlefield_neighbors(fighter_field, victim_field))
+	if (!battlefield_neighbors(fighter_field, victim_field))
 		return 0;
 
 	fighter->action = PAWN_FIGHT;
@@ -261,7 +261,7 @@ int combat_assault(const struct game *restrict game, const struct battle *restri
 		return 0;
 
 	struct point fighter_field = fighter->moves[fighter->moves_count - 1].location;
-	if (battlefield_neighbors(fighter_field, target))
+	if (!battlefield_neighbors(fighter_field, target))
 		return 0;
 
 	fighter->action = PAWN_ASSAULT;

@@ -512,7 +512,7 @@ void input_animation(const struct game *restrict game, const struct battle *rest
 	} while (progress < 1.0);
 }
 
-static void if_battlefield(const struct state_battle *state, const struct game *game)
+static void if_battlefield(unsigned char player, const struct game *game)
 {
 	// clear window
 	glClearColor(0.0, 0.0, 0.0, 0.0);
@@ -522,7 +522,7 @@ static void if_battlefield(const struct state_battle *state, const struct game *
 	display_image(&image_terrain[0], BATTLE_X - 8, BATTLE_Y - 8, BATTLEFIELD_WIDTH * FIELD_SIZE + 16, BATTLEFIELD_HEIGHT * FIELD_SIZE + 16);
 
 	// draw rectangle with current player's color
-	display_rectangle(CTRL_X, CTRL_Y, 256, 16, Player + state->player);
+	display_rectangle(CTRL_X, CTRL_Y, 256, 16, Player + player);
 
 	// show the control section in gray
 	display_rectangle(CTRL_X, CTRL_Y + CTRL_MARGIN, CTRL_WIDTH, CTRL_HEIGHT - CTRL_MARGIN, Gray);
@@ -534,7 +534,7 @@ void if_formation(const void *argument, const struct game *game)
 
 	size_t x, y;
 
-	if_battlefield((const struct state_battle *)state, game); // TODO fix this cast
+	if_battlefield(state->player, game);
 
 	// TODO mark somehow that only self pawns are displayed
 
@@ -603,7 +603,7 @@ void if_battle(const void *argument, const struct game *game)
 	size_t x, y;
 	const struct pawn *pawn;
 
-	if_battlefield(state, game);
+	if_battlefield(state->player, game);
 
 	// Display pawns and obstacles.
 	for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
@@ -652,14 +652,8 @@ void if_battle(const void *argument, const struct game *game)
 
 		pawn = battlefield[state->y][state->x].pawn;
 
-		if (pawn->troop->owner == state->player)
-		{
-			// Show which fields are reachable by the pawn.
-			for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
-				for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
-					if ((state->reachable[y][x] <= pawn->troop->unit->speed) && !battlefield[y][x].pawn)
-						display_rectangle(BATTLE_X + x * object_group[Battlefield].width, BATTLE_Y + y * object_group[Battlefield].height, object_group[Battlefield].width, object_group[Battlefield].height, FieldReachable);
-		}
+		// Indicate that the pawn is selected.
+		image_draw(&image_selected, BATTLE_X + state->x * FIELD_SIZE - 1, BATTLE_Y + state->y * FIELD_SIZE - 1);
 
 		// Display pawn information in the control section.
 		if (pawn->troop->owner == state->player) color = Self;
@@ -668,37 +662,41 @@ void if_battle(const void *argument, const struct game *game)
 		display_rectangle(CTRL_X, CTRL_Y + CTRL_MARGIN, FIELD_SIZE + MARGIN * 2, FIELD_SIZE + font12.height + MARGIN * 2, color);
 		display_unit(pawn->troop->unit->index, CTRL_X + MARGIN, CTRL_Y + CTRL_MARGIN + MARGIN, Player + pawn->troop->owner, Black, pawn->troop->count);
 
-		image_draw(&image_selected, BATTLE_X + state->x * FIELD_SIZE - 1, BATTLE_Y + state->y * FIELD_SIZE - 1);
-
-		// Show pawn task (if any).
 		if (pawn->troop->owner == state->player)
 		{
+			// Show pawn movement target.
+			size_t i;
+			for(i = 1; i < pawn->moves_count; ++i)
+			{
+				struct point from = pawn->moves[i - 1].location;
+				from.x = BATTLE_X + from.x * FIELD_SIZE + FIELD_SIZE / 2;
+				from.y = BATTLE_Y + from.y * FIELD_SIZE + FIELD_SIZE / 2;
+
+				struct point to = pawn->moves[i].location;
+				to.x = BATTLE_X + to.x * FIELD_SIZE + FIELD_SIZE / 2;
+				to.y = BATTLE_Y + to.y * FIELD_SIZE + FIELD_SIZE / 2;
+
+				if (pawn->moves[i].time <= 1.0) color = PathReachable;
+				else color = PathUnreachable;
+				display_arrow(from, to, BATTLE_X, BATTLE_Y, color);
+			}
+
 			if (pawn->action == PAWN_SHOOT)
 			{
 				image_draw(&image_shoot_destination, BATTLE_X + pawn->target.field.x * FIELD_SIZE, BATTLE_Y + pawn->target.field.y * FIELD_SIZE);
 			}
-			else if (pawn->action == PAWN_FIGHT)
+			else if ((pawn->action == PAWN_FIGHT) || (pawn->action == PAWN_ASSAULT))
 			{
 				struct point target = pawn->target.pawn->moves[0].location;
 				image_draw(&image_fight_destination, BATTLE_X + target.x * FIELD_SIZE, BATTLE_Y + target.y * FIELD_SIZE);
 			}
 			else
 			{
-				size_t i;
-				for(i = 1; i < pawn->moves_count; ++i)
-				{
-					struct point from = pawn->moves[i - 1].location;
-					from.x = BATTLE_X + from.x * FIELD_SIZE + FIELD_SIZE / 2;
-					from.y = BATTLE_Y + from.y * FIELD_SIZE + FIELD_SIZE / 2;
-
-					struct point to = pawn->moves[i].location;
-					to.x = BATTLE_X + to.x * FIELD_SIZE + FIELD_SIZE / 2;
-					to.y = BATTLE_Y + to.y * FIELD_SIZE + FIELD_SIZE / 2;
-
-					if (pawn->moves[i].time <= 1.0) color = PathReachable;
-					else color = PathUnreachable;
-					display_arrow(from, to, BATTLE_X, BATTLE_Y, color);
-				}
+				// Show which fields are reachable by the pawn.
+				for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
+					for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
+						if ((state->reachable[y][x] <= pawn->troop->unit->speed) && !battlefield[y][x].pawn)
+							display_rectangle(BATTLE_X + x * object_group[Battlefield].width, BATTLE_Y + y * object_group[Battlefield].height, object_group[Battlefield].width, object_group[Battlefield].height, FieldReachable);
 			}
 		}
 	}

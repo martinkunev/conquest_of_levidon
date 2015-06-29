@@ -2,10 +2,10 @@ struct state_battle
 {
 	unsigned char player; // current player
 
+	struct point hover; // position of the hovered field
+
 	struct obstacles *obstacles; // obstacles on the battlefield
 	struct adjacency_list *graph; // graph used for pathfinding
-
-	struct point hover; // position of the hovered field
 
 	unsigned char x, y; // position of the current field
 	struct pawn *pawn; // selected pawn

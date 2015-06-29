@@ -91,8 +91,9 @@ int input_local(const struct area *restrict areas, size_t areas_count, void (*di
 					continue;
 				default: // runtime error
 					return status;
+				case 0:
+					break;
 				}
-				break;
 			}
 		} while (index--);
 		display(state, game);
