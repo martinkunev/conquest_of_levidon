@@ -15,30 +15,30 @@
 const struct unit UNITS[] =
 {
 	{
-		.index = 0, NAME("Peasant"), .speed = 4, .health = 3, .armor = ARMOR_NONE,
+		.index = 0, NAME("Peasant"), .speed = 4, .agility = 0.5, .health = 3, .armor = ARMOR_NONE,
 		.cost = {.gold = 1}, .expense = {.food = 1}, .time = 1,
 		.melee = {.weapon = WEAPON_CLEAVING, .damage = 1},
 	},
 	{
-		.index = 1, NAME("Archer"), .speed = 4, .health = 3, .armor = ARMOR_NONE,
+		.index = 1, NAME("Archer"), .speed = 4, .agility = 1.0, .health = 3, .armor = ARMOR_NONE,
 		.cost = {.gold = 1, .wood = 1}, .expense = {.food = 1}, .time = 1, .requires = (1 << BuildingArcheryRange),
 		.melee = {.weapon = WEAPON_CLEAVING, .damage = 1},
 		.ranged = {.weapon = WEAPON_ARROW, .damage = 1, .range = 5},
 	},
 	{
-		.index = 2, NAME("Militia"), .speed = 5, .health = 5, .armor = ARMOR_LEATHER,
+		.index = 2, NAME("Militia"), .speed = 5, .agility = 1.0, .health = 5, .armor = ARMOR_LEATHER,
 		.cost = {.gold = 1, .iron = 1}, .expense = {.food = 1}, .time = 1, .requires = (1 << BuildingBarracks),
 		.melee = {.weapon = WEAPON_CLEAVING, .damage = 2},
 	},
 	{
-		.index = 3, NAME("Light cavalry"), .speed = 9, .health = 8, .armor = ARMOR_LEATHER,
+		.index = 3, NAME("Light cavalry"), .speed = 9, .agility = 1.0, .health = 8, .armor = ARMOR_LEATHER,
 		.cost = {.gold = 2, .iron = 1}, .expense = {.food = 3}, .time = 2, .requires = (1 << BuildingStables),
 		.melee = {.weapon = WEAPON_CLEAVING, .damage = 2},
 	},
 	{
-		.index = 4, NAME("Battering Ram"), .speed = 3, .health = 25, .armor = ARMOR_WOODEN,
+		.index = 4, NAME("Battering Ram"), .speed = 3, .agility = 0.25, .health = 25, .armor = ARMOR_WOODEN,
 		.cost = {.gold = 2, .wood = 5}, .expense = {.food = 2}, .time = 2, .requires = (1 << BuildingWorkshop),
-		.melee = {.weapon = WEAPON_BLUNT, .damage = 10},
+		.melee = {.weapon = WEAPON_BLUNT, .damage = 50},
 	},
 };
 const size_t UNITS_COUNT = sizeof(UNITS) / sizeof(*UNITS);

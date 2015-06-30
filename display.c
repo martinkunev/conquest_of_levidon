@@ -35,7 +35,7 @@ unsigned char display_colors[][4] = {
 	[PathUnreachable] = {192, 0, 0, 255},
 
 	[Hover] = {0, 0, 0, 192},
-	[FieldReachable] = {0, 0, 0, 128},
+	[FieldReachable] = {0, 0, 0, 64},
 
 	[Player + 0] = {160, 160, 160, 255},
 	[Player + 1] = {0, 96, 0, 255},
@@ -95,8 +95,6 @@ static int is_ear(const struct polygon_draw *prev, const struct polygon_draw *cu
 
 void display_rectangle(unsigned x, unsigned y, unsigned width, unsigned height, enum color color)
 {
-	// http://stackoverflow.com/questions/10040961/opengl-pixel-perfect-2d-drawing
-
 	glColor4ubv(display_colors[color]);
 
 	glBegin(GL_QUADS);

@@ -107,6 +107,6 @@ void if_map(const void *argument, const struct game *game);
 void if_formation(const void *argument, const struct game *game);
 void if_battle(const void *argument, const struct game *game);
 
-void if_set(struct battlefield field[BATTLEFIELD_WIDTH][BATTLEFIELD_HEIGHT], struct battle *b);
+void if_set(struct battle *b);
 void input_animation(const struct game *restrict game, const struct battle *restrict battle);
 void if_regions_input(struct game *restrict game);

@@ -261,7 +261,7 @@ static int play(struct game *restrict game)
 					// Remove dead troops.
 					if (!troop->count)
 					{
-						troop_detach(&region->troops, troop);
+						troop_detach(&region->garrison.troops, troop);
 						free(troop);
 					}
 				}

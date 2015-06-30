@@ -29,7 +29,7 @@ int input_local(const struct area *restrict areas, size_t areas_count, void (*di
 	while (event = xcb_poll_for_event(connection))
 		free(event);
 
-	display(state, game); // TODO is this necessary?
+	display(state, game);
 
 	while (1)
 	{
@@ -97,6 +97,6 @@ int input_local(const struct area *restrict areas, size_t areas_count, void (*di
 				}
 			}
 		} while (index--);
-		display(state, game); // TODO is this necessary?
+		display(state, game);
 	}
 }

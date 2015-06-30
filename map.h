@@ -43,6 +43,7 @@ struct unit
 	unsigned char speed;
 	unsigned char health;
 	enum armor armor;
+	double agility;
 
 	struct
 	{

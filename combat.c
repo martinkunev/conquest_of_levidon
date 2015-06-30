@@ -15,7 +15,7 @@ static const double damage_boost[6][6] =
 	[WEAPON_CLEAVING] = {	1.0,		0.8,		0.7,		0.3,		0.5,		0.0},
 	[WEAPON_POLEARM] = {	1.0,		1.0,		0.8,		0.4,		0.2,		0.0},
 	[WEAPON_BLADE] = {		1.0,		1.0,		0.9,		0.5,		0.2,		0.0},
-	[WEAPON_BLUNT] = {		1.0,		1.0,		1.0,		0.6,		1.0,		0.7},
+	[WEAPON_BLUNT] = {		1.0,		1.0,		1.0,		0.5,		1.0,		0.7},
 };
 
 // Deals damage to a pawn.
@@ -24,6 +24,9 @@ static void pawn_deal(struct pawn *pawn, unsigned damage)
 	if (!pawn) return;
 	pawn->hurt += damage;
 }
+
+// TODO use boost and agility in the calculations
+// TODO kill not more troops than the number of attacking troops
 
 // TODO this should not be here
 // TODO deprecated

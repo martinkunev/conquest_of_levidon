@@ -49,10 +49,12 @@
 #define glRenderbufferStorage(...) glRenderbufferStorageEXT(__VA_ARGS__)
 #define glFramebufferRenderbuffer(...) glFramebufferRenderbufferEXT(__VA_ARGS__)
 
-#define ANIMATION_DURATION 4.0
+#define ANIMATION_DURATION 3.0
 
 #define WM_STATE "_NET_WM_STATE"
 #define WM_STATE_FULLSCREEN "_NET_WM_STATE_FULLSCREEN"
+
+#include <stdio.h>
 
 static Display *display;
 static xcb_window_t window;
@@ -68,10 +70,6 @@ GLuint map_framebuffer;
 
 // TODO Create a struct that stores all the information about the battle (battlefield, players, etc.)
 struct battle *battle;
-struct battlefield (*battlefield)[BATTLEFIELD_WIDTH];
-
-struct region *restrict regions;
-size_t regions_count;
 
 static struct image image_move_destination, image_fight_destination, image_shoot_destination, image_selected, image_flag, image_panel, image_construction;
 static struct image image_terrain[1];
@@ -234,10 +232,6 @@ static void if_load_images(void)
 
 int if_init(const struct game *game)
 {
-	// TODO fix this
-	regions = game->regions;
-	regions_count = game->regions_count;
-
 	display = XOpenDisplay(0);
 	if (!display) return -1;
 
@@ -281,7 +275,8 @@ int if_init(const struct game *game)
 
 	xcb_create_colormap(connection, XCB_COLORMAP_ALLOC_NONE, colormap, screen->root, visualID);
 
-	uint32_t eventmask = XCB_EVENT_MASK_EXPOSURE | XCB_EVENT_MASK_KEY_PRESS | XCB_EVENT_MASK_KEY_RELEASE | XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_BUTTON_RELEASE | XCB_EVENT_MASK_POINTER_MOTION;
+	//uint32_t eventmask = XCB_EVENT_MASK_EXPOSURE | XCB_EVENT_MASK_KEY_PRESS | XCB_EVENT_MASK_KEY_RELEASE | XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_BUTTON_RELEASE | XCB_EVENT_MASK_POINTER_MOTION;
+	uint32_t eventmask = XCB_EVENT_MASK_EXPOSURE | XCB_EVENT_MASK_KEY_PRESS | XCB_EVENT_MASK_KEY_RELEASE | XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_BUTTON_RELEASE;
 	uint32_t valuelist[] = {eventmask, colormap, 0};
 	uint32_t valuemask = XCB_CW_EVENT_MASK | XCB_CW_COLORMAP;
 
@@ -443,8 +438,6 @@ static int if_animation(const struct player *restrict players, const struct batt
 
 	size_t x, y;
 
-	// clear window
-	//glClearColor(0.0, 0.0, 0.0, 0.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	// Display panel background pattern.
@@ -455,7 +448,7 @@ static int if_animation(const struct player *restrict players, const struct batt
 	for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
 		for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
 		{
-			const struct battlefield *field = &battlefield[y][x];
+			const struct battlefield *field = &battle->field[y][x];
 			if (field->blockage)
 			{
 				// TODO decide whether to use palisade or fortress
@@ -480,13 +473,14 @@ static int if_animation(const struct player *restrict players, const struct batt
 	for(p = 0; p < battle->pawns_count; ++p)
 	{
 		struct pawn *pawn = battle->pawns + p;
-		double x, y;
+		double x, y, x_final, y_final;
 
 		if (!pawn->troop->count) continue;
 
 		// If the pawn will move more this round, the animation must continue.
-		if (movement_location(pawn, progress, &x, &y) != movement_location(pawn, 1.0, &x, &y))
-			finished = 0;
+		movement_location(pawn, progress, &x, &y);
+		movement_location(pawn, 1.0, &x_final, &y_final);
+		if ((x != x_final) || (y != y_final)) finished = 0;
 
 		display_troop(pawn->troop->unit->index, BATTLE_X + x * object_group[Battlefield].width, BATTLE_Y + y * object_group[Battlefield].height, Player + pawn->troop->owner, 0, 0);
 	}
@@ -516,22 +510,22 @@ void input_animation(const struct game *restrict game, const struct battle *rest
 
 static void if_battlefield(unsigned char player, const struct game *game)
 {
-	// clear window
-	//glClearColor(0.0, 0.0, 0.0, 0.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	// Display battleifled background.
 	display_image(&image_terrain[0], BATTLE_X - 8, BATTLE_Y - 8, BATTLEFIELD_WIDTH * FIELD_SIZE + 16, BATTLEFIELD_HEIGHT * FIELD_SIZE + 16);
 
-	// draw rectangle with current player's color
+	// Draw rectangle with current player's color.
 	display_rectangle(CTRL_X, CTRL_Y, 256, 16, Player + player);
 
-	// show the control section in gray
+	// Draw the control section in gray.
 	display_rectangle(CTRL_X, CTRL_Y + CTRL_MARGIN, CTRL_WIDTH, CTRL_HEIGHT - CTRL_MARGIN, Gray);
 }
 
 void if_formation(const void *argument, const struct game *game)
 {
+	// TODO battle must be passed as argument
+
 	const struct state_formation *state = argument;
 
 	size_t x, y;
@@ -543,7 +537,7 @@ void if_formation(const void *argument, const struct game *game)
 	for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
 		for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
 		{
-			const struct battlefield *field = &battlefield[y][x];
+			const struct battlefield *field = &battle->field[y][x];
 			if (field->blockage)
 			{
 				// TODO decide whether to use palisade or fortress
@@ -574,7 +568,7 @@ void if_formation(const void *argument, const struct game *game)
 		{
 			// Display at which fields the pawn can be placed.
 			for(i = 0; i < state->reachable_count; ++i)
-				if (!battlefield[state->reachable[i].y][state->reachable[i].x].pawn)
+				if (!battle->field[state->reachable[i].y][state->reachable[i].x].pawn)
 					display_rectangle(BATTLE_X + state->reachable[i].x * object_group[Battlefield].width, BATTLE_Y + state->reachable[i].y * object_group[Battlefield].height, object_group[Battlefield].width, object_group[Battlefield].height, FieldReachable);
 
 			// Display the selected pawn in the control section.
@@ -607,7 +601,7 @@ static void show_health(const struct pawn *pawn, unsigned x, unsigned y)
 
 	end = format_bytes(buffer, S("health: "));
 	end = format_uint(end, left, 10);
-	end = format_bytes(buffer, S(" / "));
+	end = format_bytes(end, S(" / "));
 	end = format_uint(end, total, 10);
 
 	display_string(buffer, end - buffer, x, y, &font12, White);
@@ -620,10 +614,15 @@ static void show_health(const struct pawn *pawn, unsigned x, unsigned y)
 
 void if_battle(const void *argument, const struct game *game)
 {
+	// TODO battle must be passed as argument
+
 	const struct state_battle *state = argument;
 
 	size_t x, y;
 	const struct pawn *pawn;
+
+	struct timeval start, end;
+	gettimeofday(&start, 0);
 
 	if_battlefield(state->player, game);
 
@@ -631,7 +630,7 @@ void if_battle(const void *argument, const struct game *game)
 	for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
 		for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
 		{
-			const struct battlefield *field = &battlefield[y][x];
+			const struct battlefield *field = &battle->field[y][x];
 			if (pawn = field->pawn)
 			{
 				enum color color;
@@ -707,9 +706,14 @@ void if_battle(const void *argument, const struct game *game)
 			{
 				image_draw(&image_shoot_destination, BATTLE_X + pawn->target.field.x * FIELD_SIZE, BATTLE_Y + pawn->target.field.y * FIELD_SIZE);
 			}
-			else if ((pawn->action == PAWN_FIGHT) || (pawn->action == PAWN_ASSAULT))
+			else if (pawn->action == PAWN_FIGHT)
 			{
 				struct point target = pawn->target.pawn->moves[0].location;
+				image_draw(&image_fight_destination, BATTLE_X + target.x * FIELD_SIZE, BATTLE_Y + target.y * FIELD_SIZE);
+			}
+			else if (pawn->action == PAWN_ASSAULT)
+			{
+				struct point target = pawn->target.field;
 				image_draw(&image_fight_destination, BATTLE_X + target.x * FIELD_SIZE, BATTLE_Y + target.y * FIELD_SIZE);
 			}
 			else
@@ -717,7 +721,7 @@ void if_battle(const void *argument, const struct game *game)
 				// Show which fields are reachable by the pawn.
 				for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
 					for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
-						if ((state->reachable[y][x] <= pawn->troop->unit->speed) && !battlefield[y][x].pawn)
+						if ((state->reachable[y][x] <= pawn->troop->unit->speed) && !battle->field[y][x].pawn)
 							display_rectangle(BATTLE_X + x * object_group[Battlefield].width, BATTLE_Y + y * object_group[Battlefield].height, object_group[Battlefield].width, object_group[Battlefield].height, FieldReachable);
 			}
 		}
@@ -725,6 +729,9 @@ void if_battle(const void *argument, const struct game *game)
 
 	glFlush();
 	glXSwapBuffers(display, drawable);
+
+	gettimeofday(&end, 0);
+	//printf("battle: %lf\n", (end.tv_sec * 1000000 + end.tv_usec - start.tv_sec * 1000000 - start.tv_usec) / 1000000.0);
 
 	// TODO finish this test
 	/*{
@@ -1047,8 +1054,9 @@ void if_map(const void *argument, const struct game *game)
 
 	size_t i, j;
 
-	// clear window
-	//glClearColor(0.0, 0.0, 0.0, 0.0); // TODO do I need to call this all the time
+	struct timeval start, end;
+	gettimeofday(&start, 0);
+
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	// Display current player's color.
@@ -1059,10 +1067,6 @@ void if_map(const void *argument, const struct game *game)
 
 	// Display panel background pattern.
 	display_image(&image_panel, PANEL_X, PANEL_Y, PANEL_WIDTH, PANEL_HEIGHT);
-
-	// show map in black
-	// TODO is this necessary?
-	//display_rectangle(MAP_X, MAP_Y, MAP_WIDTH, MAP_HEIGHT, Black);
 
 	// TODO remove this color display box
 	/*for(i = 0; i < PLAYERS_LIMIT; ++i)
@@ -1077,19 +1081,21 @@ void if_map(const void *argument, const struct game *game)
 
 	// TODO place income logic at a single place (now it's here and in main.c)
 
-	for(i = 0; i < regions_count; ++i)
+	for(i = 0; i < game->regions_count; ++i)
 	{
+		const struct region *restrict region = game->regions + i;
+
 		// Fill each region with the color of its owner (or the color indicating unexplored).
-		if (state->regions_visible[i]) glColor4ubv(display_colors[Player + regions[i].owner]);
+		if (state->regions_visible[i]) glColor4ubv(display_colors[Player + region->owner]);
 		else glColor4ubv(display_colors[Unexplored]);
-		display_polygon(regions[i].location, MAP_X, MAP_Y);
+		display_polygon(region->location, MAP_X, MAP_Y);
 
 		// Remember income and expenses.
-		if (regions[i].owner == state->player) region_income(regions + i, &income);
-		for(troop = regions[i].troops; troop; troop = troop->_next)
+		if (region->owner == state->player) region_income(region, &income);
+		for(troop = region->troops; troop; troop = troop->_next)
 			if (troop->owner == state->player)
 			{
-				if (regions[i].owner != regions[i].garrison.owner)
+				if (region->owner != region->garrison.owner)
 				{
 					struct resources expense;
 					resource_multiply(&expense, &troop->unit->expense, 2);
@@ -1098,19 +1104,20 @@ void if_map(const void *argument, const struct game *game)
 				else resource_add(&expenses, &troop->unit->expense);
 			}
 	}
-	/*for(i = 0; i < regions_count; ++i)
+
+	// Draw region borders.
+	for(i = 0; i < game->regions_count; ++i)
 	{
-		// Draw region borders.
 		glColor4ubv(display_colors[Black]);
 		glBegin(GL_LINE_STRIP);
-		for(j = 0; j < regions[i].location->vertices_count; ++j)
-			glVertex2f(MAP_X + regions[i].location->points[j].x, MAP_Y + regions[i].location->points[j].y);
+		for(j = 0; j < game->regions[i].location->vertices_count; ++j)
+			glVertex2f(MAP_X + game->regions[i].location->points[j].x, MAP_Y + game->regions[i].location->points[j].y);
 		glEnd();
-	}*/
+	}
 
 	if (state->region >= 0)
 	{
-		const struct region *region = regions + state->region;
+		const struct region *region = game->regions + state->region;
 
 		// Show the name of the selected region.
 		display_string(region->name, region->name_length, PANEL_X + image_flag.width + MARGIN, PANEL_Y + (image_flag.height - font12.height) / 2, &font12, Black);
@@ -1128,12 +1135,14 @@ void if_map(const void *argument, const struct game *game)
 
 	glFlush();
 	glXSwapBuffers(display, drawable);
+
+	gettimeofday(&end, 0);
+	//printf("map: %lf\n", (end.tv_sec * 1000000 + end.tv_usec - start.tv_sec * 1000000 - start.tv_usec) / 1000000.0);
 }
 
-void if_set(struct battlefield field[BATTLEFIELD_WIDTH][BATTLEFIELD_HEIGHT], struct battle *b)
+void if_set(struct battle *b)
 {
 	battle = b;
-	battlefield = field;
 }
 
 void if_term(void)

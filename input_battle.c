@@ -14,11 +14,12 @@
 #include "input_battle.h"
 #include "interface.h"
 
-extern const struct battle *battle;
-extern struct battlefield (*battlefield)[BATTLEFIELD_WIDTH];
+extern struct battle *battle;
 
 static int input_round(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
 {
+	// TODO battle must be passed as argument
+
 	struct state_battle *state = argument; // TODO sometimes this is state_formation
 
 	switch (code)
@@ -95,6 +96,8 @@ static int attack(const struct game *restrict game, const struct battle *restric
 
 static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
 {
+	// TODO battle must be passed as argument
+
 	struct state_battle *state = argument;
 
 	int status;
@@ -108,7 +111,7 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 	{
 		// Set current field.
 		state->field = (struct point){x, y};
-		state->pawn = battlefield[y][x].pawn;
+		state->pawn = battle->field[y][x].pawn;
 
 		if (state->pawn)
 		{
@@ -136,8 +139,6 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 			pawn->action = 0;
 			return 0;
 		}
-
-		// TODO ? fast move
 
 		// TODO memory error checks below?
 
@@ -188,6 +189,8 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 
 static int input_place(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
 {
+	// TODO battle must be passed as argument
+
 	struct state_formation *state = argument;
 
 	if (code >= 0) return INPUT_NOTME;
@@ -200,7 +203,7 @@ static int input_place(int code, unsigned x, unsigned y, uint16_t modifiers, con
 	if (code == -1)
 	{
 		struct pawn *selected = state->pawn;
-		struct pawn *new = battlefield[y][x].pawn;
+		struct pawn *new = battle->field[y][x].pawn;
 
 		// If there is a selected pawn, put it at the clicked field.
 		// If there is a pawn at the clicked field, take it from there.
@@ -219,7 +222,7 @@ reachable:
 			selected->moves[0].time = 0.0;
 		}
 
-		battlefield[y][x].pawn = selected;
+		battle->field[y][x].pawn = selected;
 		state->pawn = new;
 
 		if (new)
@@ -237,7 +240,7 @@ reachable:
 
 int input_formation(const struct game *restrict game, struct battle *restrict battle, unsigned char player)
 {
-	if_set(battle->field, battle);
+	if_set(battle); // TODO remove this
 
 	struct area areas[] = {
 		{
@@ -268,7 +271,7 @@ int input_formation(const struct game *restrict game, struct battle *restrict ba
 
 int input_battle(const struct game *restrict game, struct battle *restrict battle, unsigned char player)
 {
-	if_set(battle->field, battle);
+	if_set(battle); // TODO remove this
 
 	struct area areas[] = {
 		{
