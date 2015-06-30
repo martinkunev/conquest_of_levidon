@@ -646,14 +646,12 @@ void if_battle(const void *argument, const struct game *game)
 		display_rectangle(BATTLE_X + state->hover.x * object_group[Battlefield].width, BATTLE_Y + state->hover.y * object_group[Battlefield].height, object_group[Battlefield].width, object_group[Battlefield].height, Hover);*/
 
 	// Display information about the selected field.
-	if ((state->x < BATTLEFIELD_WIDTH) && (state->y < BATTLEFIELD_HEIGHT) && battlefield[state->y][state->x].pawn)
+	if (pawn = state->pawn)
 	{
 		enum color color;
 
-		pawn = battlefield[state->y][state->x].pawn;
-
 		// Indicate that the pawn is selected.
-		image_draw(&image_selected, BATTLE_X + state->x * FIELD_SIZE - 1, BATTLE_Y + state->y * FIELD_SIZE - 1);
+		image_draw(&image_selected, BATTLE_X + state->field.x * FIELD_SIZE - 1, BATTLE_Y + state->field.y * FIELD_SIZE - 1);
 
 		// Display pawn information in the control section.
 		if (pawn->troop->owner == state->player) color = Self;

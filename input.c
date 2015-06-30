@@ -25,13 +25,14 @@ int input_local(const struct area *restrict areas, size_t areas_count, void (*di
 	size_t index;
 	int status;
 
-	display(state, game); // TODO is this necessary?
+	// Ignore all the queued events.
+	while (xcb_poll_for_event(connection))
+		;
 
-	// TODO clear queued events (previously pressed keys, etc.)
+	display(state, game); // TODO is this necessary?
 
 	while (1)
 	{
-		// TODO consider using xcb_poll_for_event()
 		event = xcb_wait_for_event(connection);
 		if (!event) return ERROR_MEMORY;
 
@@ -96,6 +97,6 @@ int input_local(const struct area *restrict areas, size_t areas_count, void (*di
 				}
 			}
 		} while (index--);
-		display(state, game);
+		display(state, game); // TODO is this necessary?
 	}
 }

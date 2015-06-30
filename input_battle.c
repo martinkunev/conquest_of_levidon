@@ -49,7 +49,7 @@ static int attack(const struct game *restrict game, const struct battle *restric
 	int x = target.x, y = target.y;
 
 	// If the pawn is not next to its target, move before attacking it.
-	if (!battlefield_neighbors((struct point){state->x, state->y}, target))
+	if (!battlefield_neighbors(state->field, target))
 	{
 		double move_distance = INFINITY;
 		int move_x, move_y;
@@ -107,8 +107,7 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 	if (code == -1)
 	{
 		// Set current field.
-		state->x = x;
-		state->y = y;
+		state->field = (struct point){x, y};
 		state->pawn = battlefield[y][x].pawn;
 
 		if (state->pawn)
@@ -292,10 +291,8 @@ int input_battle(const struct game *restrict game, struct battle *restrict battl
 
 	state.player = player;
 
-	// Set current field to a field outside of the board.
-	state.x = BATTLEFIELD_WIDTH;
-	state.y = BATTLEFIELD_HEIGHT;
-
+	// No selected field or pawn.
+	state.field = POINT_NONE;
 	state.pawn = 0;
 	state.hover = POINT_NONE;
 
