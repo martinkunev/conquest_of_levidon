@@ -39,6 +39,8 @@
 #define RESOURCE_IRON 720
 #define RESOURCE_STONE 740
 
+#define HEALTH_BAR 64
+
 // TODO compatibility with OpenGL 2.1 (necessary in MacOS X)
 #define glGenFramebuffers(...) glGenFramebuffersEXT(__VA_ARGS__)
 #define glGenRenderbuffers(...) glGenRenderbuffersEXT(__VA_ARGS__)
@@ -360,7 +362,7 @@ error:
 	return -1;
 }
 
-static void display_unit(size_t unit, unsigned x, unsigned y, enum color color, enum color text, unsigned count)
+static void display_troop(size_t unit, unsigned x, unsigned y, enum color color, enum color text, unsigned count)
 {
 	display_rectangle(x, y, FIELD_SIZE, FIELD_SIZE, color);
 	image_draw(&image_units[unit], x, y);
@@ -439,7 +441,7 @@ static int if_animation(const struct player *restrict players, const struct batt
 
 	size_t x, y;
 
-	// TODO in some cases the animation must terminate but it doesn't
+	// TODO in some cases the animation should terminate but it doesn't
 
 	// clear window
 	glClearColor(0.0, 0.0, 0.0, 0.0);
@@ -482,11 +484,11 @@ static int if_animation(const struct player *restrict players, const struct batt
 
 		if (!pawn->troop->count) continue;
 
-		// TODO improve this check
-		if (movement_location(pawn, progress, &x, &y) < pawn->moves_count)
+		// If the pawn will move more this round, the animation must continue.
+		if (movement_location(pawn, progress, &x, &y) != movement_location(pawn, 1.0, &x, &y))
 			finished = 0;
 
-		display_unit(pawn->troop->unit->index, BATTLE_X + x * object_group[Battlefield].width, BATTLE_Y + y * object_group[Battlefield].height, Player + pawn->troop->owner, 0, 0);
+		display_troop(pawn->troop->unit->index, BATTLE_X + x * object_group[Battlefield].width, BATTLE_Y + y * object_group[Battlefield].height, Player + pawn->troop->owner, 0, 0);
 	}
 
 	glFlush();
@@ -577,13 +579,13 @@ void if_formation(const void *argument, const struct game *game)
 
 			// Display the selected pawn in the control section.
 			display_rectangle(CTRL_X, CTRL_Y + CTRL_MARGIN, FIELD_SIZE + MARGIN * 2, FIELD_SIZE + font12.height + MARGIN * 2, Self);
-			display_unit(troop->unit->index, CTRL_X + MARGIN, CTRL_Y + CTRL_MARGIN + MARGIN, Player + troop->owner, Black, troop->count);
+			display_troop(troop->unit->index, CTRL_X + MARGIN, CTRL_Y + CTRL_MARGIN + MARGIN, Player + troop->owner, Black, troop->count);
 		}
 		else
 		{
 			// Display the pawn at its present location.
 			struct point location = pawns[i]->moves[0].location;
-			display_unit(troop->unit->index, BATTLE_X + location.x * object_group[Battlefield].width, BATTLE_Y + location.y * object_group[Battlefield].height, Player + state->player, 0, 0);
+			display_troop(troop->unit->index, BATTLE_X + location.x * object_group[Battlefield].width, BATTLE_Y + location.y * object_group[Battlefield].height, Player + state->player, 0, 0);
 		}
 	}
 
@@ -594,6 +596,26 @@ void if_formation(const void *argument, const struct game *game)
 
 	glFlush();
 	glXSwapBuffers(display, drawable);
+}
+
+static void show_health(const struct pawn *pawn, unsigned x, unsigned y)
+{
+	char buffer[32], *end; // TODO make sure this is enough
+
+	unsigned total = pawn->troop->health * pawn->troop->count;
+	unsigned left = total - pawn->harm;
+
+	end = format_bytes(buffer, S("health: "));
+	end = format_uint(end, left, 10);
+	end = format_bytes(buffer, S(" / "));
+	end = format_uint(end, total, 10);
+
+	display_string(buffer, end - buffer, x, y, &font12, White);
+
+	// HEALTH_BAR * left / total
+	// HEALTH_BAR * total / total == HEALTH_BAR
+	//display_rectangle(CTRL_X, CTRL_Y + CTRL_MARGIN, FIELD_SIZE + MARGIN * 2, FIELD_SIZE + font12.height + MARGIN * 2, color);
+	//
 }
 
 void if_battle(const void *argument, const struct game *game)
@@ -617,7 +639,7 @@ void if_battle(const void *argument, const struct game *game)
 				else if (game->players[pawn->troop->owner].alliance == game->players[state->player].alliance) color = Ally;
 				else color = Enemy;
 
-				display_unit(pawn->troop->unit->index, BATTLE_X + x * object_group[Battlefield].width, BATTLE_Y + y * object_group[Battlefield].height, color, 0, 0);
+				display_troop(pawn->troop->unit->index, BATTLE_X + x * object_group[Battlefield].width, BATTLE_Y + y * object_group[Battlefield].height, color, 0, 0);
 
 				// TODO towers
 			}
@@ -658,7 +680,9 @@ void if_battle(const void *argument, const struct game *game)
 		else if (game->players[pawn->troop->owner].alliance == game->players[state->player].alliance) color = Ally;
 		else color = Enemy;
 		display_rectangle(CTRL_X, CTRL_Y + CTRL_MARGIN, FIELD_SIZE + MARGIN * 2, FIELD_SIZE + font12.height + MARGIN * 2, color);
-		display_unit(pawn->troop->unit->index, CTRL_X + MARGIN, CTRL_Y + CTRL_MARGIN + MARGIN, Player + pawn->troop->owner, Black, pawn->troop->count);
+		display_troop(pawn->troop->unit->index, CTRL_X + MARGIN, CTRL_Y + CTRL_MARGIN + MARGIN, Player + pawn->troop->owner, Black, pawn->troop->count);
+
+		show_health(pawn, CTRL_X, CTRL_Y + CTRL_MARGIN + FIELD_SIZE + font12.height + MARGIN * 2 + MARGIN);
 
 		if (pawn->troop->owner == state->player)
 		{
@@ -905,7 +929,7 @@ static void if_map_region(const struct region *region, const struct state_map *s
 			if ((x >= offset) && (x < offset + TROOPS_VISIBLE))
 			{
 				struct point position = if_position(object, x - offset);
-				display_unit(troop->unit->index, position.x, position.y, Player + troop->owner, color_text, troop->count);
+				display_troop(troop->unit->index, position.x, position.y, Player + troop->owner, color_text, troop->count);
 				if (troop == state->troop) draw_rectangle(position.x - 1, position.y - 1, object_group[object].width + 2, object_group[object].height + 2, White);
 			}
 
@@ -938,7 +962,7 @@ static void if_map_region(const struct region *region, const struct state_map *s
 				for(troop = region->garrison.troops; troop; troop = troop->_next)
 				{
 					struct point position = if_position(TroopGarrison, i);
-					display_unit(troop->unit->index, position.x, position.y, Player + troop->owner, Black, troop->count);
+					display_troop(troop->unit->index, position.x, position.y, Player + troop->owner, Black, troop->count);
 					i += 1;
 				}
 
@@ -982,7 +1006,7 @@ static void if_map_region(const struct region *region, const struct state_map *s
 			struct point position = if_position(Dismiss, index);
 			if (region->train[index])
 			{
-				display_unit(region->train[index]->index, position.x, position.y, White, 0, 0);
+				display_troop(region->train[index]->index, position.x, position.y, White, 0, 0);
 				show_progress((index ? 0 : region->train_time), region->train[0]->time, position.x, position.y, object_group[Dismiss].width, object_group[Dismiss].height);
 			}
 			else display_rectangle(position.x, position.y, object_group[Dismiss].width, object_group[Dismiss].height, Black);
@@ -994,7 +1018,7 @@ static void if_map_region(const struct region *region, const struct state_map *s
 			if (!region_unit_available(region, UNITS[index])) continue;
 
 			struct point position = if_position(Inventory, index);
-			display_unit(index, position.x, position.y, Player, 0, 0);
+			display_troop(index, position.x, position.y, Player, 0, 0);
 		}
 	}
 
