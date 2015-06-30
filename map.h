@@ -160,6 +160,8 @@ void troop_remove(struct troop **troops, struct troop *troop);
 
 int troop_spawn(struct region *restrict region, struct troop **restrict troops, const struct unit *restrict unit, unsigned count, unsigned char owner);
 
+void map_visible(const struct game *restrict game, unsigned char player, unsigned char visible[REGIONS_LIMIT]);
+
 static inline int allies(const struct game *game, unsigned player0, unsigned player1)
 {
 	return (game->players[player0].alliance == game->players[player1].alliance);

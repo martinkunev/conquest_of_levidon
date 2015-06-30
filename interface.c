@@ -325,6 +325,8 @@ int if_init(const struct game *game)
 
 	if_reshape(screen->width_in_pixels, screen->height_in_pixels); // TODO call this after resize
 
+	glClearColor(0.0, 0.0, 0.0, 0.0);
+
 	// Make the window fullscreen.
 	{
 		XEvent event = {0};
@@ -441,10 +443,8 @@ static int if_animation(const struct player *restrict players, const struct batt
 
 	size_t x, y;
 
-	// TODO in some cases the animation should terminate but it doesn't
-
 	// clear window
-	glClearColor(0.0, 0.0, 0.0, 0.0);
+	//glClearColor(0.0, 0.0, 0.0, 0.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	// Display panel background pattern.
@@ -517,7 +517,7 @@ void input_animation(const struct game *restrict game, const struct battle *rest
 static void if_battlefield(unsigned char player, const struct game *game)
 {
 	// clear window
-	glClearColor(0.0, 0.0, 0.0, 0.0);
+	//glClearColor(0.0, 0.0, 0.0, 0.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	// Display battleifled background.
@@ -602,8 +602,8 @@ static void show_health(const struct pawn *pawn, unsigned x, unsigned y)
 {
 	char buffer[32], *end; // TODO make sure this is enough
 
-	unsigned total = pawn->troop->health * pawn->troop->count;
-	unsigned left = total - pawn->harm;
+	unsigned total = pawn->troop->unit->health * pawn->troop->count;
+	unsigned left = total - pawn->hurt;
 
 	end = format_bytes(buffer, S("health: "));
 	end = format_uint(end, left, 10);
@@ -1048,10 +1048,11 @@ void if_map(const void *argument, const struct game *game)
 	size_t i, j;
 
 	// clear window
-	glClearColor(0.0, 0.0, 0.0, 0.0);
+	//glClearColor(0.0, 0.0, 0.0, 0.0); // TODO do I need to call this all the time
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	// display current player's color
+	// Display current player's color.
+	// TODO use darker color in the center
 	draw_rectangle(PANEL_X - 4, PANEL_Y - 4, PANEL_WIDTH + 8, PANEL_HEIGHT + 8, Player + state->player);
 	draw_rectangle(PANEL_X - 3, PANEL_Y - 3, PANEL_WIDTH + 6, PANEL_HEIGHT + 6, Player + state->player);
 	draw_rectangle(PANEL_X - 2, PANEL_Y - 2, PANEL_WIDTH + 4, PANEL_HEIGHT + 4, Player + state->player);
@@ -1060,7 +1061,8 @@ void if_map(const void *argument, const struct game *game)
 	display_image(&image_panel, PANEL_X, PANEL_Y, PANEL_WIDTH, PANEL_HEIGHT);
 
 	// show map in black
-	display_rectangle(MAP_X, MAP_Y, MAP_WIDTH, MAP_HEIGHT, Black);
+	// TODO is this necessary?
+	//display_rectangle(MAP_X, MAP_Y, MAP_WIDTH, MAP_HEIGHT, Black);
 
 	// TODO remove this color display box
 	/*for(i = 0; i < PLAYERS_LIMIT; ++i)
@@ -1073,34 +1075,12 @@ void if_map(const void *argument, const struct game *game)
 	struct resources income = {0}, expenses = {0};
 	const struct troop *troop;
 
-	// Determine which regions to show.
-	unsigned char region_visible[REGIONS_LIMIT] = {0};
-	for(i = 0; i < regions_count; ++i)
-	{
-		if (game->players[regions[i].owner].alliance == state_alliance)
-		{
-			region_visible[i] = 1;
-
-			// Make the neighboring regions visible when a watch tower is built.
-			if (region_built(regions + i, BuildingWatchTower))
-			{
-				for(j = 0; j < NEIGHBORS_LIMIT; ++j)
-				{
-					struct region *neighbor = regions[i].neighbors[j];
-					if (neighbor) region_visible[neighbor->index] = 1;
-				}
-			}
-		}
-		else if (game->players[regions[i].garrison.owner].alliance == state_alliance)
-		{
-			region_visible[i] = 1;
-		}
-	}
+	// TODO place income logic at a single place (now it's here and in main.c)
 
 	for(i = 0; i < regions_count; ++i)
 	{
 		// Fill each region with the color of its owner (or the color indicating unexplored).
-		if (region_visible[i]) glColor4ubv(display_colors[Player + regions[i].owner]);
+		if (state->regions_visible[i]) glColor4ubv(display_colors[Player + regions[i].owner]);
 		else glColor4ubv(display_colors[Unexplored]);
 		display_polygon(regions[i].location, MAP_X, MAP_Y);
 
@@ -1108,9 +1088,17 @@ void if_map(const void *argument, const struct game *game)
 		if (regions[i].owner == state->player) region_income(regions + i, &income);
 		for(troop = regions[i].troops; troop; troop = troop->_next)
 			if (troop->owner == state->player)
-				resource_add(&expenses, &troop->unit->expense);
+			{
+				if (regions[i].owner != regions[i].garrison.owner)
+				{
+					struct resources expense;
+					resource_multiply(&expense, &troop->unit->expense, 2);
+					resource_add(&expenses, &expense);
+				}
+				else resource_add(&expenses, &troop->unit->expense);
+			}
 	}
-	for(i = 0; i < regions_count; ++i)
+	/*for(i = 0; i < regions_count; ++i)
 	{
 		// Draw region borders.
 		glColor4ubv(display_colors[Black]);
@@ -1118,19 +1106,19 @@ void if_map(const void *argument, const struct game *game)
 		for(j = 0; j < regions[i].location->vertices_count; ++j)
 			glVertex2f(MAP_X + regions[i].location->points[j].x, MAP_Y + regions[i].location->points[j].y);
 		glEnd();
-	}
+	}*/
 
 	if (state->region >= 0)
 	{
 		const struct region *region = regions + state->region;
 
-		// Show the name of the region.
+		// Show the name of the selected region.
 		display_string(region->name, region->name_length, PANEL_X + image_flag.width + MARGIN, PANEL_Y + (image_flag.height - font12.height) / 2, &font12, Black);
 
-		if (region_visible[state->region]) if_map_region(region, state, game);
+		if (state->regions_visible[state->region]) if_map_region(region, state, game);
 	}
 
-	// Treasury
+	// treasury
 	struct resources *treasury = &game->players[state->player].treasury;
 	show_resource(&image_gold, treasury->gold, income.gold, expenses.gold, RESOURCE_GOLD);
 	show_resource(&image_food, treasury->food, income.food, expenses.food, RESOURCE_FOOD);

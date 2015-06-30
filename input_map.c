@@ -509,5 +509,7 @@ int input_map(const struct game *restrict game, unsigned char player)
 
 	state.hover_object = HOVER_NONE;
 
+	map_visible(game, player, state.regions_visible);
+
 	return input_local(areas, sizeof(areas) / sizeof(*areas), if_map, game, &state);
 }

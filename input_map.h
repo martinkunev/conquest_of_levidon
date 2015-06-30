@@ -19,6 +19,8 @@ struct state_map
 
 	unsigned self_offset, other_offset;
 	unsigned self_count, other_count;
+
+	unsigned char regions_visible[REGIONS_LIMIT];
 };
 
 int input_map(const struct game *restrict game, unsigned char player);

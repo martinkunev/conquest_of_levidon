@@ -26,8 +26,8 @@ int input_local(const struct area *restrict areas, size_t areas_count, void (*di
 	int status;
 
 	// Ignore all the queued events.
-	while (xcb_poll_for_event(connection))
-		;
+	while (event = xcb_poll_for_event(connection))
+		free(event);
 
 	display(state, game); // TODO is this necessary?
 
