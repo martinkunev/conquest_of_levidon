@@ -158,6 +158,7 @@ int image_load_png(struct image *restrict image, const char *restrict filename, 
 
 void image_draw(const struct image *restrict image, unsigned x, unsigned y)
 {
+	glColor4ub(255, 255, 255, 255); // TODO why is this necessary
 	glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 	glBindTexture(GL_TEXTURE_2D, image->texture);
 
@@ -182,6 +183,7 @@ void image_draw(const struct image *restrict image, unsigned x, unsigned y)
 
 void display_image(const struct image *restrict image, unsigned x, unsigned y, unsigned width, unsigned height)
 {
+	glColor4ub(255, 255, 255, 255); // TODO why is this necessary
 	glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 	glBindTexture(GL_TEXTURE_2D, image->texture);
 

@@ -54,8 +54,6 @@
 #define WM_STATE "_NET_WM_STATE"
 #define WM_STATE_FULLSCREEN "_NET_WM_STATE_FULLSCREEN"
 
-#include <stdio.h>
-
 static Display *display;
 static xcb_window_t window;
 static GLXDrawable drawable;
@@ -630,9 +628,6 @@ void if_battle(const void *argument, const struct game *game)
 	size_t x, y;
 	const struct pawn *pawn;
 
-	struct timeval start, end;
-	gettimeofday(&start, 0);
-
 	if_battlefield(state->player, game);
 
 	// Display pawns and obstacles.
@@ -735,13 +730,14 @@ void if_battle(const void *argument, const struct game *game)
 			}
 		}
 	}
-	else if (!point_eq(state->field, POINT_NONE)) show_strength(&battle->field[state->field.y][state->field.x], CTRL_X, CTRL_Y + CTRL_MARGIN);
+	else if (!point_eq(state->field, POINT_NONE))
+	{
+		const struct battlefield *restrict field = &battle->field[state->field.y][state->field.x];
+		if (field->blockage == BLOCKAGE_OBSTACLE) show_strength(field, CTRL_X, CTRL_Y + CTRL_MARGIN);
+	}
 
 	glFlush();
 	glXSwapBuffers(display, drawable);
-
-	gettimeofday(&end, 0);
-	//printf("battle: %lf\n", (end.tv_sec * 1000000 + end.tv_usec - start.tv_sec * 1000000 - start.tv_usec) / 1000000.0);
 
 	// TODO finish this test
 	/*{
@@ -1064,9 +1060,6 @@ void if_map(const void *argument, const struct game *game)
 
 	size_t i, j;
 
-	struct timeval start, end;
-	gettimeofday(&start, 0);
-
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	// Display current player's color.
@@ -1145,9 +1138,6 @@ void if_map(const void *argument, const struct game *game)
 
 	glFlush();
 	glXSwapBuffers(display, drawable);
-
-	gettimeofday(&end, 0);
-	//printf("map: %lf\n", (end.tv_sec * 1000000 + end.tv_usec - start.tv_sec * 1000000 - start.tv_usec) / 1000000.0);
 }
 
 void if_set(struct battle *b)
