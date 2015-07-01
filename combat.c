@@ -190,9 +190,21 @@ static unsigned pawn_victims(unsigned min, unsigned max)
 	}
 }
 
-void battlefield_clean_corpses(struct battle *battle)
+void battlefield_clean(struct battle *battle)
 {
 	size_t p;
+	size_t x, y;
+
+	// Remove destroyed obstacles.
+	for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
+		for(x = 0; x < BATTLEFIELD_HEIGHT; ++x)
+		{
+			struct battlefield *restrict field = &battle->field[y][x];
+			if ((field->blockage == BLOCKAGE_OBSTACLE) && !field->strength)
+				field->blockage = BLOCKAGE_NONE;
+		}
+
+	// Remove dead pawns.
 	for(p = 0; p < battle->pawns_count; ++p)
 	{
 		struct pawn *pawn = battle->pawns + p;
@@ -202,7 +214,7 @@ void battlefield_clean_corpses(struct battle *battle)
 
 		if ((troop->count * troop->unit->health) <= pawn->hurt)
 		{
-			// All units in this pawn are killed.
+			// All troops in this pawn are killed.
 			troop->count = 0;
 			battle->field[pawn->moves[0].location.y][pawn->moves[0].location.x].pawn = 0;
 		}
@@ -220,22 +232,17 @@ void battlefield_clean_corpses(struct battle *battle)
 		}
 	}
 
-	// TODO clean pawns attacking the dead pawns
-}
+	// Stop pawns from attacking dead pawns and destroyed obstacles.
+	for(p = 0; p < battle->pawns_count; ++p)
+	{
+		struct pawn *pawn = battle->pawns + p;
 
-void battlefield_clean_ruines(struct battle *battle)
-{
-	size_t x, y;
+		if ((pawn->action == PAWN_FIGHT) && !pawn->target.pawn->troop->count)
+			pawn->action = 0;
 
-	for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
-		for(x = 0; x < BATTLEFIELD_HEIGHT; ++x)
-		{
-			struct battlefield *restrict field = &battle->field[y][x];
-			if ((field->blockage == BLOCKAGE_OBSTACLE) && !field->strength)
-				field->blockage = BLOCKAGE_NONE;
-		}
-
-	// TODO clean pawns attacking the ruines
+		if ((pawn->action == PAWN_ASSAULT) && !battle->field[pawn->target.field.y][pawn->target.field.x].blockage)
+			pawn->action = 0;
+	}
 }
 
 int combat_fight(const struct game *restrict game, const struct battle *restrict battle, const struct obstacles *restrict obstacles, struct pawn *restrict fighter, struct pawn *restrict victim)

@@ -122,13 +122,6 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 
 		if (state->pawn)
 		{
-			// Remove action target if the target does not exist any more.
-			// TODO this should not be done here
-			if ((state->pawn->action == PAWN_FIGHT) && !state->pawn->target.pawn->troop->count)
-				state->pawn->action = 0;
-			if ((state->pawn->action == PAWN_ASSAULT) && !battle->field[state->pawn->target.field.y][state->pawn->target.field.x].strength)
-				state->pawn->action = 0;
-
 			status = path_reachable(state->pawn, state->graph, state->obstacles, state->reachable);
 			if (status < 0) return status;
 		}

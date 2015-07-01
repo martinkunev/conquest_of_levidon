@@ -73,7 +73,7 @@ static int play_battle(struct game *restrict game, struct battle *restrict battl
 
 		// TODO Deal damage to each pawn escaping from enemy pawns.
 		battlefield_shoot(battle);
-		battlefield_clean_corpses(battle);
+		battlefield_clean(battle);
 
 		battlefield_movement_plan(game->players, game->players_count, battle->field, battle->pawns, battle->pawns_count);
 
@@ -84,8 +84,7 @@ static int play_battle(struct game *restrict game, struct battle *restrict battl
 		// TODO fight animation // TODO this should be part of player-specific input
 
 		battlefield_fight(game, battle);
-		battlefield_clean_corpses(battle);
-		battlefield_clean_ruines(battle);
+		battlefield_clean(battle);
 	}
 
 	// TODO show battle overview // this is player-specific
