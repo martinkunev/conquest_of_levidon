@@ -132,14 +132,15 @@ struct garrison_info
 	unsigned troops;
 	unsigned provisions;
 	unsigned strength_wall, strength_gate;
+	enum armor armor_wall, armor_gate;
 };
 
 static inline const struct garrison_info *garrison_info(const struct region *restrict region)
 {
 	static const struct garrison_info info[] =
 	{
-		[PALISADE] = {.index = PALISADE, .troops = 3, .provisions = 2, .strength_wall = 100, .strength_gate = 40},
-		[FORTRESS] = {.index = FORTRESS, .troops = 6, .provisions = 5, .strength_wall = 200, .strength_gate = 60},
+		[PALISADE] = {.index = PALISADE, .troops = 3, .provisions = 2, .strength_wall = 100, .armor_wall = ARMOR_WOODEN, .strength_gate = 40, .armor_gate = ARMOR_WOODEN},
+		[FORTRESS] = {.index = FORTRESS, .troops = 6, .provisions = 5, .strength_wall = 200, .armor_wall = ARMOR_STONE, .strength_gate = 60, .armor_gate = ARMOR_WOODEN},
 	};
 
 	if (region_built(region, BuildingFortress)) return info + FORTRESS;

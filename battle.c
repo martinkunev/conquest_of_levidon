@@ -250,28 +250,29 @@ static void battlefield_init_assault(const struct game *restrict game, struct ba
 	// #     #
 	// ###.###
 
-#define OBSTACLE(x, y, p, o, s) do \
+#define OBSTACLE(x, y, p, o, s, a) do \
 	{ \
 		struct battlefield *restrict field = &battle->field[y][x]; \
 		field->blockage = BLOCKAGE_OBSTACLE; \
 		field->position = (p); \
 		field->owner = (o); \
 		field->strength = (s); \
+		field->armor = (a); \
 	} while (0)
 
-	OBSTACLE(9, 0, POSITION_TOP | POSITION_BOTTOM, OWNER_NONE, garrison->strength_wall);
-	OBSTACLE(9, 1, POSITION_TOP | POSITION_BOTTOM, battle->region->garrison.owner, garrison->strength_gate);
-	OBSTACLE(9, 2, POSITION_TOP | POSITION_BOTTOM, OWNER_NONE, garrison->strength_wall);
-	OBSTACLE(9, 3, POSITION_TOP | POSITION_RIGHT, OWNER_NONE, garrison->strength_wall);
-	OBSTACLE(10, 3, POSITION_LEFT | POSITION_RIGHT, OWNER_NONE, garrison->strength_wall);
-	OBSTACLE(11, 3, POSITION_LEFT | POSITION_RIGHT, OWNER_NONE, garrison->strength_wall);
-	OBSTACLE(12, 3, POSITION_LEFT | POSITION_RIGHT, battle->region->garrison.owner, garrison->strength_gate);
-	OBSTACLE(13, 3, POSITION_LEFT | POSITION_RIGHT, OWNER_NONE, garrison->strength_wall);
-	OBSTACLE(14, 3, POSITION_LEFT | POSITION_RIGHT, OWNER_NONE, garrison->strength_wall);
-	OBSTACLE(15, 3, POSITION_TOP | POSITION_LEFT, OWNER_NONE, garrison->strength_wall);
-	OBSTACLE(15, 2, POSITION_TOP | POSITION_BOTTOM, OWNER_NONE, garrison->strength_wall);
-	OBSTACLE(15, 1, POSITION_TOP | POSITION_BOTTOM, battle->region->garrison.owner, garrison->strength_gate);
-	OBSTACLE(15, 0, POSITION_TOP | POSITION_BOTTOM, OWNER_NONE, garrison->strength_wall);
+	OBSTACLE(9, 0, POSITION_TOP | POSITION_BOTTOM, OWNER_NONE, garrison->strength_wall, garrison->armor_wall);
+	OBSTACLE(9, 1, POSITION_TOP | POSITION_BOTTOM, battle->region->garrison.owner, garrison->strength_gate, garrison->armor_gate);
+	OBSTACLE(9, 2, POSITION_TOP | POSITION_BOTTOM, OWNER_NONE, garrison->strength_wall, garrison->armor_wall);
+	OBSTACLE(9, 3, POSITION_TOP | POSITION_RIGHT, OWNER_NONE, garrison->strength_wall, garrison->armor_wall);
+	OBSTACLE(10, 3, POSITION_LEFT | POSITION_RIGHT, OWNER_NONE, garrison->strength_wall, garrison->armor_wall);
+	OBSTACLE(11, 3, POSITION_LEFT | POSITION_RIGHT, OWNER_NONE, garrison->strength_wall, garrison->armor_wall);
+	OBSTACLE(12, 3, POSITION_LEFT | POSITION_RIGHT, battle->region->garrison.owner, garrison->strength_gate, garrison->armor_gate);
+	OBSTACLE(13, 3, POSITION_LEFT | POSITION_RIGHT, OWNER_NONE, garrison->strength_wall, garrison->armor_wall);
+	OBSTACLE(14, 3, POSITION_LEFT | POSITION_RIGHT, OWNER_NONE, garrison->strength_wall, garrison->armor_wall);
+	OBSTACLE(15, 3, POSITION_TOP | POSITION_LEFT, OWNER_NONE, garrison->strength_wall, garrison->armor_wall);
+	OBSTACLE(15, 2, POSITION_TOP | POSITION_BOTTOM, OWNER_NONE, garrison->strength_wall, garrison->armor_wall);
+	OBSTACLE(15, 1, POSITION_TOP | POSITION_BOTTOM, battle->region->garrison.owner, garrison->strength_gate, garrison->armor_gate);
+	OBSTACLE(15, 0, POSITION_TOP | POSITION_BOTTOM, OWNER_NONE, garrison->strength_wall, garrison->armor_wall);
 
 #undef OBSTACLE
 

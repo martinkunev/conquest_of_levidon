@@ -18,35 +18,49 @@ static const double damage_boost[6][6] =
 	[WEAPON_BLUNT] = {		1.0,		1.0,		1.0,		0.5,		1.0,		0.7},
 };
 
-// Deals damage to a pawn.
-static void pawn_deal(struct pawn *pawn, unsigned damage)
+static void damage_fight(const struct pawn *restrict fighter, struct pawn *restrict victims[], size_t victims_count)
 {
-	if (!pawn) return;
-	pawn->hurt += damage;
+	enum weapon weapon = fighter->troop->unit->melee.weapon;
+	double damage = fighter->troop->unit->melee.damage * fighter->troop->count * fighter->troop->unit->melee.agility;
+	damage /= victims_count;
+
+	// TODO kill not more troops than the number of attacking troops
+
+	size_t i;
+	for(i = 0; i < victims_count; ++i)
+	{
+		enum armor armor = victims[i]->troop->unit->armor;
+		victims[i]->hurt += (unsigned)(damage * damage_boost[weapon][armor] + 0.5);
+	}
 }
 
-// TODO use boost and agility in the calculations
-// TODO kill not more troops than the number of attacking troops
-
-// TODO this should not be here
-// TODO deprecated
-static int battlefield_fightable(const struct pawn *restrict pawn, const struct pawn *restrict target, const struct battle *restrict battle)
+static void damage_assault(struct battle *restrict battle, const struct pawn *restrict fighter, struct point target)
 {
-	if (!target || !target->troop->count) return 0;
+	enum weapon weapon = fighter->troop->unit->melee.weapon;
+	double damage = fighter->troop->unit->melee.damage * fighter->troop->count;
 
-	struct point position = pawn->moves[0].location;
-	struct point target_position = target->moves[0].location;
+	struct battlefield *restrict field = &battle->field[target.y][target.x];
+	enum armor armor = field->armor;
 
-	// TODO what if one of the pawns is on a tower
+	// TODO rename a
+	unsigned a = (unsigned)(damage * damage_boost[weapon][armor] + 0.5);
+	if (a >= field->strength) field->strength = 0;
+	else field->strength -= a;
+}
 
-	// TODO return 0 if the pawns are in the same alliance
+// Deals damage to a pawn.
+static void pawn_deal(struct pawn **victims, size_t victims_count, unsigned damage)
+{
+	if (!*victims) return;
 
-	return battlefield_neighbors(pawn->moves[0].location, target->moves[0].location);
+	size_t j;
+	for(j = 0; j < victims_count; ++j)
+		victims[j]->hurt += damage;
 }
 
 void battlefield_fight(const struct game *restrict game, struct battle *restrict battle) // TODO rename to something like combat_melee
 {
-	size_t i, j;
+	size_t i;
 	for(i = 0; i < battle->pawns_count; ++i)
 	{
 		struct pawn *fighter = battle->pawns + i;
@@ -55,21 +69,19 @@ void battlefield_fight(const struct game *restrict game, struct battle *restrict
 		if (!fighter->troop->count) continue;
 		if (fighter->action == PAWN_SHOOT) continue;
 
-		unsigned damage_total = fighter->troop->unit->melee.damage * fighter->troop->count;
-
 		if (fighter->action == PAWN_ASSAULT)
 		{
-			struct battlefield *restrict field = &battle->field[fighter->target.field.y][fighter->target.field.x];
-			if (damage_total >= field->strength) field->strength = 0;
-			else field->strength -= damage_total;
+			damage_assault(battle, fighter, fighter->target.field);
 		}
 		else // fighter->action == PAWN_FIGHT
 		{
 			struct pawn *victims[4], *victim;
 			unsigned victims_count = 0;
 
+			// TODO what if one of the pawns is on a tower
+
 			// If the pawn has a specific fight target and is able to fight it, fight only that target.
-			if ((fighter->action == PAWN_FIGHT) && battlefield_fightable(fighter, fighter->target.pawn, battle))
+			if ((fighter->action == PAWN_FIGHT) && battlefield_neighbors(fighter->moves[0].location, fighter->target.pawn->moves[0].location))
 			{
 				victims[0] = fighter->target.pawn;
 				victims_count = 1;
@@ -91,9 +103,7 @@ void battlefield_fight(const struct game *restrict game, struct battle *restrict
 				if (!victims_count) continue; // nothing to fight
 			}
 
-			unsigned damage = ((double)damage_total / victims_count + 0.5);
-			for(j = 0; j < victims_count; ++j)
-				pawn_deal(victims[j], damage);
+			damage_fight(fighter, victims, victims_count);
 		}
 	}
 }
@@ -128,28 +138,28 @@ void battlefield_shoot(struct battle *battle)
 
 		target_index = 0;
 		on_target = targets[target_index][0] * (1 - miss) + targets[target_index][1] * miss;
-		pawn_deal(battle->field[y][x].pawn, (unsigned)(damage * on_target + 0.5));
+		pawn_deal(&battle->field[y][x].pawn, 1, (unsigned)(damage * on_target + 0.5));
 
 		target_index = 1;
 		on_target = targets[target_index][0] * (1 - miss) + targets[target_index][1] * miss;
 		damage = (unsigned)(damage_total * on_target + 0.5);
-		if (x > 0) pawn_deal(battle->field[y][x - 1].pawn, damage);
-		if (x < (BATTLEFIELD_WIDTH - 1)) pawn_deal(battle->field[y][x + 1].pawn, damage);
-		if (y > 0) pawn_deal(battle->field[y - 1][x].pawn, damage);
-		if (y < (BATTLEFIELD_HEIGHT - 1)) pawn_deal(battle->field[y + 1][x].pawn, damage);
+		if (x > 0) pawn_deal(&battle->field[y][x - 1].pawn, 1, damage);
+		if (x < (BATTLEFIELD_WIDTH - 1)) pawn_deal(&battle->field[y][x + 1].pawn, 1, damage);
+		if (y > 0) pawn_deal(&battle->field[y - 1][x].pawn, 1, damage);
+		if (y < (BATTLEFIELD_HEIGHT - 1)) pawn_deal(&battle->field[y + 1][x].pawn, 1, damage);
 
 		target_index = 2;
 		on_target = targets[target_index][0] * (1 - miss) + targets[target_index][1] * miss;
 		damage = (unsigned)(damage_total * on_target + 0.5);
 		if (x > 0)
 		{
-			if (y > 0) pawn_deal(battle->field[y - 1][x - 1].pawn, damage);
-			if (y < (BATTLEFIELD_HEIGHT - 1)) pawn_deal(battle->field[y + 1][x - 1].pawn, damage);
+			if (y > 0) pawn_deal(&battle->field[y - 1][x - 1].pawn, 1, damage);
+			if (y < (BATTLEFIELD_HEIGHT - 1)) pawn_deal(&battle->field[y + 1][x - 1].pawn, 1, damage);
 		}
 		if (x < (BATTLEFIELD_WIDTH - 1))
 		{
-			if (y > 0) pawn_deal(battle->field[y - 1][x + 1].pawn, damage);
-			if (y < (BATTLEFIELD_HEIGHT - 1)) pawn_deal(battle->field[y + 1][x + 1].pawn, damage);
+			if (y > 0) pawn_deal(&battle->field[y - 1][x + 1].pawn, 1, damage);
+			if (y < (BATTLEFIELD_HEIGHT - 1)) pawn_deal(&battle->field[y + 1][x + 1].pawn, 1, damage);
 		}
 
 		// TODO ?deal more damage to moving pawns

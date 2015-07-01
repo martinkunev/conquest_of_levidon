@@ -36,6 +36,7 @@ struct battlefield
 	signed char owner; // used for BLOCKAGE_OBSTACLE and BLOCKAGE_TOWER
 	unsigned strength; // used for BLOCKAGE_OBSTACLE and BLOCKAGE_TOWER
 	struct pawn *pawn; // used for BLOCKAGE_NONE and BLOCKAGE_TOWER
+	enum armor armor; // used for BLOCKAGE_OBSTACLE and BLOCKAGE_TOWER
 
 	// TODO for BLOCKAGE_TOWER there should be specified a field for descending
 };
