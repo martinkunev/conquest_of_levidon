@@ -34,16 +34,16 @@ struct unit
 	char name[NAME_LIMIT];
 	size_t name_length;
 
-	struct resources cost, expense;
-	unsigned char time;
-	uint32_t requires;
-
 	size_t index;
+
+	struct resources cost, expense;
+	uint32_t requires;
+	unsigned char time;
 
 	unsigned char speed;
 	unsigned char health;
 	enum armor armor;
-	double agility;
+	double agility; // TODO put this in melee?
 
 	struct
 	{

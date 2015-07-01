@@ -193,12 +193,10 @@ static unsigned pawn_victims(unsigned min, unsigned max)
 void battlefield_clean_corpses(struct battle *battle)
 {
 	size_t p;
-	struct pawn *pawn;
-	struct troop *troop;
 	for(p = 0; p < battle->pawns_count; ++p)
 	{
-		pawn = battle->pawns + p;
-		troop = pawn->troop;
+		struct pawn *pawn = battle->pawns + p;
+		struct troop *troop = pawn->troop;
 
 		if (!troop->count) continue;
 
@@ -221,6 +219,8 @@ void battlefield_clean_corpses(struct battle *battle)
 			pawn->hurt -= victims * troop->unit->health;
 		}
 	}
+
+	// TODO clean pawns attacking the dead pawns
 }
 
 void battlefield_clean_ruines(struct battle *battle)
@@ -232,8 +232,10 @@ void battlefield_clean_ruines(struct battle *battle)
 		{
 			struct battlefield *restrict field = &battle->field[y][x];
 			if ((field->blockage == BLOCKAGE_OBSTACLE) && !field->strength)
-				field->blockage = BLOCKAGE_OBSTACLE;
+				field->blockage = BLOCKAGE_NONE;
 		}
+
+	// TODO clean pawns attacking the ruines
 }
 
 int combat_fight(const struct game *restrict game, const struct battle *restrict battle, const struct obstacles *restrict obstacles, struct pawn *restrict fighter, struct pawn *restrict victim)

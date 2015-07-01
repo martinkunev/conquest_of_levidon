@@ -101,8 +101,6 @@ size_t formation_reachable_assault(const struct game *restrict game, const struc
 
 	size_t reachable_count = 0;
 
-	// TODO discard fields with obstacles in this function?
-
 	if (pawn->startup == NEIGHBOR_GARRISON)
 	{
 		for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)

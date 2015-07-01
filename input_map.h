@@ -7,14 +7,13 @@ struct state_map
 	ssize_t region; // index of the selected region
 	struct troop *troop; // selected troop
 
-	// TODO rename train
-	enum {HOVER_NONE, HOVER_TROOP, HOVER_UNIT, HOVER_BUILDING, HOVER_TRAIN} hover_object; // type of the hovered object
+	enum {HOVER_NONE, HOVER_TROOP, HOVER_UNIT, HOVER_BUILDING, HOVER_DISMISS} hover_object; // type of the hovered object
 	union
 	{
 		int troop;
 		int unit;
 		int building;
-		int train;
+		int dismiss;
 	} hover; // index of the hovered object
 
 	unsigned self_offset, other_offset;

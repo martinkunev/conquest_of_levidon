@@ -14,16 +14,20 @@ static int input_turn(int code, unsigned x, unsigned y, uint16_t modifiers, cons
 
 	switch (code)
 	{
+	case EVENT_MOTION:
+		if (state->hover_object != HOVER_NONE)
+		{
+			state->hover_object = HOVER_NONE;
+			return 0;
+		}
+	default:
+		return INPUT_IGNORE;
+
 	case 'q':
 		return INPUT_TERMINATE;
 
 	case 'n':
 		return INPUT_DONE;
-
-	case EVENT_MOTION:
-		state->hover_object = HOVER_NONE;
-	default:
-		return 0;
 	}
 }
 
@@ -34,12 +38,10 @@ static int input_region(int code, unsigned x, unsigned y, uint16_t modifiers, co
 	if (code == EVENT_MOTION) return INPUT_NOTME;
 	if (code >= 0) return INPUT_NOTME;
 
-	// TODO write this function better
-
 	// Get the clicked region.
 	int region_index = if_storage_get(x, y);
 
-	if (code == -1)
+	if (code == EVENT_MOUSE_LEFT)
 	{
 		struct troop *troop;
 
@@ -56,13 +58,15 @@ static int input_region(int code, unsigned x, unsigned y, uint16_t modifiers, co
 		for(troop = game->regions[state->region].troops; troop; troop = troop->_next)
 			if (troop->owner == state->player) state->self_count++;
 			else state->other_count++;
+
+		return 0;
 	}
-	else if (code == -3)
+	else if (code == EVENT_MOUSE_RIGHT)
 	{
+		if (region_index < 0) return INPUT_IGNORE;
+
 		struct region *region = game->regions + state->region;
 		struct troop *troop;
-
-		if (region_index < 0) return 0;
 
 		unsigned index;
 		struct region *destination = game->regions + region_index;
@@ -78,18 +82,20 @@ valid:
 			// Set the move destination of the selected troop.
 			troop = state->troop;
 			if (state->player == troop->owner)
-				troop->move = game->regions + region_index;
+				troop->move = destination;
 		}
 		else
 		{
 			// Set the move destination of all troops in the region.
 			for(troop = region->troops; troop; troop = troop->_next)
 				if (state->player == troop->owner)
-					troop->move = game->regions + region_index;
+					troop->move = destination;
 		}
+
+		return 0;
 	}
 
-	return 0;
+	return INPUT_NOTME;
 }
 
 static int input_construct(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
@@ -101,7 +107,7 @@ static int input_construct(int code, unsigned x, unsigned y, uint16_t modifiers,
 
 	if (code >= 0) return INPUT_NOTME; // ignore keyboard events
 
-	if (state->region == REGION_NONE) goto reset; // no region selected
+	if (state->region == REGION_NONE) return INPUT_IGNORE; // no region selected
 	region = game->regions + state->region;
 	if (state->player != region->owner) goto reset; // player does not control the region
 	if (region->owner != region->garrison.owner) goto reset; // the garrison is under siege
@@ -111,9 +117,9 @@ static int input_construct(int code, unsigned x, unsigned y, uint16_t modifiers,
 	if ((index < 0) || (index >= buildings_count)) goto reset; // no building clicked
 	if (!region_building_available(region, buildings[index])) goto reset; // building can not be constructed
 
-	if (code == -1)
+	if (code == EVENT_MOUSE_LEFT)
 	{
-		if (region->construct >= 0) // there is a construction in process
+		if (region->construct >= 0) // there is a construction in progress
 		{
 			// If the building clicked is the one under construction, cancel the construction.
 			// If the construction has not yet started, return allocated resources.
@@ -130,7 +136,7 @@ static int input_construct(int code, unsigned x, unsigned y, uint16_t modifiers,
 		else if (!region_built(region, index))
 		{
 			// if (build_start(game, region, index)) ...;
-			if (!resource_enough(&game->players[state->player].treasury, &buildings[index].cost)) return 0;
+			if (!resource_enough(&game->players[state->player].treasury, &buildings[index].cost)) return INPUT_IGNORE;
 
 			region->construct = index;
 			resource_subtract(&game->players[state->player].treasury, &buildings[index].cost);
@@ -141,6 +147,7 @@ static int input_construct(int code, unsigned x, unsigned y, uint16_t modifiers,
 		state->hover_object = HOVER_BUILDING;
 		state->hover.building = index;
 	}
+	else return INPUT_IGNORE;
 
 	return 0;
 
@@ -168,7 +175,7 @@ static int input_train(int code, unsigned x, unsigned y, uint16_t modifiers, con
 	if ((unit < 0) || (unit >= UNITS_COUNT)) goto reset; // no unit clicked
 	if (!region_unit_available(region, UNITS[unit])) goto reset; // unit can not be trained
 
-	if (code == -1)
+	if (code == EVENT_MOUSE_LEFT)
 	{
 		size_t index;
 
@@ -189,6 +196,7 @@ static int input_train(int code, unsigned x, unsigned y, uint16_t modifiers, con
 		state->hover_object = HOVER_UNIT;
 		state->hover.unit = unit;
 	}
+	else return INPUT_IGNORE;
 
 	return 0;
 
@@ -204,23 +212,23 @@ static int input_dismiss(int code, unsigned x, unsigned y, uint16_t modifiers, c
 	ssize_t index;
 	struct region *region;
 
-	if (code == EVENT_MOTION) return INPUT_NOTME;
+	if (code == EVENT_MOTION) return INPUT_IGNORE;
 	if (code >= 0) return INPUT_NOTME;
 
-	if (state->region == REGION_NONE) return 0;
+	if (state->region == REGION_NONE) return INPUT_IGNORE;
 	region = game->regions + state->region;
-	if (state->player != region->owner) return 0; // player does not control the region
-	if (region->owner != region->garrison.owner) return 0; // the garrison is under siege
+	if (state->player != region->owner) return INPUT_IGNORE; // player does not control the region
+	if (region->owner != region->garrison.owner) return INPUT_IGNORE; // the garrison is under siege
 
 	// Find which train order was clicked.
 	index = if_index(Dismiss, (struct point){x, y});
-	if ((index < 0) || (index >= TRAIN_QUEUE)) return 0; // no train order clicked
+	if ((index < 0) || (index >= TRAIN_QUEUE)) return INPUT_IGNORE; // no train order clicked
 
-	if (code == -1)
+	if (code == EVENT_MOUSE_LEFT)
 	{
 		//const struct unit **train = region->train;
 
-		if (!region->train[index]) return 0; // no train order clicked
+		if (!region->train[index]) return INPUT_IGNORE; // no train order clicked
 
 		// If the training has not yet started, return allocated resources.
 		// Else, reset training information.
@@ -232,9 +240,10 @@ static int input_dismiss(int code, unsigned x, unsigned y, uint16_t modifiers, c
 		for(index += 1; index < TRAIN_QUEUE; ++index)
 			region->train[index - 1] = region->train[index];
 		region->train[TRAIN_QUEUE - 1] = 0;
-	}
 
-	return 0;
+		return 0;
+	}
+	else return INPUT_IGNORE;
 }
 
 static int input_scroll_self(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
@@ -243,8 +252,8 @@ static int input_scroll_self(int code, unsigned x, unsigned y, uint16_t modifier
 
 	if (code != -1) return INPUT_NOTME; // handle only left mouse clicks
 
-	if (state->region == REGION_NONE) return 0; // no region selected
-	if (!game->regions[state->region].troops) return 0; // no troops in this region
+	if (state->region == REGION_NONE) return INPUT_IGNORE; // no region selected
+	if (!game->regions[state->region].troops) return INPUT_IGNORE; // no troops in this region
 
 	if (x <= object_group[TroopSelf].left - 1) // scroll left
 	{
@@ -252,7 +261,9 @@ static int input_scroll_self(int code, unsigned x, unsigned y, uint16_t modifier
 		{
 			state->self_offset -= TROOPS_VISIBLE;
 			state->troop = 0;
+			return 0;
 		}
+		else return INPUT_IGNORE;
 	}
 	else if (x >= object_group[TroopSelf].right + 1) // scroll right
 	{
@@ -260,8 +271,11 @@ static int input_scroll_self(int code, unsigned x, unsigned y, uint16_t modifier
 		{
 			state->self_offset += TROOPS_VISIBLE;
 			state->troop = 0;
+			return 0;
 		}
+		else return INPUT_IGNORE;
 	}
+	else return INPUT_NOTME;
 }
 
 static int input_scroll_ally(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
@@ -270,8 +284,8 @@ static int input_scroll_ally(int code, unsigned x, unsigned y, uint16_t modifier
 
 	if (code != -1) return INPUT_NOTME; // handle only left mouse clicks
 
-	if (state->region == REGION_NONE) return 0; // no region selected
-	if (!game->regions[state->region].troops) return 0; // no troops in this region
+	if (state->region == REGION_NONE) return INPUT_IGNORE; // no region selected
+	if (!game->regions[state->region].troops) return INPUT_IGNORE; // no troops in this region
 
 	if (x <= object_group[TroopOther].left - 1) // scroll left
 	{
@@ -279,7 +293,9 @@ static int input_scroll_ally(int code, unsigned x, unsigned y, uint16_t modifier
 		{
 			state->other_offset -= TROOPS_VISIBLE;
 			state->troop = 0;
+			return 0;
 		}
+		else return INPUT_IGNORE;
 	}
 	else if (x >= object_group[TroopOther].right + 1) // scroll right
 	{
@@ -287,8 +303,11 @@ static int input_scroll_ally(int code, unsigned x, unsigned y, uint16_t modifier
 		{
 			state->other_offset += TROOPS_VISIBLE;
 			state->troop = 0;
+			return 0;
 		}
+		else return INPUT_IGNORE;
 	}
+	else return INPUT_NOTME;
 }
 
 static int input_troop(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
@@ -326,8 +345,8 @@ static int input_troop(int code, unsigned x, unsigned y, uint16_t modifiers, con
 		else if (found) break;
 	}
 
-	if (code == -1) state->troop = troop;
-	else if (code == -3)
+	if (code == EVENT_MOUSE_LEFT) state->troop = troop;
+	else if (code == EVENT_MOUSE_RIGHT)
 	{
 		if (!state->troop) return 0; // no troop selected
 		if (troop == state->troop) return 0; // the clicked and the selected troop are the same
@@ -352,6 +371,7 @@ static int input_troop(int code, unsigned x, unsigned y, uint16_t modifiers, con
 			goto reset;
 		}
 	}
+	else return INPUT_IGNORE;
 
 	return 0;
 
@@ -379,7 +399,7 @@ static int input_garrison(int code, unsigned x, unsigned y, uint16_t modifiers, 
 	garrison = garrison_info(region);
 	if (!garrison) return 0; // no garrison in this region
 
-	if (code == -1)
+	if (code == EVENT_MOUSE_LEFT)
 	{
 		if (state->player != region->garrison.owner) return 0; // current player does not control the garrison
 
@@ -402,7 +422,7 @@ static int input_garrison(int code, unsigned x, unsigned y, uint16_t modifiers, 
 		troop_detach(&region->garrison.troops, troop);
 		troop_attach(&region->troops, troop);
 	}
-	else if (code == -3)
+	else if (code == EVENT_MOUSE_RIGHT)
 	{
 		if (state->player == region->garrison.owner)
 		{
@@ -428,6 +448,7 @@ static int input_garrison(int code, unsigned x, unsigned y, uint16_t modifiers, 
 			region->garrison.assault = !region->garrison.assault;
 		}
 	}
+	else return INPUT_IGNORE;
 
 	return 0;
 }
