@@ -36,16 +36,14 @@ static void damage_fight(const struct pawn *restrict fighter, struct pawn *restr
 
 static void damage_assault(struct battle *restrict battle, const struct pawn *restrict fighter, struct point target)
 {
-	enum weapon weapon = fighter->troop->unit->melee.weapon;
-	double damage = fighter->troop->unit->melee.damage * fighter->troop->count;
-
 	struct battlefield *restrict field = &battle->field[target.y][target.x];
 	enum armor armor = field->armor;
 
-	// TODO rename a
-	unsigned a = (unsigned)(damage * damage_boost[weapon][armor] + 0.5);
-	if (a >= field->strength) field->strength = 0;
-	else field->strength -= a;
+	enum weapon weapon = fighter->troop->unit->melee.weapon;
+	unsigned damage = (unsigned)(fighter->troop->unit->melee.damage * fighter->troop->count * damage_boost[weapon][armor] + 0.5);
+
+	if (damage >= field->strength) field->strength = 0;
+	else field->strength -= damage;
 }
 
 // Deals damage to a pawn.

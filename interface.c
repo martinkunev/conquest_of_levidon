@@ -611,6 +611,16 @@ static void show_health(const struct pawn *pawn, unsigned x, unsigned y)
 	//
 }
 
+static void show_strength(const struct battlefield *field, unsigned x, unsigned y)
+{
+	char buffer[32], *end; // TODO make sure this is enough
+
+	end = format_bytes(buffer, S("strength: "));
+	end = format_uint(end, field->strength, 10);
+
+	display_string(buffer, end - buffer, x, y, &font12, White);
+}
+
 void if_battle(const void *argument, const struct game *game)
 {
 	// TODO battle must be passed as argument
@@ -725,6 +735,7 @@ void if_battle(const void *argument, const struct game *game)
 			}
 		}
 	}
+	else if (!point_eq(state->field, POINT_NONE)) show_strength(&battle->field[state->field.y][state->field.x], CTRL_X, CTRL_Y + CTRL_MARGIN);
 
 	glFlush();
 	glXSwapBuffers(display, drawable);
