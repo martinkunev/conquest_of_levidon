@@ -32,9 +32,7 @@ SOFTWARE.
 #include <string.h>
 #include <locale.h>
 
-#include "arch.h"
 #include "format.h"
-
 #include "json.h"
 #include "array.c"
 #include "hashmap.c"
@@ -1479,7 +1477,7 @@ char *json_string_dump(unsigned char *restrict dest, const unsigned char *restri
 			uint32_t code;
 			uint16_t character;
 			i += utf8_read(&code, src + i, size - i);
-			character = htobe16(code);
+			character = htons(code);
 
 			// Write the encoded character.
 			*dest++ = '\\';
