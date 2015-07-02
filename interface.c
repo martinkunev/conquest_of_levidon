@@ -327,6 +327,8 @@ int if_init(const struct game *game)
 
 	if_reshape(screen->width_in_pixels, screen->height_in_pixels); // TODO call this after resize
 
+	if_load_images();
+
 	// Make the window fullscreen.
 	{
 		XEvent event = {0};
@@ -341,8 +343,6 @@ int if_init(const struct game *game)
 		XSendEvent(display, DefaultRootWindow(display), 0, SubstructureRedirectMask | SubstructureNotifyMask, &event);
 		XFlush(display);
 	}
-
-	if_load_images();
 
 	// TODO handle modifier keys
 	// TODO handle dead keys
@@ -699,12 +699,12 @@ void if_battle(const void *argument, const struct game *game)
 			for(i = 1; i < pawn->moves_count; ++i)
 			{
 				struct point from = pawn->moves[i - 1].location;
-				from.x = BATTLE_X + from.x * FIELD_SIZE + FIELD_SIZE / 2;
-				from.y = BATTLE_Y + from.y * FIELD_SIZE + FIELD_SIZE / 2;
+				from.x = from.x * FIELD_SIZE + FIELD_SIZE / 2;
+				from.y = from.y * FIELD_SIZE + FIELD_SIZE / 2;
 
 				struct point to = pawn->moves[i].location;
-				to.x = BATTLE_X + to.x * FIELD_SIZE + FIELD_SIZE / 2;
-				to.y = BATTLE_Y + to.y * FIELD_SIZE + FIELD_SIZE / 2;
+				to.x = to.x * FIELD_SIZE + FIELD_SIZE / 2;
+				to.y = to.y * FIELD_SIZE + FIELD_SIZE / 2;
 
 				if (pawn->moves[i].time <= 1.0) color = PathReachable;
 				else color = PathUnreachable;
