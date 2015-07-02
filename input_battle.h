@@ -7,7 +7,7 @@ struct state_battle
 	struct obstacles *obstacles; // obstacles on the battlefield
 	struct adjacency_list *graph; // graph used for pathfinding
 
-	unsigned char x, y; // position of the current field
+	struct point field; // selected field
 	struct pawn *pawn; // selected pawn
 
 	double reachable[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH];

@@ -34,11 +34,11 @@ struct unit
 	char name[NAME_LIMIT];
 	size_t name_length;
 
-	struct resources cost, expense;
-	unsigned char time;
-	uint32_t requires;
-
 	size_t index;
+
+	struct resources cost, expense;
+	uint32_t requires;
+	unsigned char time;
 
 	unsigned char speed;
 	unsigned char health;
@@ -46,6 +46,7 @@ struct unit
 
 	struct
 	{
+		double agility;
 		enum weapon weapon;
 		unsigned char damage;
 	} melee;
@@ -131,14 +132,15 @@ struct garrison_info
 	unsigned troops;
 	unsigned provisions;
 	unsigned strength_wall, strength_gate;
+	enum armor armor_wall, armor_gate;
 };
 
 static inline const struct garrison_info *garrison_info(const struct region *restrict region)
 {
 	static const struct garrison_info info[] =
 	{
-		[PALISADE] = {.index = PALISADE, .troops = 3, .provisions = 2, .strength_wall = 100, .strength_gate = 40},
-		[FORTRESS] = {.index = FORTRESS, .troops = 6, .provisions = 5, .strength_wall = 200, .strength_gate = 60},
+		[PALISADE] = {.index = PALISADE, .troops = 3, .provisions = 2, .strength_wall = 160, .armor_wall = ARMOR_WOODEN, .strength_gate = 80, .armor_gate = ARMOR_WOODEN},
+		[FORTRESS] = {.index = FORTRESS, .troops = 6, .provisions = 5, .strength_wall = 200, .armor_wall = ARMOR_STONE, .strength_gate = 120, .armor_gate = ARMOR_WOODEN},
 	};
 
 	if (region_built(region, BuildingFortress)) return info + FORTRESS;
@@ -159,6 +161,8 @@ void troop_detach(struct troop **troops, struct troop *troop);
 void troop_remove(struct troop **troops, struct troop *troop);
 
 int troop_spawn(struct region *restrict region, struct troop **restrict troops, const struct unit *restrict unit, unsigned count, unsigned char owner);
+
+void map_visible(const struct game *restrict game, unsigned char player, unsigned char visible[REGIONS_LIMIT]);
 
 static inline int allies(const struct game *game, unsigned player0, unsigned player1)
 {

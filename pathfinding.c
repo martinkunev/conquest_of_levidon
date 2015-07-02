@@ -255,7 +255,7 @@ static int blocks(struct point p0, struct point p1, struct point w0, struct poin
 		// Check if the line segments intersect.
 		// TODO is this good?
 		//if ((0 <= wm) && (wm <= cross) && (0 <= pm) && (pm <= cross))
-		if ((0 < wm) && (wm < cross) && (0 < pm) && (pm < cross))
+		if ((0 < wm) && (wm < cross) && (0 <= pm) && (pm <= cross))
 			return 1;
 	}
 

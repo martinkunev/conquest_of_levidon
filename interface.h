@@ -25,7 +25,7 @@
 
 // TODO fix these values
 #define TOOLTIP_X 256
-#define TOOLTIP_Y 730
+#define TOOLTIP_Y 750
 
 #define FIELD_SIZE 30
 
@@ -40,7 +40,7 @@
 #define GARRISON_Y (PANEL_Y + 160)
 #define GARRISON_MARGIN 24
 
-enum object {Building, Inventory, Dismiss, TroopSelf, TroopOther, TroopGarrison, Battlefield};
+enum object {Building, Train, Dismiss, TroopSelf, TroopOther, TroopGarrison, Battlefield};
 
 // rows, columns, left, top, width, height, padding
 #define OBJECT_GROUP(r, c, l, t, w, h, p) \
@@ -71,7 +71,7 @@ static const struct object_group
 	unsigned count;
 } object_group[] = {
 	[Building] = OBJECT_GROUP(3, 5, PANEL_X + 1, PANEL_Y + 400, 48, 48, 1),
-	[Inventory] = OBJECT_GROUP(1, 5, PANEL_X + 1, PANEL_Y + 340, 32, 32, 1),
+	[Train] = OBJECT_GROUP(1, 5, PANEL_X + 1, PANEL_Y + 340, 32, 32, 1),
 	[Dismiss] = OBJECT_GROUP(1, TRAIN_QUEUE, PANEL_X + 81, PANEL_Y + 300, 32, 32, 1),
 	[TroopSelf] = OBJECT_GROUP(1, TROOPS_VISIBLE, PANEL_X + SCROLL + 1, PANEL_Y + 36 + 2, 32, 32, 1),
 	[TroopOther] = OBJECT_GROUP(1, TROOPS_VISIBLE, PANEL_X + SCROLL + 1, PANEL_Y + 36 + 48 + 2 + 2, 32, 32, 1),
@@ -107,6 +107,6 @@ void if_map(const void *argument, const struct game *game);
 void if_formation(const void *argument, const struct game *game);
 void if_battle(const void *argument, const struct game *game);
 
-void if_set(struct battlefield field[BATTLEFIELD_WIDTH][BATTLEFIELD_HEIGHT], struct battle *b);
+void if_set(struct battle *b);
 void input_animation(const struct game *restrict game, const struct battle *restrict battle);
 void if_regions_input(struct game *restrict game);

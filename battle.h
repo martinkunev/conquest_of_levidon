@@ -30,12 +30,15 @@ enum {POSITION_RIGHT = 0x1, POSITION_TOP = 0x2, POSITION_LEFT = 0x4, POSITION_BO
 struct battlefield
 {
 	struct point location;
-	enum {BLOCKAGE_NONE, BLOCKAGE_TERRAIN, BLOCKAGE_OBSTACLE} blockage; // TODO BLOCKAGE_TOWER
+	enum {BLOCKAGE_NONE, BLOCKAGE_TERRAIN, BLOCKAGE_OBSTACLE, BLOCKAGE_TOWER} blockage;
 	unsigned char position;
 
-	signed char owner; // used for BLOCKAGE_OBSTACLE
-	unsigned strength; // used for BLOCKAGE_OBSTACLE
-	struct pawn *pawn; // used for BLOCKAGE_NONE
+	signed char owner; // used for BLOCKAGE_OBSTACLE and BLOCKAGE_TOWER
+	unsigned strength; // used for BLOCKAGE_OBSTACLE and BLOCKAGE_TOWER
+	struct pawn *pawn; // used for BLOCKAGE_NONE and BLOCKAGE_TOWER
+	enum armor armor; // used for BLOCKAGE_OBSTACLE and BLOCKAGE_TOWER
+
+	// TODO for BLOCKAGE_TOWER there should be specified a field for descending
 };
 
 struct battle

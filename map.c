@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <string.h>
 
 #include "map.h"
 
@@ -51,4 +52,33 @@ int troop_spawn(struct region *restrict region, struct troop **restrict troops, 
 	troop->move = troop->location = region;
 
 	return 0;
+}
+
+// Determine which regions are visible for the current player.
+void map_visible(const struct game *restrict game, unsigned char player, unsigned char visible[REGIONS_LIMIT])
+{
+	size_t i, j;
+
+	memset(visible, 0, REGIONS_LIMIT);
+
+	for(i = 0; i < game->regions_count; ++i)
+	{
+		const struct region *restrict region = game->regions + i;
+
+		if (allies(game, player, region->owner))
+		{
+			visible[i] = 1;
+
+			// Make the neighboring regions visible when a watch tower is built.
+			if (region_built(region, BuildingWatchTower))
+			{
+				for(j = 0; j < NEIGHBORS_LIMIT; ++j)
+				{
+					struct region *neighbor = region->neighbors[j];
+					if (neighbor) visible[neighbor->index] = 1;
+				}
+			}
+		}
+		else if (allies(game, player, region->garrison.owner)) visible[i] = 1;
+	}
 }
