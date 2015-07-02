@@ -25,6 +25,7 @@ SOFTWARE.
 // http://fossil.wanderinghorse.net/repos/cson/index.cgi/index
 
 #include <assert.h>
+#include <arpa/inet.h>
 #include <ctype.h>
 #include <float.h>
 #include <stdlib.h>
