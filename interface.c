@@ -69,6 +69,8 @@ GLuint map_framebuffer;
 // TODO Create a struct that stores all the information about the battle (battlefield, players, etc.)
 struct battle *battle;
 
+static GLuint map_renderbuffer;
+
 static struct image image_move_destination, image_fight_destination, image_shoot_destination, image_selected, image_flag, image_panel, image_construction;
 static struct image image_terrain[1];
 static struct image image_garrison[2]; // TODO this must be big enough for all garrison types
@@ -78,8 +80,6 @@ static struct image image_units[5]; // TODO the array must be enough to hold uni
 static struct image image_buildings[12]; // TODO the array must be big enough to hold buildings_count elements
 static struct image image_buildings_gray[12]; // TODO the array must be big enough to hold buildings_count elements
 static struct image image_palisade[16], image_palisade_gate[2], image_fortress[16], image_fortress_gate[2];
-
-static GLuint map_renderbuffer;
 
 struct font font12;
 
@@ -101,26 +101,32 @@ static void if_reshape(int width, int height)
 	glLoadIdentity();
 }
 
-static void if_regions_init(const struct game *game)
+static void if_regions_init(const struct game *game, int width, int height)
 {
-	size_t i, j;
+	size_t i;
 
 	unsigned regions_count = game->regions_count;
 	// assert(game->regions_count < 65536);
 
-	glGenFramebuffers(1, &map_framebuffer);
 	glGenRenderbuffers(1, &map_renderbuffer);
+	glGenFramebuffers(1, &map_framebuffer);
 
-	glBindFramebuffer(GL_FRAMEBUFFER, map_framebuffer);
 	glBindRenderbuffer(GL_RENDERBUFFER, map_renderbuffer);
+	glBindFramebuffer(GL_FRAMEBUFFER, map_framebuffer);
 
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_RGB8, MAP_WIDTH, MAP_HEIGHT);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_RGB8, width, height);
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, map_renderbuffer);
 
-	glBindRenderbuffer(GL_RENDERBUFFER, 0);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glViewport(0, 0, width, height);
 
-	glBindFramebuffer(GL_FRAMEBUFFER, map_framebuffer);
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	glOrtho(0, width, 0, height, 0, 1);
+
+	// TODO why is this necessary
+	//glBindRenderbuffer(GL_RENDERBUFFER, 0);
+	//glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	//glBindFramebuffer(GL_FRAMEBUFFER, map_framebuffer);
 
 	glClear(GL_COLOR_BUFFER_BIT);
 
@@ -138,10 +144,9 @@ int if_storage_get(unsigned x, unsigned y)
 {
 	GLubyte pixel[3];
 
-	glBindFramebuffer(GL_FRAMEBUFFER, map_framebuffer);
-	//glReadPixels(x, MAP_HEIGHT - y, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixel);
-	glReadPixels(x, SCREEN_HEIGHT - y, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixel); // TODO why does this work?
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, map_framebuffer);
+	glReadPixels(x, y, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixel);
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 
 	if (!pixel[0]) return -1;
 	return pixel[1] * 256 + pixel[2];
@@ -315,9 +320,12 @@ int if_init(const struct game *game)
 
 	// TODO set window title, border, etc.
 
-	if_reshape(screen->width_in_pixels, screen->height_in_pixels); // TODO call this after resize
-
 	glClearColor(0.0, 0.0, 0.0, 0.0);
+
+	// Initialize region input recognition.
+	if_regions_init(game, MAP_WIDTH, MAP_HEIGHT);
+
+	if_reshape(screen->width_in_pixels, screen->height_in_pixels); // TODO call this after resize
 
 	// Make the window fullscreen.
 	{
@@ -344,9 +352,6 @@ int if_init(const struct game *game)
 	XDisplayKeycodes(display, &keycode_min, &keycode_max);
 	keymap = XGetKeyboardMapping(display, keycode_min, (keycode_max - keycode_min + 1), &keysyms_per_keycode);
 	if (!keymap) goto error; // TODO error
-
-	// Initialize region input recognition.
-	if_regions_init(game);
 
 	return 0;
 
@@ -1030,7 +1035,7 @@ static void if_map_region(const struct region *region, const struct state_map *s
 		{
 			if (!region_unit_available(region, UNITS[index])) continue;
 
-			struct point position = if_position(Inventory, index);
+			struct point position = if_position(Train, index);
 			display_troop(index, position.x, position.y, Player, 0, 0);
 		}
 	}

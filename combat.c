@@ -69,7 +69,8 @@ void battlefield_fight(const struct game *restrict game, struct battle *restrict
 
 		if (fighter->action == PAWN_ASSAULT)
 		{
-			damage_assault(battle, fighter, fighter->target.field);
+			if (battlefield_neighbors(fighter->moves[0].location, fighter->target.field))
+				damage_assault(battle, fighter, fighter->target.field);
 		}
 		else // fighter->action == PAWN_FIGHT
 		{

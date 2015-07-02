@@ -139,8 +139,8 @@ static inline const struct garrison_info *garrison_info(const struct region *res
 {
 	static const struct garrison_info info[] =
 	{
-		[PALISADE] = {.index = PALISADE, .troops = 3, .provisions = 2, .strength_wall = 100, .armor_wall = ARMOR_WOODEN, .strength_gate = 40, .armor_gate = ARMOR_WOODEN},
-		[FORTRESS] = {.index = FORTRESS, .troops = 6, .provisions = 5, .strength_wall = 200, .armor_wall = ARMOR_STONE, .strength_gate = 60, .armor_gate = ARMOR_WOODEN},
+		[PALISADE] = {.index = PALISADE, .troops = 3, .provisions = 2, .strength_wall = 160, .armor_wall = ARMOR_WOODEN, .strength_gate = 80, .armor_gate = ARMOR_WOODEN},
+		[FORTRESS] = {.index = FORTRESS, .troops = 6, .provisions = 5, .strength_wall = 200, .armor_wall = ARMOR_STONE, .strength_gate = 120, .armor_gate = ARMOR_WOODEN},
 	};
 
 	if (region_built(region, BuildingFortress)) return info + FORTRESS;

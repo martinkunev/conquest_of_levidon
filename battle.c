@@ -388,6 +388,9 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 	unsigned count[1 + UNIT_SPEED_LIMIT] = {0}, offset[1 + UNIT_SPEED_LIMIT];
 	for(troop = region->troops; troop; troop = troop->_next)
 		count[troop->unit->speed] += 1;
+	if (assault)
+		for(troop = region->garrison.troops; troop; troop = troop->_next)
+			count[troop->unit->speed] += 1;
 	offset[UNIT_SPEED_LIMIT] = 0;
 	i = UNIT_SPEED_LIMIT;
 	while (i--) offset[i] = offset[i + 1] + count[i + 1];

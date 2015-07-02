@@ -171,7 +171,7 @@ static int input_train(int code, unsigned x, unsigned y, uint16_t modifiers, con
 	if (region->owner != region->garrison.owner) goto reset; // the garrison is under siege
 
 	// Find which unit was clicked.
-	unit = if_index(Inventory, (struct point){x, y});
+	unit = if_index(Train, (struct point){x, y});
 	if ((unit < 0) || (unit >= UNITS_COUNT)) goto reset; // no unit clicked
 	if (!region_unit_available(region, UNITS[unit])) goto reset; // unit can not be trained
 
@@ -471,10 +471,10 @@ int input_map(const struct game *restrict game, unsigned char player)
 			.callback = input_region,
 		},
 		{
-			.left = object_group[Inventory].left,
-			.right = object_group[Inventory].right,
-			.top = object_group[Inventory].top,
-			.bottom = object_group[Inventory].bottom,
+			.left = object_group[Train].left,
+			.right = object_group[Train].right,
+			.top = object_group[Train].top,
+			.bottom = object_group[Train].bottom,
 			.callback = input_train,
 		},
 		{

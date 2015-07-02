@@ -81,7 +81,7 @@
 			"comment": "3",
 			"name": "Epirus",
 			"owner": 2,
-			"troops": [["Militia", 20, 2]],
+			"troops": [["Militia", 20, 2], ["Battering Ram", 1, 2]],
 			"built": [],
 			"neighbors": [2, 5, 4, -1, -1, -1, -1, 1],
 			"location": [
