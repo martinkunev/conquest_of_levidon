@@ -12,9 +12,11 @@
 #include "combat.h"
 #include "input.h"
 #include "input_battle.h"
-#include "interface.h"
+#include "display.h"
 
 extern struct battle *battle;
+
+extern unsigned SCREEN_WIDTH, SCREEN_HEIGHT;
 
 static int input_round(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
 {

@@ -12,7 +12,7 @@
 #define UNIT_SPEED_LIMIT 16
 
 #include "resources.h"
-#include "display.h"
+#include "draw.h"
 
 #define region_unit_available(region, unit) (!((unit).requires & ~(region)->built))
 #define region_building_available(region, building) (!((building).requires & ~(region)->built))

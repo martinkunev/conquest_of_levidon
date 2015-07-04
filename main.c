@@ -18,6 +18,7 @@
 #include "input_map.h"
 #include "input_battle.h"
 #include "interface.h"
+#include "display.h"
 
 #define S(s) s, sizeof(s) - 1
 
@@ -407,13 +408,22 @@ int main(int argc, char *argv[])
 	}
 
 	srandom(time(0));
-	if (!if_init(&game))
-	{
-		winner = play(&game);
 
-		// TODO display game end message
-		write(2, S("game finished\n"));
-	}
+	if_init();
+	if_load_images();
+
+	// Initialize region input recognition.
+	if_regions_init(&game, MAP_WIDTH, MAP_HEIGHT);
+
+	if_display();
+
+	winner = play(&game);
+
+	// TODO display game end message
+	write(2, S("game finished\n"));
+
+	if_regions_term();
+	if_term();
 
 	world_term(&game);
 

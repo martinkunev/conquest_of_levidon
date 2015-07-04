@@ -6,7 +6,7 @@
 #include "battle.h"
 #include "input.h"
 #include "input_map.h"
-#include "interface.h"
+#include "display.h"
 
 static int input_turn(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
 {
@@ -455,6 +455,8 @@ static int input_garrison(int code, unsigned x, unsigned y, uint16_t modifiers, 
 
 int input_map(const struct game *restrict game, unsigned char player)
 {
+	extern unsigned SCREEN_WIDTH, SCREEN_HEIGHT;
+
 	struct area areas[] = {
 		{
 			.left = 0,

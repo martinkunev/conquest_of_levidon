@@ -1,7 +1,4 @@
-#define _POSIX_SOURCE
-
 #include <fcntl.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -13,10 +10,6 @@
 #include "image.h"
 
 #define MAGIC_NUMBER_SIZE 8
-
-// TODO fix image transparency problem that appears on the map
-
-#include <stdio.h>
 
 int image_load_png(struct image *restrict image, const char *restrict filename, int grayscale)
 {
