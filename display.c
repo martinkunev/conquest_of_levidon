@@ -74,7 +74,7 @@ static uint8_t *format_sint(uint8_t *buffer, int64_t number)
 	return format_int(buffer, number, 10);
 }
 
-void if_regions_init(const struct game *game, int width, int height)
+void if_storage_init(const struct game *game, int width, int height)
 {
 	size_t i;
 
@@ -125,7 +125,7 @@ int if_storage_get(unsigned x, unsigned y)
 	return pixel[1] * 256 + pixel[2];
 }
 
-void if_regions_term(void)
+void if_storage_term(void)
 {
 	glDeleteRenderbuffers(1, &map_renderbuffer);
 	glDeleteFramebuffers(1, &map_framebuffer);

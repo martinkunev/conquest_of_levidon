@@ -10,6 +10,11 @@
 
 #include "draw.h"
 
+#define BACK_RADIUS 2 /* width of the back of the arrow */
+#define FRONT_RADIUS 2 /* radius of the front of the arrow (behind the head) */
+#define HEAD_RADIUS 5 /* radius of the head of the arrow */
+#define HEAD_LENGTH 10 /* length of the head of the arrow */
+
 struct polygon_draw
 {
 	const struct point *point;
@@ -190,11 +195,6 @@ void display_polygon(const struct polygon *restrict polygon, int offset_x, int o
 
 	free(draw);
 }
-
-#define BACK_RADIUS 2 /* width of the back of the arrow */
-#define FRONT_RADIUS 2 /* radius of the front of the arrow (behind the head) */
-#define HEAD_RADIUS 5 /* radius of the head of the arrow */
-#define HEAD_LENGTH 10 /* length of the head of the arrow */
 
 // TODO rewrite this?
 void display_arrow(struct point from, struct point to, int offset_x, int offset_y, enum color color)

@@ -57,10 +57,11 @@ wait:
 			x = keyboard->event_x;
 			y = keyboard->event_y;
 			modifiers = keyboard->state;
-			break;
 
 			//KeySym *input = keymap + (keyboard->detail - keycode_min) * keysyms_per_keycode;
-			//printf("%d %c %c %c %c\n", (int)*input, (int)input[0], (int)input[1], (int)input[2], (int)input[3]);
+			//printf("%d | %d %c %c %c %c\n", (int)code, (int)*input, (int)input[0], (int)input[1], (int)input[2], (int)input[3]);
+
+			break;
 
 		case XCB_MOTION_NOTIFY:
 			motion = (xcb_motion_notify_event_t *)event;
