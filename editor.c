@@ -385,18 +385,17 @@ int main(int argc, char *argv[])
 	struct state state;
 
 	if_init();
-
-	image_load_png(&image_world, "img/world.png", 0);
+	if (argc > 1) image_load_png(&image_world, argv[1], 0);
 	if_storage_init();
 
 	if_display();
 
-	if (argc > 1)
+	if (argc > 2)
 	{
 		struct stat info;
 		unsigned char *buffer;
 
-		int world = open(argv[1], O_RDONLY);
+		int world = open(argv[2], O_RDONLY);
 		if (world < 0) abort();
 		if (fstat(world, &info) < 0)
 		{
