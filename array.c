@@ -1,6 +1,12 @@
 #include <stdlib.h>
 
-int array_init(struct array *restrict array, size_t data_count)
+#define CAT2(a0, a1) a0 ## a1
+#define NAME2(a0, a1) CAT2(a0, a1)
+
+#define CAT3(a0, a1, a2) a0 ## a1 ## a2
+#define NAME3(a0, a1, a2) CAT3(a0, a1, a2)
+
+int NAME3(array, array_suffix, _init)(struct NAME2(array, array_suffix) *restrict array, size_t data_count)
 {
 	array->count = 0;
 	array->data_count = data_count;
@@ -10,7 +16,7 @@ int array_init(struct array *restrict array, size_t data_count)
 	return 0;
 }
 
-int array_expand(struct array *restrict array, size_t count)
+int NAME3(array, array_suffix, _expand)(struct NAME2(array, array_suffix) *restrict array, size_t count)
 {
 	if (array->data_count < count)
 	{
@@ -29,9 +35,9 @@ int array_expand(struct array *restrict array, size_t count)
 	return 0;
 }
 
-int array_push(struct array *restrict array, array_type value)
+int NAME3(array, array_suffix, _push)(struct NAME2(array, array_suffix) *restrict array, array_type value)
 {
-	int status = array_expand(array, array->count + 1);
+	int status = NAME3(array, array_suffix, _expand)(array, array->count + 1);
 	if (status) return status;
 	array->data[array->count] = value;
 	array->count += 1;

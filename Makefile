@@ -7,7 +7,7 @@ O=main.o world.o map.o resources.o battle.o movement.o combat.o pathfinding.o in
 all: $(O)
 	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o map
 
-editor: image.o draw.o interface.o input.o editor.o
+editor: image.o draw.o interface.o input.o json.o format.o editor.o
 	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o editor
 
 check: clean

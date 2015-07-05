@@ -170,7 +170,7 @@ void if_display(void)
 	glLoadIdentity();
 
 	// Make the window fullscreen.
-	{
+	/*{
 		XEvent event = {0};
 		event.type = ClientMessage;
 		event.xclient.window = window;
@@ -182,7 +182,7 @@ void if_display(void)
 		//XMapWindow(display, window);
 		XSendEvent(display, DefaultRootWindow(display), 0, SubstructureRedirectMask | SubstructureNotifyMask, &event);
 		XFlush(display);
-	}
+	}*/
 }
 
 void if_term(void)

@@ -2,14 +2,17 @@ struct game;
 
 #define GL_GLEXT_PROTOTYPES
 
+#include <fcntl.h>
 #include <stdlib.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include <GL/glx.h>
 #include <GL/glext.h>
 
-#include <xcb/xcb.h>
-
 #include "types.h"
+#include "json.h"
 #include "input.h"
 #include "image.h"
 #include "draw.h"
@@ -22,11 +25,14 @@ struct vertex
 	unsigned region;
 };
 
+#undef array_suffix
+#undef array_type
+#define array_suffix _vertex
 #define array_type struct vertex
 #include "array.h"
 #include "array.c"
 
-#include <stdio.h>
+#define S(s) (s), sizeof(s) - 1
 
 extern Display *display;
 extern GLXDrawable drawable;
@@ -44,7 +50,7 @@ static GLuint map_renderbuffer;
 
 struct state
 {
-	struct array points;
+	struct array_vertex points;
 	unsigned region_start;
 	unsigned region;
 };
@@ -145,14 +151,6 @@ static int input_editor(int code, unsigned x, unsigned y, uint16_t modifiers, co
 			int index = if_storage_get(x, y);
 			if (index > (int)state->region_start) // this point is already added to the current region
 				return INPUT_IGNORE;
-			else if (index == (int)state->region_start)
-			{
-				if (state->region_start > state->points.count - 3)
-					return INPUT_IGNORE;
-				state->region_start = state->points.count;
-				state->region += 1;
-				return 0;
-			}
 
 			if (index >= 0)
 			{
@@ -160,11 +158,33 @@ static int input_editor(int code, unsigned x, unsigned y, uint16_t modifiers, co
 				y = state->points.data[index].point.y;
 			}
 
-			if_storage_point(x, y, state->points.count);
-			if (array_push(&state->points, (struct vertex){x, y, index, state->region}) < 0)
-				; // TODO
+			if (index == (int)state->region_start)
+			{
+				if (state->region_start > state->points.count - 3)
+					return INPUT_IGNORE;
 
-			//printf("%u %u\n", x, y);
+				if (array_vertex_push(&state->points, (struct vertex){x, y, index, state->region}) < 0)
+					abort();
+
+				state->region_start = state->points.count;
+				state->region += 1;
+				return 0;
+			}
+
+			if_storage_point(x, y, state->points.count);
+			if (array_vertex_push(&state->points, (struct vertex){x, y, index, state->region}) < 0)
+				abort();
+		}
+		return 0;
+
+
+	case ((255 << 8) | 27): // escape
+		if (state->points.count <= state->region_start)
+			return INPUT_IGNORE;
+		{
+			struct vertex v = state->points.data[state->points.count - 1];
+			if_storage_point(v.point.x, v.point.y, v.previous);
+			state->points.count -= 1;
 		}
 		return 0;
 
@@ -183,21 +203,7 @@ static int input_editor(int code, unsigned x, unsigned y, uint16_t modifiers, co
 			state->points.count -= 1;
 			for(i = index; i < state->points.count; ++i)
 				state->points.data[i] = state->points.data[i + 1];
-
-			//printf("%u %u\n", x, y);
 		}
-		return 0;
-
-	/*case ' ':
-		if (state->region_start > state->points.count - 3)
-			return INPUT_IGNORE;
-		state->region_start = state->points.count;
-		state->region += 1;
-		return 0;*/
-
-	case ((255 << 8) | 27): // escape
-		if (state->points.count <= state->region_start) return INPUT_IGNORE;
-		state->points.count -= 1;
 		return 0;
 	}
 }
@@ -219,18 +225,8 @@ static void if_editor(const void *argument, const struct game *game)
 	{
 		if (state->points.data[i].region != region)
 		{
-			struct point start = state->points.data[i - 1].point;
-			struct point end = state->points.data[region_start].point;
-
-			glColor3ub(0, 0, 0);
-			glBegin(GL_LINES);
-			glVertex2f(start.x, start.y);
-			glVertex2f(end.x, end.y);
-			glEnd();
-
 			region = state->points.data[i].region;
 			region_start = i;
-
 			continue;
 		}
 
@@ -262,7 +258,112 @@ static void if_editor(const void *argument, const struct game *game)
 	glXSwapBuffers(display, drawable);
 }
 
-static void input(void)
+static void save(const struct array_vertex *points)
+{
+	size_t i;
+
+	union json *json, *regions, *location, *point;
+
+	json = json_object();
+	regions = json_array();
+	json = json_object_insert(json, S("regions"), regions);
+
+	unsigned region_start = 0;
+	int region = -1;
+	for(i = 0; i < points->count; ++i)
+	{
+		struct point p = points->data[i].point;
+
+		if (points->data[i].region != region)
+		{
+			location = json_array();
+			regions = json_array_insert(regions, json_object_insert(json_object(), S("location"), location));
+
+			region = points->data[i].region;
+			region_start = i;
+			continue;
+		}
+
+		point = json_array();
+		location = json_array_insert(location, point);
+		point = json_array_insert(point, json_integer(p.x));
+		point = json_array_insert(point, json_integer(p.y));
+	}
+
+	if (!json) abort();
+
+	size_t size = json_size(json);
+	char *buffer = malloc(size + 1);
+	if (!buffer) abort();
+	json_dump(buffer, json);
+	buffer[size] = '\n';
+	write(1, buffer, size + 1);
+	free(buffer);
+}
+
+static inline union json *value_get_try(const struct hashmap *restrict hashmap, const unsigned char *restrict key, size_t size, enum json_type type)
+{
+	union json **entry = hashmap_get(hashmap, key, size);
+	if (!entry || (json_type(*entry) != type)) return 0;
+	return *entry;
+}
+
+static void load(const unsigned char *restrict buffer, size_t size, struct array_vertex *restrict points)
+{
+	size_t r, p;
+
+	union json *json, *regions;
+
+	if (array_vertex_init(points, ARRAY_SIZE_DEFAULT) < 0)
+		abort();
+
+	json = json_parse(buffer, size);
+	if (!json || (json_type(json) != JSON_OBJECT)) abort();
+	regions = value_get_try(&json->object, S("regions"), JSON_ARRAY);
+	if (!regions) abort();
+
+	for(r = 0; r < regions->array.count; ++r)
+	{
+		union json *region, *location;
+
+		region = regions->array.data[r];
+		if (json_type(region) != JSON_OBJECT) abort();
+
+		location = value_get_try(&region->object, S("location"), JSON_ARRAY);
+		if (!location) abort();
+
+		unsigned region_start = points->count;
+
+		for(p = 0; p < location->array.count; ++p)
+		{
+			union json *point = location->array.data[p];
+			if ((json_type(point) != JSON_ARRAY) || (point->array.count != 2)) abort();
+			if (json_type(point->array.data[0]) != JSON_INTEGER) abort();
+			if (json_type(point->array.data[1]) != JSON_INTEGER) abort();
+
+			unsigned x = point->array.data[0]->integer;
+			unsigned y = point->array.data[1]->integer;
+
+			int index = if_storage_get(x, y);
+			if (index >= (int)region_start) // this point is already added to the current region
+				abort();
+
+			if (index >= 0)
+			{
+				x = points->data[index].point.x;
+				y = points->data[index].point.y;
+			}
+
+			if_storage_point(x, y, points->count);
+			if (array_vertex_push(points, (struct vertex){x, y, index, r}) < 0)
+				abort();
+		}
+	}
+
+	json_free(json);
+}
+
+static void input(struct state *restrict state)
 {
 	extern unsigned SCREEN_WIDTH, SCREEN_HEIGHT;
 
@@ -276,19 +377,13 @@ static void input(void)
 		}
 	};
 
-	struct state state;
-
-	if (array_init(&state.points, ARRAY_SIZE_DEFAULT) < 0)
-		return; // TODO
-
-	state.region_start = 0;
-	state.region = 0;
-
-	input_local(areas, sizeof(areas) / sizeof(*areas), if_editor, 0, &state);
+	input_local(areas, sizeof(areas) / sizeof(*areas), if_editor, 0, state);
 }
 
-int main(void)
+int main(int argc, char *argv[])
 {
+	struct state state;
+
 	if_init();
 
 	image_load_png(&image_world, "img/world.png", 0);
@@ -296,7 +391,41 @@ int main(void)
 
 	if_display();
 
-	input();
+	if (argc > 1)
+	{
+		struct stat info;
+		unsigned char *buffer;
+
+		int world = open(argv[1], O_RDONLY);
+		if (world < 0) abort();
+		if (fstat(world, &info) < 0)
+		{
+			close(world);
+			return 0;
+		}
+		buffer = mmap(0, info.st_size, PROT_READ, MAP_PRIVATE, world, 0);
+		close(world);
+		if (buffer == MAP_FAILED) abort();
+
+		load(buffer, info.st_size, &state.points);
+		if (!state.points.count) abort();
+		state.region_start = state.points.count;
+		state.region = state.points.data[state.points.count - 1].region + 1;
+
+		munmap(buffer, info.st_size);
+	}
+	else
+	{
+		if (array_vertex_init(&state.points, ARRAY_SIZE_DEFAULT) < 0)
+			abort();
+		state.region_start = state.points.count;
+		state.region = 0;
+	}
+
+	input(&state);
+
+	save(&state.points);
+	array_vertex_term(&state.points);
 
 	if_storage_term();
 
