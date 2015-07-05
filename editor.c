@@ -272,8 +272,6 @@ static void save(const struct array_vertex *points)
 	int region = -1;
 	for(i = 0; i < points->count; ++i)
 	{
-		struct point p = points->data[i].point;
-
 		if (points->data[i].region != region)
 		{
 			location = json_array();
@@ -283,6 +281,8 @@ static void save(const struct array_vertex *points)
 			region_start = i;
 			continue;
 		}
+
+		struct point p = points->data[i - 1].point;
 
 		point = json_array();
 		location = json_array_insert(location, point);
@@ -306,6 +306,30 @@ static inline union json *value_get_try(const struct hashmap *restrict hashmap, 
 	union json **entry = hashmap_get(hashmap, key, size);
 	if (!entry || (json_type(*entry) != type)) return 0;
 	return *entry;
+}
+
+static void load_point(const union json *point, size_t region, struct array_vertex *restrict points)
+{
+	if ((json_type(point) != JSON_ARRAY) || (point->array.count != 2)) abort();
+	if (json_type(point->array.data[0]) != JSON_INTEGER) abort();
+	if (json_type(point->array.data[1]) != JSON_INTEGER) abort();
+
+	unsigned x = point->array.data[0]->integer;
+	unsigned y = point->array.data[1]->integer;
+
+	int index = if_storage_get(x, y);
+	/*if (index >= (int)region_start) // this point is already added to the current region
+		abort();*/
+
+	if (index >= 0)
+	{
+		x = points->data[index].point.x;
+		y = points->data[index].point.y;
+	}
+
+	if_storage_point(x, y, points->count);
+	if (array_vertex_push(points, (struct vertex){x, y, index, region}) < 0)
+		abort();
 }
 
 static void load(const unsigned char *restrict buffer, size_t size, struct array_vertex *restrict points)
@@ -332,32 +356,9 @@ static void load(const unsigned char *restrict buffer, size_t size, struct array
 		location = value_get_try(&region->object, S("location"), JSON_ARRAY);
 		if (!location) abort();
 
-		unsigned region_start = points->count;
-
 		for(p = 0; p < location->array.count; ++p)
-		{
-			union json *point = location->array.data[p];
-			if ((json_type(point) != JSON_ARRAY) || (point->array.count != 2)) abort();
-			if (json_type(point->array.data[0]) != JSON_INTEGER) abort();
-			if (json_type(point->array.data[1]) != JSON_INTEGER) abort();
-
-			unsigned x = point->array.data[0]->integer;
-			unsigned y = point->array.data[1]->integer;
-
-			int index = if_storage_get(x, y);
-			if (index >= (int)region_start) // this point is already added to the current region
-				abort();
-
-			if (index >= 0)
-			{
-				x = points->data[index].point.x;
-				y = points->data[index].point.y;
-			}
-
-			if_storage_point(x, y, points->count);
-			if (array_vertex_push(points, (struct vertex){x, y, index, r}) < 0)
-				abort();
-		}
+			load_point(location->array.data[p], r, points);
+		load_point(location->array.data[0], r, points);
 	}
 
 	json_free(json);
