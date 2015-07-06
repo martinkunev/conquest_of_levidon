@@ -353,7 +353,7 @@ static int input_troop(int code, unsigned x, unsigned y, uint16_t modifiers, con
 		if (troop->unit != state->troop->unit) return 0; // the clicked and the selected units are different
 
 		// Transfer units from the selected troop to the clicked troop.
-		unsigned transfer_count = (SLOT_UNITS - troop->count);
+		unsigned transfer_count = (troop->unit->troops_count - troop->count);
 		if (state->troop->count > transfer_count)
 		{
 			state->troop->count -= transfer_count;

@@ -157,7 +157,7 @@ static int play(struct game *restrict game)
 			// Update training time and check if there are trained units.
 			if (region->train[0] && (++region->train_time == region->train[0]->time))
 			{
-				if (troop_spawn(region, &region->troops, region->train[0], SLOT_UNITS, region->owner) < 0) ; // TODO
+				if (troop_spawn(region, &region->troops, region->train[0], region->train[0]->troops_count, region->owner) < 0) ; // TODO
 
 				region->train_time = 0;
 				for(i = 1; i < TRAIN_QUEUE; ++i)

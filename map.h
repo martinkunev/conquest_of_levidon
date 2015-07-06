@@ -7,8 +7,6 @@
 
 #define REGIONS_LIMIT 256
 
-#define SLOT_UNITS 20
-
 #define UNIT_SPEED_LIMIT 16
 
 #include "resources.h"
@@ -36,8 +34,9 @@ struct unit
 
 	size_t index;
 
-	struct resources cost, expense;
 	uint32_t requires;
+	unsigned troops_count;
+	struct resources cost, expense;
 	unsigned char time;
 
 	unsigned char speed;
