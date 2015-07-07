@@ -219,23 +219,6 @@ static int blocks(struct point p0, struct point p1, struct point w0, struct poin
 
 	// TODO it looks like this breaks for 0 coordinates (because after subtraction they become negative)
 
-	// Take account for pawn size by forbidding positions too close to the wall.
-	// In order to do this, make wall coordinates span the fields next to the end points.
-	{
-		int direction_x = sign(w1.x - w0.x);
-		int direction_y = sign(w1.y - w0.y);
-		w0.x -= direction_x;
-		w0.y -= direction_y;
-		w1.x += direction_x;
-		w1.y += direction_y;
-	}
-
-	// Express end coordinates as relative to their start coordinates.
-	p1.x -= p0.x;
-	p1.y -= p0.y;
-	w1.x -= w0.x;
-	w1.y -= w0.y;
-
 	cross = cross_product(p1, w1);
 	if (cross) // the lines intersect
 	{
@@ -255,9 +238,9 @@ static int blocks(struct point p0, struct point p1, struct point w0, struct poin
 		}
 
 		// Check if the line segments intersect.
-		// TODO this is not right
-		//if ((0 <= wm) && (wm <= cross) && (0 <= pm) && (pm <= cross))
-		if ((0 < wm) && (wm < cross) && (0 <= pm) && (pm <= cross))
+		// TODO is this right
+		if ((0 <= wm) && (wm <= cross) && (0 <= pm) && (pm <= cross))
+		//if ((0 < wm) && (wm < cross) && (0 <= pm) && (pm <= cross))
 			return 1;
 	}
 	// TODO what if the vectors are collinear: (q0 - p0) x p1 == 0
@@ -265,20 +248,61 @@ static int blocks(struct point p0, struct point p1, struct point w0, struct poin
 	return 0;
 }
 
-// Checks whether the field target can be seen from origin (there are no obstacles in-between).
-static int visible(struct point origin, struct point target, const struct obstacles *restrict obstacles)
+// Checks whether a pawn can move directly from origin to target (there are no obstacles in-between).
+static int movable(struct point origin, struct point target, const struct obstacles *restrict obstacles)
 {
-	// Check if there is a wall that blocks the path from origin to target.
 	size_t i;
+
+	// Express end coordinate as relative to the start coordinate.
+	target.x -= origin.x;
+	target.y -= origin.y;
+
+	// Check if there is a wall that blocks the path from origin to target.
 	for(i = 0; i < obstacles->count; ++i)
-		if (blocks(origin, target, obstacles->obstacle[i].p[0], obstacles->obstacle[i].p[1]))
-			return 0;
+	{
+		struct point wall0 = obstacles->obstacle[i].p[0];
+		struct point wall1 = obstacles->obstacle[i].p[1];
+
+		// Express end coordinate as relative to the start coordinate.
+		wall1.x -= wall0.x;
+		wall1.y -= wall0.y;
+
+		// Make sure the whole pawn can pass beside the wall.
+		// TODO find a better solution for this
+		if (blocks(origin, (struct point){target.x - 1, target.y - 1}, wall0, wall1)) return 0;
+		if (blocks(origin, (struct point){target.x - 1, target.y + 1}, wall0, wall1)) return 0;
+		if (blocks(origin, (struct point){target.x + 1, target.y - 1}, wall0, wall1)) return 0;
+		if (blocks(origin, (struct point){target.x + 1, target.y + 1}, wall0, wall1)) return 0;
+	}
 	return 1;
 }
 
-int path_visible(struct point origin, struct point target, const struct obstacles *restrict obstacles)
+// Checks whether the field target can be seen from origin (there are no obstacles in-between).
+int target_visible(struct point origin, struct point target, const struct obstacles *restrict obstacles)
 {
-	return visible(field_position(origin), field_position(target), obstacles);
+	size_t i;
+
+	origin = field_position(origin);
+	target = field_position(target);
+
+	// Express end coordinate as relative to the start coordinate.
+	target.x -= origin.x;
+	target.y -= origin.y;
+
+	// Check if there is a wall that blocks the path from origin to target.
+	for(i = 0; i < obstacles->count; ++i)
+	{
+		struct point wall0 = obstacles->obstacle[i].p[0];
+		struct point wall1 = obstacles->obstacle[i].p[1];
+
+		// Express end coordinate as relative to the start coordinate.
+		wall1.x -= wall0.x;
+		wall1.y -= wall0.y;
+
+		if (blocks(origin, target, wall0, wall1))
+			return 0;
+	}
+	return 1;
 }
 
 // Attach the vertex at position index to the graph by adding the necessary edges.
@@ -294,7 +318,7 @@ static int graph_attach(struct adjacency_list *restrict graph, size_t index, con
 	for(node = 0; node < index; ++node)
 	{
 		to = graph->list[node].location;
-		if (visible(from, to, obstacles))
+		if (movable(from, to, obstacles))
 		{
 			distance = battlefield_distance(from, to);
 
@@ -561,7 +585,7 @@ int path_reachable(const struct pawn *restrict pawn, struct adjacency_list *rest
 			for(i = 0; i < graph->count; ++i)
 			{
 				struct point target = {x, y};
-				if (visible(graph->list[i].location, field_position(target), obstacles))
+				if (movable(graph->list[i].location, field_position(target), obstacles))
 				{
 					struct point field = position_field(graph->list[i].location);
 					double distance = traverse_info[i].distance + battlefield_distance(field, target);

@@ -48,6 +48,7 @@ struct obstacles *path_obstacles(const struct game *restrict game, const struct 
 struct adjacency_list *visibility_graph_build(const struct battle *restrict battle, const struct obstacles *restrict obstacles);
 void visibility_graph_free(struct adjacency_list *graph);
 
-int path_visible(struct point origin, struct point target, const struct obstacles *restrict obstacles);
+int target_visible(struct point origin, struct point target, const struct obstacles *restrict obstacles);
+
 int path_reachable(const struct pawn *restrict pawn, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles, double reachable[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH]);
 int path_queue(struct pawn *restrict pawn, struct point target, struct adjacency_list *restrict nodes, const struct obstacles *restrict obstacles);
