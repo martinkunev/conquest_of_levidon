@@ -734,13 +734,13 @@ static void tooltip_cost(const char *restrict name, size_t name_length, const st
 
 static inline void show_flag(unsigned x, unsigned y, unsigned player)
 {
-	display_rectangle(x + 4, x + 4, 24, 12, Player + player);
+	display_rectangle(x + 4, y + 4, 24, 12, Player + player);
 	image_draw(&image_flag, x, y);
 }
 
 static inline void show_flag_small(unsigned x, unsigned y, unsigned player)
 {
-	display_rectangle(x + 2, x + 2, 12, 6, Player + player);
+	display_rectangle(x + 2, y + 2, 12, 6, Player + player);
 	image_draw(&image_flag_small, x, y);
 }
 
@@ -990,15 +990,15 @@ void if_map(const void *argument, const struct game *game)
 		if (!state->regions_visible[i]) continue;
 
 		// Display garrison if built.
-		const struct region *region = game->regions + state->region;
+		const struct region *region = game->regions + i;
 		const struct garrison_info *restrict garrison = garrison_info(region);
 		if (garrison)
 		{
 			const struct image *restrict image = &image_map_garrison[garrison->index];
-			unsigned location_x = region->location_garrison.x - image->width / 2;
-			unsigned location_y = region->location_garrison.y - image->height / 2;
+			unsigned location_x = MAP_X + region->location_garrison.x - image->width / 2;
+			unsigned location_y = MAP_Y + region->location_garrison.y - image->height / 2;
 			display_image(image, location_x, location_y, image->width, image->height);
-			show_flag_small(region->location_garrison.x, location_y - image_flag_small.height, region->owner);
+			show_flag_small(MAP_X + region->location_garrison.x, location_y - image_flag_small.height + 8, region->garrison.owner);
 		}
 	}
 
