@@ -15,12 +15,12 @@
 const struct unit UNITS[] =
 {
 	{
-		.index = 0, NAME("Peasant"), .speed = 4, .health = 3, .armor = ARMOR_NONE,
+		.index = 0, NAME("Peasant"), .speed = 4, .health = 4, .armor = ARMOR_NONE,
 		.cost = {.gold = 1}, .expense = {.food = 1}, .time = 1, .troops_count = 20,
 		.melee = {.weapon = WEAPON_CLEAVING, .damage = 1, .agility = 0.5},
 	},
 	{
-		.index = 1, NAME("Archer"), .speed = 4, .health = 3, .armor = ARMOR_NONE,
+		.index = 1, NAME("Archer"), .speed = 4, .health = 4, .armor = ARMOR_NONE,
 		.cost = {.gold = 1, .wood = 1}, .expense = {.food = 1}, .time = 1, .troops_count = 20, .requires = (1 << BuildingArcheryRange),
 		.melee = {.weapon = WEAPON_CLEAVING, .damage = 1, .agility = 1.0},
 		.ranged = {.weapon = WEAPON_ARROW, .damage = 1, .range = 5},
@@ -32,7 +32,7 @@ const struct unit UNITS[] =
 	},
 	{
 		.index = 3, NAME("Light cavalry"), .speed = 9, .health = 8, .armor = ARMOR_LEATHER,
-		.cost = {.gold = 2, .iron = 1}, .expense = {.food = 3}, .time = 2, .troops_count = 20, .requires = (1 << BuildingStables),
+		.cost = {.gold = 2, .iron = 1}, .expense = {.food = 3}, .time = 2, .troops_count = 20, .requires = (1 << BuildingBarracks) | (1 << BuildingStables),
 		.melee = {.weapon = WEAPON_CLEAVING, .damage = 2, .agility = 1.0},
 	},
 	{
@@ -206,13 +206,6 @@ static int region_init(struct game *restrict game, struct region *restrict regio
 		else region->neighbors[j] = game->regions + entry->integer;
 	}
 
-	item = value_get_try(data, "center", JSON_ARRAY);
-	if (!item || (item->array.count != 2)) return -1;
-	x = item->array.data[0];
-	y = item->array.data[1];
-	if ((json_type(x) != JSON_INTEGER) || (json_type(y) != JSON_INTEGER)) return -1;
-	region->center = (struct point){x->integer, y->integer};
-
 	item = value_get_try(data, "name", JSON_STRING);
 	if (!item || (item->string.size > NAME_LIMIT)) return -1;
 	memcpy(region->name, item->string.data, item->string.size);
@@ -241,6 +234,20 @@ static int region_init(struct game *restrict game, struct region *restrict regio
 		}
 		points[j] = (struct point){x->integer, y->integer};
 	}
+
+	item = value_get_try(data, "location_garrison", JSON_ARRAY);
+	if (!item || (item->array.count != 2)) return -1;
+	x = item->array.data[0];
+	y = item->array.data[1];
+	if ((json_type(x) != JSON_INTEGER) || (json_type(y) != JSON_INTEGER)) return -1;
+	region->location_garrison = (struct point){x->integer, y->integer};
+
+	item = value_get_try(data, "center", JSON_ARRAY);
+	if (!item || (item->array.count != 2)) return -1;
+	x = item->array.data[0];
+	y = item->array.data[1];
+	if ((json_type(x) != JSON_INTEGER) || (json_type(y) != JSON_INTEGER)) return -1;
+	region->center = (struct point){x->integer, y->integer};
 
 	return 0;
 }
@@ -295,8 +302,7 @@ int world_init(const union json *restrict json, struct game *restrict game)
 		//game->players[index].input_formation = input_formation;
 	}
 
-	// Player 0 is hard-coded as neutral.
-	game->players[0].type = Neutral;
+	game->players[PLAYER_NEUTRAL].type = Neutral;
 	//game->players[0].input_formation = input_formation_none;
 
 	node = value_get_try(&json->object, "regions", JSON_ARRAY);

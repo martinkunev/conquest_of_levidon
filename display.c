@@ -58,9 +58,10 @@ static GLuint map_renderbuffer;
 // TODO Create a struct that stores all the information about the battle (battlefield, players, etc.)
 struct battle *battle;
 
-static struct image image_move_destination, image_fight_destination, image_shoot_destination, image_selected, image_flag, image_panel, image_construction;
+static struct image image_move_destination, image_fight_destination, image_shoot_destination, image_selected, image_flag, image_flag_small, image_panel, image_construction;
 static struct image image_terrain[1];
 static struct image image_garrison[2]; // TODO this must be big enough for all garrison types
+static struct image image_map_garrison[2]; // TODO this must be big enough for all garrison types
 static struct image image_gold, image_food, image_wood, image_stone, image_iron, image_time;
 static struct image image_scroll_left, image_scroll_right;
 static struct image image_units[5]; // TODO the array must be enough to hold units_count units
@@ -138,11 +139,15 @@ void if_load_images(void)
 	image_load_png(&image_shoot_destination, "img/shoot_destination.png", 0);
 	image_load_png(&image_selected, "img/selected.png", 0);
 	image_load_png(&image_flag, "img/flag.png", 0);
+	image_load_png(&image_flag_small, "img/flag_small.png", 0);
 	image_load_png(&image_panel, "img/panel.png", 0);
 	image_load_png(&image_construction, "img/construction.png", 0);
 
 	image_load_png(&image_garrison[PALISADE], "img/garrison_palisade.png", 0);
 	image_load_png(&image_garrison[FORTRESS], "img/garrison_fortress.png", 0);
+
+	image_load_png(&image_map_garrison[PALISADE], "img/map_palisade.png", 0);
+	image_load_png(&image_map_garrison[FORTRESS], "img/map_fortress.png", 0);
 
 	image_load_png(&image_scroll_left, "img/scroll_left.png", 0);
 	image_load_png(&image_scroll_right, "img/scroll_right.png", 0);
@@ -733,6 +738,12 @@ static inline void show_flag(unsigned x, unsigned y, unsigned player)
 	image_draw(&image_flag, x, y);
 }
 
+static inline void show_flag_small(unsigned x, unsigned y, unsigned player)
+{
+	display_rectangle(x + 2, x + 2, 12, 6, Player + player);
+	image_draw(&image_flag_small, x, y);
+}
+
 static void if_map_region(const struct region *region, const struct state_map *state, const struct game *game)
 {
 	unsigned state_alliance = game->players[state->player].alliance;
@@ -972,6 +983,23 @@ void if_map(const void *argument, const struct game *game)
 		for(j = 0; j < game->regions[i].location->vertices_count; ++j)
 			glVertex2f(MAP_X + game->regions[i].location->points[j].x, MAP_Y + game->regions[i].location->points[j].y);
 		glEnd();
+	}
+
+	for(i = 0; i < game->regions_count; ++i)
+	{
+		if (!state->regions_visible[i]) continue;
+
+		// Display garrison if built.
+		const struct region *region = game->regions + state->region;
+		const struct garrison_info *restrict garrison = garrison_info(region);
+		if (garrison)
+		{
+			const struct image *restrict image = &image_map_garrison[garrison->index];
+			unsigned location_x = region->location_garrison.x - image->width / 2;
+			unsigned location_y = region->location_garrison.y - image->height / 2;
+			display_image(image, location_x, location_y, image->width, image->height);
+			show_flag_small(region->location_garrison.x, location_y - image_flag_small.height, region->owner);
+		}
 	}
 
 	if (state->region >= 0)
