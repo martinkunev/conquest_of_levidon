@@ -89,7 +89,7 @@ static int attack(const struct game *restrict game, const struct battle *restric
 		else return ERROR_MISSING;
 	}
 
-	combat_fight(game, battle, state->obstacles, state->pawn, battle->field[y][x].pawn);
+	combat_order_fight(game, battle, state->obstacles, state->pawn, battle->field[y][x].pawn);
 
 	return 0;
 }
@@ -146,7 +146,7 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 
 		// if CONTROL is pressed, shoot
 		// if SHIFT is pressed, move
-		if (modifiers & XCB_MOD_MASK_CONTROL) combat_shoot(game, battle, state->obstacles, pawn, point);
+		if (modifiers & XCB_MOD_MASK_CONTROL) combat_order_shoot(game, battle, state->obstacles, pawn, point);
 		else if (modifiers & XCB_MOD_MASK_SHIFT)
 		{
 			movement_queue(pawn, point, state->graph, state->obstacles);
@@ -168,13 +168,13 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 				}
 				else
 				{
-					if (combat_shoot(game, battle, state->obstacles, pawn, point))
+					if (combat_order_shoot(game, battle, state->obstacles, pawn, point))
 						;
 					else
 						attack(game, battle, state, point); // TODO error check
 				}
 			}
-			else if (combat_assault(game, battle, state->obstacles, pawn, point))
+			else if (combat_order_assault(game, battle, state->obstacles, pawn, point))
 				;
 			else
 			{
