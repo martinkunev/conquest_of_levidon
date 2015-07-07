@@ -52,6 +52,8 @@ static int play_battle(struct game *restrict game, struct battle *restrict battl
 
 	while ((status = battle_end(game, battle, defender)) < 0)
 	{
+		struct obstacles *restrict obstacles = path_obstacles(game, battle, PLAYER_NEUTRAL);
+
 		// Ask each player to perform battle actions.
 		// TODO implement Computer and Remote
 		for(player = 0; player < game->players_count; ++player)
@@ -73,7 +75,7 @@ static int play_battle(struct game *restrict game, struct battle *restrict battl
 		// TODO shoot animation // TODO this should be part of player-specific input
 
 		// TODO Deal damage to each pawn escaping from enemy pawns.
-		battlefield_shoot(battle);
+		battlefield_shoot(battle, obstacles);
 		battlefield_clean(battle);
 
 		battlefield_movement_plan(game->players, game->players_count, battle->field, battle->pawns, battle->pawns_count);
@@ -86,6 +88,8 @@ static int play_battle(struct game *restrict game, struct battle *restrict battl
 
 		battlefield_fight(game, battle);
 		battlefield_clean(battle);
+
+		free(obstacles);
 	}
 
 	// TODO show battle overview // this is player-specific
