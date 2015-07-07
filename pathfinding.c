@@ -217,8 +217,10 @@ static int blocks(struct point p0, struct point p1, struct point w0, struct poin
 
 	long cross;
 
-	// A pawn spans a whole field.
-	// Make wall coordinates take acount of that by forbidding positions too close to the wall.
+	// TODO it looks like this breaks for 0 coordinates (because after subtraction they become negative)
+
+	// Take account for pawn size by forbidding positions too close to the wall.
+	// In order to do this, make wall coordinates span the fields next to the end points.
 	{
 		int direction_x = sign(w1.x - w0.x);
 		int direction_y = sign(w1.y - w0.y);
@@ -253,11 +255,12 @@ static int blocks(struct point p0, struct point p1, struct point w0, struct poin
 		}
 
 		// Check if the line segments intersect.
-		// TODO is this good?
+		// TODO this is not right
 		//if ((0 <= wm) && (wm <= cross) && (0 <= pm) && (pm <= cross))
 		if ((0 < wm) && (wm < cross) && (0 <= pm) && (pm <= cross))
 			return 1;
 	}
+	// TODO what if the vectors are collinear: (q0 - p0) x p1 == 0
 
 	return 0;
 }
@@ -265,16 +268,11 @@ static int blocks(struct point p0, struct point p1, struct point w0, struct poin
 // Checks whether the field target can be seen from origin (there are no obstacles in-between).
 static int visible(struct point origin, struct point target, const struct obstacles *restrict obstacles)
 {
-	size_t i;
-
 	// Check if there is a wall that blocks the path from origin to target.
+	size_t i;
 	for(i = 0; i < obstacles->count; ++i)
-	{
-		const struct obstacle *restrict obstacle = obstacles->obstacle + i;
-		if (blocks(origin, target, obstacle->p[0], obstacle->p[1]))
+		if (blocks(origin, target, obstacles->obstacle[i].p[0], obstacles->obstacle[i].p[1]))
 			return 0;
-	}
-
 	return 1;
 }
 
@@ -507,8 +505,6 @@ int path_reachable(const struct pawn *restrict pawn, struct adjacency_list *rest
 
 	size_t vertex_origin;
 
-	// TODO don't treat blockage positions as reachable (they are allowed on some diagonals for some reason)
-
 	// Add vertex for the origin.
 	vertex_origin = graph->count++;
 	graph->list[vertex_origin].location = field_position(pawn->moves[pawn->moves_count - 1].location);
@@ -569,14 +565,7 @@ int path_reachable(const struct pawn *restrict pawn, struct adjacency_list *rest
 				{
 					struct point field = position_field(graph->list[i].location);
 					double distance = traverse_info[i].distance + battlefield_distance(field, target);
-					if (distance < reachable[y][x])
-					{
-						reachable[y][x] = distance;
-						if (distance <= pawn->troop->unit->speed)
-						{
-							int a = 0;
-						}
-					}
+					if (distance < reachable[y][x]) reachable[y][x] = distance;
 				}
 			}
 		}
