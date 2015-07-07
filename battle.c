@@ -250,6 +250,12 @@ static void battlefield_init_assault(const struct game *restrict game, struct ba
 	// #     #
 	// ###.###
 
+	// TODO: towers
+	// #     #
+	// .     .
+	// O     O
+	// ##O.O##
+
 #define OBSTACLE(x, y, p, o, s, a) do \
 	{ \
 		struct battlefield *restrict field = &battle->field[y][x]; \
