@@ -232,10 +232,10 @@ static int input_dismiss(int code, unsigned x, unsigned y, uint16_t modifiers, c
 
 		// If the training has not yet started, return allocated resources.
 		// Else, reset training information.
-		if (index || !game->regions[state->region].train_time)
+		if (index || !game->regions[state->region].train_progress)
 			resource_add(&game->players[state->player].treasury, &region->train[index]->cost);
 		else
-			game->regions[state->region].train_time = 0;
+			game->regions[state->region].train_progress = 0;
 
 		for(index += 1; index < TRAIN_QUEUE; ++index)
 			region->train[index - 1] = region->train[index];

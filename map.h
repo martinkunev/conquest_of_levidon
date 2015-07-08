@@ -86,14 +86,14 @@ struct region
 
 	unsigned char owner;
 
-	unsigned char train_time;
+	unsigned char train_progress;
 	const struct unit *train[TRAIN_QUEUE];
 
 	struct troop *troops;
 
 	struct
 	{
-		enum {East, NorthEast, North, NorthWest, West, SouthWest, South, SouthEast} position;
+		// enum {East, NorthEast, North, NorthWest, West, SouthWest, South, SouthEast} position;
 
 		unsigned char owner;
 		struct troop *troops;

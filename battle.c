@@ -95,7 +95,7 @@ size_t formation_reachable_open(const struct game *restrict game, const struct b
 size_t formation_reachable_assault(const struct game *restrict game, const struct battle *restrict battle, const struct pawn *restrict pawn, struct point reachable[REACHABLE_LIMIT])
 {
 	const double defend[2] = {12.5, 0};
-	const double assault[ASSAULT_LIMIT][2] = {{12.5, 25.0}, {0.0, 12.5}, {25.0, 12.5}, {3.5, 21.5}, {21.5, 21.5}};
+	const double assault[ASSAULT_LIMIT][2] = {{12.5, 20.0}, {0.0, 7.5}, {25.0, 7.5}, {3.5, 16.5}, {21.5, 16.5}};
 
 	size_t x, y;
 

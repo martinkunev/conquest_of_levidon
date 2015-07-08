@@ -25,6 +25,8 @@ struct vertex
 	unsigned region;
 };
 
+// WARNING: Vertices in a region must be listed counterclockwise.
+
 #undef array_suffix
 #undef array_type
 #define array_suffix _vertex

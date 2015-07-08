@@ -137,7 +137,6 @@ static int region_init(struct game *restrict game, struct region *restrict regio
 	if (!item) return -1;
 	region->owner = item->integer;
 
-	region->garrison.position = North; // TODO fix this
 	region->garrison.owner = region->owner;
 	region->garrison.troops = 0;
 	region->garrison.siege = 0;
@@ -194,7 +193,7 @@ static int region_init(struct game *restrict game, struct region *restrict regio
 	}
 
 	size_t train_index = 0;
-	region->train_time = 0;
+	region->train_progress = 0;
 	if (item = value_get(data, "train"))
 	{
 		if ((json_type(item) != JSON_ARRAY) || (item->array.count > TRAIN_QUEUE)) return -1;
@@ -209,10 +208,10 @@ static int region_init(struct game *restrict game, struct region *restrict regio
 			train_index += 1;
 		}
 
-		if (item = value_get(data, "train_time"))
+		if (item = value_get(data, "train_progress"))
 		{
 			if (json_type(item) != JSON_INTEGER) return -1;
-			region->train_time = item->integer;
+			region->train_progress = item->integer;
 		}
 	}
 	while (train_index < TRAIN_QUEUE)

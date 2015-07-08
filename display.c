@@ -887,7 +887,7 @@ static void if_map_region(const struct region *region, const struct state_map *s
 			if (region->train[index])
 			{
 				display_troop(region->train[index]->index, position.x, position.y, White, 0, 0);
-				show_progress((index ? 0 : region->train_time), region->train[0]->time, position.x, position.y, object_group[Dismiss].width, object_group[Dismiss].height);
+				show_progress((index ? 0 : region->train_progress), region->train[0]->time, position.x, position.y, object_group[Dismiss].width, object_group[Dismiss].height);
 			}
 			else display_rectangle(position.x, position.y, object_group[Dismiss].width, object_group[Dismiss].height, Black);
 		}
