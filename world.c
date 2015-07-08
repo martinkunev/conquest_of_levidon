@@ -196,16 +196,6 @@ static int region_init(struct game *restrict game, struct region *restrict regio
 		if (region_build(&region->built, &item->array)) return -1;
 	}
 
-	item = value_get_try(data, "neighbors", JSON_ARRAY);
-	if (!item || (item->array.count != NEIGHBORS_LIMIT)) return -1;
-	for(j = 0; j < NEIGHBORS_LIMIT; ++j)
-	{
-		entry = item->array.data[j];
-		if (json_type(entry) != JSON_INTEGER) return -1;
-		if ((entry->integer < 0) || (entry->integer >= game->regions_count)) region->neighbors[j] = 0;
-		else region->neighbors[j] = game->regions + entry->integer;
-	}
-
 	item = value_get_try(data, "name", JSON_STRING);
 	if (!item || (item->string.size > NAME_LIMIT)) return -1;
 	memcpy(region->name, item->string.data, item->string.size);
@@ -250,6 +240,38 @@ static int region_init(struct game *restrict game, struct region *restrict regio
 	region->center = (struct point){x->integer, y->integer};
 
 	return 0;
+}
+
+static int region_neighbors(struct game *restrict game, struct region *restrict region, const struct hashmap *restrict regions, const struct hashmap *restrict data)
+{
+	size_t i;
+
+	union json *node, *item, *entry;
+	const union json *name, *count, *owner;
+
+	size_t index;
+
+	item = value_get_try(data, "neighbors", JSON_ARRAY);
+	if (!item || (item->array.count != NEIGHBORS_LIMIT)) return -1;
+	for(i = 0; i < NEIGHBORS_LIMIT; ++i)
+	{
+		entry = item->array.data[i];
+		switch (json_type(entry))
+		{
+		case JSON_NULL:
+			region->neighbors[i] = 0;
+			continue; // no neighbor in this direction
+		default:
+			return -1;
+		case JSON_STRING:
+			break;
+		}
+
+		node = (value_get_try)(regions, entry->string.data, entry->string.size, JSON_OBJECT);
+		if (!node) return -1; // no region with such name
+		index = value_get_try(&node->object, "location", JSON_ARRAY)->integer; // TODO ugly: type is not changed but the value is integer
+		region->neighbors[i] = game->regions + index;
+	}
 }
 
 int world_init(const union json *restrict json, struct game *restrict game)
@@ -305,23 +327,41 @@ int world_init(const union json *restrict json, struct game *restrict game)
 	game->players[PLAYER_NEUTRAL].type = Neutral;
 	//game->players[0].input_formation = input_formation_none;
 
-	node = value_get_try(&json->object, "regions", JSON_ARRAY);
-	if (!node || (node->array.count < 1) || (node->array.count > REGIONS_LIMIT)) goto error;
+	node = value_get_try(&json->object, "regions", JSON_OBJECT);
+	if (!node || (node->object.count < 1) || (node->object.count > REGIONS_LIMIT)) goto error;
 
-	game->regions_count = node->array.count;
+	game->regions_count = node->object.count;
 	game->regions = malloc(game->regions_count * sizeof(struct region));
 	if (!game->regions) goto error;
-	for(index = 0; index < game->regions_count; ++index)
+
+	struct hashmap_iterator it;
+	struct hashmap_entry *region;
+	index = 0;
+	for(region = hashmap_first(&node->object, &it); region; region = hashmap_next(&node->object, &it))
 	{
-		item = node->array.data[index];
+		size_t i;
+
+		item = region->value;
 		if (json_type(item) != JSON_OBJECT) goto error;
 
 		game->regions[index].index = index;
-
 		if (region_init(game, game->regions + index, &item->object) < 0) goto error;
-		continue;
 
-		////////////////////////
+		// TODO very ugly way to store a hashmap with region indices; fix this
+		union json *field = value_get_try(&item->object, "location", JSON_ARRAY);
+		for(i = 0; i < field->array.count; ++i)
+			json_free(field->array.data[i]);
+		field->integer = index;
+
+		index += 1;
+	}
+
+	for(region = hashmap_first(&node->object, &it); region; region = hashmap_next(&node->object, &it))
+	{
+		item = region->value;
+		index = value_get_try(&item->object, "location", JSON_ARRAY)->integer; // TODO ugly: type is not changed but the value is integer
+		if (region_neighbors(game, game->regions + index, &node->object, &item->object) < 0)
+			goto error;
 	}
 
 	return 0;
