@@ -76,7 +76,7 @@ struct troop
 	unsigned count;
 	unsigned char owner;
 
-	struct region *location, *move; // TODO maybe change this to *location[2]
+	struct region *location, *move;
 };
 
 struct region

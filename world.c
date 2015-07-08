@@ -87,16 +87,24 @@ next:
 	return 0;
 }
 
-static int troop_create(struct troop **restrict troops, struct region *restrict region, const struct string *restrict name, unsigned count, unsigned char owner)
+// TODO maybe use hash table here
+static signed char building_find(const struct string *restrict name)
 {
 	size_t i;
+	for(i = 0; i < buildings_count; ++i)
+		if ((name->size == buildings[i].name_length) && !memcmp(name->data, buildings[i].name, buildings[i].name_length))
+			return i;
+	return 0;
+}
 
-	// TODO maybe use hash table
+// TODO maybe use hash table
+static const struct unit *unit_find(const struct string *restrict name)
+{
+	size_t i;
 	for(i = 0; i < UNITS_COUNT; ++i)
 		if ((name->size == UNITS[i].name_length) && !memcmp(name->data, UNITS[i].name, UNITS[i].name_length))
-			return troop_spawn(region, troops, UNITS + i, count, owner);
-
-	return -1;
+			return UNITS + i;
+	return 0;
 }
 
 static inline union json *value_get(const struct hashmap *restrict hashmap, const unsigned char *restrict key, size_t size)
@@ -123,6 +131,7 @@ static int region_init(struct game *restrict game, struct region *restrict regio
 	const union json *name, *count, *owner;
 	const union json *x, *y;
 	struct point *points;
+	const struct unit *restrict unit;
 
 	item = value_get_try(data, "owner", JSON_INTEGER);
 	if (!item) return -1;
@@ -137,10 +146,6 @@ static int region_init(struct game *restrict game, struct region *restrict regio
 	if (item = value_get(data, "garrison"))
 	{
 		if (json_type(item) != JSON_OBJECT) return -1;
-
-		/*field = value_get(&item->object, "position");
-		if (!field || (json_type(field) != JSON_INTEGER)) return -1;
-		region->owner = field->integer;*/
 
 		field = value_get_try(data, "owner", JSON_INTEGER);
 		if (!field) return -1;
@@ -160,7 +165,9 @@ static int region_init(struct game *restrict game, struct region *restrict regio
 				owner = entry->array.data[2];
 				if ((json_type(owner) != JSON_INTEGER) || (owner->integer <= 0) || (owner->integer >= game->players_count)) return -1;
 
-				if (troop_create(&region->garrison.troops, region, &name->string, count->integer, owner->integer)) return -1;
+				unit = unit_find(&name->string);
+				if (!unit) return -1;
+				if (troop_spawn(region, &region->garrison.troops, unit, count->integer, owner->integer)) return -1;
 			}
 		}
 	}
@@ -180,21 +187,62 @@ static int region_init(struct game *restrict game, struct region *restrict regio
 			owner = entry->array.data[2];
 			if ((json_type(owner) != JSON_INTEGER) || (owner->integer <= 0) || (owner->integer >= game->players_count)) return -1;
 
-			if (troop_create(&region->troops, region, &name->string, count->integer, owner->integer)) return -1;
+			unit = unit_find(&name->string);
+			if (!unit) return -1;
+			if (troop_spawn(region, &region->troops, unit, count->integer, owner->integer)) return -1;
 		}
 	}
 
+	size_t train_index = 0;
 	region->train_time = 0;
-	memset(region->train, 0, sizeof(region->train)); // TODO implement this
+	if (item = value_get(data, "train"))
+	{
+		if ((json_type(item) != JSON_ARRAY) || (item->array.count > TRAIN_QUEUE)) return -1;
+
+		for(j = 0; j < item->array.count; ++j)
+		{
+			name = item->array.data[j];
+			if (json_type(name) != JSON_STRING) return -1;
+
+			region->train[train_index] = unit_find(&name->string);
+			if (!region->train[train_index]) return -1;
+			train_index += 1;
+		}
+
+		if (item = value_get(data, "train_time"))
+		{
+			if (json_type(item) != JSON_INTEGER) return -1;
+			region->train_time = item->integer;
+		}
+	}
+	while (train_index < TRAIN_QUEUE)
+		region->train[train_index++] = 0;
 
 	region->built = 0;
-	region->construct = -1;
-	region->build_progress = 0;
 	if (item = value_get(data, "built"))
 	{
 		if (json_type(item) != JSON_ARRAY) return -1;
 		if (region_build(&region->built, &item->array)) return -1;
 	}
+
+	region->build_progress = 0;
+	if (item = value_get(data, "construct"))
+	{
+		signed char building;
+
+		if (json_type(item) != JSON_STRING) return -1;
+
+		building = building_find(&item->string);
+		if (building < 0) return -1;
+		region->construct = building;
+
+		if (item = value_get(data, "build_progress"))
+		{
+			if (json_type(item) != JSON_INTEGER) return -1;
+			region->build_progress = item->integer;
+		}
+	}
+	else region->construct = -1;
 
 	item = value_get_try(data, "name", JSON_STRING);
 	if (!item || (item->string.size > NAME_LIMIT)) return -1;
