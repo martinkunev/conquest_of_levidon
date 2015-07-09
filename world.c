@@ -125,7 +125,7 @@ static inline union json *value_get_try(const struct hashmap *restrict hashmap, 
 }
 #define value_get_try(hashmap, key, type) (value_get_try)(hashmap, key, sizeof(key) - 1, type)
 
-static int region_init(struct game *restrict game, struct region *restrict region, const struct hashmap *restrict data)
+static int region_init(struct game *restrict game, struct region *restrict region, const unsigned char *restrict name_data, size_t name_size, const struct hashmap *restrict data)
 {
 	size_t j;
 
@@ -134,6 +134,10 @@ static int region_init(struct game *restrict game, struct region *restrict regio
 	const union json *x, *y;
 	struct point *points;
 	const struct unit *restrict unit;
+
+	if (name_size > NAME_LIMIT) return -1;
+	memcpy(region->name, name_data, name_size);
+	region->name_length = name_size;
 
 	item = value_get_try(data, "owner", JSON_INTEGER);
 	if (!item) return -1;
@@ -149,8 +153,7 @@ static int region_init(struct game *restrict game, struct region *restrict regio
 		if (json_type(item) != JSON_OBJECT) return -1;
 
 		field = value_get_try(&item->object, "owner", JSON_INTEGER);
-		if (!field) return -1;
-		region->garrison.owner = field->integer;
+		if (field) region->garrison.owner = field->integer;
 
 		if (field = value_get(&item->object, "troops"))
 		{
@@ -256,11 +259,6 @@ static int region_init(struct game *restrict game, struct region *restrict regio
 		}
 	}
 	else region->construct = -1;
-
-	item = value_get_try(data, "name", JSON_STRING);
-	if (!item || (item->string.size > NAME_LIMIT)) return -1;
-	memcpy(region->name, item->string.data, item->string.size);
-	region->name_length = item->string.size;
 
 	item = value_get_try(data, "location", JSON_ARRAY);
 	if (!item || (item->array.count < 3)) return -1;
@@ -406,7 +404,7 @@ int world_load(const union json *restrict json, struct game *restrict game)
 		if (json_type(item) != JSON_OBJECT) goto error;
 
 		game->regions[index].index = index;
-		if (region_init(game, game->regions + index, &item->object) < 0) goto error;
+		if (region_init(game, game->regions + index, region->key_data, region->key_size, &item->object) < 0) goto error;
 
 		// TODO very ugly way to store a hashmap with region indices; fix this
 		union json *field = value_get_try(&item->object, "location", JSON_ARRAY);
