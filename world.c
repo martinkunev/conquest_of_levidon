@@ -12,6 +12,8 @@
 
 #define NAME(string) .name = string, .name_length = sizeof(string) - 1
 
+#define S(s) (s), sizeof(s) - 1
+
 const struct unit UNITS[] =
 {
 	{
@@ -146,7 +148,7 @@ static int region_init(struct game *restrict game, struct region *restrict regio
 	{
 		if (json_type(item) != JSON_OBJECT) return -1;
 
-		field = value_get_try(data, "owner", JSON_INTEGER);
+		field = value_get_try(&item->object, "owner", JSON_INTEGER);
 		if (!field) return -1;
 		region->garrison.owner = field->integer;
 
@@ -168,6 +170,18 @@ static int region_init(struct game *restrict game, struct region *restrict regio
 				if (!unit) return -1;
 				if (troop_spawn(region, &region->garrison.troops, unit, count->integer, owner->integer)) return -1;
 			}
+		}
+
+		if (field = value_get(&item->object, "siege"))
+		{
+			if (json_type(field) != JSON_INTEGER) return -1;
+			region->garrison.siege = field->integer;
+		}
+
+		if (field = value_get(&item->object, "assault"))
+		{
+			if (json_type(field) != JSON_BOOLEAN) return -1;
+			region->garrison.assault = field->boolean;
 		}
 	}
 
@@ -321,7 +335,7 @@ static int region_neighbors(struct game *restrict game, struct region *restrict 
 	}
 }
 
-int world_init(const union json *restrict json, struct game *restrict game)
+int world_load(const union json *restrict json, struct game *restrict game)
 {
 	struct string key;
 	const union json *item, *node, *field, *entry;
@@ -415,11 +429,113 @@ int world_init(const union json *restrict json, struct game *restrict game)
 
 error:
 	// TODO segmentation fault on partial initialization? (because of non-zeroed pointers)
-	world_term(game);
+	world_unload(game);
 	return -1;
 }
 
-void world_term(struct game *restrict game)
+static union json *world_save_point(struct point p)
+{
+	union json *point = json_array();
+	point = json_array_insert(point, json_integer(p.x));
+	point = json_array_insert(point, json_integer(p.y));
+	return point;
+}
+
+static union json *world_save_troops(const struct troop *troop)
+{
+	union json *troops = json_array();
+	while (troop)
+	{
+		union json *t = json_array();
+		t = json_array_insert(t, json_string(troop->unit->name, troop->unit->name_length));
+		t = json_array_insert(t, json_integer(troop->count));
+		t = json_array_insert(t, json_integer(troop->owner));
+		troops = json_array_insert(troops, t);
+		troop = troop->_next;
+	}
+}
+
+union json *world_save(const struct game *restrict game)
+{
+	union json *json = json_object();
+
+	size_t i, j;
+
+	union json *players = json_array();
+	for(i = 0; i < game->players_count; ++i)
+	{
+		union json *player = json_object();
+
+		player = json_object_insert(player, S("alliance"), json_integer(game->players[i].alliance));
+		player = json_object_insert(player, S("gold"), json_integer(game->players[i].treasury.gold));
+		player = json_object_insert(player, S("food"), json_integer(game->players[i].treasury.food));
+		player = json_object_insert(player, S("wood"), json_integer(game->players[i].treasury.wood));
+		player = json_object_insert(player, S("iron"), json_integer(game->players[i].treasury.iron));
+		player = json_object_insert(player, S("stone"), json_integer(game->players[i].treasury.stone));
+
+		players = json_array_insert(players, player);
+	}
+	json = json_object_insert(json, S("players"), players);
+
+	union json *regions = json_object();
+	for(i = 0; i < game->regions_count; ++i)
+	{
+		union json *region = json_object();
+
+		union json *neighbors = json_array();
+		for(j = 0; j < NEIGHBORS_LIMIT; ++j)
+		{
+			const struct region *restrict neighbor = game->regions[i].neighbors[j];
+			if (neighbor) neighbors = json_array_insert(neighbors, json_string(neighbor->name, neighbor->name_length));
+			else neighbors = json_array_insert(neighbors, json_null());
+		}
+		region = json_object_insert(region, S("neighbors"), neighbors);
+
+		union json *location = json_array();
+		const struct polygon *restrict polygon = game->regions[i].location;
+		for(j = 0; j < polygon->vertices_count; ++j)
+			location = json_array_insert(location, world_save_point(polygon->points[j]));
+		region = json_object_insert(region, S("location"), location);
+
+		region = json_object_insert(region, S("location_garrison"), world_save_point(game->regions[i].location_garrison));
+		region = json_object_insert(region, S("center"), world_save_point(game->regions[i].center));
+
+		region = json_object_insert(region, S("owner"), json_integer(game->regions[i].owner));
+
+		union json *train = json_array();
+		for(j = 0; j < TRAIN_QUEUE; ++j)
+		{
+			const struct unit *restrict unit = game->regions[i].train[j];
+			if (!unit) break;
+			train = json_array_insert(train, json_string(unit->name, unit->name_length));
+		}
+		region = json_object_insert(region, S("train"), train);
+		region = json_object_insert(region, S("train_progress"), json_integer(game->regions[i].train_progress));
+
+		region = json_object_insert(region, S("built"), json_integer(game->regions[i].built));
+		region = json_object_insert(region, S("construct"), json_integer(game->regions[i].construct));
+		region = json_object_insert(region, S("build_progress"), json_integer(game->regions[i].build_progress));
+
+		region = json_object_insert(region, S("troops"), world_save_troops(game->regions[i].troops));
+
+		if (garrison_info(game->regions + i))
+		{
+			union json *garrison = json_object();
+			garrison = json_object_insert(garrison, S("owner"), json_integer(game->regions[i].garrison.owner));
+			garrison = json_object_insert(garrison, S("troops"), world_save_troops(game->regions[i].garrison.troops));
+			garrison = json_object_insert(garrison, S("siege"), json_integer(game->regions[i].garrison.siege));
+			garrison = json_object_insert(garrison, S("assault"), json_boolean(game->regions[i].garrison.assault));
+			region = json_object_insert(region, S("garrison"), garrison);
+		}
+
+		json = json_object_insert(json, game->regions[i].name, game->regions[i].name_length, region);
+	}
+	json = json_object_insert(json, S("regions"), regions);
+
+	return json;
+}
+
+void world_unload(struct game *restrict game)
 {
 	size_t index;
 	for(index = 0; index < game->regions_count; ++index)

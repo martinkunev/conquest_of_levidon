@@ -403,7 +403,7 @@ int main(int argc, char *argv[])
 		write(2, S("Invalid map format\n"));
 		return -1;
 	}
-	success = !world_init(json, &game);
+	success = !world_load(json, &game);
 	json_free(json);
 	if (!success)
 	{
@@ -429,7 +429,7 @@ int main(int argc, char *argv[])
 	if_storage_term();
 	if_term();
 
-	world_term(&game);
+	world_unload(&game);
 
 	return 0;
 }

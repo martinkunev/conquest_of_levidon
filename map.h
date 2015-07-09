@@ -84,6 +84,12 @@ struct region
 	char name[NAME_LIMIT];
 	size_t name_length;
 
+	size_t index;
+	struct region *neighbors[NEIGHBORS_LIMIT];
+	struct polygon *location;
+	struct point location_garrison;
+	struct point center;
+
 	unsigned char owner;
 
 	unsigned char train_progress;
@@ -102,13 +108,6 @@ struct region
 
 		int assault;
 	} garrison;
-
-	size_t index;
-	struct region *neighbors[NEIGHBORS_LIMIT];
-	struct polygon *location;
-
-	struct point location_garrison;
-	struct point center;
 
 	uint32_t built;
 	signed char construct; // -1 == no construction
