@@ -50,6 +50,15 @@ static inline struct point field_position(struct point field)
 }
 static inline struct point position_field(struct point position)
 {
+	/*if (position.x == -1)
+	{
+		if (position.y == -1) return (struct point){-1, -1};
+		else return (struct point){-1, position.y / 2};
+	}
+	else if (position.y == -1)
+	{
+		return (struct point){position.x / 2, -1};
+	}*/
 	return (struct point){position.x / 2, position.y / 2};
 }
 
@@ -269,22 +278,24 @@ static int movable(struct point origin, struct point target, const struct obstac
 
 		// Make sure the whole pawn can pass beside the wall.
 		// TODO find a better solution for this
-		if (wall0.x != wall1.x) // horizontal wall
+		if (wall1.x) // horizontal wall
 		{
-			int direction = sign(wall1.x - wall0.x);
-			if (blocks(origin, target, (struct point){wall0.x - direction, wall0.y - 1}, (struct point){wall1.x + direction, wall1.y - 1})) return 0;
-			if (blocks(origin, target, (struct point){wall0.x - direction, wall0.y + 1}, (struct point){wall1.x + direction, wall1.y + 1})) return 0;
-			if (blocks(origin, target, (struct point){wall0.x - direction, wall0.y - 1}, (struct point){wall0.x - direction, wall1.y + 1})) return 0;
-			if (blocks(origin, target, (struct point){wall1.x + direction, wall0.y - 1}, (struct point){wall1.x + direction, wall1.y + 1})) return 0;
+			// assert(!wall1.y);
+			int direction = sign(wall1.x);
+			if (blocks(origin, target, (struct point){wall0.x - direction, wall0.y - 1}, (struct point){wall1.x + 2 * direction, 0})) return 0;
+			if (blocks(origin, target, (struct point){wall0.x - direction, wall0.y + 1}, (struct point){wall1.x + 2 * direction, 0})) return 0;
+			if (blocks(origin, target, (struct point){wall0.x - direction, wall0.y - 1}, (struct point){0, 2 * direction})) return 0;
+			if (blocks(origin, target, (struct point){wall0.x + wall1.x + direction, wall0.y - 1}, (struct point){0, 2 * direction})) return 0;
 		}
 		else
 		{
-			// assert(wall0.y != wall1.y);
-			int direction = sign(wall1.y - wall0.y);
-			if (blocks(origin, target, (struct point){wall0.x - 1, wall0.y - direction}, (struct point){wall1.x - 1, wall1.y + direction})) return 0;
-			if (blocks(origin, target, (struct point){wall0.x + 1, wall0.y - direction}, (struct point){wall1.x + 1, wall1.y + direction})) return 0;
-			if (blocks(origin, target, (struct point){wall0.x - 1, wall0.y - direction}, (struct point){wall0.x + 1, wall0.y - direction})) return 0;
-			if (blocks(origin, target, (struct point){wall1.x - 1, wall1.y + direction}, (struct point){wall1.x + 1, wall1.y + direction})) return 0;
+			// assert(wall1.y);
+			// assert(!wall1.x);
+			int direction = sign(wall1.y);
+			if (blocks(origin, target, (struct point){wall0.x - 1, wall0.y - direction}, (struct point){0, wall1.y + 2 * direction})) return 0;
+			if (blocks(origin, target, (struct point){wall0.x + 1, wall0.y - direction}, (struct point){0, wall1.y + 2 * direction})) return 0;
+			if (blocks(origin, target, (struct point){wall0.x - 1, wall0.y - direction}, (struct point){2 * direction, 0})) return 0;
+			if (blocks(origin, target, (struct point){wall0.x - 1, wall0.y + wall1.y + direction}, (struct point){2 * direction, 0})) return 0;
 		}
 	}
 	return 1;
@@ -333,7 +344,7 @@ static int graph_attach(struct adjacency_list *restrict graph, size_t index, con
 		to = graph->list[node].location;
 		if (movable(from, to, obstacles))
 		{
-			distance = battlefield_distance(from, to);
+			distance = battlefield_distance(position_field(from), position_field(to));
 
 			neighbor = malloc(sizeof(*neighbor));
 			if (!neighbor) return ERROR_MEMORY;
@@ -403,6 +414,10 @@ static void graph_detach(struct adjacency_list *graph, size_t index)
 static void vertex_insert(struct adjacency_list *graph, const struct obstacle *restrict obstacle, int x, int y, unsigned char occupied[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH])
 {
 	struct adjacency *node;
+
+	// Don't add vertices that are outside the battlefield.
+	if ((x < 0) || (y < 0) || (x > 2 * BATTLEFIELD_WIDTH) || (y > 2 * BATTLEFIELD_HEIGHT))
+		return;
 
 	int field_x = x / 2;
 	int field_y = y / 2;
@@ -599,6 +614,7 @@ int path_reachable(const struct pawn *restrict pawn, struct adjacency_list *rest
 			{
 				struct point target = {x, y};
 				double distance = traverse_info[i].distance;
+
 				if ((distance < INFINITY) && movable(graph->list[i].location, field_position(target), obstacles))
 				{
 					distance += battlefield_distance(position_field(graph->list[i].location), target);
