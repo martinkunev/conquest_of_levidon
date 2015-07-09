@@ -239,8 +239,8 @@ static int blocks(struct point p0, struct point p1, struct point w0, struct poin
 
 		// Check if the line segments intersect.
 		// TODO is this right
-		if ((0 <= wm) && (wm <= cross) && (0 <= pm) && (pm <= cross))
-		//if ((0 < wm) && (wm < cross) && (0 <= pm) && (pm <= cross))
+		//if ((0 <= wm) && (wm <= cross) && (0 <= pm) && (pm <= cross))
+		if ((0 < wm) && (wm < cross) && (0 <= pm) && (pm <= cross))
 			return 1;
 	}
 	// TODO what if the vectors are collinear: (q0 - p0) x p1 == 0
@@ -269,10 +269,23 @@ static int movable(struct point origin, struct point target, const struct obstac
 
 		// Make sure the whole pawn can pass beside the wall.
 		// TODO find a better solution for this
-		if (blocks(origin, (struct point){target.x - 1, target.y - 1}, wall0, wall1)) return 0;
-		if (blocks(origin, (struct point){target.x - 1, target.y + 1}, wall0, wall1)) return 0;
-		if (blocks(origin, (struct point){target.x + 1, target.y - 1}, wall0, wall1)) return 0;
-		if (blocks(origin, (struct point){target.x + 1, target.y + 1}, wall0, wall1)) return 0;
+		if (wall0.x != wall1.x) // horizontal wall
+		{
+			int direction = sign(wall1.x - wall0.x);
+			if (blocks(origin, target, (struct point){wall0.x - direction, wall0.y - 1}, (struct point){wall1.x + direction, wall1.y - 1})) return 0;
+			if (blocks(origin, target, (struct point){wall0.x - direction, wall0.y + 1}, (struct point){wall1.x + direction, wall1.y + 1})) return 0;
+			if (blocks(origin, target, (struct point){wall0.x - direction, wall0.y - 1}, (struct point){wall0.x - direction, wall1.y + 1})) return 0;
+			if (blocks(origin, target, (struct point){wall1.x + direction, wall0.y - 1}, (struct point){wall1.x + direction, wall1.y + 1})) return 0;
+		}
+		else
+		{
+			// assert(wall0.y != wall1.y);
+			int direction = sign(wall1.y - wall0.y);
+			if (blocks(origin, target, (struct point){wall0.x - 1, wall0.y - direction}, (struct point){wall1.x - 1, wall1.y + direction})) return 0;
+			if (blocks(origin, target, (struct point){wall0.x + 1, wall0.y - direction}, (struct point){wall1.x + 1, wall1.y + direction})) return 0;
+			if (blocks(origin, target, (struct point){wall0.x - 1, wall0.y - direction}, (struct point){wall0.x + 1, wall0.y - direction})) return 0;
+			if (blocks(origin, target, (struct point){wall1.x - 1, wall1.y + direction}, (struct point){wall1.x + 1, wall1.y + direction})) return 0;
+		}
 	}
 	return 1;
 }
@@ -547,7 +560,7 @@ int path_reachable(const struct pawn *restrict pawn, struct adjacency_list *rest
 		traverse_info[i].distance = INFINITY;
 		traverse_info[i].origin = 0;
 	}
-	traverse_info[vertex_origin].distance = (pawn->moves[pawn->moves_count - 1].time * pawn->troop->unit->speed);
+	traverse_info[vertex_origin].distance = (pawn->moves[pawn->moves_count - 1].time * pawn->troop->unit->speed); // TODO this is ugly
 	traverse_info[vertex_origin].origin = 0;
 
 	// Find the shortest path to each vertex using Dijkstra's algorithm.
@@ -585,10 +598,10 @@ int path_reachable(const struct pawn *restrict pawn, struct adjacency_list *rest
 			for(i = 0; i < graph->count; ++i)
 			{
 				struct point target = {x, y};
-				if (movable(graph->list[i].location, field_position(target), obstacles))
+				double distance = traverse_info[i].distance;
+				if ((distance < INFINITY) && movable(graph->list[i].location, field_position(target), obstacles))
 				{
-					struct point field = position_field(graph->list[i].location);
-					double distance = traverse_info[i].distance + battlefield_distance(field, target);
+					distance += battlefield_distance(position_field(graph->list[i].location), target);
 					if (distance < reachable[y][x]) reachable[y][x] = distance;
 				}
 			}
@@ -688,7 +701,7 @@ int path_queue(struct pawn *restrict pawn, struct point target, struct adjacency
 		from = temp;
 	}
 
-	// Add the selected path points to move.
+	// Add the selected path points to the movement queue.
 	next = traverse_info + vertex_origin;
 	while (next = next->origin)
 	{
