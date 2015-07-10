@@ -9,6 +9,8 @@
 #include "interface_menu.h"
 #include "menu.h"
 
+// TODO display long filenames properly
+
 extern Display *display;
 extern GLXDrawable drawable;
 
@@ -40,6 +42,8 @@ void if_menu(const void *argument, const struct game *game)
 			display_string(state->worlds->names[i]->data, state->worlds->names[i]->size, object_group[Worlds].left, object_group[Worlds].top + (object_group[Worlds].height - font12.height) / 2, &font12, White);
 		}
 	}
+
+	display_string(state->filename, state->filename_size, object_group[Worlds].left, object_group[Worlds].bottom, &font12, White);
 
 	glFlush();
 	glXSwapBuffers(display, drawable);

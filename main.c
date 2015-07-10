@@ -370,7 +370,7 @@ int main(int argc, char *argv[])
 	int winner;
 	int status;
 
-	status = input_menu(&game);
+	status = input_load(&game);
 	if (status < 0)
 	{
 		// TODO

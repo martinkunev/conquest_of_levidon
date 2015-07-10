@@ -6,6 +6,7 @@
 #include "battle.h"
 #include "input.h"
 #include "input_map.h"
+#include "input_menu.h"
 #include "display.h"
 
 static int input_turn(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
@@ -22,6 +23,10 @@ static int input_turn(int code, unsigned x, unsigned y, uint16_t modifiers, cons
 		}
 	default:
 		return INPUT_IGNORE;
+
+	case 's':
+		input_save(game); // TODO error check
+		return 0;
 
 	case 'q':
 		return INPUT_TERMINATE;

@@ -1,5 +1,6 @@
 #include "types.h"
 #include "base.h"
+#include "format.h"
 #include "map.h"
 #include "input.h"
 #include "input_menu.h"
@@ -8,17 +9,22 @@
 #include "interface_menu.h"
 #include "menu.h"
 
+// TODO handle long filenames properly
+
 extern unsigned SCREEN_WIDTH, SCREEN_HEIGHT;
 
 static int input_none(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
 {
 	struct state *state = argument;
 
-	// TODO support keyboard for world selection
+	// TODO allow entering filename
+	// TODO support arrows for world selection
 
 	switch (code)
 	{
 	default:
+		state->filename[0] = 0;
+		state->filename_size = 0;
 		state->world = -1;
 		return 0;
 
@@ -26,7 +32,7 @@ static int input_none(int code, unsigned x, unsigned y, uint16_t modifiers, cons
 		if (state->world >= 0) return INPUT_DONE;
 		else return 0;
 
-	case 'q': // surrender
+	case ((255 << 8) | 27): // escape
 		return INPUT_TERMINATE;
 	}
 }
@@ -47,7 +53,10 @@ static int input_world(int code, unsigned x, unsigned y, uint16_t modifiers, con
 
 	if (code == EVENT_MOUSE_LEFT)
 	{
+		const bytes_t *filename = state->worlds->names[index];
 		state->world = index;
+		*format_bytes(state->filename, filename->data, filename->size) = 0; // TODO buffer overflow
+		state->filename_size = filename->size;
 		return 0;
 	}
 
@@ -56,6 +65,8 @@ static int input_world(int code, unsigned x, unsigned y, uint16_t modifiers, con
 reset:
 	if (state->world >= 0)
 	{
+		state->filename[0] = 0;
+		state->filename_size = 0;
 		state->world = -1;
 		return 0;
 	}
@@ -63,10 +74,11 @@ reset:
 }
 
 #define DIRECTORY_WORLDS "/home/martin/dev/medieval/worlds/"
+#define DIRECTORY_SAVE "/home/martin/dev/medieval/save/"
 
 //#define WORLD_DEFAULT "worlds/balkans"
 
-int input_menu(struct game *restrict game)
+int input_load(struct game *restrict game)
 {
 	struct area areas[] = {
 		{
@@ -95,6 +107,9 @@ int input_menu(struct game *restrict game)
 
 	state.world = -1; // TODO select some world by default (maybe the newest for saves and the oldest for other worlds)
 
+	state.filename[0] = 0;
+	state.filename_size = 0;
+
 	int status = input_local(areas, sizeof(areas) / sizeof(*areas), if_menu, game, &state);
 	if (status) return status;
 
@@ -102,5 +117,43 @@ int input_menu(struct game *restrict game)
 
 	const bytes_t *world = state.worlds->names[state.world];
 
-	return menu_world_open(DIRECTORY_WORLDS, sizeof(DIRECTORY_WORLDS) - 1, world->data, world->size, game);
+	return menu_load(DIRECTORY_WORLDS, sizeof(DIRECTORY_WORLDS) - 1, world->data, world->size, game);
+}
+
+int input_save(const struct game *restrict game)
+{
+	struct area areas[] = {
+		{
+			.left = 0,
+			.right = SCREEN_WIDTH - 1,
+			.top = 0,
+			.bottom = SCREEN_HEIGHT - 1,
+			.callback = input_none
+		},
+		{
+			.left = object_group[Worlds].left,
+			.right = object_group[Worlds].right,
+			.top = object_group[Worlds].top,
+			.bottom = object_group[Worlds].bottom,
+			.callback = input_world
+		},
+	};
+
+	// TODO getcwd
+
+	struct state state;
+
+	state.worlds = menu_worlds(DIRECTORY_SAVE, sizeof(DIRECTORY_SAVE) - 1);
+	if (!state.worlds) return -1; // TODO this could be several different errors
+
+	state.world = -1;
+
+	// TODO ? generate some name
+	state.filename[0] = 0;
+	state.filename_size = 0;
+
+	int status = input_local(areas, sizeof(areas) / sizeof(*areas), if_menu, game, &state);
+	if (status) return status;
+
+	return menu_save(DIRECTORY_SAVE, sizeof(DIRECTORY_SAVE) - 1, state.filename, state.filename_size, game);
 }

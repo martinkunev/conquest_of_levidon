@@ -100,7 +100,15 @@ error:
 	return 0;
 }
 
-int menu_world_open(const unsigned char *restrict location, size_t location_size, const unsigned char *restrict filename, size_t filename_size, struct game *restrict game)
+static unsigned char *path_cat(const unsigned char *restrict location, size_t location_size, const unsigned char *restrict filename, size_t filename_size)
+{
+	unsigned char *filepath = malloc(location_size + filename_size + 1);
+	if (!filepath) return 0;
+	*format_bytes(format_bytes(filepath, location, location_size), filename, filename_size) = 0;
+	return filepath;
+}
+
+int menu_load(const unsigned char *restrict location, size_t location_size, const unsigned char *restrict filename, size_t filename_size, struct game *restrict game)
 {
 	int file;
 	struct stat info;
@@ -108,10 +116,8 @@ int menu_world_open(const unsigned char *restrict location, size_t location_size
 	int success;
 	union json *json;
 
-	// Generate file path.
-	unsigned char *filepath = malloc(location_size + filename_size + 1);
+	unsigned char *filepath = path_cat(location, location_size, filename, filename_size);
 	if (!filepath) return ERROR_MEMORY;
-	*format_bytes(format_bytes(filepath, location, location_size), filename, filename_size) = 0;
 
 	file = open(filepath, O_RDONLY);
 	free(filepath);
@@ -133,5 +139,62 @@ int menu_world_open(const unsigned char *restrict location, size_t location_size
 	json_free(json);
 	if (!success) return ERROR_INPUT;
 
+	return 0;
+}
+
+int menu_save(const unsigned char *restrict location, size_t location_size, const unsigned char *restrict filename, size_t filename_size, const struct game *restrict game)
+{
+	int file;
+	union json *json;
+	unsigned char *buffer;
+	size_t size, progress;
+	ssize_t written;
+
+	json = world_save(game);
+	if (!json) return ERROR_MEMORY;
+
+	size = json_size(json);
+	buffer = malloc(size);
+	if (!buffer)
+	{
+		json_free(json);
+		return ERROR_MEMORY;
+	}
+
+	json_dump(buffer, json);
+	json_free(json);
+
+	unsigned char *filepath = path_cat(location, location_size, filename, filename_size);
+	if (!filepath)
+	{
+		free(buffer);
+		return ERROR_MEMORY;
+	}
+
+	file = creat(filepath, 0644);
+	if (file < 0)
+	{
+		free(filepath);
+		free(buffer);
+		return -1;
+	}
+
+	// Write the serialized world into the file.
+	for(progress = 0; progress < size; progress += written)
+	{
+		written = write(file, buffer + progress, size - progress);
+		if (written < 0)
+		{
+			unlink(filepath);
+			close(file);
+			free(filepath);
+			free(buffer);
+			return -1;
+		}
+	}
+
+	close(file);
+	free(filepath);
+	free(buffer);
 	return 0;
 }
