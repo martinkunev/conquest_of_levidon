@@ -247,13 +247,13 @@ static void if_editor(const void *argument, const struct game *game)
 	{
 		struct point point = state->points.data[i].point;
 		draw_rectangle(point.x - 3, point.y - 3, 7, 7, Black);
-		display_rectangle(point.x - 2, point.y - 2, 5, 5, Ally);
+		fill_rectangle(point.x - 2, point.y - 2, 5, 5, Ally);
 	}
 	for(; i < state->points.count; ++i)
 	{
 		struct point point = state->points.data[i].point;
 		draw_rectangle(point.x - 3, point.y - 3, 7, 7, Black);
-		display_rectangle(point.x - 2, point.y - 2, 5, 5, Enemy);
+		fill_rectangle(point.x - 2, point.y - 2, 5, 5, Enemy);
 	}
 
 	glFlush();

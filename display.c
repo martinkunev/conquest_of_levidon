@@ -219,7 +219,7 @@ void if_load_images(void)
 
 static void display_troop(size_t unit, unsigned x, unsigned y, enum color color, enum color text, unsigned count)
 {
-	display_rectangle(x, y, FIELD_SIZE, FIELD_SIZE, color);
+	fill_rectangle(x, y, FIELD_SIZE, FIELD_SIZE, color);
 	image_draw(&image_units[unit], x, y);
 
 	if (count)
@@ -286,7 +286,7 @@ static void show_progress(unsigned current, unsigned total, unsigned x, unsigned
 
 		glEnd();
 	}
-	else display_rectangle(x, y, width, height, Progress);
+	else fill_rectangle(x, y, width, height, Progress);
 }
 
 // TODO write this better
@@ -374,10 +374,10 @@ static void if_battlefield(unsigned char player, const struct game *game)
 	display_image(&image_terrain[0], BATTLE_X - 8, BATTLE_Y - 8, BATTLEFIELD_WIDTH * FIELD_SIZE + 16, BATTLEFIELD_HEIGHT * FIELD_SIZE + 16);
 
 	// Draw rectangle with current player's color.
-	display_rectangle(CTRL_X, CTRL_Y, 256, 16, Player + player);
+	fill_rectangle(CTRL_X, CTRL_Y, 256, 16, Player + player);
 
 	// Draw the control section in gray.
-	display_rectangle(CTRL_X, CTRL_Y + CTRL_MARGIN, CTRL_WIDTH, CTRL_HEIGHT - CTRL_MARGIN, Gray);
+	fill_rectangle(CTRL_X, CTRL_Y + CTRL_MARGIN, CTRL_WIDTH, CTRL_HEIGHT - CTRL_MARGIN, Gray);
 }
 
 void if_formation(const void *argument, const struct game *game)
@@ -427,10 +427,10 @@ void if_formation(const void *argument, const struct game *game)
 			// Display at which fields the pawn can be placed.
 			for(j = 0; j < state->reachable_count; ++j)
 				if (!battle->field[state->reachable[j].y][state->reachable[j].x].pawn)
-					display_rectangle(BATTLE_X + state->reachable[j].x * object_group[Battlefield].width, BATTLE_Y + state->reachable[j].y * object_group[Battlefield].height, object_group[Battlefield].width, object_group[Battlefield].height, FieldReachable);
+					fill_rectangle(BATTLE_X + state->reachable[j].x * object_group[Battlefield].width, BATTLE_Y + state->reachable[j].y * object_group[Battlefield].height, object_group[Battlefield].width, object_group[Battlefield].height, FieldReachable);
 
 			// Display the selected pawn in the control section.
-			display_rectangle(CTRL_X, CTRL_Y + CTRL_MARGIN, FIELD_SIZE + MARGIN * 2, FIELD_SIZE + font12.height + MARGIN * 2, Self);
+			fill_rectangle(CTRL_X, CTRL_Y + CTRL_MARGIN, FIELD_SIZE + MARGIN * 2, FIELD_SIZE + font12.height + MARGIN * 2, Self);
 			display_troop(troop->unit->index, CTRL_X + MARGIN, CTRL_Y + CTRL_MARGIN + MARGIN, Player + troop->owner, Black, troop->count);
 		}
 		else
@@ -444,7 +444,7 @@ void if_formation(const void *argument, const struct game *game)
 	// Display hovered field in color.
 	// TODO this is buggy
 	/*if (!point_eq(state->hover, POINT_NONE))
-		display_rectangle(BATTLE_X + state->hover.x * object_group[Battlefield].width, BATTLE_Y + state->hover.y * object_group[Battlefield].height, object_group[Battlefield].width, object_group[Battlefield].height, Hover);*/
+		fill_rectangle(BATTLE_X + state->hover.x * object_group[Battlefield].width, BATTLE_Y + state->hover.y * object_group[Battlefield].height, object_group[Battlefield].width, object_group[Battlefield].height, Hover);*/
 
 	glFlush();
 	glXSwapBuffers(display, drawable);
@@ -466,7 +466,7 @@ static void show_health(const struct pawn *pawn, unsigned x, unsigned y)
 
 	// HEALTH_BAR * left / total
 	// HEALTH_BAR * total / total == HEALTH_BAR
-	//display_rectangle(CTRL_X, CTRL_Y + CTRL_MARGIN, FIELD_SIZE + MARGIN * 2, FIELD_SIZE + font12.height + MARGIN * 2, color);
+	//fill_rectangle(CTRL_X, CTRL_Y + CTRL_MARGIN, FIELD_SIZE + MARGIN * 2, FIELD_SIZE + font12.height + MARGIN * 2, color);
 	//
 }
 
@@ -566,7 +566,7 @@ void if_battle(const void *argument, const struct game *game)
 	// Display hovered field in color.
 	// TODO this is buggy
 	/*if (!point_eq(state->hover, POINT_NONE))
-		display_rectangle(BATTLE_X + state->hover.x * object_group[Battlefield].width, BATTLE_Y + state->hover.y * object_group[Battlefield].height, object_group[Battlefield].width, object_group[Battlefield].height, Hover);*/
+		fill_rectangle(BATTLE_X + state->hover.x * object_group[Battlefield].width, BATTLE_Y + state->hover.y * object_group[Battlefield].height, object_group[Battlefield].width, object_group[Battlefield].height, Hover);*/
 
 	// Display information about the selected pawn or field (or all pawns if nothing is selected).
 	if (pawn = state->pawn)
@@ -580,7 +580,7 @@ void if_battle(const void *argument, const struct game *game)
 		if (pawn->troop->owner == state->player) color = Self;
 		else if (allies(game, state->player, pawn->troop->owner)) color = Ally;
 		else color = Enemy;
-		display_rectangle(CTRL_X, CTRL_Y + CTRL_MARGIN, FIELD_SIZE + MARGIN * 2, FIELD_SIZE + font12.height + MARGIN * 2, color);
+		fill_rectangle(CTRL_X, CTRL_Y + CTRL_MARGIN, FIELD_SIZE + MARGIN * 2, FIELD_SIZE + font12.height + MARGIN * 2, color);
 		display_troop(pawn->troop->unit->index, CTRL_X + MARGIN, CTRL_Y + CTRL_MARGIN + MARGIN, Player + pawn->troop->owner, Black, pawn->troop->count);
 
 		show_health(pawn, CTRL_X, CTRL_Y + CTRL_MARGIN + FIELD_SIZE + font12.height + MARGIN * 2 + MARGIN);
@@ -595,7 +595,7 @@ void if_battle(const void *argument, const struct game *game)
 				for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
 					for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
 						if ((state->reachable[y][x] <= pawn->troop->unit->speed) && !battle->field[y][x].pawn)
-							display_rectangle(BATTLE_X + x * object_group[Battlefield].width, BATTLE_Y + y * object_group[Battlefield].height, object_group[Battlefield].width, object_group[Battlefield].height, FieldReachable);
+							fill_rectangle(BATTLE_X + x * object_group[Battlefield].width, BATTLE_Y + y * object_group[Battlefield].height, object_group[Battlefield].width, object_group[Battlefield].height, FieldReachable);
 			}
 		}
 	}
@@ -748,13 +748,13 @@ static void tooltip_cost(const char *restrict name, size_t name_length, const st
 
 static inline void show_flag(unsigned x, unsigned y, unsigned player)
 {
-	display_rectangle(x + 4, y + 4, 24, 12, Player + player);
+	fill_rectangle(x + 4, y + 4, 24, 12, Player + player);
 	image_draw(&image_flag, x, y);
 }
 
 static inline void show_flag_small(unsigned x, unsigned y, unsigned player)
 {
-	display_rectangle(x + 2, y + 2, 12, 6, Player + player);
+	fill_rectangle(x + 2, y + 2, 12, 6, Player + player);
 	image_draw(&image_flag_small, x, y);
 }
 
@@ -796,7 +796,7 @@ static void if_map_region(const struct region *region, const struct state_map *s
 
 			if (troop->owner == state->player)
 			{
-				if (!self_count) display_rectangle(PANEL_X, object_group[TroopSelf].top - 2, PANEL_WIDTH, 2 + object_group[TroopSelf].height + 12 + 2, Self);
+				if (!self_count) fill_rectangle(PANEL_X, object_group[TroopSelf].top - 2, PANEL_WIDTH, 2 + object_group[TroopSelf].height + 12 + 2, Self);
 				x = self_count++;
 				object = TroopSelf;
 				offset = state->self_offset;
@@ -804,7 +804,7 @@ static void if_map_region(const struct region *region, const struct state_map *s
 			}
 			else if (game->players[troop->owner].alliance == state_alliance)
 			{
-				if (!other_count) display_rectangle(PANEL_X, object_group[TroopOther].top - 2, PANEL_WIDTH, 2 + object_group[TroopOther].height + 12 + 2, Ally);
+				if (!other_count) fill_rectangle(PANEL_X, object_group[TroopOther].top - 2, PANEL_WIDTH, 2 + object_group[TroopOther].height + 12 + 2, Ally);
 				x = other_count++;
 				object = TroopOther;
 				offset = state->other_offset;
@@ -812,7 +812,7 @@ static void if_map_region(const struct region *region, const struct state_map *s
 			}
 			else if (region->garrison.owner == state->player)
 			{
-				if (!other_count) display_rectangle(PANEL_X, object_group[TroopOther].top - 2, PANEL_WIDTH, 2 + object_group[TroopOther].height + 12 + 2, Enemy);
+				if (!other_count) fill_rectangle(PANEL_X, object_group[TroopOther].top - 2, PANEL_WIDTH, 2 + object_group[TroopOther].height + 12 + 2, Enemy);
 				x = other_count++;
 				object = TroopOther;
 				offset = state->other_offset;
@@ -849,7 +849,7 @@ static void if_map_region(const struct region *region, const struct state_map *s
 			{
 				image_draw(&image_garrison[garrison->index], GARRISON_X, GARRISON_Y);
 
-				display_rectangle(GARRISON_X + 4, GARRISON_Y - GARRISON_MARGIN + 4, 24, 12, Player + region->garrison.owner);
+				fill_rectangle(GARRISON_X + 4, GARRISON_Y - GARRISON_MARGIN + 4, 24, 12, Player + region->garrison.owner);
 				image_draw(&image_flag, GARRISON_X, GARRISON_Y - GARRISON_MARGIN);
 
 				i = 0;
@@ -903,7 +903,7 @@ static void if_map_region(const struct region *region, const struct state_map *s
 				display_troop(region->train[index]->index, position.x, position.y, White, 0, 0);
 				show_progress((index ? 0 : region->train_progress), region->train[0]->time, position.x, position.y, object_group[Dismiss].width, object_group[Dismiss].height);
 			}
-			else display_rectangle(position.x, position.y, object_group[Dismiss].width, object_group[Dismiss].height, Black);
+			else fill_rectangle(position.x, position.y, object_group[Dismiss].width, object_group[Dismiss].height, Black);
 		}
 
 		// Display units available for training.
@@ -954,7 +954,7 @@ void if_map(const void *argument, const struct game *game)
 
 	// TODO remove this color display box
 	/*for(i = 0; i < PLAYERS_LIMIT; ++i)
-		display_rectangle(PANEL_X + (i % 4) * 32, PANEL_Y + 300 + (i / 4) * 32, 32, 32, Player + i);*/
+		fill_rectangle(PANEL_X + (i % 4) * 32, PANEL_Y + 300 + (i / 4) * 32, 32, 32, Player + i);*/
 
 	// Map
 

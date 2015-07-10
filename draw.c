@@ -98,7 +98,7 @@ static int is_ear(const struct polygon_draw *prev, const struct polygon_draw *cu
 	return Ear;
 }
 
-void display_rectangle(unsigned x, unsigned y, unsigned width, unsigned height, enum color color)
+void fill_rectangle(unsigned x, unsigned y, unsigned width, unsigned height, enum color color)
 {
 	glColor4ubv(display_colors[color]);
 

@@ -1,20 +1,18 @@
-#include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/mman.h>
-#include <sys/stat.h>
 #include <time.h>
 #include <unistd.h>
 
 #include "types.h"
-#include "json.h"
 #include "map.h"
+#include "json.h"
 #include "world.h"
 #include "pathfinding.h"
 #include "battle.h"
 #include "movement.h"
 #include "combat.h"
 #include "input.h"
+#include "input_menu.h"
 #include "input_map.h"
 #include "input_battle.h"
 #include "interface.h"
@@ -24,8 +22,6 @@
 
 #define WINNER_NOBODY -1
 #define WINNER_BATTLE -2
-
-#define WORLD_DEFAULT "worlds/balkans"
 
 static int play_battle(struct game *restrict game, struct battle *restrict battle, unsigned char defender)
 {
@@ -370,44 +366,14 @@ static int play(struct game *restrict game)
 
 int main(int argc, char *argv[])
 {
-	const char *world;
-
-	struct stat info;
-	int file;
-	char *buffer;
-	union json *json;
-	int success;
-
 	struct game game;
 	int winner;
+	int status;
 
-	if (argc < 2) world = WORLD_DEFAULT;
-	else world = argv[1];
-
-	file = open(world, O_RDONLY);
-	if (file < 0) return -1;
-	if (fstat(file, &info) < 0)
+	status = input_menu(&game);
+	if (status < 0)
 	{
-		close(file);
-		return -1;
-	}
-	buffer = mmap(0, info.st_size, PROT_READ, MAP_SHARED, file, 0);
-	close(file);
-	if (buffer == MAP_FAILED) return -1;
-
-	json = json_parse(buffer, info.st_size);
-	munmap(buffer, info.st_size);
-
-	if (!json)
-	{
-		write(2, S("Invalid map format\n"));
-		return -1;
-	}
-	success = !world_load(json, &game);
-	json_free(json);
-	if (!success)
-	{
-		write(2, S("Invalid map data\n"));
+		// TODO
 		return -1;
 	}
 
