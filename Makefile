@@ -2,7 +2,7 @@ export CC=gcc
 export CFLAGS=-std=c99 -pthread -O2 -fstrict-aliasing -I/usr/X11/include -D_BSD_SOURCE -D_DEFAULT_SOURCE -pedantic -Werror -Wstrict-aliasing -Wchar-subscripts -Wimplicit -Wsequence
 export LDFLAGS=-pthread -L/usr/X11/lib -lm -lpng -lGL -lX11 -lxcb -lX11-xcb -lOSMesa
 
-O=main.o world.o map.o resources.o battle.o movement.o combat.o pathfinding.o interface.o display.o input.o input_map.o input_battle.o draw.o image.o format.o json.o
+O=main.o menu.o world.o map.o resources.o battle.o movement.o combat.o pathfinding.o interface.o interface_menu.o display.o input.o input_menu.o input_map.o input_battle.o draw.o image.o format.o json.o
 
 all: $(O)
 	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o map

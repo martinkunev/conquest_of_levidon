@@ -71,11 +71,15 @@ struct files *menu_worlds(const char *restrict path, size_t path_size)
 		name_length = strlen(entry->d_name);
 #endif
 
+		// TODO don't allocate memory for the path
+
 		name = malloc(offsetof(bytes_t, data) + path_size + name_length + 1);
 		if (!name) goto error;
-		name->size = path_size + name_length;
+		//name->size = path_size + name_length;
+		name->size = name_length;
 
-		*format_bytes(format_bytes(name->data, path, path_size), entry->d_name, name_length) = 0;
+		//*format_bytes(format_bytes(name->data, path, path_size), entry->d_name, name_length) = 0;
+		*format_bytes(name->data, entry->d_name, name_length) = 0;
 
 		list->names[list->count++] = name;
 	}

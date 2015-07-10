@@ -451,6 +451,7 @@ static union json *world_save_troops(const struct troop *troop)
 		troops = json_array_insert(troops, t);
 		troop = troop->_next;
 	}
+	return troops;
 }
 
 union json *world_save(const struct game *restrict game)
@@ -510,9 +511,17 @@ union json *world_save(const struct game *restrict game)
 		region = json_object_insert(region, S("train"), train);
 		region = json_object_insert(region, S("train_progress"), json_integer(game->regions[i].train_progress));
 
-		region = json_object_insert(region, S("built"), json_integer(game->regions[i].built));
-		region = json_object_insert(region, S("construct"), json_integer(game->regions[i].construct));
-		region = json_object_insert(region, S("build_progress"), json_integer(game->regions[i].build_progress));
+		union json *built = json_array();
+		for(j = 0; j < buildings_count; ++j)
+			if (game->regions[i].built & (1 << j))
+				built = json_array_insert(built, json_string(buildings[j].name, buildings[j].name_length));
+		region = json_object_insert(region, S("built"), built);
+		if (game->regions[i].construct >= 0)
+		{
+			const struct building *restrict building = &buildings[game->regions[i].construct];
+			region = json_object_insert(region, S("construct"), json_string(building->name, building->name_length));
+			region = json_object_insert(region, S("build_progress"), json_integer(game->regions[i].build_progress));
+		}
 
 		region = json_object_insert(region, S("troops"), world_save_troops(game->regions[i].troops));
 
@@ -526,7 +535,7 @@ union json *world_save(const struct game *restrict game)
 			region = json_object_insert(region, S("garrison"), garrison);
 		}
 
-		json = json_object_insert(json, game->regions[i].name, game->regions[i].name_length, region);
+		regions = json_object_insert(regions, game->regions[i].name, game->regions[i].name_length, region);
 	}
 	json = json_object_insert(json, S("regions"), regions);
 

@@ -370,17 +370,19 @@ int main(int argc, char *argv[])
 	int winner;
 	int status;
 
+	srandom(time(0));
+
+	if_init();
+	if_load_images();
+
+	if_display();
+
 	status = input_load(&game);
 	if (status < 0)
 	{
 		// TODO
 		return -1;
 	}
-
-	srandom(time(0));
-
-	if_init();
-	if_load_images();
 
 	// Initialize region input recognition.
 	if_storage_init(&game, MAP_WIDTH, MAP_HEIGHT);

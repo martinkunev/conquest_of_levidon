@@ -39,7 +39,7 @@ void if_menu(const void *argument, const struct game *game)
 		}
 		else
 		{
-			display_string(state->worlds->names[i]->data, state->worlds->names[i]->size, object_group[Worlds].left, object_group[Worlds].top + (object_group[Worlds].height - font12.height) / 2, &font12, White);
+			display_string(state->worlds->names[i]->data, state->worlds->names[i]->size, position.x, position.y + (object_group[Worlds].height - font12.height) / 2, &font12, White);
 		}
 	}
 

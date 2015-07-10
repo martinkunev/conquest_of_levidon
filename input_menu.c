@@ -34,6 +34,9 @@ static int input_none(int code, unsigned x, unsigned y, uint16_t modifiers, cons
 
 	case ((255 << 8) | 27): // escape
 		return INPUT_TERMINATE;
+
+	case EVENT_MOTION:
+		return INPUT_NOTME;
 	}
 }
 
@@ -43,6 +46,7 @@ static int input_world(int code, unsigned x, unsigned y, uint16_t modifiers, con
 
 	ssize_t index;
 
+	if (code == EVENT_MOTION) return INPUT_NOTME;
 	if (code >= 0) return INPUT_NOTME; // ignore keyboard events
 
 	// Find which world was clicked.
