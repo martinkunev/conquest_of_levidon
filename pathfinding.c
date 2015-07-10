@@ -50,15 +50,6 @@ static inline struct point field_position(struct point field)
 }
 static inline struct point position_field(struct point position)
 {
-	/*if (position.x == -1)
-	{
-		if (position.y == -1) return (struct point){-1, -1};
-		else return (struct point){-1, position.y / 2};
-	}
-	else if (position.y == -1)
-	{
-		return (struct point){position.x / 2, -1};
-	}*/
 	return (struct point){position.x / 2, position.y / 2};
 }
 
@@ -247,8 +238,6 @@ static int blocks(struct point p0, struct point p1, struct point w0, struct poin
 		}
 
 		// Check if the line segments intersect.
-		// TODO is this right
-		//if ((0 <= wm) && (wm <= cross) && (0 <= pm) && (pm <= cross))
 		if ((0 < wm) && (wm < cross) && (0 <= pm) && (pm <= cross))
 			return 1;
 	}
@@ -282,8 +271,7 @@ static int movable(struct point origin, struct point target, const struct obstac
 		{
 			// assert(!wall1.y);
 			int direction = sign(wall1.x);
-			if (blocks(origin, target, (struct point){wall0.x - direction, wall0.y - 1}, (struct point){wall1.x + 2 * direction, 0})) return 0;
-			if (blocks(origin, target, (struct point){wall0.x - direction, wall0.y + 1}, (struct point){wall1.x + 2 * direction, 0})) return 0;
+			if (blocks(origin, target, (struct point){wall0.x - direction, wall0.y}, (struct point){wall1.x + 2 * direction, 0})) return 0;
 			if (blocks(origin, target, (struct point){wall0.x - direction, wall0.y - 1}, (struct point){0, 2 * direction})) return 0;
 			if (blocks(origin, target, (struct point){wall0.x + wall1.x + direction, wall0.y - 1}, (struct point){0, 2 * direction})) return 0;
 		}
@@ -292,8 +280,7 @@ static int movable(struct point origin, struct point target, const struct obstac
 			// assert(wall1.y);
 			// assert(!wall1.x);
 			int direction = sign(wall1.y);
-			if (blocks(origin, target, (struct point){wall0.x - 1, wall0.y - direction}, (struct point){0, wall1.y + 2 * direction})) return 0;
-			if (blocks(origin, target, (struct point){wall0.x + 1, wall0.y - direction}, (struct point){0, wall1.y + 2 * direction})) return 0;
+			if (blocks(origin, target, (struct point){wall0.x, wall0.y - direction}, (struct point){0, wall1.y + 2 * direction})) return 0;
 			if (blocks(origin, target, (struct point){wall0.x - 1, wall0.y - direction}, (struct point){2 * direction, 0})) return 0;
 			if (blocks(origin, target, (struct point){wall0.x - 1, wall0.y + wall1.y + direction}, (struct point){2 * direction, 0})) return 0;
 		}
@@ -604,7 +591,7 @@ int path_reachable(const struct pawn *restrict pawn, struct adjacency_list *rest
 
 	// Find which fields are visible from a graph vertex.
 	// Store the least distance to each visible field.
-	// TODO is this slow?
+	// TODO this is slow
 	for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
 	{
 		for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
