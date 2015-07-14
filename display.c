@@ -58,7 +58,8 @@ static GLuint map_renderbuffer;
 // TODO Create a struct that stores all the information about the battle (battlefield, players, etc.)
 struct battle *battle;
 
-static struct image image_move_destination, image_fight_destination, image_shoot_destination, image_selected, image_flag, image_flag_small, image_panel, image_construction;
+static struct image image_selected, image_assault, image_flag, image_flag_small, image_panel, image_construction;
+static struct image image_pawn_fight, image_pawn_assault, image_pawn_shoot;
 static struct image image_terrain[1];
 static struct image image_garrison[2]; // TODO this must be big enough for all garrison types
 static struct image image_map_garrison[2]; // TODO this must be big enough for all garrison types
@@ -134,14 +135,16 @@ void if_storage_term(void)
 
 void if_load_images(void)
 {
-	image_load_png(&image_move_destination, "img/move_destination.png", 0);
-	image_load_png(&image_fight_destination, "img/move_destination.png", 0);
-	image_load_png(&image_shoot_destination, "img/shoot_destination.png", 0);
 	image_load_png(&image_selected, "img/selected.png", 0);
+	image_load_png(&image_assault, "img/move_destination.png", 0);
 	image_load_png(&image_flag, "img/flag.png", 0);
 	image_load_png(&image_flag_small, "img/flag_small.png", 0);
 	image_load_png(&image_panel, "img/panel.png", 0);
 	image_load_png(&image_construction, "img/construction.png", 0);
+
+	image_load_png(&image_pawn_fight, "img/pawn_fight.png", 0);
+	image_load_png(&image_pawn_assault, "img/pawn_assault.png", 0);
+	image_load_png(&image_pawn_shoot, "img/pawn_shoot.png", 0);
 
 	image_load_png(&image_garrison[PALISADE], "img/garrison_palisade.png", 0);
 	image_load_png(&image_garrison[FORTRESS], "img/garrison_fortress.png", 0);
@@ -503,17 +506,17 @@ static void if_battle_pawn(const struct game *game, const struct state_battle *r
 
 	if (pawn->action == PAWN_SHOOT)
 	{
-		image_draw(&image_shoot_destination, BATTLE_X + pawn->target.field.x * FIELD_SIZE, BATTLE_Y + pawn->target.field.y * FIELD_SIZE);
+		image_draw(&image_pawn_shoot, BATTLE_X + pawn->target.field.x * FIELD_SIZE, BATTLE_Y + pawn->target.field.y * FIELD_SIZE);
 	}
 	else if (pawn->action == PAWN_FIGHT)
 	{
 		struct point target = pawn->target.pawn->moves[0].location;
-		image_draw(&image_fight_destination, BATTLE_X + target.x * FIELD_SIZE, BATTLE_Y + target.y * FIELD_SIZE);
+		image_draw(&image_pawn_fight, BATTLE_X + target.x * FIELD_SIZE, BATTLE_Y + target.y * FIELD_SIZE);
 	}
 	else if (pawn->action == PAWN_ASSAULT)
 	{
 		struct point target = pawn->target.field;
-		image_draw(&image_fight_destination, BATTLE_X + target.x * FIELD_SIZE, BATTLE_Y + target.y * FIELD_SIZE);
+		image_draw(&image_pawn_assault, BATTLE_X + target.x * FIELD_SIZE, BATTLE_Y + target.y * FIELD_SIZE);
 	}
 }
 
@@ -875,7 +878,7 @@ static void if_map_region(const struct region *region, const struct state_map *s
 				for(troop = region->garrison.troops; troop; troop = troop->_next)
 				{
 					struct point position = if_position(TroopGarrison, i);
-					image_draw(&image_move_destination, position.x, position.y);
+					image_draw(&image_assault, position.x, position.y);
 					i += 1;
 				}
 			}
