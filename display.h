@@ -1,5 +1,9 @@
+#define TABS_X 32
+#define TABS_Y 32
+#define TAB_PADDING 2
+
 #define WORLDS_X 32
-#define WORLDS_Y 32
+#define WORLDS_Y 56
 
 #define MAP_WIDTH 768
 #define MAP_HEIGHT 768
@@ -37,7 +41,7 @@
 #define GARRISON_Y (PANEL_Y + 160)
 #define GARRISON_MARGIN 24
 
-enum object {Worlds, Building, Train, Dismiss, TroopSelf, TroopOther, TroopGarrison, Battlefield};
+enum object {Worlds, WorldTabs, Building, Train, Dismiss, TroopSelf, TroopOther, TroopGarrison, Battlefield};
 
 // rows, columns, left, top, width, height, padding
 #define OBJECT_GROUP(r, c, l, t, w, h, p) \
@@ -67,6 +71,7 @@ static const struct object_group
 	unsigned padding;
 	unsigned count;
 } object_group[] = {
+	[WorldTabs] = OBJECT_GROUP(1, 3, TABS_X, TABS_Y, 80, 24, 0),
 	[Worlds] = OBJECT_GROUP(24, 1, WORLDS_X, WORLDS_Y, 240, 20, 0),
 	[Building] = OBJECT_GROUP(3, 5, PANEL_X + 1, PANEL_Y + 400, 48, 48, 1),
 	[Train] = OBJECT_GROUP(1, 5, PANEL_X + 1, PANEL_Y + 340, 32, 32, 1),

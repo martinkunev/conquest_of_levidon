@@ -93,6 +93,13 @@ error:
 	closedir(dir);
 	free(entry);
 
+	menu_free(list);
+
+	return 0;
+}
+
+void menu_free(struct files *list)
+{
 	if (list)
 	{
 		size_t i;
@@ -100,8 +107,6 @@ error:
 			free(list->names[i]);
 		free(list);
 	}
-
-	return 0;
 }
 
 static unsigned char *path_cat(const unsigned char *restrict location, size_t location_size, const unsigned char *restrict filename, size_t filename_size)
