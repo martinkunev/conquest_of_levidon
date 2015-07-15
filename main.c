@@ -287,20 +287,27 @@ static int play(struct game *restrict game)
 				}
 				else if (winner != game->players[region->owner].alliance)
 				{
-					// assert(slots);
-					owner_troop = random() % slots;
-					for(troop = region->troops; troop; troop = troop->_next)
+					if (winner == game->players[region->garrison.owner].alliance)
 					{
-						if (owner_troop) owner_troop -= 1;
-						else
+						region->owner = region->garrison.owner;
+					}
+					else
+					{
+						// assert(slots);
+						owner_troop = random() % slots;
+						for(troop = region->troops; troop; troop = troop->_next)
 						{
-							// Set new region owner.
-							region->owner = troop->owner;
-							region->garrison.siege = 0;
-							if (!region->garrison.troops) region->garrison.owner = troop->owner;
-							break;
+							if (owner_troop) owner_troop -= 1;
+							else
+							{
+								region->owner = troop->owner;
+								if (!region->garrison.troops) region->garrison.owner = troop->owner;
+								break;
+							}
 						}
 					}
+
+					region->garrison.siege = 0;
 
 					// Cancel all constructions and trainings.
 					region->construct = -1;

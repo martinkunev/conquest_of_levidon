@@ -52,7 +52,7 @@
 		"Thessaly": {
 			"owner": 1,
 			"garrison": {"troops": [["Peasant", 20, 1]]},
-			"built": ["Fortress"],
+			"built": ["Barracks", "Fortress"],
 			"neighbors": [null, "Thrace", "Macedonia", null, "Epirus", null, "Attica", null],
 			"location": [
 				[392, 463],
@@ -138,7 +138,7 @@
 		},
 		"Byzantium": {
 			"owner": 3,
-			"built": ["Sawmill", "Farm", "Barracks", "Watch tower"],
+			"built": ["Sawmill", "Farm", "Barracks", "Forge", "Watch tower"],
 			"neighbors": [null, null, null, "Zagore", "Thrace", null, null, null],
 			"location": [
 				[516, 391],

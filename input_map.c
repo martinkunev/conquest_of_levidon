@@ -333,7 +333,7 @@ static int input_troop(int code, unsigned x, unsigned y, uint16_t modifiers, con
 	if (!troop) goto reset; // no troops in this region
 
 	// Find which troop was clicked.
-	offset = if_index(Building, (struct point){x, y});
+	offset = if_index(TroopSelf, (struct point){x, y});
 	if (offset < 0) goto reset; // no troop clicked
 	offset += state->self_offset;
 
@@ -412,7 +412,7 @@ static int input_garrison(int code, unsigned x, unsigned y, uint16_t modifiers, 
 		if (!troop) return 0; // no troops in the garrison
 
 		// Find which troop was clicked.
-		index = if_index(Building, (struct point){x, y});
+		index = if_index(TroopGarrison, (struct point){x, y});
 		if (index < 0) return 0; // no troop clicked
 
 		// Find the clicked troop in the linked list.

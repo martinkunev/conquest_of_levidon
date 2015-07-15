@@ -65,9 +65,9 @@ static struct image image_garrison[2]; // TODO this must be big enough for all g
 static struct image image_map_garrison[2]; // TODO this must be big enough for all garrison types
 static struct image image_gold, image_food, image_wood, image_stone, image_iron, image_time;
 static struct image image_scroll_left, image_scroll_right;
-static struct image image_units[5]; // TODO the array must be enough to hold units_count units
-static struct image image_buildings[12]; // TODO the array must be big enough to hold buildings_count elements
-static struct image image_buildings_gray[12]; // TODO the array must be big enough to hold buildings_count elements
+static struct image image_units[6]; // TODO the array must be enough to hold units_count units
+static struct image image_buildings[13]; // TODO the array must be big enough to hold buildings_count elements
+static struct image image_buildings_gray[13]; // TODO the array must be big enough to hold buildings_count elements
 static struct image image_palisade[16], image_palisade_gate[2], image_fortress[16], image_fortress_gate[2];
 
 static uint8_t *format_sint(uint8_t *buffer, int64_t number)
@@ -136,7 +136,7 @@ void if_storage_term(void)
 void if_load_images(void)
 {
 	image_load_png(&image_selected, "img/selected.png", 0);
-	image_load_png(&image_assault, "img/move_destination.png", 0);
+	image_load_png(&image_assault, "img/assault.png", 0);
 	image_load_png(&image_flag, "img/flag.png", 0);
 	image_load_png(&image_flag_small, "img/flag_small.png", 0);
 	image_load_png(&image_panel, "img/panel.png", 0);
@@ -164,9 +164,10 @@ void if_load_images(void)
 
 	image_load_png(&image_units[0], "img/peasant.png", 0);
 	image_load_png(&image_units[1], "img/archer.png", 0);
-	image_load_png(&image_units[2], "img/pikeman.png", 0);
+	image_load_png(&image_units[2], "img/militia.png", 0);
 	image_load_png(&image_units[3], "img/horse_rider.png", 0);
 	image_load_png(&image_units[4], "img/battering_ram.png", 0);
+	image_load_png(&image_units[5], "img/pikeman.png", 0);
 
 	image_load_png(&image_buildings[0], "img/farm.png", 0);
 	image_load_png(&image_buildings[1], "img/irrigation.png", 0);
@@ -180,6 +181,7 @@ void if_load_images(void)
 	image_load_png(&image_buildings[9], "img/palisade.png", 0);
 	image_load_png(&image_buildings[10], "img/fortress.png", 0);
 	image_load_png(&image_buildings[11], "img/workshop.png", 0);
+	image_load_png(&image_buildings[12], "img/forge.png", 0);
 
 	image_load_png(&image_buildings_gray[0], "img/farm.png", 1);
 	image_load_png(&image_buildings_gray[1], "img/irrigation.png", 1);
@@ -193,6 +195,7 @@ void if_load_images(void)
 	image_load_png(&image_buildings_gray[9], "img/palisade.png", 1);
 	image_load_png(&image_buildings_gray[10], "img/fortress.png", 1);
 	image_load_png(&image_buildings_gray[11], "img/workshop.png", 1);
+	image_load_png(&image_buildings_gray[12], "img/forge.png", 1);
 
 	image_load_png(&image_terrain[0], "img/terrain_grass.png", 0);
 

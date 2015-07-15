@@ -29,7 +29,7 @@ const struct unit UNITS[] =
 	},
 	{
 		.index = 2, NAME("Militia"), .speed = 5, .health = 5, .armor = ARMOR_LEATHER,
-		.cost = {.gold = 1, .iron = 1}, .expense = {.food = 1}, .time = 1, .troops_count = 20, .requires = (1 << BuildingBarracks),
+		.cost = {.gold = 1, .wood = 1}, .expense = {.food = 1}, .time = 1, .troops_count = 20, .requires = (1 << BuildingBarracks),
 		.melee = {.weapon = WEAPON_CLEAVING, .damage = 2, .agility = 1.0},
 	},
 	{
@@ -41,6 +41,11 @@ const struct unit UNITS[] =
 		.index = 4, NAME("Battering Ram"), .speed = 3, .health = 80, .armor = ARMOR_WOODEN,
 		.cost = {.gold = 2, .wood = 5}, .expense = {.food = 2}, .time = 2, .troops_count = 1, .requires = (1 << BuildingWorkshop),
 		.melee = {.weapon = WEAPON_BLUNT, .damage = 50, .agility = 0.25},
+	},
+	{
+		.index = 5, NAME("Pikeman"), .speed = 5, .health = 6, .armor = ARMOR_CHAINMAIL,
+		.cost = {.gold = 1, .wood = 1, .iron = 1}, .expense = {.food = 1}, .time = 1, .troops_count = 20, .requires = (1 << BuildingForge),
+		.melee = {.weapon = WEAPON_CLEAVING, .damage = 3, .agility = 1.0},
 	},
 };
 const size_t UNITS_COUNT = sizeof(UNITS) / sizeof(*UNITS);
@@ -59,6 +64,7 @@ const struct building buildings[] =
 	[BuildingPalisade] = {NAME("Palisade"), .cost = {.gold = 10, .wood = 20}, .time = 4},
 	[BuildingFortress] = {NAME("Fortress"), .cost = {.gold = 20, .stone = 20}, .time = 8, .requires = (1 << BuildingPalisade)},
 	[BuildingWorkshop] = {NAME("Workshop"), .cost = {.gold = 8, .wood = 10}, .time = 5, .requires = (1 << BuildingSawmill)},
+	[BuildingForge] = {NAME("Forge"), .cost = {.gold = 4, .wood = 5, .stone = 5, .iron = 3}, .time = 4, .requires = (1 << BuildingBarracks)},
 };
 const size_t buildings_count = sizeof(buildings) / sizeof(*buildings);
 
