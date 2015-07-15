@@ -1,4 +1,5 @@
 #include <dirent.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <stdlib.h>
 #if !defined(_DIRENT_HAVE_D_NAMLEN)
@@ -30,8 +31,12 @@ struct files *menu_worlds(const char *restrict path, size_t path_size)
 	if (!entry) return 0;
 
 	dir = opendir(path);
-	if (!dir)
+	while (!dir)
 	{
+		// If the directory does not exist, try to create and open it.
+		if ((errno == ENOENT) && !mkdir(path, 0755) && (dir = opendir(path)))
+			break;
+
 		free(entry);
 		return 0;
 	}

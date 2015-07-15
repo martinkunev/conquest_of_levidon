@@ -114,6 +114,13 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 		if (point_eq(point, state->field))
 			return INPUT_IGNORE;
 
+		if (!battle->field[y][x].pawn && !battle->field[y][x].blockage)
+		{
+			state->field = POINT_NONE;
+			state->pawn = 0;
+			return 0;
+		}
+
 		// Set current field.
 		state->field = point;
 		state->pawn = battle->field[y][x].pawn;

@@ -286,7 +286,7 @@ int combat_order_assault(const struct game *restrict game, const struct battle *
 
 	const struct battlefield *restrict field = &battle->field[target.y][target.x];
 
-	if ((field->blockage != BLOCKAGE_OBSTACLE) || allies(game, fighter->troop->owner, field->owner))
+	if ((field->blockage != BLOCKAGE_OBSTACLE) || allies(game, fighter->troop->owner, field->owner)) // TODO the allies check works only for gates
 		return 0;
 
 	struct point fighter_field = fighter->moves[fighter->moves_count - 1].location;

@@ -101,8 +101,8 @@ static size_t pawn_position(const struct pawn *restrict pawn, double time_now, s
 
 	size_t index = movement_location(pawn, time_now, &real_x, &real_y);
 
-	location->x = real_x * 2;
-	location->y = real_y * 2;
+	location->x = real_x * 2 + 0.5;
+	location->y = real_y * 2 + 0.5;
 	return index;
 }
 
