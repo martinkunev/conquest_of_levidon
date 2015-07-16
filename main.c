@@ -3,6 +3,7 @@
 #include <time.h>
 #include <unistd.h>
 
+#include "base.h"
 #include "types.h"
 #include "map.h"
 #include "json.h"
@@ -17,6 +18,7 @@
 #include "input_battle.h"
 #include "interface.h"
 #include "display.h"
+#include "menu.h"
 
 #define S(s) s, sizeof(s) - 1
 
@@ -379,6 +381,8 @@ int main(int argc, char *argv[])
 
 	srandom(time(0));
 
+	menu_init();
+
 	if_init();
 	if_load_images();
 
@@ -405,6 +409,8 @@ int main(int argc, char *argv[])
 	if_term();
 
 	world_unload(&game);
+
+	menu_term();
 
 	return 0;
 }

@@ -9,33 +9,14 @@
 #include "interface_menu.h"
 #include "menu.h"
 
-#define DIRECTORY_SHARED "/share/medieval/worlds/"
-#define DIRECTORY_WORLDS "/.medieval/worlds/"
-#define DIRECTORY_SAVED "/.medieval/save/"
-
 // TODO handle long filenames properly
 
 extern unsigned SCREEN_WIDTH, SCREEN_HEIGHT;
 
-struct string
-{
-	size_t size;
-	const char *data;
-};
-#define string(s) sizeof(s) - 1, s
-
-// TODO these should be allocated dynamically
-static const struct string directories[] = {
-	string("/home/martin/dev/medieval/worlds/"),
-	string("/home/martin/.medieval/worlds/"),
-	string("/home/martin/.medieval/save/")
-};
-static const size_t directories_count = sizeof(directories) / sizeof(*directories);
-
 static int tab_select(struct state *restrict state, size_t index)
 {
 	// TODO is this behavior on error good?
-	struct files *worlds_new = menu_worlds(directories[index].data, directories[index].size);
+	struct files *worlds_new = menu_worlds(index);
 	if (!worlds_new) return -1; // TODO this could be several different errors
 
 	menu_free(state->worlds);
@@ -83,7 +64,7 @@ static int input_tab(int code, unsigned x, unsigned y, uint16_t modifiers, const
 
 	// Find which tab was clicked.
 	index = if_index(WorldTabs, (struct point){x, y});
-	if ((index < 0) || (index >= directories_count)) return INPUT_IGNORE; // no tab clicked
+	if ((index < 0) || (index >= DIRECTORIES_COUNT)) return INPUT_IGNORE; // no tab clicked
 
 	if (code == EVENT_MOUSE_LEFT)
 	{
@@ -131,46 +112,6 @@ reset:
 	else return INPUT_IGNORE;
 }
 
-/*
-static int menu_init(void)
-{
-	const char *home;
-	size_t home_size;
-
-	bytes_t *path;
-	size_t size;
-
-	// TODO create this if it does not exist
-	// "/home/martin/.medieval/"
-
-	home = getenv("HOME");
-	if (!home) return ERROR_MISSING;
-	home_size = strlen(home);
-
-	// TODO check for very large values of home_size
-
-	size = sizeof(PREFIX) - 1 + sizeof(DIRECTORY_SHARED) - 1;
-	path = malloc(offsetof(bytes_t, data) + size + 1);
-	if (!path) return ERROR_MEMORY;
-	path->size = size;
-	*format_bytes(format_bytes(path->data, PREFIX, sizeof(PREFIX) - 1), DIRECTORY_SHARED, sizeof(DIRECTORY_SHARED) - 1) = 0;
-
-	size = home_size + sizeof(DIRECTORY_WORLDS) - 1;
-	path = malloc(offsetof(bytes_t, data) + size + 1);
-	if (!path) return ERROR_MEMORY;
-	path->size = size;
-	*format_bytes(format_bytes(path->data, home, home_size), DIRECTORY_WORLDS, sizeof(DIRECTORY_WORLDS) - 1) = 0;
-
-	size = home_size + sizeof(DIRECTORY_SAVE) - 1;
-	path = malloc(offsetof(bytes_t, data) + size + 1);
-	if (!path) return ERROR_MEMORY;
-	path->size = size;
-	*format_bytes(format_bytes(path->data, home, home_size), DIRECTORY_SAVE, sizeof(DIRECTORY_SAVE) - 1) = 0;
-
-	return 0;
-}
-*/
-
 int input_load(struct game *restrict game)
 {
 	struct area areas[] = {
@@ -197,8 +138,6 @@ int input_load(struct game *restrict game)
 		},
 	};
 
-	// TODO get home directory
-
 	struct state state;
 
 	state.worlds = 0;
@@ -216,7 +155,7 @@ int input_load(struct game *restrict game)
 
 	const bytes_t *world = state.worlds->names[state.world];
 
-	return menu_load(directories[state.directory].data, directories[state.directory].size, world->data, world->size, game);
+	return menu_load(state.directory, world->data, world->size, game);
 }
 
 int input_save(const struct game *restrict game)
@@ -245,8 +184,6 @@ int input_save(const struct game *restrict game)
 		},
 	};
 
-	// TODO get home directory
-
 	struct state state;
 
 	state.worlds = 0;
@@ -260,5 +197,5 @@ int input_save(const struct game *restrict game)
 	free(state.worlds);
 	if (status) return status;
 
-	return menu_save(directories[state.directory].data, directories[state.directory].size, state.filename, state.filename_size, game);
+	return menu_save(state.directory, state.filename, state.filename_size, game);
 }
