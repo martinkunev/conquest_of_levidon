@@ -343,7 +343,9 @@ int world_load(const union json *restrict json, struct game *restrict game)
 	const union json *item, *node, *field;
 	size_t index;
 
+	game->players_count = 0;
 	game->players = 0;
+	game->regions_count = 0;
 	game->regions = 0;
 
 	if (json_type(json) != JSON_OBJECT) goto error;
