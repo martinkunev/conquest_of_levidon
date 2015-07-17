@@ -1,5 +1,7 @@
 #include <stdlib.h>
 
+#include <X11/keysym.h>
+
 #include "types.h"
 #include "map.h"
 #include "pathfinding.h"
@@ -28,7 +30,7 @@ static int input_turn(int code, unsigned x, unsigned y, uint16_t modifiers, cons
 		input_save(game); // TODO error check
 		return 0;
 
-	case 'q':
+	case XK_Escape:
 		return INPUT_TERMINATE;
 
 	case 'n':

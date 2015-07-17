@@ -300,9 +300,9 @@ void draw_cursor(const char *string, size_t length, unsigned x, unsigned y, stru
 
 	glColor4ubv(display_colors[color]);
 
-	glBegin(GL_LINE);
-	glVertex2i(x + box.width, y);
-	glVertex2i(x + box.width, y + font->height);
+	glBegin(GL_LINES);
+	glVertex2f(x + box.width + 0.5, y);
+	glVertex2f(x + box.width + 0.5, y + font->height);
 	glEnd();
 }
 

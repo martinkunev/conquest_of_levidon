@@ -1,5 +1,7 @@
 #include <stdlib.h>
 
+#include <X11/keysym.h>
+
 #include <xcb/xcb.h>
 
 #include "types.h"
@@ -11,12 +13,35 @@ extern KeySym *keymap;
 extern int keysyms_per_keycode;
 extern int keycode_min, keycode_max;
 
+static int is_modifier(int code)
+{
+	switch (code)
+	{
+	default:
+		return 0;
+
+	case XK_Shift_L:
+	case XK_Shift_R:
+	case XK_Control_L:
+	case XK_Control_R:
+	case XK_Alt_L:
+	case XK_Alt_R:
+	case XK_Super_L:
+	case XK_Super_R:
+	case XK_Caps_Lock:
+	case XK_Num_Lock:
+		return 1;
+	}
+}
+
 int input_local(const struct area *restrict areas, size_t areas_count, void (*display)(const void *, const struct game *), const struct game *restrict game, void *state)
 {
 	xcb_generic_event_t *event;
 	xcb_button_release_event_t *mouse;
 	xcb_key_press_event_t *keyboard;
 	xcb_motion_notify_event_t *motion;
+
+	// TODO support capital letters with shift and caps lock
 
 	int code; // TODO this is oversimplification
 	unsigned x, y;
@@ -54,12 +79,10 @@ wait:
 		case XCB_KEY_PRESS:
 			keyboard = (xcb_key_press_event_t *)event;
 			code = keymap[(keyboard->detail - keycode_min) * keysyms_per_keycode];
+			if (is_modifier(code)) continue;
 			x = keyboard->event_x;
 			y = keyboard->event_y;
 			modifiers = keyboard->state;
-
-			//KeySym *input = keymap + (keyboard->detail - keycode_min) * keysyms_per_keycode;
-			//printf("%d | %d %c %c %c %c\n", (int)code, (int)*input, (int)input[0], (int)input[1], (int)input[2], (int)input[3]);
 
 			break;
 

@@ -46,7 +46,7 @@ void if_menu(const void *argument, const struct game *game)
 		if (i == object_group[Worlds].rows) break; // TODO scrolling support
 
 		position = if_position(Worlds, i);
-		if (state->world == i) // selected
+		if (state->world_index == i) // selected
 		{
 			fill_rectangle(position.x, position.y, object_group[Worlds].width, object_group[Worlds].height, White);
 			display_string(state->worlds->names[i]->data, state->worlds->names[i]->size, position.x, position.y + (object_group[Worlds].height - font12.height) / 2, &font12, Black);
@@ -58,10 +58,8 @@ void if_menu(const void *argument, const struct game *game)
 	}
 
 	if (state->name_size)
-	{
 		display_string(state->name, state->name_size, object_group[Worlds].left, object_group[Worlds].bottom + MARGIN, &font12, White);
-		draw_cursor(state->name, state->name_position, object_group[Worlds].left, object_group[Worlds].bottom + MARGIN, &font12, White);
-	}
+	draw_cursor(state->name, state->name_position, object_group[Worlds].left, object_group[Worlds].bottom + MARGIN, &font12, White);
 
 	glFlush();
 	glXSwapBuffers(display, drawable);

@@ -208,7 +208,7 @@ int menu_load(size_t index, const unsigned char *restrict filename, size_t filen
 	if (fstat(file, &info) < 0)
 	{
 		close(file);
-		return -1;
+		return ERROR_MISSING; // TODO this could be ERROR_ACCESS or something else
 	}
 	buffer = mmap(0, info.st_size, PROT_READ, MAP_SHARED, file, 0);
 	close(file);
@@ -262,7 +262,7 @@ int menu_save(size_t index, const unsigned char *restrict filename, size_t filen
 	{
 		free(filepath);
 		free(buffer);
-		return -1;
+		return ERROR_ACCESS; // TODO this could be several different errors
 	}
 
 	// Write the serialized world into the file.
@@ -275,7 +275,7 @@ int menu_save(size_t index, const unsigned char *restrict filename, size_t filen
 			close(file);
 			free(filepath);
 			free(buffer);
-			return -1;
+			return ERROR_WRITE;
 		}
 	}
 

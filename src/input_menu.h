@@ -3,7 +3,7 @@
 struct state
 {
 	struct files *worlds;
-	ssize_t world;
+	ssize_t world_index;
 
 	size_t directory;
 
