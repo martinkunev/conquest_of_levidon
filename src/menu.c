@@ -204,7 +204,7 @@ int menu_load(size_t index, const unsigned char *restrict filename, size_t filen
 
 	file = open(filepath->data, O_RDONLY);
 	free(filepath);
-	if (file < 0) return -1;
+	if (file < 0) return ERROR_MISSING; // TODO this could be ERROR_ACCESS or something else
 	if (fstat(file, &info) < 0)
 	{
 		close(file);
@@ -212,7 +212,7 @@ int menu_load(size_t index, const unsigned char *restrict filename, size_t filen
 	}
 	buffer = mmap(0, info.st_size, PROT_READ, MAP_SHARED, file, 0);
 	close(file);
-	if (buffer == MAP_FAILED) return -1;
+	if (buffer == MAP_FAILED) return ERROR_MEMORY;
 
 	json = json_parse(buffer, info.st_size);
 	munmap(buffer, info.st_size);

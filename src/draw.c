@@ -22,6 +22,11 @@ struct polygon_draw
 	struct polygon_draw *prev, *next;
 };
 
+struct box
+{
+	unsigned width, height;
+};
+
 extern struct font font;
 
 unsigned char display_colors[][4] = {
@@ -248,14 +253,15 @@ int font_init(Display *restrict display, struct font *restrict font, const char 
 	XUnloadFont(display, font);
 }*/
 
-unsigned display_string(const char *string, size_t length, unsigned x, unsigned y, struct font *restrict font, enum color color)
+static struct box string_box(const char *string, size_t length, struct font *restrict font)
 {
 	struct box box = {0, 0};
-	XCharStruct *info;
-	unsigned height;
 
 	if (font->info->per_char)
 	{
+		XCharStruct *info;
+		unsigned height;
+
 		size_t i;
 		for(i = 0; i < length; ++i)
 		{
@@ -282,6 +288,29 @@ If either min_byte1 or max_byte1 are nonzero, both min_char_or_byte2 and max_cha
 		box.width = font->info->max_bounds.width;
 		box.height = font->info->max_bounds.ascent + font->info->max_bounds.descent;
 	}
+
+	return box;
+}
+
+void draw_cursor(const char *string, size_t length, unsigned x, unsigned y, struct font *restrict font, enum color color)
+{
+	// TODO make this part of display_string
+
+	struct box box = string_box(string, length, font);
+
+	glColor4ubv(display_colors[color]);
+
+	glBegin(GL_LINE);
+	glVertex2i(x + box.width, y);
+	glVertex2i(x + box.width, y + font->height);
+	glEnd();
+}
+
+unsigned display_string(const char *string, size_t length, unsigned x, unsigned y, struct font *restrict font, enum color color)
+{
+	// TODO support cursor here; not in a separate function
+
+	struct box box = string_box(string, length, font);
 
 	glListBase(font->base);
 	glColor4ubv(display_colors[color]);

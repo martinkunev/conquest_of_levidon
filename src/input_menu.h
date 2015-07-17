@@ -7,8 +7,9 @@ struct state
 
 	size_t directory;
 
-	char filename[FILENAME_LIMIT];
-	size_t filename_size;
+	char name[FILENAME_LIMIT];
+	size_t name_size;
+	size_t name_position;
 };
 
 int input_load(struct game *restrict game);

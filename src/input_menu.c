@@ -1,3 +1,5 @@
+#include <X11/keysym.h>
+
 #include "types.h"
 #include "base.h"
 #include "format.h"
@@ -30,26 +32,77 @@ static int input_none(int code, unsigned x, unsigned y, uint16_t modifiers, cons
 {
 	struct state *state = argument;
 
-	// TODO allow entering filename
 	// TODO support arrows for world selection
 
 	switch (code)
 	{
-	default:
-		state->filename[0] = 0;
-		state->filename_size = 0;
-		state->world = -1;
+	case XK_Return:
+		if (state->world >= 0) return INPUT_DONE;
 		return 0;
 
-	case ((255 << 8) | 13): // return
-		if (state->world >= 0) return INPUT_DONE;
-		else return 0;
-
-	case ((255 << 8) | 27): // escape
+	case XK_Escape:
 		return INPUT_TERMINATE;
 
 	case EVENT_MOTION:
 		return INPUT_NOTME;
+
+	default:
+		if ((code > 31) && (code < 127))
+		{
+			if (state->name_size == FILENAME_LIMIT) return INPUT_IGNORE; // TODO indicate the buffer is full
+
+			if (state->name_position < state->name_size)
+				memmove(state->name + state->name_position + 1, state->name + state->name_position, state->name_size - state->name_position);
+			state->name[state->name_position++] = code;
+			state->name_size += 1;
+		}
+		else
+		{
+			state->name[0] = 0;
+			state->name_size = 0;
+			state->name_position = 0;
+		}
+		state->world = -1;
+		return 0;
+
+	case XK_BackSpace:
+		if (!state->name_position) return INPUT_IGNORE;
+
+		if (state->name_position < state->name_size)
+			memmove(state->name + state->name_position - 1, state->name + state->name_position, state->name_size - state->name_position);
+		state->name_position -= 1;
+		state->name_size -= 1;
+
+		return 0;
+
+	case XK_Delete:
+		if (state->name_position == state->name_size) return INPUT_IGNORE;
+
+		state->name_size -= 1;
+		if (state->name_position < state->name_size)
+			memmove(state->name + state->name_position, state->name + state->name_position + 1, state->name_size - state->name_position);
+
+		return 0;
+
+	case XK_Home:
+		if (state->name_position == 0) return INPUT_IGNORE;
+		state->name_position = 0;
+		return 0;
+
+	case XK_End:
+		if (state->name_position == state->name_size) return INPUT_IGNORE;
+		state->name_position = state->name_size;
+		return 0;
+
+	case XK_Left:
+		if (state->name_position == 0) return INPUT_IGNORE;
+		state->name_position -= 1;
+		return 0;
+
+	case XK_Right:
+		if (state->name_position == state->name_size) return INPUT_IGNORE;
+		state->name_position += 1;
+		return 0;
 	}
 }
 
@@ -94,8 +147,8 @@ static int input_world(int code, unsigned x, unsigned y, uint16_t modifiers, con
 	{
 		const bytes_t *filename = state->worlds->names[index];
 		state->world = index;
-		*format_bytes(state->filename, filename->data, filename->size) = 0; // TODO buffer overflow
-		state->filename_size = filename->size;
+		format_bytes(state->name, filename->data, filename->size); // TODO buffer overflow
+		state->name_position = state->name_size = filename->size;
 		return 0;
 	}
 
@@ -104,8 +157,8 @@ static int input_world(int code, unsigned x, unsigned y, uint16_t modifiers, con
 reset:
 	if (state->world >= 0)
 	{
-		state->filename[0] = 0;
-		state->filename_size = 0;
+		state->name_size = 0;
+		state->name_position = 0;
 		state->world = -1;
 		return 0;
 	}
@@ -145,17 +198,27 @@ int input_load(struct game *restrict game)
 
 	// TODO select some world by default (maybe the newest for saves and the oldest for other worlds)
 	//#define WORLD_DEFAULT "worlds/balkans"
-	state.filename[0] = 0;
-	state.filename_size = 0;
+	state.name_size = 0;
+	state.name_position = 0;
 
-	int status = input_local(areas, sizeof(areas) / sizeof(*areas), if_menu, game, &state);
-	if (status) return status;
+	while (1)
+	{
+		int status;
+
+		if (status = input_local(areas, sizeof(areas) / sizeof(*areas), if_menu, game, &state)) return status;
+
+		status = menu_load(state.directory, state.name, state.name_size, game);
+		if (status == ERROR_MEMORY) return status;
+		if (!status) break;
+
+		// TODO indicate the error with something in red
+		state.name_size = 0;
+		state.name_position = 0;
+	}
 
 	// TODO customize player types, alliances, etc.
 
-	const bytes_t *world = state.worlds->names[state.world];
-
-	return menu_load(state.directory, world->data, world->size, game);
+	return 0;
 }
 
 int input_save(const struct game *restrict game)
@@ -190,12 +253,12 @@ int input_save(const struct game *restrict game)
 	if (tab_select(&state, 2) < 0) return -1; // TODO
 
 	// TODO ? generate some name
-	state.filename[0] = 0;
-	state.filename_size = 0;
+	state.name_size = 0;
+	state.name_position = 0;
 
 	int status = input_local(areas, sizeof(areas) / sizeof(*areas), if_menu, game, &state);
 	free(state.worlds);
 	if (status) return status;
 
-	return menu_save(state.directory, state.filename, state.filename_size, game);
+	return menu_save(state.directory, state.name, state.name_size, game);
 }

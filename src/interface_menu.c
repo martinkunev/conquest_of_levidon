@@ -57,7 +57,11 @@ void if_menu(const void *argument, const struct game *game)
 		}
 	}
 
-	display_string(state->filename, state->filename_size, object_group[Worlds].left, object_group[Worlds].bottom, &font12, White);
+	if (state->name_size)
+	{
+		display_string(state->name, state->name_size, object_group[Worlds].left, object_group[Worlds].bottom + MARGIN, &font12, White);
+		draw_cursor(state->name, state->name_position, object_group[Worlds].left, object_group[Worlds].bottom + MARGIN, &font12, White);
+	}
 
 	glFlush();
 	glXSwapBuffers(display, drawable);

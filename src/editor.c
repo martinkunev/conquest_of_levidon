@@ -26,9 +26,9 @@ struct vertex
 	unsigned region;
 };
 
-// TODO create a struct for region information; store name, neighbors, center, etc. there
+// TODO use world_load() and world_save() in the map editor
 // TODO tools for: garrison placement
-// TODO determine region neighbors
+// TODO determine region neighbors automatically
 
 // WARNING: Vertices in a region must be listed counterclockwise.
 
