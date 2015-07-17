@@ -1,0 +1,33 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+my $prefix = '/usr/local';
+my $debug = 0;
+
+for (@ARGV)
+{
+	if (/^--prefix=(.*)/)
+	{
+		$prefix = $1;
+	}
+	elsif (/^--debug$/)
+	{
+		$debug = 1;
+	}
+	else
+	{
+		print "Usage: $0 [OPTION ...]\n\t--prefix=<prefix>    \tspecify install location (default /usr/local)\n\t--debug              \tcompile for debugging";
+		exit;
+	}
+}
+
+$prefix .= '/';
+$prefix =~ s|/|\\/|g;
+
+my $cflags = ($debug ? '-O0 -g' : '-O2');
+
+unlink 'Makefile';
+qx(sed -e "s/\@{PREFIX}/$prefix/" -e "s/\@{CFLAGS}/$cflags/" Makefile.in > Makefile);
+chmod 0444, 'Makefile';
