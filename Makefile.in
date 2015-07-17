@@ -5,10 +5,13 @@ export LDFLAGS=-pthread -L/usr/X11/lib -lm -lpng -lGL -lX11 -lxcb -lX11-xcb -lOS
 all:
 	make -C src $@
 
-src/medieval:
+force:
+	@true
+
+medieval: force
 	make -C src medieval
 
-src/editor:
+editor: force
 	make -C src editor
 
 check:

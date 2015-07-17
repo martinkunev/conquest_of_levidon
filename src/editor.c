@@ -12,6 +12,7 @@ struct game;
 #include <GL/glext.h>
 
 #include "types.h"
+#include "format.h"
 #include "json.h"
 #include "input.h"
 #include "image.h"
@@ -24,6 +25,10 @@ struct vertex
 	int previous; // the previous vertex with the same point
 	unsigned region;
 };
+
+// TODO create a struct for region information; store name, neighbors, center, etc. there
+// TODO tools for: garrison placement
+// TODO determine region neighbors
 
 // WARNING: Vertices in a region must be listed counterclockwise.
 
@@ -267,7 +272,7 @@ static void save(const struct array_vertex *points)
 	union json *json, *regions, *location, *point;
 
 	json = json_object();
-	regions = json_array();
+	regions = json_object();
 	json = json_object_insert(json, S("regions"), regions);
 
 	unsigned region_start = 0;
@@ -276,11 +281,15 @@ static void save(const struct array_vertex *points)
 	{
 		if (points->data[i].region != region)
 		{
-			location = json_array();
-			regions = json_array_insert(regions, json_object_insert(json_object(), S("location"), location));
+			char buffer[5], *end; // TODO make sure this is big enough
 
 			region = points->data[i].region;
 			region_start = i;
+
+			location = json_array();
+			end = format_uint(buffer, region, 10);
+			regions = json_object_insert(regions, buffer, end - buffer, json_object_insert(json_object(), S("location"), location));
+
 			continue;
 		}
 
@@ -336,31 +345,37 @@ static void load_point(const union json *point, size_t region, struct array_vert
 
 static void load(const unsigned char *restrict buffer, size_t size, struct array_vertex *restrict points)
 {
-	size_t r, p;
+	size_t region_index, p;
 
 	union json *json, *regions;
+
+	struct hashmap_iterator it;
+	struct hashmap_entry *entry;
 
 	if (array_vertex_init(points, ARRAY_SIZE_DEFAULT) < 0)
 		abort();
 
 	json = json_parse(buffer, size);
 	if (!json || (json_type(json) != JSON_OBJECT)) abort();
-	regions = value_get_try(&json->object, S("regions"), JSON_ARRAY);
+	regions = value_get_try(&json->object, S("regions"), JSON_OBJECT);
 	if (!regions) abort();
 
-	for(r = 0; r < regions->array.count; ++r)
+	region_index = 0;
+	for(entry = hashmap_first(&regions->object, &it); entry; entry = hashmap_next(&regions->object, &it))
 	{
 		union json *region, *location;
 
-		region = regions->array.data[r];
+		region = entry->value;
 		if (json_type(region) != JSON_OBJECT) abort();
 
 		location = value_get_try(&region->object, S("location"), JSON_ARRAY);
 		if (!location) abort();
 
 		for(p = 0; p < location->array.count; ++p)
-			load_point(location->array.data[p], r, points);
-		load_point(location->array.data[0], r, points);
+			load_point(location->array.data[p], region_index, points);
+		load_point(location->array.data[0], region_index, points);
+
+		region_index += 1;
 	}
 
 	json_free(json);
