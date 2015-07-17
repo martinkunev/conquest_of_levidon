@@ -1,5 +1,6 @@
 *.o
-map
-editor
+src/medieval
+src/editor
 test/check
+Makefile
 .*

@@ -1,0 +1,13 @@
+O=main.o menu.o world.o map.o resources.o battle.o movement.o combat.o pathfinding.o interface.o interface_menu.o display.o input.o input_menu.o input_map.o input_battle.o draw.o image.o format.o json.o
+
+all: medieval
+
+medieval: $(O)
+	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $@
+
+editor: image.o draw.o interface.o input.o json.o format.o editor.o
+	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $@
+
+clean:
+	rm -f *.o
+	rm -f medieval editor

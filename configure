@@ -26,7 +26,7 @@ for (@ARGV)
 $prefix .= '/';
 $prefix =~ s|/|\\/|g;
 
-my $cflags = ($debug ? '-O0 -g' : '-O2');
+my $cflags = ($debug ? '-O0 -g' : '-O2 -fstrict-aliasing');
 
 unlink 'Makefile';
 qx(sed -e "s/\@{PREFIX}/$prefix/" -e "s/\@{CFLAGS}/$cflags/" Makefile.in > Makefile);

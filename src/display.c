@@ -41,6 +41,8 @@
 
 #define ANIMATION_DURATION 3.0
 
+#define PREFIX_IMG PREFIX "share/medieval/img/"
+
 extern Display *display;
 extern GLXDrawable drawable;
 extern xcb_screen_t *screen;
@@ -135,69 +137,69 @@ void if_storage_term(void)
 
 void if_load_images(void)
 {
-	image_load_png(&image_selected, "img/selected.png", 0);
-	image_load_png(&image_assault, "img/assault.png", 0);
-	image_load_png(&image_flag, "img/flag.png", 0);
-	image_load_png(&image_flag_small, "img/flag_small.png", 0);
-	image_load_png(&image_panel, "img/panel.png", 0);
-	image_load_png(&image_construction, "img/construction.png", 0);
+	image_load_png(&image_selected, PREFIX_IMG "selected.png", 0);
+	image_load_png(&image_assault, PREFIX_IMG "assault.png", 0);
+	image_load_png(&image_flag, PREFIX_IMG "flag.png", 0);
+	image_load_png(&image_flag_small, PREFIX_IMG "flag_small.png", 0);
+	image_load_png(&image_panel, PREFIX_IMG "panel.png", 0);
+	image_load_png(&image_construction, PREFIX_IMG "construction.png", 0);
 
-	image_load_png(&image_pawn_fight, "img/pawn_fight.png", 0);
-	image_load_png(&image_pawn_assault, "img/pawn_assault.png", 0);
-	image_load_png(&image_pawn_shoot, "img/pawn_shoot.png", 0);
+	image_load_png(&image_pawn_fight, PREFIX_IMG "pawn_fight.png", 0);
+	image_load_png(&image_pawn_assault, PREFIX_IMG "pawn_assault.png", 0);
+	image_load_png(&image_pawn_shoot, PREFIX_IMG "pawn_shoot.png", 0);
 
-	image_load_png(&image_garrison[PALISADE], "img/garrison_palisade.png", 0);
-	image_load_png(&image_garrison[FORTRESS], "img/garrison_fortress.png", 0);
+	image_load_png(&image_garrison[PALISADE], PREFIX_IMG "garrison_palisade.png", 0);
+	image_load_png(&image_garrison[FORTRESS], PREFIX_IMG "garrison_fortress.png", 0);
 
-	image_load_png(&image_map_garrison[PALISADE], "img/map_palisade.png", 0);
-	image_load_png(&image_map_garrison[FORTRESS], "img/map_fortress.png", 0);
+	image_load_png(&image_map_garrison[PALISADE], PREFIX_IMG "map_palisade.png", 0);
+	image_load_png(&image_map_garrison[FORTRESS], PREFIX_IMG "map_fortress.png", 0);
 
-	image_load_png(&image_scroll_left, "img/scroll_left.png", 0);
-	image_load_png(&image_scroll_right, "img/scroll_right.png", 0);
+	image_load_png(&image_scroll_left, PREFIX_IMG "scroll_left.png", 0);
+	image_load_png(&image_scroll_right, PREFIX_IMG "scroll_right.png", 0);
 
-	image_load_png(&image_gold, "img/gold.png", 0);
-	image_load_png(&image_food, "img/food.png", 0);
-	image_load_png(&image_wood, "img/wood.png", 0);
-	image_load_png(&image_stone, "img/stone.png", 0);
-	image_load_png(&image_iron, "img/iron.png", 0);
-	image_load_png(&image_time, "img/time.png", 0);
+	image_load_png(&image_gold, PREFIX_IMG "gold.png", 0);
+	image_load_png(&image_food, PREFIX_IMG "food.png", 0);
+	image_load_png(&image_wood, PREFIX_IMG "wood.png", 0);
+	image_load_png(&image_stone, PREFIX_IMG "stone.png", 0);
+	image_load_png(&image_iron, PREFIX_IMG "iron.png", 0);
+	image_load_png(&image_time, PREFIX_IMG "time.png", 0);
 
-	image_load_png(&image_units[0], "img/peasant.png", 0);
-	image_load_png(&image_units[1], "img/archer.png", 0);
-	image_load_png(&image_units[2], "img/militia.png", 0);
-	image_load_png(&image_units[3], "img/horse_rider.png", 0);
-	image_load_png(&image_units[4], "img/battering_ram.png", 0);
-	image_load_png(&image_units[5], "img/pikeman.png", 0);
+	image_load_png(&image_units[0], PREFIX_IMG "peasant.png", 0);
+	image_load_png(&image_units[1], PREFIX_IMG "archer.png", 0);
+	image_load_png(&image_units[2], PREFIX_IMG "militia.png", 0);
+	image_load_png(&image_units[3], PREFIX_IMG "horse_rider.png", 0);
+	image_load_png(&image_units[4], PREFIX_IMG "battering_ram.png", 0);
+	image_load_png(&image_units[5], PREFIX_IMG "pikeman.png", 0);
 
-	image_load_png(&image_buildings[0], "img/farm.png", 0);
-	image_load_png(&image_buildings[1], "img/irrigation.png", 0);
-	image_load_png(&image_buildings[2], "img/sawmill.png", 0);
-	image_load_png(&image_buildings[3], "img/mine.png", 0);
-	image_load_png(&image_buildings[4], "img/blast_furnace.png", 0);
-	image_load_png(&image_buildings[5], "img/barracks.png", 0);
-	image_load_png(&image_buildings[6], "img/archery_range.png", 0);
-	image_load_png(&image_buildings[7], "img/stables.png", 0);
-	image_load_png(&image_buildings[8], "img/watch_tower.png", 0);
-	image_load_png(&image_buildings[9], "img/palisade.png", 0);
-	image_load_png(&image_buildings[10], "img/fortress.png", 0);
-	image_load_png(&image_buildings[11], "img/workshop.png", 0);
-	image_load_png(&image_buildings[12], "img/forge.png", 0);
+	image_load_png(&image_buildings[0], PREFIX_IMG "farm.png", 0);
+	image_load_png(&image_buildings[1], PREFIX_IMG "irrigation.png", 0);
+	image_load_png(&image_buildings[2], PREFIX_IMG "sawmill.png", 0);
+	image_load_png(&image_buildings[3], PREFIX_IMG "mine.png", 0);
+	image_load_png(&image_buildings[4], PREFIX_IMG "blast_furnace.png", 0);
+	image_load_png(&image_buildings[5], PREFIX_IMG "barracks.png", 0);
+	image_load_png(&image_buildings[6], PREFIX_IMG "archery_range.png", 0);
+	image_load_png(&image_buildings[7], PREFIX_IMG "stables.png", 0);
+	image_load_png(&image_buildings[8], PREFIX_IMG "watch_tower.png", 0);
+	image_load_png(&image_buildings[9], PREFIX_IMG "palisade.png", 0);
+	image_load_png(&image_buildings[10], PREFIX_IMG "fortress.png", 0);
+	image_load_png(&image_buildings[11], PREFIX_IMG "workshop.png", 0);
+	image_load_png(&image_buildings[12], PREFIX_IMG "forge.png", 0);
 
-	image_load_png(&image_buildings_gray[0], "img/farm.png", 1);
-	image_load_png(&image_buildings_gray[1], "img/irrigation.png", 1);
-	image_load_png(&image_buildings_gray[2], "img/sawmill.png", 1);
-	image_load_png(&image_buildings_gray[3], "img/mine.png", 1);
-	image_load_png(&image_buildings_gray[4], "img/blast_furnace.png", 1);
-	image_load_png(&image_buildings_gray[5], "img/barracks.png", 1);
-	image_load_png(&image_buildings_gray[6], "img/archery_range.png", 1);
-	image_load_png(&image_buildings_gray[7], "img/stables.png", 1);
-	image_load_png(&image_buildings_gray[8], "img/watch_tower.png", 1);
-	image_load_png(&image_buildings_gray[9], "img/palisade.png", 1);
-	image_load_png(&image_buildings_gray[10], "img/fortress.png", 1);
-	image_load_png(&image_buildings_gray[11], "img/workshop.png", 1);
-	image_load_png(&image_buildings_gray[12], "img/forge.png", 1);
+	image_load_png(&image_buildings_gray[0], PREFIX_IMG "farm.png", 1);
+	image_load_png(&image_buildings_gray[1], PREFIX_IMG "irrigation.png", 1);
+	image_load_png(&image_buildings_gray[2], PREFIX_IMG "sawmill.png", 1);
+	image_load_png(&image_buildings_gray[3], PREFIX_IMG "mine.png", 1);
+	image_load_png(&image_buildings_gray[4], PREFIX_IMG "blast_furnace.png", 1);
+	image_load_png(&image_buildings_gray[5], PREFIX_IMG "barracks.png", 1);
+	image_load_png(&image_buildings_gray[6], PREFIX_IMG "archery_range.png", 1);
+	image_load_png(&image_buildings_gray[7], PREFIX_IMG "stables.png", 1);
+	image_load_png(&image_buildings_gray[8], PREFIX_IMG "watch_tower.png", 1);
+	image_load_png(&image_buildings_gray[9], PREFIX_IMG "palisade.png", 1);
+	image_load_png(&image_buildings_gray[10], PREFIX_IMG "fortress.png", 1);
+	image_load_png(&image_buildings_gray[11], PREFIX_IMG "workshop.png", 1);
+	image_load_png(&image_buildings_gray[12], PREFIX_IMG "forge.png", 1);
 
-	image_load_png(&image_terrain[0], "img/terrain_grass.png", 0);
+	image_load_png(&image_terrain[0], PREFIX_IMG "terrain_grass.png", 0);
 
 	// Load battlefield images.
 	size_t i;
@@ -205,22 +207,22 @@ void if_load_images(void)
 	{
 		char buffer[64], *end; // TODO make sure this is enough
 
-		end = format_bytes(buffer, S("img/palisade"));
+		end = format_bytes(buffer, S(PREFIX_IMG "palisade"));
 		end = format_uint(end, i, 10);
 		end = format_bytes(end, S(".png"));
 		*end = 0;
 		image_load_png(&image_palisade[i], buffer, 0);
 
-		end = format_bytes(buffer, S("img/fortress"));
+		end = format_bytes(buffer, S(PREFIX_IMG "fortress"));
 		end = format_uint(end, i, 10);
 		end = format_bytes(end, S(".png"));
 		*end = 0;
 		image_load_png(&image_fortress[i], buffer, 0);
 	}
-	image_load_png(&image_palisade_gate[0], "img/palisade_gate0.png", 0);
-	image_load_png(&image_fortress_gate[0], "img/fortress_gate0.png", 0);
-	image_load_png(&image_palisade_gate[1], "img/palisade_gate1.png", 0);
-	image_load_png(&image_fortress_gate[1], "img/fortress_gate1.png", 0);
+	image_load_png(&image_palisade_gate[0], PREFIX_IMG "palisade_gate0.png", 0);
+	image_load_png(&image_fortress_gate[0], PREFIX_IMG "fortress_gate0.png", 0);
+	image_load_png(&image_palisade_gate[1], PREFIX_IMG "palisade_gate1.png", 0);
+	image_load_png(&image_fortress_gate[1], PREFIX_IMG "fortress_gate1.png", 0);
 }
 
 static void display_troop(size_t unit, unsigned x, unsigned y, enum color color, enum color text, unsigned count)
