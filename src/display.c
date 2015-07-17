@@ -247,8 +247,6 @@ static void show_progress(unsigned current, unsigned total, unsigned x, unsigned
 		double progress = (double)current / total;
 		double angle = progress * 2 * M_PI;
 
-		double cx = x + width / 2, cy = y + height / 2;
-
 		glColor4ubv(display_colors[Progress]);
 
 		glBegin(GL_POLYGON);
@@ -334,7 +332,6 @@ static int if_animation(const struct player *restrict players, const struct batt
 			}
 		}
 
-	struct point location;
 	size_t p;
 	for(p = 0; p < battle->pawns_count; ++p)
 	{
@@ -965,8 +962,6 @@ void if_map(const void *argument, const struct game *game)
 		fill_rectangle(PANEL_X + (i % 4) * 32, PANEL_Y + 300 + (i / 4) * 32, 32, 32, Player + i);*/
 
 	// Map
-
-	unsigned state_alliance = game->players[state->player].alliance;
 
 	struct resources income = {0}, expenses = {0};
 	const struct troop *troop;

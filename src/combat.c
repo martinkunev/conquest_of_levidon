@@ -130,7 +130,6 @@ void battlefield_shoot(struct battle *battle, const struct obstacles *restrict o
 
 		int x = shooter->target.field.x;
 		int y = shooter->target.field.y;
-		struct pawn *victim = battle->field[y][x].pawn;
 
 		// TODO what if there is a tower on one of the fields
 

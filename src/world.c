@@ -312,7 +312,6 @@ static int region_neighbors(struct game *restrict game, struct region *restrict 
 	size_t i;
 
 	union json *node, *item, *entry;
-	const union json *name, *count, *owner;
 
 	size_t index;
 
@@ -341,8 +340,7 @@ static int region_neighbors(struct game *restrict game, struct region *restrict 
 
 int world_load(const union json *restrict json, struct game *restrict game)
 {
-	struct string key;
-	const union json *item, *node, *field, *entry;
+	const union json *item, *node, *field;
 	size_t index;
 
 	game->players = 0;

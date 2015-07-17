@@ -158,7 +158,6 @@ static int pawn_wait(struct pawn *occupied[BATTLEFIELD_HEIGHT * 2][BATTLEFIELD_W
 	// Make the pawn detour to its failback at step_stop the previous step and continue moving toward its next location at step_continue.
 
 	double time_detour = (double)step_stop / MOVEMENT_STEPS;
-	double distance;
 
 	if (time_detour > pawn->moves[0].time)
 	{
@@ -360,7 +359,6 @@ int battlefield_movement_plan(const struct player *restrict players, size_t play
 		pawns[p].failback.x = pawns[p].moves[0].location.x * 2;
 		pawns[p].failback.y = pawns[p].moves[0].location.y * 2;
 
-		struct queue_item *item;
 		pawns[p].moves[0].time = 0;
 		for(i = 1; i < pawns[p].moves_count; ++i)
 		{
