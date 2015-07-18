@@ -52,7 +52,7 @@
 		"Thessaly": {
 			"owner": 1,
 			"garrison": {"troops": [["Peasant", 20, 1]]},
-			"built": ["Barracks", "Fortress"],
+			"built": ["Barracks", "Palisade", "Fortress"],
 			"neighbors": [null, "Thrace", "Macedonia", null, "Epirus", null, "Attica", null],
 			"location": [
 				[392, 463],

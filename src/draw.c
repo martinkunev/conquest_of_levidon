@@ -34,7 +34,7 @@ unsigned char display_colors[][4] = {
 	[Gray] = {128, 128, 128, 255},
 	[Black] = {0, 0, 0, 255},
 	[Unexplored] = {64, 64, 64, 128},
-	[Progress] = {128, 128, 128, 160},
+	[Progress] = {96, 96, 96, 160},
 	[Select] = {192, 192, 0, 255},
 
 	[Self] = {0, 192, 0, 255},

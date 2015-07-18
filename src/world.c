@@ -44,8 +44,14 @@ const struct unit UNITS[] =
 	},
 	{
 		.index = 5, NAME("Pikeman"), .speed = 5, .health = 6, .armor = ARMOR_CHAINMAIL,
-		.cost = {.gold = 1, .wood = 1, .iron = 1}, .expense = {.food = 1}, .time = 1, .troops_count = 20, .requires = (1 << BuildingForge),
+		.cost = {.gold = 2, .wood = 1, .iron = 1}, .expense = {.food = 1}, .time = 1, .troops_count = 20, .requires = (1 << BuildingForge),
 		.melee = {.weapon = WEAPON_CLEAVING, .damage = 3, .agility = 1.0},
+	},
+	{
+		.index = 6, NAME("Longbow"), .speed = 4, .health = 5, .armor = ARMOR_LEATHER,
+		.cost = {.gold = 2, .wood = 2}, .expense = {.food = 1}, .time = 1, .troops_count = 20, .requires = (1 << BuildingBarracks) | (1 << BuildingArcheryRange),
+		.melee = {.weapon = WEAPON_CLEAVING, .damage = 1, .agility = 1.0},
+		.ranged = {.weapon = WEAPON_ARROW, .damage = 2, .range = 6},
 	},
 };
 const size_t UNITS_COUNT = sizeof(UNITS) / sizeof(*UNITS);
@@ -59,7 +65,7 @@ const struct building buildings[] =
 	[BuildingBlastFurnace] = {NAME("Blast furnace"), .cost = {.gold = 8, .stone = 10}, .income = {.iron = 1, .stone = -1}, .time = 5, .requires = (1 << BuildingMine)},
 	[BuildingBarracks] = {NAME("Barracks"), .cost = {.gold = 5, .stone = 10}, .time = 4},
 	[BuildingArcheryRange] = {NAME("Archery range"), .cost = {.gold = 3, .wood = 4}, .time = 2},
-	[BuildingStables] = {NAME("Stables"), .cost = {.gold = 10, .food = 10, .wood = 15}, .time = 4, .requires = (1 << BuildingFarm)},
+	[BuildingStables] = {NAME("Stables"), .cost = {.gold = 10, .food = 10, .wood = 15}, .time = 6, .requires = (1 << BuildingFarm)},
 	[BuildingWatchTower] = {NAME("Watch tower"), .cost = {.gold = 3, .wood = 5}, .time = 2},
 	[BuildingPalisade] = {NAME("Palisade"), .cost = {.gold = 10, .wood = 20}, .time = 4},
 	[BuildingFortress] = {NAME("Fortress"), .cost = {.gold = 20, .stone = 20}, .time = 8, .requires = (1 << BuildingPalisade)},

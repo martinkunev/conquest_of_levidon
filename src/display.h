@@ -74,7 +74,7 @@ static const struct object_group
 	[WorldTabs] = OBJECT_GROUP(1, 3, TABS_X, TABS_Y, 80, 24, 0),
 	[Worlds] = OBJECT_GROUP(24, 1, WORLDS_X, WORLDS_Y, 240, 20, 0),
 	[Building] = OBJECT_GROUP(3, 5, PANEL_X + 1, PANEL_Y + 400, 48, 48, 1),
-	[Train] = OBJECT_GROUP(1, 6, PANEL_X + 1, PANEL_Y + 340, 32, 32, 1),
+	[Train] = OBJECT_GROUP(1, 7, PANEL_X + 1, PANEL_Y + 340, 32, 32, 1),
 	[Dismiss] = OBJECT_GROUP(1, TRAIN_QUEUE, PANEL_X + 81, PANEL_Y + 300, 32, 32, 1),
 	[TroopSelf] = OBJECT_GROUP(1, TROOPS_VISIBLE, PANEL_X + SCROLL + 1, PANEL_Y + 36 + 2, 32, 32, 1),
 	[TroopOther] = OBJECT_GROUP(1, TROOPS_VISIBLE, PANEL_X + SCROLL + 1, PANEL_Y + 36 + 48 + 2 + 2, 32, 32, 1),

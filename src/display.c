@@ -67,7 +67,7 @@ static struct image image_garrison[2]; // TODO this must be big enough for all g
 static struct image image_map_garrison[2]; // TODO this must be big enough for all garrison types
 static struct image image_gold, image_food, image_wood, image_stone, image_iron, image_time;
 static struct image image_scroll_left, image_scroll_right;
-static struct image image_units[6]; // TODO the array must be enough to hold units_count units
+static struct image image_units[7]; // TODO the array must be enough to hold units_count units
 static struct image image_buildings[13]; // TODO the array must be big enough to hold buildings_count elements
 static struct image image_buildings_gray[13]; // TODO the array must be big enough to hold buildings_count elements
 static struct image image_palisade[16], image_palisade_gate[2], image_fortress[16], image_fortress_gate[2];
@@ -170,6 +170,7 @@ void if_load_images(void)
 	image_load_png(&image_units[3], PREFIX_IMG "horse_rider.png", 0);
 	image_load_png(&image_units[4], PREFIX_IMG "battering_ram.png", 0);
 	image_load_png(&image_units[5], PREFIX_IMG "pikeman.png", 0);
+	image_load_png(&image_units[6], PREFIX_IMG "longbow.png", 0);
 
 	image_load_png(&image_buildings[0], PREFIX_IMG "farm.png", 0);
 	image_load_png(&image_buildings[1], PREFIX_IMG "irrigation.png", 0);
@@ -613,7 +614,10 @@ void if_battle(const void *argument, const struct game *game)
 	{
 		size_t i;
 		for(i = 0; i < battle->players[state->player].pawns_count; ++i)
+		{
+			if (!battle->players[state->player].pawns[i]->troop->count) continue;
 			if_battle_pawn(game, state, battle->players[state->player].pawns[i]);
+		}
 	}
 
 	glFlush();
@@ -743,12 +747,15 @@ static void tooltip_cost(const char *restrict name, size_t name_length, const st
 		offset += 40;
 	}
 
-	image_draw(&image_time, TOOLTIP_X + offset, TOOLTIP_Y);
-	offset += 16;
+	if (time)
+	{
+		image_draw(&image_time, TOOLTIP_X + offset, TOOLTIP_Y);
+		offset += 16;
 
-	length = format_uint(buffer, time, 10) - (uint8_t *)buffer;
-	display_string(buffer, length, TOOLTIP_X + offset, TOOLTIP_Y, &font12, White);
-	offset += 40;
+		length = format_uint(buffer, time, 10) - (uint8_t *)buffer;
+		display_string(buffer, length, TOOLTIP_X + offset, TOOLTIP_Y, &font12, White);
+		offset += 40;
+	}
 }
 
 static inline void show_flag(unsigned x, unsigned y, unsigned player)
@@ -905,7 +912,7 @@ static void if_map_region(const struct region *region, const struct state_map *s
 			struct point position = if_position(Dismiss, index);
 			if (region->train[index])
 			{
-				display_troop(region->train[index]->index, position.x, position.y, White, 0, 0);
+				display_troop(region->train[index]->index, position.x, position.y, Player, 0, 0);
 				show_progress((index ? 0 : region->train_progress), region->train[0]->time, position.x, position.y, object_group[Dismiss].width, object_group[Dismiss].height);
 			}
 			else fill_rectangle(position.x, position.y, object_group[Dismiss].width, object_group[Dismiss].height, Black);
@@ -931,7 +938,13 @@ static void if_map_region(const struct region *region, const struct state_map *s
 		}
 		break;
 	case HOVER_BUILDING:
-		if (!region_built(region, state->hover.building))
+		if (region_built(region, state->hover.building))
+		{
+			const struct building *building = buildings + state->hover.building;
+			const struct resources none = {0};
+			tooltip_cost(building->name, building->name_length, &none, 0);
+		}
+		else
 		{
 			const struct building *building = buildings + state->hover.building;
 			tooltip_cost(building->name, building->name_length, &building->cost, building->time);
