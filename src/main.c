@@ -159,7 +159,7 @@ static int play(struct game *restrict game)
 			// Update training time and check if there are trained units.
 			if (region->train[0] && (++region->train_progress == region->train[0]->time))
 			{
-				if (troop_spawn(region, &region->troops, region->train[0], region->train[0]->troops_count, region->owner) < 0) ; // TODO
+				if (troop_spawn(region, &region->troops, region->train[0], region->train[0]->troops_count, region->owner) < 0) abort(); // TODO
 
 				region->train_progress = 0;
 				for(i = 1; i < TRAIN_QUEUE; ++i)
@@ -210,14 +210,14 @@ static int play(struct game *restrict game)
 			if (winner == WINNER_BATTLE) // open battle
 			{
 				struct battle battle;
-				if (battlefield_init(game, &battle, region, 0) < 0) ; // TODO
+				if (battlefield_init(game, &battle, region, 0) < 0) abort(); // TODO
 				winner = play_battle(game, &battle, game->players[battle.region->owner].alliance);
 				battlefield_term(game, &battle);
 			}
 			else if (region->garrison.assault) // assault
 			{
 				struct battle battle;
-				if (battlefield_init(game, &battle, region, 1) < 0) ; // TODO
+				if (battlefield_init(game, &battle, region, 1) < 0) abort(); // TODO
 				winner = play_battle(game, &battle, game->players[battle.region->garrison.owner].alliance);
 				battlefield_term(game, &battle);
 

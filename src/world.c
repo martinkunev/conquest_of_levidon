@@ -336,6 +336,8 @@ static int region_neighbors(struct game *restrict game, struct region *restrict 
 		index = value_get_try(&node->object, "location", JSON_ARRAY)->integer; // TODO ugly: type is not changed but the value is integer
 		region->neighbors[i] = game->regions + index;
 	}
+
+	return 0;
 }
 
 int world_load(const union json *restrict json, struct game *restrict game)
