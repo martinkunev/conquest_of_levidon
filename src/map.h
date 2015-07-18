@@ -57,6 +57,7 @@ struct unit
 	} ranged;
 };
 
+enum {UnitPeasant, UnitMilitia, UnitPikeman, UnitArcher, UnitLongbow, UnitLightCavalry, UnitBatteringRam};
 enum {BuildingFarm, BuildingIrrigation, BuildingSawmill, BuildingMine, BuildingBlastFurnace, BuildingBarracks, BuildingArcheryRange, BuildingStables, BuildingWatchTower, BuildingPalisade, BuildingFortress, BuildingWorkshop, BuildingForge};
 
 struct building

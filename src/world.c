@@ -17,41 +17,41 @@
 const struct unit UNITS[] =
 {
 	{
-		.index = 0, NAME("Peasant"), .speed = 4, .health = 4, .armor = ARMOR_NONE,
+		.index = UnitPeasant, NAME("Peasant"), .speed = 4, .health = 4, .armor = ARMOR_NONE,
 		.cost = {.gold = 1}, .expense = {.food = 1}, .time = 1, .troops_count = 20,
 		.melee = {.weapon = WEAPON_CLEAVING, .damage = 1, .agility = 0.5},
 	},
 	{
-		.index = 1, NAME("Archer"), .speed = 4, .health = 4, .armor = ARMOR_NONE,
+		.index = UnitMilitia, NAME("Militia"), .speed = 5, .health = 5, .armor = ARMOR_LEATHER,
+		.cost = {.gold = 1, .wood = 1}, .expense = {.food = 1}, .time = 1, .troops_count = 20, .requires = (1 << BuildingBarracks),
+		.melee = {.weapon = WEAPON_CLEAVING, .damage = 2, .agility = 1.0},
+	},
+	{
+		.index = UnitPikeman, NAME("Pikeman"), .speed = 5, .health = 6, .armor = ARMOR_CHAINMAIL,
+		.cost = {.gold = 2, .wood = 1, .iron = 1}, .expense = {.food = 1}, .time = 1, .troops_count = 20, .requires = (1 << BuildingForge),
+		.melee = {.weapon = WEAPON_CLEAVING, .damage = 3, .agility = 1.0},
+	},
+	{
+		.index = UnitArcher, NAME("Archer"), .speed = 4, .health = 4, .armor = ARMOR_NONE,
 		.cost = {.gold = 1, .wood = 1}, .expense = {.food = 1}, .time = 1, .troops_count = 20, .requires = (1 << BuildingArcheryRange),
 		.melee = {.weapon = WEAPON_CLEAVING, .damage = 1, .agility = 1.0},
 		.ranged = {.weapon = WEAPON_ARROW, .damage = 1, .range = 5},
 	},
 	{
-		.index = 2, NAME("Militia"), .speed = 5, .health = 5, .armor = ARMOR_LEATHER,
-		.cost = {.gold = 1, .wood = 1}, .expense = {.food = 1}, .time = 1, .troops_count = 20, .requires = (1 << BuildingBarracks),
-		.melee = {.weapon = WEAPON_CLEAVING, .damage = 2, .agility = 1.0},
+		.index = UnitLongbow, NAME("Longbow"), .speed = 4, .health = 5, .armor = ARMOR_LEATHER,
+		.cost = {.gold = 2, .wood = 2}, .expense = {.food = 1}, .time = 1, .troops_count = 20, .requires = (1 << BuildingBarracks) | (1 << BuildingArcheryRange),
+		.melee = {.weapon = WEAPON_CLEAVING, .damage = 1, .agility = 1.0},
+		.ranged = {.weapon = WEAPON_ARROW, .damage = 2, .range = 6},
 	},
 	{
-		.index = 3, NAME("Light cavalry"), .speed = 9, .health = 8, .armor = ARMOR_LEATHER,
+		.index = UnitLightCavalry, NAME("Light Cavalry"), .speed = 9, .health = 8, .armor = ARMOR_LEATHER,
 		.cost = {.gold = 2, .iron = 1}, .expense = {.food = 3}, .time = 2, .troops_count = 20, .requires = (1 << BuildingBarracks) | (1 << BuildingStables),
 		.melee = {.weapon = WEAPON_CLEAVING, .damage = 2, .agility = 1.0},
 	},
 	{
-		.index = 4, NAME("Battering Ram"), .speed = 3, .health = 80, .armor = ARMOR_WOODEN,
+		.index = UnitBatteringRam, NAME("Battering Ram"), .speed = 3, .health = 80, .armor = ARMOR_WOODEN,
 		.cost = {.gold = 2, .wood = 5}, .expense = {.food = 2}, .time = 2, .troops_count = 1, .requires = (1 << BuildingWorkshop),
 		.melee = {.weapon = WEAPON_BLUNT, .damage = 50, .agility = 0.25},
-	},
-	{
-		.index = 5, NAME("Pikeman"), .speed = 5, .health = 6, .armor = ARMOR_CHAINMAIL,
-		.cost = {.gold = 2, .wood = 1, .iron = 1}, .expense = {.food = 1}, .time = 1, .troops_count = 20, .requires = (1 << BuildingForge),
-		.melee = {.weapon = WEAPON_CLEAVING, .damage = 3, .agility = 1.0},
-	},
-	{
-		.index = 6, NAME("Longbow"), .speed = 4, .health = 5, .armor = ARMOR_LEATHER,
-		.cost = {.gold = 2, .wood = 2}, .expense = {.food = 1}, .time = 1, .troops_count = 20, .requires = (1 << BuildingBarracks) | (1 << BuildingArcheryRange),
-		.melee = {.weapon = WEAPON_CLEAVING, .damage = 1, .agility = 1.0},
-		.ranged = {.weapon = WEAPON_ARROW, .damage = 2, .range = 6},
 	},
 };
 const size_t UNITS_COUNT = sizeof(UNITS) / sizeof(*UNITS);
