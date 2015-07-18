@@ -47,10 +47,11 @@ static int input_round(int code, unsigned x, unsigned y, uint16_t modifiers, con
 
 static int attack(const struct game *restrict game, const struct battle *restrict battle, struct state_battle *restrict state, struct point target)
 {
+	struct pawn *pawn = state->pawn;
 	int x = target.x, y = target.y;
 
 	// If the pawn is not next to its target, move before attacking it.
-	if (!battlefield_neighbors(state->field, target))
+	if (!battlefield_neighbors(pawn->moves[pawn->moves_count - 1].location, target))
 	{
 		double move_distance = INFINITY;
 		int move_x, move_y;
@@ -82,14 +83,14 @@ static int attack(const struct game *restrict game, const struct battle *restric
 
 		if (move_distance < INFINITY)
 		{
-			movement_set(state->pawn, (struct point){move_x, move_y}, state->graph, state->obstacles);
-			if (path_reachable(state->pawn, state->graph, state->obstacles, state->reachable) < 0)
+			movement_queue(pawn, (struct point){move_x, move_y}, state->graph, state->obstacles);
+			if (path_reachable(pawn, state->graph, state->obstacles, state->reachable) < 0)
 				return ERROR_MEMORY;
 		}
 		else return ERROR_MISSING;
 	}
 
-	combat_order_fight(game, battle, state->obstacles, state->pawn, battle->field[y][x].pawn);
+	combat_order_fight(game, battle, state->obstacles, pawn, battle->field[y][x].pawn);
 
 	return 0;
 }
@@ -109,7 +110,7 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 
 	struct point point = {x, y};
 
-	if (code == -1)
+	if (code == EVENT_MOUSE_LEFT)
 	{
 		if (point_eq(point, state->field))
 			return INPUT_IGNORE;
@@ -133,7 +134,7 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 
 		return 0;
 	}
-	else if (code == -3)
+	else if (code == EVENT_MOUSE_RIGHT)
 	{
 		struct pawn *pawn = state->pawn;
 		if (!pawn || (pawn->troop->owner != state->player)) return INPUT_IGNORE;
