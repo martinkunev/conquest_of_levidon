@@ -19,7 +19,8 @@
 
 struct player
 {
-	enum {Neutral, Local, Computer, Remote} type;
+	//enum {Neutral, Local, Computer, Remote} type;
+	enum {Neutral, Local} type;
 	struct resources treasury;
 	unsigned char alliance;
 };

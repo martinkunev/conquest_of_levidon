@@ -73,7 +73,7 @@ int image_load_png(struct image *restrict image, const char *restrict filename, 
 	int bit_depth, color_type;
 	png_get_IHDR(png_ptr, info_ptr, &image->width, &image->height, &bit_depth, &color_type, 0, 0, 0);
 
-	if (bit_depth != 8) ; // TODO unsupported
+	if (bit_depth != 8) return -1; // TODO unsupported
 
 	GLint format;
 	switch (color_type)

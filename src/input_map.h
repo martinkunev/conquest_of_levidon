@@ -7,7 +7,8 @@ struct state_map
 	ssize_t region; // index of the selected region
 	struct troop *troop; // selected troop
 
-	enum {HOVER_NONE, HOVER_TROOP, HOVER_UNIT, HOVER_BUILDING, HOVER_DISMISS} hover_object; // type of the hovered object
+	//enum {HOVER_NONE, HOVER_TROOP, HOVER_UNIT, HOVER_BUILDING, HOVER_DISMISS} hover_object; // type of the hovered object
+	enum {HOVER_NONE, HOVER_UNIT, HOVER_BUILDING} hover_object; // type of the hovered object
 	union
 	{
 		int troop;

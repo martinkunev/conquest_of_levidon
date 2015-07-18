@@ -24,7 +24,7 @@ uint32_t *state
 // TODO implement format_real in order to use it in json_dump to increase the speed
 // TODO: optimize for bases 8, 10, 16
 
-static const unsigned char digits[64] = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-_", padding = '.';
+static const unsigned char digits[64] = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-_";
 
 uint32_t format_uint_length(uintmax_t number, uint8_t base)
 {
