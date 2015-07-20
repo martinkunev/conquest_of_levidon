@@ -23,7 +23,7 @@ static const double damage_boost[6][6] =
 static void damage_fight(const struct pawn *restrict fighter, struct pawn *restrict victims[], size_t victims_count)
 {
 	enum weapon weapon = fighter->troop->unit->melee.weapon;
-	double damage = fighter->troop->unit->melee.damage * fighter->troop->count * fighter->troop->unit->melee.agility;
+	double damage = fighter->troop->unit->melee.damage * fighter->count * fighter->troop->unit->melee.agility;
 	damage /= victims_count;
 
 	// TODO kill no more troops than the number of attacking troops
@@ -42,7 +42,7 @@ static void damage_assault(struct battle *restrict battle, const struct pawn *re
 	enum armor armor = field->armor;
 
 	enum weapon weapon = fighter->troop->unit->melee.weapon;
-	unsigned damage = (unsigned)(fighter->troop->unit->melee.damage * fighter->troop->count * damage_boost[weapon][armor] + 0.5);
+	unsigned damage = (unsigned)(fighter->troop->unit->melee.damage * fighter->count * damage_boost[weapon][armor] + 0.5);
 
 	if (damage >= field->strength) field->strength = 0;
 	else field->strength -= damage;
@@ -66,7 +66,7 @@ void battlefield_fight(const struct game *restrict game, struct battle *restrict
 		struct pawn *fighter = battle->pawns + i;
 		unsigned char fighter_alliance = game->players[fighter->troop->owner].alliance;
 
-		if (!fighter->troop->count) continue;
+		if (!fighter->count) continue;
 		if (fighter->action == PAWN_SHOOT) continue;
 
 		if (fighter->action == PAWN_ASSAULT)
@@ -118,10 +118,10 @@ void battlefield_shoot(struct battle *battle, const struct obstacles *restrict o
 	{
 		struct pawn *shooter = battle->pawns + i;
 
-		if (!shooter->troop->count) continue;
+		if (!shooter->count) continue;
 		if (shooter->action != PAWN_SHOOT) continue;
 
-		double damage_total = shooter->troop->unit->ranged.damage * shooter->troop->count;
+		double damage_total = shooter->troop->unit->ranged.damage * shooter->count;
 		unsigned damage;
 
 		unsigned target_index;
@@ -226,12 +226,12 @@ void battlefield_clean(struct battle *battle)
 		struct pawn *pawn = battle->pawns + p;
 		struct troop *troop = pawn->troop;
 
-		if (!troop->count) continue;
+		if (!pawn->count) continue;
 
-		if ((troop->count * troop->unit->health) <= pawn->hurt)
+		if ((pawn->count * troop->unit->health) <= pawn->hurt)
 		{
 			// All troops in this pawn are killed.
-			troop->count = 0;
+			pawn->count = 0;
 			battle->field[pawn->moves[0].location.y][pawn->moves[0].location.x].pawn = 0;
 		}
 		else
@@ -239,11 +239,11 @@ void battlefield_clean(struct battle *battle)
 			// Find the minimum and maximum of units that can be killed.
 			unsigned max = pawn->hurt / troop->unit->health;
 			unsigned min;
-			if ((troop->unit->health - 1) * troop->count >= pawn->hurt) min = 0;
-			else min = pawn->hurt % troop->count;
+			if ((troop->unit->health - 1) * pawn->count >= pawn->hurt) min = 0;
+			else min = pawn->hurt % pawn->count;
 
 			unsigned victims = pawn_victims(min, max);
-			troop->count -= victims;
+			pawn->count -= victims;
 			pawn->hurt -= victims * troop->unit->health;
 		}
 	}
@@ -253,7 +253,7 @@ void battlefield_clean(struct battle *battle)
 	{
 		struct pawn *pawn = battle->pawns + p;
 
-		if ((pawn->action == PAWN_FIGHT) && !pawn->target.pawn->troop->count)
+		if ((pawn->action == PAWN_FIGHT) && !pawn->target.pawn->count)
 			pawn->action = 0;
 
 		if ((pawn->action == PAWN_ASSAULT) && !battle->field[pawn->target.field.y][pawn->target.field.x].blockage)

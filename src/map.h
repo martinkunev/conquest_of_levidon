@@ -48,12 +48,12 @@ struct unit
 	{
 		double agility;
 		enum weapon weapon;
-		unsigned char damage;
+		unsigned char damage; // TODO double?
 	} melee;
 	struct
 	{
 		enum weapon weapon;
-		unsigned char damage;
+		unsigned char damage; // TODO double?
 		unsigned char range;
 	} ranged;
 };

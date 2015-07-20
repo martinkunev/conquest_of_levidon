@@ -409,7 +409,10 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 		i = offset[troop->unit->speed]++;
 
 		pawns[i].troop = troop;
+		pawns[i].count = troop->count;
+		pawns[i].dead = 0;
 		pawns[i].hurt = 0;
+
 		pawns[i].action = 0;
 
 		pawns[i].startup = 0; // this will be initialized later
@@ -446,6 +449,8 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 void battlefield_term(const struct game *restrict game, struct battle *restrict battle)
 {
 	size_t i;
+	for(i = 0; i < battle->pawns_count; ++i)
+		battle->pawns[i].troop->count = battle->pawns[i].count;
 	for(i = 0; i < game->players_count; ++i)
 		free(battle->players[i].pawns);
 	free(battle->pawns);
@@ -473,7 +478,7 @@ int battle_end(const struct game *restrict game, struct battle *restrict battle,
 		for(j = 0; j < battle->players[i].pawns_count; ++j)
 		{
 			pawn = battle->players[i].pawns[j];
-			if (pawn->troop->count)
+			if (pawn->count)
 			{
 				alive = 1;
 

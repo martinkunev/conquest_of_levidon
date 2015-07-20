@@ -342,7 +342,7 @@ static int if_animation(const struct player *restrict players, const struct batt
 		struct pawn *pawn = battle->pawns + p;
 		double x, y, x_final, y_final;
 
-		if (!pawn->troop->count) continue;
+		if (!pawn->count) continue;
 
 		// If the pawn will move more this round, the animation must continue.
 		movement_location(pawn, progress, &x, &y);
@@ -440,7 +440,7 @@ void if_formation(const void *argument, const struct game *game)
 
 			// Display the selected pawn in the control section.
 			fill_rectangle(CTRL_X, CTRL_Y + CTRL_MARGIN, FIELD_SIZE + MARGIN * 2, FIELD_SIZE + font12.height + MARGIN * 2, Self);
-			display_troop(troop->unit->index, CTRL_X + MARGIN, CTRL_Y + CTRL_MARGIN + MARGIN, Player + troop->owner, Black, troop->count);
+			display_troop(troop->unit->index, CTRL_X + MARGIN, CTRL_Y + CTRL_MARGIN + MARGIN, Player + troop->owner, Black, pawns[i]->count);
 		}
 		else
 		{
@@ -463,7 +463,7 @@ static void show_health(const struct pawn *pawn, unsigned x, unsigned y)
 {
 	char buffer[32], *end; // TODO make sure this is enough
 
-	unsigned total = pawn->troop->unit->health * pawn->troop->count;
+	unsigned total = pawn->troop->unit->health * pawn->count;
 	unsigned left = total - pawn->hurt;
 
 	end = format_bytes(buffer, S("health: "));
@@ -590,7 +590,7 @@ void if_battle(const void *argument, const struct game *game)
 		else if (allies(game, state->player, pawn->troop->owner)) color = Ally;
 		else color = Enemy;
 		fill_rectangle(CTRL_X, CTRL_Y + CTRL_MARGIN, FIELD_SIZE + MARGIN * 2, FIELD_SIZE + font12.height + MARGIN * 2, color);
-		display_troop(pawn->troop->unit->index, CTRL_X + MARGIN, CTRL_Y + CTRL_MARGIN + MARGIN, Player + pawn->troop->owner, Black, pawn->troop->count);
+		display_troop(pawn->troop->unit->index, CTRL_X + MARGIN, CTRL_Y + CTRL_MARGIN + MARGIN, Player + pawn->troop->owner, Black, pawn->count);
 
 		show_health(pawn, CTRL_X, CTRL_Y + CTRL_MARGIN + FIELD_SIZE + font12.height + MARGIN * 2 + MARGIN);
 
@@ -618,7 +618,7 @@ void if_battle(const void *argument, const struct game *game)
 		size_t i;
 		for(i = 0; i < battle->players[state->player].pawns_count; ++i)
 		{
-			if (!battle->players[state->player].pawns[i]->troop->count) continue;
+			if (!battle->players[state->player].pawns[i]->count) continue;
 			if_battle_pawn(game, state, battle->players[state->player].pawns[i]);
 		}
 	}

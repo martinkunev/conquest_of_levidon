@@ -7,6 +7,8 @@
 struct pawn
 {
 	struct troop *troop;
+	unsigned count;
+	unsigned dead;
 	unsigned hurt;
 
 	struct move *moves; // TODO allocate this

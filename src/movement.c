@@ -356,7 +356,7 @@ int battlefield_movement_plan(const struct player *restrict players, size_t play
 	// Set failback and movement time for each pawn.
 	for(p = 0; p < pawns_count; ++p)
 	{
-		if (!pawns[p].troop->count) continue;
+		if (!pawns[p].count) continue;
 
 		pawns[p].failback.x = pawns[p].moves[0].location.x * 2;
 		pawns[p].failback.y = pawns[p].moves[0].location.y * 2;
@@ -378,7 +378,7 @@ int battlefield_movement_plan(const struct player *restrict players, size_t play
 		for(p = 0; p < pawns_count; ++p)
 		{
 			pawn = pawns + p;
-			if (!pawn->troop->count) continue;
+			if (!pawn->count) continue;
 			pawn_position(pawn, now, &pawn->step);
 
 			failback = point_eq(pawn->step, pawn->failback);
@@ -409,7 +409,7 @@ retry:
 		// Update the failback of each pawn to the field at the top left side of the pawn.
 		for(p = 0; p < pawns_count; ++p)
 		{
-			if (!pawns[p].troop->count) continue;
+			if (!pawns[p].count) continue;
 
 			pawns[p].failback.x = pawns[p].step.x & ~0x1u;
 			pawns[p].failback.y = pawns[p].step.y & ~0x1u;
@@ -420,7 +420,7 @@ retry:
 	for(p = 0; p < pawns_count; ++p)
 	{
 		pawn = pawns + p;
-		if (!pawn->troop->count) continue;
+		if (!pawn->count) continue;
 
 		size_t index = pawn_position(pawn, 1.0, &pawn->step);
 
@@ -445,7 +445,7 @@ void battlefield_movement_perform(struct battlefield battlefield[][BATTLEFIELD_H
 	for(p = 0; p < pawns_count; ++p)
 	{
 		struct pawn *pawn = pawns + p;
-		if (!pawn->troop->count) continue;
+		if (!pawn->count) continue;
 
 		size_t index = pawn_position(pawn, 1.0, &pawn->step);
 
