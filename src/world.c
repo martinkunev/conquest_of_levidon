@@ -303,13 +303,6 @@ static int region_init(struct game *restrict game, struct region *restrict regio
 	if ((json_type(x) != JSON_INTEGER) || (json_type(y) != JSON_INTEGER)) return -1;
 	region->location_garrison = (struct point){x->integer, y->integer};
 
-	item = value_get_try(data, "center", JSON_ARRAY);
-	if (!item || (item->array.count != 2)) return -1;
-	x = item->array.data[0];
-	y = item->array.data[1];
-	if ((json_type(x) != JSON_INTEGER) || (json_type(y) != JSON_INTEGER)) return -1;
-	region->center = (struct point){x->integer, y->integer};
-
 	return 0;
 }
 
@@ -511,7 +504,6 @@ union json *world_save(const struct game *restrict game)
 		region = json_object_insert(region, S("location"), location);
 
 		region = json_object_insert(region, S("location_garrison"), world_save_point(game->regions[i].location_garrison));
-		region = json_object_insert(region, S("center"), world_save_point(game->regions[i].center));
 
 		region = json_object_insert(region, S("owner"), json_integer(game->regions[i].owner));
 

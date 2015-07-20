@@ -54,6 +54,33 @@ int troop_spawn(struct region *restrict region, struct troop **restrict troops, 
 	return 0;
 }
 
+// Returns whether the polygons share a border. Stores the border points in first and second (in the order of polygon a).
+int polygons_border(const struct polygon *restrict a, const struct polygon *restrict b, struct point *restrict first, struct point *restrict second)
+{
+	size_t ai, bi;
+
+	for(ai = 0; ai < a->vertices_count; ++ai)
+	{
+		for(bi = 0; bi < b->vertices_count; ++bi)
+		{
+			if (point_eq(a->points[ai], b->points[bi]))
+			{
+				size_t aj = (ai + 1) % a->vertices_count;
+				size_t bj = (bi + b->vertices_count - 1) % b->vertices_count;
+				if (point_eq(a->points[aj], b->points[bj]))
+				{
+					if (first) *first = a->points[ai];
+					if (second) *second = a->points[aj];
+					return 1;
+				}
+				else break; // a->points[ai] does not participate in a common border
+			}
+		}
+	}
+
+	return 0;
+}
+
 // Determine which regions are visible for the current player.
 void map_visible(const struct game *restrict game, unsigned char player, unsigned char visible[REGIONS_LIMIT])
 {

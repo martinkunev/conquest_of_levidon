@@ -26,6 +26,11 @@ struct font
 enum color {White, Gray, Black, Unexplored, Progress, Select, Self, Ally, Enemy, PathReachable, PathUnreachable, Hover, FieldReachable, Player};
 extern unsigned char display_colors[][4]; // TODO remove this
 
+static inline int point_eq(struct point a, struct point b)
+{
+	return ((a.x == b.x) && (a.y == b.y));
+}
+
 void draw_rectangle(unsigned x, unsigned y, unsigned width, unsigned height, enum color color);
 
 void fill_rectangle(unsigned x, unsigned y, unsigned width, unsigned height, enum color color);

@@ -31,6 +31,8 @@ static int play_battle(struct game *restrict game, struct battle *restrict battl
 
 	int status;
 
+	battle->round = 0;
+
 	// Ask each player to position their pawns.
 	for(player = 0; player < game->players_count; ++player)
 	{
@@ -47,6 +49,8 @@ static int play_battle(struct game *restrict game, struct battle *restrict battl
 			break;
 		}
 	}
+
+	battle->round = 1;
 
 	while ((status = battle_end(game, battle, defender)) < 0)
 	{
@@ -88,6 +92,8 @@ static int play_battle(struct game *restrict game, struct battle *restrict battl
 		battlefield_clean(battle);
 
 		free(obstacles);
+
+		battle->round += 1;
 	}
 
 	// TODO show battle overview // this is player-specific

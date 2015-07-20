@@ -90,7 +90,6 @@ struct region
 	struct region *neighbors[NEIGHBORS_LIMIT];
 	struct polygon *location;
 	struct point location_garrison;
-	struct point center;
 
 	unsigned char owner;
 
@@ -162,6 +161,8 @@ void troop_detach(struct troop **troops, struct troop *troop);
 void troop_remove(struct troop **troops, struct troop *troop);
 
 int troop_spawn(struct region *restrict region, struct troop **restrict troops, const struct unit *restrict unit, unsigned count, unsigned char owner);
+
+int polygons_border(const struct polygon *restrict a, const struct polygon *restrict b, struct point *restrict first, struct point *restrict second);
 
 void map_visible(const struct game *restrict game, unsigned char player, unsigned char visible[REGIONS_LIMIT]);
 

@@ -41,6 +41,8 @@
 
 #define ANIMATION_DURATION 3.0
 
+#define ARROW_LENGTH 80
+
 #define PREFIX_IMG PREFIX "share/medieval/img/"
 
 extern Display *display;
@@ -60,7 +62,7 @@ static GLuint map_renderbuffer;
 // TODO Create a struct that stores all the information about the battle (battlefield, players, etc.)
 struct battle *battle;
 
-static struct image image_selected, image_assault, image_flag, image_flag_small, image_panel, image_construction;
+static struct image image_selected, image_assault, image_flag, image_flag_small, image_panel, image_construction, image_movement;
 static struct image image_pawn_fight, image_pawn_assault, image_pawn_shoot;
 static struct image image_terrain[1];
 static struct image image_garrison[2]; // TODO this must be big enough for all garrison types
@@ -143,6 +145,7 @@ void if_load_images(void)
 	image_load_png(&image_flag_small, PREFIX_IMG "flag_small.png", 0);
 	image_load_png(&image_panel, PREFIX_IMG "panel.png", 0);
 	image_load_png(&image_construction, PREFIX_IMG "construction.png", 0);
+	image_load_png(&image_movement, PREFIX_IMG "movement.png", 0);
 
 	image_load_png(&image_pawn_fight, PREFIX_IMG "pawn_fight.png", 0);
 	image_load_png(&image_pawn_assault, PREFIX_IMG "pawn_assault.png", 0);
@@ -805,6 +808,7 @@ static void if_map_region(const struct region *region, const struct state_map *s
 		{
 			size_t x;
 			enum color color_text;
+			int movement = 0;
 
 			if (troop->owner == state->player)
 			{
@@ -813,6 +817,8 @@ static void if_map_region(const struct region *region, const struct state_map *s
 				object = TroopSelf;
 				offset = state->self_offset;
 				color_text = Black;
+
+				movement = (troop->move != troop->location);
 			}
 			else if (game->players[troop->owner].alliance == state_alliance)
 			{
@@ -836,15 +842,35 @@ static void if_map_region(const struct region *region, const struct state_map *s
 			{
 				struct point position = if_position(object, x - offset);
 				display_troop(troop->unit->index, position.x, position.y, Player + troop->owner, color_text, troop->count);
+				if (movement) image_draw(&image_movement, position.x, position.y);
 				if (troop == state->troop) draw_rectangle(position.x - 1, position.y - 1, object_group[object].width + 2, object_group[object].height + 2, White);
 			}
 
 			// Draw the destination of each moving troop owned by current player.
 			if ((troop->owner == state->player) && (!state->troop || (troop == state->troop)) && (troop->move->index != state->region))
 			{
-				struct point from = {troop->location->center.x, troop->location->center.y};
-				struct point to = {troop->move->center.x, troop->move->center.y};
-				display_arrow(from, to, MAP_X, MAP_Y, Self); // TODO change color
+				struct point p0, p1;
+				if (polygons_border(troop->location->location, troop->move->location, &p0, &p1)) // TODO this is slow; don't do it every time
+				{
+					// Take the points p0 and p1 as endpoints of the diagonal of the square and find the endpoints of the other diagonal.
+					// http://stackoverflow.com/questions/27829304/calculate-bisector-segment-coordinates
+
+					int x = p1.x - p0.x;
+					int y = p1.y - p0.y;
+
+					double xm = p0.x + x / 2.0;
+					double ym = p0.y + y / 2.0;
+
+					double length = sqrt(y * y + x * x);
+					double dx = ARROW_LENGTH * y / (2 * length);
+					double dy = ARROW_LENGTH * x / (2 * length);
+
+					struct point from = {xm - dx, ym + dy};
+					struct point to = {xm - dx, ym + dy};
+
+					display_arrow(from, to, MAP_X, MAP_Y, Self); // TODO change color
+				}
+				else ; // TODO buggy map
 			}
 		}
 

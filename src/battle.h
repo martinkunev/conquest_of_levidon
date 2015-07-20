@@ -55,12 +55,9 @@ struct battle
 		size_t pawns_count;
 		struct pawn **pawns;
 	} players[PLAYERS_LIMIT];
-};
 
-static inline int point_eq(struct point a, struct point b)
-{
-	return ((a.x == b.x) && (a.y == b.y));
-}
+	unsigned round;
+};
 
 size_t formation_reachable_open(const struct game *restrict game, const struct battle *restrict battle, const struct pawn *restrict pawn, struct point reachable[REACHABLE_LIMIT]);
 size_t formation_reachable_assault(const struct game *restrict game, const struct battle *restrict battle, const struct pawn *restrict pawn, struct point reachable[REACHABLE_LIMIT]);

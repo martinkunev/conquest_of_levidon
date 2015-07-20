@@ -17,7 +17,6 @@
 			"neighbors": [null, null, null, "Red Mountains", null, null, null, null],
 			"location": [[499,699],[399,689],[400,750],[505,742],[544,700],[522,685]],
 			"location_garrison": [520,722],
-			"center": [457,721]
 		},
 		"Red Mountains": {
 			"owner": 4,
@@ -25,7 +24,6 @@
 			"neighbors": ["Dorne", null, "Cape Wrath", "Highgarden", "Old Town", null, null, null],
 			"location": [[399,689],[420,652],[371,654],[340,652],[307,667],[288,705],[300,733],[314,720],[315,759],[400,750]],
 			"location_garrison": [332,688],
-			"center": [357,693]
 		},
 		"Old Town": {
 			"owner": 1,
@@ -33,7 +31,6 @@
 			"neighbors": ["Red Mountains", "Highgarden", null, null, null, null, null, null],
 			"location": [[300,733],[288,705],[307,667],[278,635],[258,633],[250,652],[230,669],[238,701],[260,694],[250,714],[269,739]],
 			"location_garrison": [262,685],
-			"center": [274,680]
 		},
 		"Highgarden": {
 			"owner": 1,
@@ -41,7 +38,6 @@
 			"neighbors": ["Cape Wrath", "The Reach", "Lannisport", null, null, "Old Town", "Red Mountains", null],
 			"location": [[307,667],[340,652],[355,629],[333,543],[290,547],[264,563],[239,563],[245,573],[240,585],[280,615],[267,623],[278,635]],
 			"location_garrison": [309,631],
-			"center": [316,602]
 		},
 		"The Reach": {
 			"owner": 1,
@@ -49,7 +45,6 @@
 			"neighbors": ["Storm's End", "King's Landing", "Riverrun", "Lannisport", null, "Highgarden", "Cape Wrath", null],
 			"location": [[355,629],[418,612],[432,589],[437,544],[392,513],[362,505],[333,543]],
 			"location_garrison": [396,564],
-			"center": [386,575]
 		},
 		"Cape Wrath": {
 			"owner": 3,
@@ -57,7 +52,6 @@
 			"neighbors": [null, null, "Storm's End", "The Reach", "Highgarden", null, "Red Mountains", null],
 			"location": [[355,629],[340,652],[371,654],[420,652],[451,644],[496,661],[512,656],[538,621],[481,612],[418,612]],
 			"location_garrison": [415,630],
-			"center": [434,630]
 		},
 		"Storm's End": {
 			"owner": 3,
@@ -65,7 +59,6 @@
 			"neighbors": [null, null, "King's Landing", null, "The Reach", null, "Cape Wrath", null],
 			"location": [[432,589],[418,612],[481,612],[481,603],[501,596],[519,548],[499,546],[437,544]],
 			"location_garrison": [493,597],
-			"center": [467,579]
 		},
 		"King's Landing": {
 			"owner": 6,
@@ -73,7 +66,6 @@
 			"neighbors": [null, null, null, "Riverrun", null, "The Reach", "Storm's End", null],
 			"location": [[499,546],[517,508],[505,504],[482,534],[477,527],[444,535],[441,524],[460,520],[471,486],[517,460],[528,432],[483,462],[460,459],[412,527],[437,544]],
 			"location_garrison": [439,523],
-			"center": [432,524]
 		},
 		"Lannisport": {
 			"owner": 2,
@@ -81,7 +73,6 @@
 			"neighbors": [null, "Riverrun", "Casterly Rock", null, null, null, "Highgarden", "The Reach"],
 			"location": [[239,563],[264,563],[290,547],[333,543],[362,505],[335,483],[252,509]],
 			"location_garrison": [258,518],
-			"center": [299,517]
 		},
 		"Casterly Rock": {
 			"owner": 2,
@@ -89,7 +80,6 @@
 			"neighbors": ["Riverrun", "The Twins", null, null, null, null, "Lannisport", null],
 			"location": [[252,509],[335,483],[327,471],[334,436],[324,418],[268,429],[273,445],[258,485],[231,497],[227,513]],
 			"location_garrison": [259,490],
-			"center": [294,464]
 		},
 		"Riverrun": {
 			"owner": 7,
@@ -97,7 +87,6 @@
 			"neighbors": [null, "Mountains of the Moon", "The Twins", null, "Casterly Rock", "Lannisport", "The Reach", "King's Landing"],
 			"location": [[334,436],[327,471],[335,483],[362,505],[392,513],[412,527],[460,459],[431,448],[405,402]],
 			"location_garrison": [349,445],
-			"center": [386,454]
 		},
 		"The Twins": {
 			"owner": 7,
@@ -105,7 +94,6 @@
 			"neighbors": ["Mountains of the Moon", null, "The Neck", null, null, "Casterly Rock", "Riverrun", null],
 			"location": [[324,418],[334,436],[405,402],[386,375],[386,342],[369,333],[317,355],[323,368],[302,378],[310,392],[335,384],[343,402]],
 			"location_garrison": [347,367],
-			"center": [363,379]
 		},
 		"Mountains of the Moon": {
 			"owner": 5,
@@ -113,7 +101,6 @@
 			"neighbors": [null, "Vale of Arryn", null, null, "The Twins", "Riverrun", null, null],
 			"location": [[405,402],[431,448],[474,450],[505,432],[500,415],[524,416],[545,398],[493,402],[442,389],[410,339],[386,342],[386,375]],
 			"location_garrison": [444,409],
-			"center": [440,405]
 		},
 		"Vale of Arryn": {
 			"owner": 5,
@@ -121,7 +108,6 @@
 			"neighbors": [null, null, null, null, null, "Mountains of the Moon", null, null],
 			"location": [[442,389],[493,402],[533,375],[517,359],[530,341],[469,365],[515,335],[481,340],[500,325],[476,333],[504,311],[410,339]],
 			"location_garrison": [461,380],
-			"center": [462,372]
 		},
 		"The Neck": {
 			"owner": 8,
@@ -129,7 +115,6 @@
 			"neighbors": [null, "White Harbor", "Barrowlands", null, null, null, "The Twins", null],
 			"location": [[317,355],[369,333],[394,279],[377,260],[323,275],[252,299],[246,307],[229,298],[214,328],[281,331]],
 			"location_garrison": [364,278],
-			"center": [340,302]
 		},
 		"White Harbor": {
 			"owner": 8,
@@ -137,7 +122,6 @@
 			"neighbors": [null, null, "Dreadfort", null, "Barrowlands", "The Neck", null, null],
 			"location": [[377,260],[394,279],[395,261],[411,290],[443,283],[464,243],[506,249],[471,202],[383,202]],
 			"location_garrison": [402,260],
-			"center": [410,237]
 		},
 		"Barrowlands": {
 			"owner": 8,
@@ -145,7 +129,6 @@
 			"neighbors": ["White Harbor", null, "Winterfell", null, null, null, "The Neck", null],
 			"location": [[323,275],[377,260],[383,202],[242,173],[243,193],[222,188],[210,247],[225,238],[248,281]],
 			"location_garrison": [318,206],
-			"center": [333,228]
 		},
 		"Dreadfort": {
 			"owner": 8,
@@ -153,7 +136,6 @@
 			"neighbors": [null, null, null, "The Wall", "Winterfell", null, "White Harbor", null],
 			"location": [[383,202],[471,202],[468,172],[483,178],[499,147],[515,159],[516,102],[463,97],[400,117]],
 			"location_garrison": [440,163],
-			"center": [432,163]
 		},
 		"Winterfell": {
 			"owner": 8,
@@ -161,7 +143,6 @@
 			"neighbors": ["Dreadfort", null, "The Wall", null, null, null, "Barrowlands", null],
 			"location": [[242,173],[383,202],[400,117],[330,122],[273,143],[252,118],[234,124],[252,137]],
 			"location_garrison": [359,175],
-			"center": [345,159]
 		},
 		"The Wall": {
 			"owner": 8,
@@ -169,7 +150,6 @@
 			"neighbors": [null, null, null, null, null, null, "Winterfell", "Dreadfort"],
 			"location": [[330,122],[400,117],[463,97],[452,48],[378,48],[335,85]],
 			"location_garrison": [416,54],
-			"center": [405,90]
 		}
 	}
 }
