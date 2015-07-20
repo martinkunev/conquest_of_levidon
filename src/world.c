@@ -49,7 +49,7 @@ const struct unit UNITS[] =
 		.melee = {.weapon = WEAPON_CLEAVING, .damage = 2, .agility = 1.0},
 	},
 	{
-		.index = UnitBatteringRam, NAME("Battering Ram"), .speed = 3, .health = 80, .armor = ARMOR_WOODEN,
+		.index = UnitBatteringRam, NAME("Battering Ram"), .speed = 3, .health = 60, .armor = ARMOR_WOODEN,
 		.cost = {.gold = 2, .wood = 5}, .expense = {.food = 2}, .time = 2, .troops_count = 1, .requires = (1 << BuildingWorkshop),
 		.melee = {.weapon = WEAPON_BLUNT, .damage = 50, .agility = 0.25},
 	},

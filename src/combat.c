@@ -15,8 +15,8 @@ static const double damage_boost[6][6] =
 	[WEAPON_NONE] =	{		0.0,		0.0,		0.0,		0.0,		0.0,		0.0},
 	[WEAPON_ARROW] = {		1.0,		0.8,		0.7,		0.2,		0.0,		0.0},
 	[WEAPON_CLEAVING] = {	1.0,		0.8,		0.7,		0.3,		0.5,		0.0},
-	[WEAPON_POLEARM] = {	1.0,		1.0,		0.8,		0.4,		0.2,		0.0},
-	[WEAPON_BLADE] = {		1.0,		1.0,		0.9,		0.5,		0.2,		0.0},
+	[WEAPON_POLEARM] = {	1.0,		1.0,		0.7,		0.4,		0.2,		0.0},
+	[WEAPON_BLADE] = {		1.0,		1.0,		0.8,		0.5,		0.2,		0.0},
 	[WEAPON_BLUNT] = {		1.0,		1.0,		1.0,		0.5,		1.0,		0.7},
 };
 
