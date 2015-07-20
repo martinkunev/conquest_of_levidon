@@ -78,7 +78,7 @@ static int input_region(int code, unsigned x, unsigned y, uint16_t modifiers, co
 		unsigned index;
 		struct region *destination = game->regions + region_index;
 		if (destination == region) goto valid;
-		for(index = 0; index < 8; ++index)
+		for(index = 0; index < NEIGHBORS_LIMIT; ++index)
 			if (destination == region->neighbors[index])
 				goto valid;
 		return 0;

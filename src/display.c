@@ -41,7 +41,7 @@
 
 #define ANIMATION_DURATION 3.0
 
-#define ARROW_LENGTH 80
+#define ARROW_LENGTH 60
 
 #define PREFIX_IMG PREFIX "share/medieval/img/"
 
@@ -865,7 +865,7 @@ static void if_map_region(const struct region *region, const struct state_map *s
 					double dx = ARROW_LENGTH * y / (2 * length);
 					double dy = ARROW_LENGTH * x / (2 * length);
 
-					struct point from = {xm - dx, ym + dy};
+					struct point from = {xm + dx, ym - dy};
 					struct point to = {xm - dx, ym + dy};
 
 					display_arrow(from, to, MAP_X, MAP_Y, Self); // TODO change color
@@ -918,6 +918,27 @@ static void if_map_region(const struct region *region, const struct state_map *s
 				}
 			}
 		}
+	}
+	else if (state->regions_visible[region->index])
+	{
+		// Display an estimation of the number troops in the region.
+		// Don't include garrison troops.
+
+		// TODO fix this
+
+		unsigned count = 0;
+		char buffer[16], *end; // TODO make sure this is enough
+
+		// TODO exclude troops going out of the garrison
+
+		for(troop = region->troops; troop; troop = troop->_next)
+			count += troop->count;
+
+		count = ((count + 5) / 10) * 10;
+		end = format_uint(buffer, count, 10);
+
+		display_string(S("estimated troops:"), PANEL_X + 2, PANEL_Y + 32, &font12, Black);
+		display_string(buffer, end - buffer, PANEL_X + 140, PANEL_Y + 32, &font12, Black);
 	}
 
 	if ((state->player == region->owner) && !siege)

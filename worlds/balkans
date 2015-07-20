@@ -25,6 +25,7 @@
 				[357, 595]
 			],
 			"location_garrison": [314,603],
+			"center": [302, 600]
 		},
 		"Attica": {
 			"owner": 1,
@@ -46,6 +47,7 @@
 				[309, 574]
 			],
 			"location_garrison": [365,577],
+			"center": [312, 539]
 		},
 		"Thessaly": {
 			"owner": 1,
@@ -70,6 +72,7 @@
 				[400, 487]
 			],
 			"location_garrison": [352,446],
+			"center": [316, 490]
 		},
 		"Epirus": {
 			"owner": 2,
@@ -85,6 +88,7 @@
 				[202, 469]
 			],
 			"location_garrison": [240,500],
+			"center": [246, 463]
 		},
 		"Dyrrachium": {
 			"owner": 0,
@@ -99,6 +103,7 @@
 				[185, 360]
 			],
 			"location_garrison": [212,411],
+			"center": [218, 379]
 		},
 		"Macedonia": {
 			"owner": 0,
@@ -113,6 +118,7 @@
 				[260, 428]
 			],
 			"location_garrison": [279,388],
+			"center": [326, 389]
 		},
 		"Thrace": {
 			"owner": 0,
@@ -128,6 +134,7 @@
 				[392, 364]
 			],
 			"location_garrison": [436,368],
+			"center": [434, 371]
 		},
 		"Byzantium": {
 			"owner": 3,
@@ -145,6 +152,7 @@
 				[576, 376]
 			],
 			"location_garrison": [609,417],
+			"center": [545, 393]
 		},
 		"Zagore": {
 			"owner": 0,
@@ -160,6 +168,7 @@
 				[418, 330]
 			],
 			"location_garrison": [554,338],
+			"center": [500, 331]
 		},
 		"Dobruja": {
 			"owner": 0,
@@ -180,6 +189,7 @@
 				[571, 316]
 			],
 			"location_garrison": [573,292],
+			"center": [574, 232]
 		},
 		"Moesia": {
 			"owner": 0,
@@ -195,6 +205,7 @@
 				[381, 256]
 			],
 			"location_garrison": [486,289],
+			"center": [475, 282]
 		},
 		"Serdika": {
 			"owner": 0,
@@ -212,6 +223,7 @@
 				[418, 330]
 			],
 			"location_garrison": [380,328],
+			"center": [358, 297]
 		},
 		"Dardania": {
 			"owner": 0,
@@ -232,6 +244,7 @@
 				[256, 366]
 			],
 			"location_garrison": [301,286],
+			"center": [292, 296]
 		},
 		"Doclea": {
 			"owner": 2,
@@ -246,6 +259,7 @@
 				[136, 321]
 			],
 			"location_garrison": [253,208],
+			"center": [185, 313]
 		},
 		"Rascia": {
 			"owner": 0,
@@ -262,6 +276,7 @@
 				[191, 272]
 			],
 			"location_garrison": [174,340],
+			"center": [225, 230]
 		},
 		"Dalmatia": {
 			"owner": 2,
@@ -278,6 +293,7 @@
 				[77, 277]
 			],
 			"location_garrison": [103,285],
+			"center": [106, 251]
 		},
 		"Pannonia": {
 			"owner": 0,
@@ -292,6 +308,7 @@
 				[105, 228]
 			],
 			"location_garrison": [158,164],
+			"center": [135, 163]
 		},
 		"Banat": {
 			"owner": 0,
@@ -309,6 +326,7 @@
 				[194, 122]
 			],
 			"location_garrison": [278,149],
+			"center": [252, 132]
 		},
 		"Dacia": {
 			"owner": 0,
@@ -329,6 +347,7 @@
 				[331, 127]
 			],
 			"location_garrison": [383,210],
+			"center": [360, 192]
 		},
 		"Wallachia": {
 			"owner": 0,
@@ -339,12 +358,13 @@
 				[461, 269],
 				[494, 249],
 				[545, 240],
-				[571, 230],
+				[571, 229],
 				[582, 177],
 				[480, 181],
 				[406, 212]
 			],
 			"location_garrison": [505,232],
+			"center": [475, 222]
 		}
 	}
 }
