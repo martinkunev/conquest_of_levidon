@@ -774,7 +774,7 @@ static inline void show_flag_small(unsigned x, unsigned y, unsigned player)
 	image_draw(&image_flag_small, x, y);
 }
 
-void if_map_troops(const struct region *region, const struct state_map *state, const struct game *game)
+static void if_map_troops(const struct region *region, const struct state_map *state, const struct game *game)
 {
 	unsigned count_self = 0, count_allies = 0, count_enemies = 0, count;
 
@@ -793,12 +793,14 @@ void if_map_troops(const struct region *region, const struct state_map *state, c
 		count_allies = (count_allies + 5) / 10;
 		count = count_self + count_allies;
 
-		if (count_self)
-			fill_rectangle(region->center.x, region->center.y - count_self, TROOPS_BAR_WIDTH, count_self, Self);
-		if (count_allies)
-			fill_rectangle(region->center.x, region->center.y - count, TROOPS_BAR_WIDTH, count_allies, Ally);
 		if (count)
-			draw_rectangle(region->center.x - 1, region->center.y - count - 1, TROOPS_BAR_WIDTH + 2, count + 2, Black);
+		{
+			if (count_self)
+				fill_rectangle(MAP_X + region->center.x, MAP_Y + region->center.y - count_self, TROOPS_BAR_WIDTH, count_self, Self);
+			if (count_allies)
+				fill_rectangle(MAP_X + region->center.x, MAP_Y + region->center.y - count, TROOPS_BAR_WIDTH, count_allies, Ally);
+			draw_rectangle(MAP_X + region->center.x - 1, MAP_Y + region->center.y - count - 1, TROOPS_BAR_WIDTH + 2, count + 2, Black);
+		}
 	}
 	else
 	{
@@ -807,10 +809,31 @@ void if_map_troops(const struct region *region, const struct state_map *state, c
 
 		if (count)
 		{
-			fill_rectangle(region->center.x, region->center.y - count, TROOPS_BAR_WIDTH, count, Enemy);
-			draw_rectangle(region->center.x - 1, region->center.y - count - 1, TROOPS_BAR_WIDTH + 2, count + 2, Black);
+			fill_rectangle(MAP_X + region->center.x, MAP_Y + region->center.y - count, TROOPS_BAR_WIDTH, count, Enemy);
+			draw_rectangle(MAP_X + region->center.x - 1, MAP_Y + region->center.y - count - 1, TROOPS_BAR_WIDTH + 2, count + 2, Black);
 		}
 	}
+}
+
+static void display_troop_destination(struct point p0, struct point p1)
+{
+	// Take the points p0 and p1 as endpoints of the diagonal of the square and find the endpoints of the other diagonal.
+	// http://stackoverflow.com/questions/27829304/calculate-bisector-segment-coordinates
+
+	int x = p1.x - p0.x;
+	int y = p1.y - p0.y;
+
+	double xm = p0.x + x / 2.0;
+	double ym = p0.y + y / 2.0;
+
+	double length = sqrt(y * y + x * x);
+	double dx = ARROW_LENGTH * y / (2 * length);
+	double dy = ARROW_LENGTH * x / (2 * length);
+
+	struct point from = {xm + dx, ym - dy};
+	struct point to = {xm - dx, ym + dy};
+
+	display_arrow(from, to, MAP_X, MAP_Y, Self); // TODO change color
 }
 
 static void if_map_region(const struct region *region, const struct state_map *state, const struct game *game)
@@ -892,23 +915,7 @@ static void if_map_region(const struct region *region, const struct state_map *s
 				struct point p0, p1;
 				if (polygons_border(troop->location->location, troop->move->location, &p0, &p1)) // TODO this is slow; don't do it every time
 				{
-					// Take the points p0 and p1 as endpoints of the diagonal of the square and find the endpoints of the other diagonal.
-					// http://stackoverflow.com/questions/27829304/calculate-bisector-segment-coordinates
-
-					int x = p1.x - p0.x;
-					int y = p1.y - p0.y;
-
-					double xm = p0.x + x / 2.0;
-					double ym = p0.y + y / 2.0;
-
-					double length = sqrt(y * y + x * x);
-					double dx = ARROW_LENGTH * y / (2 * length);
-					double dy = ARROW_LENGTH * x / (2 * length);
-
-					struct point from = {xm + dx, ym - dy};
-					struct point to = {xm - dx, ym + dy};
-
-					display_arrow(from, to, MAP_X, MAP_Y, Self); // TODO change color
+					display_troop_destination(p0, p1);
 				}
 				else
 				{
@@ -1099,7 +1106,7 @@ void if_map(const void *argument, const struct game *game)
 			unsigned location_x = MAP_X + region->location_garrison.x - image->width / 2;
 			unsigned location_y = MAP_Y + region->location_garrison.y - image->height / 2;
 			display_image(image, location_x, location_y, image->width, image->height);
-			show_flag_small(MAP_X + region->location_garrison.x, location_y - image_flag_small.height + 8, region->garrison.owner);
+			show_flag_small(MAP_X + region->location_garrison.x, location_y - image_flag_small.height + 10, region->garrison.owner);
 		}
 
 		// Display troops bar.
