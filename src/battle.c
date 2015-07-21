@@ -2,11 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "types.h"
 #include "map.h"
 #include "pathfinding.h"
 #include "battle.h"
-#include "movement.h"
 
 #define FORMATION_RADIUS_ATTACK 3
 #define FORMATION_RADIUS_DEFEND 4

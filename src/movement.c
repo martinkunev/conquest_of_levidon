@@ -1,7 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "types.h"
 #include "map.h"
 #include "pathfinding.h"
 #include "battle.h"
@@ -336,7 +335,7 @@ wait:
 }
 
 // pawns must be sorted by speed descending
-int battlefield_movement_plan(const struct player *restrict players, size_t players_count, struct battlefield battlefield[][BATTLEFIELD_HEIGHT], struct pawn *restrict pawns, size_t pawns_count)
+void battlefield_movement_plan(const struct player *restrict players, size_t players_count, struct battlefield battlefield[][BATTLEFIELD_HEIGHT], struct pawn *restrict pawns, size_t pawns_count)
 {
 	unsigned step;
 	double now;
@@ -433,8 +432,6 @@ retry:
 			pawn->moves[index].time = 1.0;
 		}
 	}
-
-	return 0;
 }
 
 void battlefield_movement_perform(struct battlefield battlefield[][BATTLEFIELD_HEIGHT], struct pawn *restrict pawns, size_t pawns_count)

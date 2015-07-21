@@ -1,4 +1,3 @@
-#include <stdlib.h>
 #include <sys/time.h>
 
 #define GL_GLEXT_PROTOTYPES
@@ -8,7 +7,6 @@
 
 #include <xcb/xcb.h>
 
-#include "types.h"
 #include "format.h"
 #include "map.h"
 #include "pathfinding.h"
@@ -18,7 +16,6 @@
 #include "input.h"
 #include "input_map.h"
 #include "input_battle.h"
-#include "interface.h"
 #include "display.h"
 
 #define S(s) (s), sizeof(s) - 1
@@ -112,7 +109,7 @@ void if_storage_init(const struct game *game, int width, int height)
 	for(i = 0; i < regions_count; ++i)
 	{
 		glColor3ub(255, i / 256, i % 256);
-		display_polygon(game->regions[i].location, 0, 0);
+		fill_polygon(game->regions[i].location, 0, 0);
 	}
 
 	glFlush();
@@ -238,7 +235,7 @@ void display_troop(size_t unit, unsigned x, unsigned y, enum color color, enum c
 	{
 		char buffer[16];
 		size_t length = format_uint(buffer, count, 10) - (uint8_t *)buffer;
-		display_string(buffer, length, x + (FIELD_SIZE - (length * 10)) / 2, y + FIELD_SIZE, &font12, text);
+		draw_string(buffer, length, x + (FIELD_SIZE - (length * 10)) / 2, y + FIELD_SIZE, &font12, text);
 	}
 }
 
@@ -471,7 +468,7 @@ static void show_health(const struct pawn *pawn, unsigned x, unsigned y)
 	end = format_bytes(end, S(" / "));
 	end = format_uint(end, total, 10);
 
-	display_string(buffer, end - buffer, x, y, &font12, White);
+	draw_string(buffer, end - buffer, x, y, &font12, White);
 
 	// HEALTH_BAR * left / total
 	// HEALTH_BAR * total / total == HEALTH_BAR
@@ -486,7 +483,7 @@ static void show_strength(const struct battlefield *field, unsigned x, unsigned 
 	end = format_bytes(buffer, S("strength: "));
 	end = format_uint(end, field->strength, 10);
 
-	display_string(buffer, end - buffer, x, y, &font12, White);
+	draw_string(buffer, end - buffer, x, y, &font12, White);
 }
 
 static void if_battle_pawn(const struct game *game, const struct state_battle *restrict state, const struct pawn *restrict pawn)
@@ -682,16 +679,16 @@ static void show_resource(const struct image *restrict image, int treasury, int 
 	end = format_uint(buffer, treasury, 10);
 
 	x = PANEL_X + image->width;
-	x += display_string(buffer, end - buffer, x, y, &font12, Black);
+	x += draw_string(buffer, end - buffer, x, y, &font12, Black);
 	if (income)
 	{
 		end = format_sint(buffer, income);
-		x += display_string(buffer, end - buffer, x, y, &font12, Ally);
+		x += draw_string(buffer, end - buffer, x, y, &font12, Ally);
 	}
 	if (expense)
 	{
 		end = format_sint(buffer, -expense);
-		x += display_string(buffer, end - buffer, x, y, &font12, Enemy);
+		x += draw_string(buffer, end - buffer, x, y, &font12, Enemy);
 	}
 }
 
@@ -702,7 +699,7 @@ static void tooltip_cost(const char *restrict name, size_t name_length, const st
 
 	unsigned offset = 120;
 
-	display_string(name, name_length, TOOLTIP_X, TOOLTIP_Y, &font12, White);
+	draw_string(name, name_length, TOOLTIP_X, TOOLTIP_Y, &font12, White);
 
 	if (cost->gold)
 	{
@@ -710,7 +707,7 @@ static void tooltip_cost(const char *restrict name, size_t name_length, const st
 		offset += 16;
 
 		length = format_uint(buffer, cost->gold, 10) - (uint8_t *)buffer;
-		display_string(buffer, length, TOOLTIP_X + offset, TOOLTIP_Y, &font12, White);
+		draw_string(buffer, length, TOOLTIP_X + offset, TOOLTIP_Y, &font12, White);
 		offset += 40;
 	}
 	if (cost->food)
@@ -719,7 +716,7 @@ static void tooltip_cost(const char *restrict name, size_t name_length, const st
 		offset += 16;
 
 		length = format_uint(buffer, cost->food, 10) - (uint8_t *)buffer;
-		display_string(buffer, length, TOOLTIP_X + offset, TOOLTIP_Y, &font12, White);
+		draw_string(buffer, length, TOOLTIP_X + offset, TOOLTIP_Y, &font12, White);
 		offset += 40;
 	}
 	if (cost->wood)
@@ -728,7 +725,7 @@ static void tooltip_cost(const char *restrict name, size_t name_length, const st
 		offset += 16;
 
 		length = format_uint(buffer, cost->wood, 10) - (uint8_t *)buffer;
-		display_string(buffer, length, TOOLTIP_X + offset, TOOLTIP_Y, &font12, White);
+		draw_string(buffer, length, TOOLTIP_X + offset, TOOLTIP_Y, &font12, White);
 		offset += 40;
 	}
 	if (cost->stone)
@@ -737,7 +734,7 @@ static void tooltip_cost(const char *restrict name, size_t name_length, const st
 		offset += 16;
 
 		length = format_uint(buffer, cost->stone, 10) - (uint8_t *)buffer;
-		display_string(buffer, length, TOOLTIP_X + offset, TOOLTIP_Y, &font12, White);
+		draw_string(buffer, length, TOOLTIP_X + offset, TOOLTIP_Y, &font12, White);
 		offset += 40;
 	}
 	if (cost->iron)
@@ -746,7 +743,7 @@ static void tooltip_cost(const char *restrict name, size_t name_length, const st
 		offset += 16;
 
 		length = format_uint(buffer, cost->iron, 10) - (uint8_t *)buffer;
-		display_string(buffer, length, TOOLTIP_X + offset, TOOLTIP_Y, &font12, White);
+		draw_string(buffer, length, TOOLTIP_X + offset, TOOLTIP_Y, &font12, White);
 		offset += 40;
 	}
 
@@ -756,7 +753,7 @@ static void tooltip_cost(const char *restrict name, size_t name_length, const st
 		offset += 16;
 
 		length = format_uint(buffer, time, 10) - (uint8_t *)buffer;
-		display_string(buffer, length, TOOLTIP_X + offset, TOOLTIP_Y, &font12, White);
+		draw_string(buffer, length, TOOLTIP_X + offset, TOOLTIP_Y, &font12, White);
 		offset += 40;
 	}
 }
@@ -937,8 +934,8 @@ static void if_map_region(const struct region *region, const struct state_map *s
 		count = ((count + 5) / 10) * 10;
 		end = format_uint(buffer, count, 10);
 
-		display_string(S("estimated troops:"), PANEL_X + 2, PANEL_Y + 32, &font12, Black);
-		display_string(buffer, end - buffer, PANEL_X + 140, PANEL_Y + 32, &font12, Black);
+		draw_string(S("estimated troops:"), PANEL_X + 2, PANEL_Y + 32, &font12, Black);
+		draw_string(buffer, end - buffer, PANEL_X + 140, PANEL_Y + 32, &font12, Black);
 	}
 
 	if ((state->player == region->owner) && !siege)
@@ -950,7 +947,7 @@ static void if_map_region(const struct region *region, const struct state_map *s
 			image_draw(&image_construction, position.x, position.y);
 		}
 
-		display_string(S("train:"), PANEL_X + 2, object_group[Dismiss].top + (object_group[Dismiss].height - font12.height) / 2, &font12, Black);
+		draw_string(S("train:"), PANEL_X + 2, object_group[Dismiss].top + (object_group[Dismiss].height - font12.height) / 2, &font12, Black);
 
 		// Display train queue.
 		size_t index;
@@ -1035,7 +1032,7 @@ void if_map(const void *argument, const struct game *game)
 		// Fill each region with the color of its owner (or the color indicating unexplored).
 		if (state->regions_visible[i]) glColor4ubv(display_colors[Player + region->owner]);
 		else glColor4ubv(display_colors[Unexplored]);
-		display_polygon(region->location, MAP_X, MAP_Y);
+		fill_polygon(region->location, MAP_X, MAP_Y);
 
 		// Remember income and expenses.
 		if (region->owner == state->player) region_income(region, &income);
@@ -1084,7 +1081,7 @@ void if_map(const void *argument, const struct game *game)
 		const struct region *region = game->regions + state->region;
 
 		// Show the name of the selected region.
-		display_string(region->name, region->name_length, PANEL_X + image_flag.width + MARGIN, PANEL_Y + (image_flag.height - font12.height) / 2, &font12, Black);
+		draw_string(region->name, region->name_length, PANEL_X + image_flag.width + MARGIN, PANEL_Y + (image_flag.height - font12.height) / 2, &font12, Black);
 
 		if (state->regions_visible[state->region]) if_map_region(region, state, game);
 	}

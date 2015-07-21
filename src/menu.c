@@ -9,7 +9,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "types.h"
+#include "errors.h"
 #include "base.h"
 #include "format.h"
 #include "json.h"

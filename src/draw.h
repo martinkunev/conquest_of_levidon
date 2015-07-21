@@ -32,9 +32,9 @@ static inline int point_eq(struct point a, struct point b)
 }
 
 void draw_rectangle(unsigned x, unsigned y, unsigned width, unsigned height, enum color color);
-
 void fill_rectangle(unsigned x, unsigned y, unsigned width, unsigned height, enum color color);
-void display_polygon(const struct polygon *restrict polygon, int offset_x, int offset_y);
+
+void fill_polygon(const struct polygon *restrict polygon, int offset_x, int offset_y);
 
 void display_arrow(struct point from, struct point to, int offset_x, int offset_y, enum color color);
 
@@ -42,5 +42,4 @@ int font_init(Display *restrict display, struct font *restrict font, const char 
 //void font_term(Display *restrict display, struct font *restrict font);
 
 void draw_cursor(const char *string, size_t length, unsigned x, unsigned y, struct font *restrict font, enum color color);
-
-unsigned display_string(const char *string, size_t length, unsigned x, unsigned y, struct font *restrict font, enum color color);
+unsigned draw_string(const char *string, size_t length, unsigned x, unsigned y, struct font *restrict font, enum color color);

@@ -1,3 +1,7 @@
+#include <stdbool.h>
+#include <stdint.h>
+#include "errors.h"
+
 union json;
 
 #define array_type union json *
@@ -7,9 +11,6 @@ union json;
 #include "hashmap.h"
 
 #define JSON_DEPTH_MAX 7
-
-#include <stdbool.h>
-#include "errors.h"
 
 enum json_type {JSON_NULL, JSON_BOOLEAN, JSON_INTEGER, JSON_REAL, JSON_STRING, JSON_ARRAY, JSON_OBJECT};
 

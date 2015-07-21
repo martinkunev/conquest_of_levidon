@@ -2,13 +2,12 @@
 
 #include <X11/keysym.h>
 
-#include "types.h"
+#include "errors.h"
 #include "map.h"
-#include "pathfinding.h"
-#include "battle.h"
 #include "input.h"
 #include "input_map.h"
 #include "input_menu.h"
+#include "pathfinding.h"
 #include "display.h"
 
 static int input_turn(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)

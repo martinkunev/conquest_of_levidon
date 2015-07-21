@@ -130,7 +130,7 @@ void draw_rectangle(unsigned x, unsigned y, unsigned width, unsigned height, enu
 }
 
 // Display a region as a polygon, using ear clipping.
-void display_polygon(const struct polygon *restrict polygon, int offset_x, int offset_y)
+void fill_polygon(const struct polygon *restrict polygon, int offset_x, int offset_y)
 {
 	// assert(polygon->vertices_count > 2);
 
@@ -294,7 +294,7 @@ If either min_byte1 or max_byte1 are nonzero, both min_char_or_byte2 and max_cha
 
 void draw_cursor(const char *string, size_t length, unsigned x, unsigned y, struct font *restrict font, enum color color)
 {
-	// TODO make this part of display_string
+	// TODO make this part of draw_string
 
 	struct box box = string_box(string, length, font);
 
@@ -306,7 +306,7 @@ void draw_cursor(const char *string, size_t length, unsigned x, unsigned y, stru
 	glEnd();
 }
 
-unsigned display_string(const char *string, size_t length, unsigned x, unsigned y, struct font *restrict font, enum color color)
+unsigned draw_string(const char *string, size_t length, unsigned x, unsigned y, struct font *restrict font, enum color color)
 {
 	// TODO support cursor here; not in a separate function
 

@@ -1,6 +1,5 @@
 #include <GL/glx.h>
 
-#include "types.h"
 #include "base.h"
 #include "map.h"
 #include "input_report.h"
@@ -45,8 +44,8 @@ void if_report(const void *argument, const struct game *game_)
 
 	// TODO for assault display whether the assault was successful, etc. (what is the damage to the garrison)
 
-	display_string(S("Before the battle"), REPORT_BEFORE_X, TITLE_Y, &font12, White);
-	display_string(S("After the battle"), REPORT_AFTER_X, TITLE_Y, &font12, White);
+	draw_string(S("Before the battle"), REPORT_BEFORE_X, TITLE_Y, &font12, White);
+	draw_string(S("After the battle"), REPORT_AFTER_X, TITLE_Y, &font12, White);
 
 	for(player = 0; player < game->players_count; ++player)
 	{

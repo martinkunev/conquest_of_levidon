@@ -5,9 +5,6 @@
 
 #include <xcb/xcb.h>
 
-#include "types.h"
-#include "format.h"
-#include "image.h"
 #include "draw.h"
 #include "interface.h"
 
@@ -19,8 +16,6 @@
 
 // Use xlsfonts to list the available fonts.
 // "-misc-dejavu sans mono-bold-r-normal--12-0-0-0-m-0-ascii-0"
-
-#define S(s) (s), sizeof(s) - 1
 
 // TODO compatibility with OpenGL 2.1 (necessary in MacOS X)
 #define glGenFramebuffers(...) glGenFramebuffersEXT(__VA_ARGS__)

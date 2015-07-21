@@ -3,7 +3,6 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "types.h"
 #include "json.h"
 #include "map.h"
 #include "world.h"

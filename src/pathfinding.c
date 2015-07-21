@@ -1,6 +1,6 @@
-#include <string.h>
+#include <stdlib.h>
 
-#include "types.h"
+#include "errors.h"
 #include "map.h"
 #include "pathfinding.h"
 #include "battle.h"

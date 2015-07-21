@@ -1,6 +1,6 @@
 #include <X11/keysym.h>
 
-#include "types.h"
+#include "errors.h"
 #include "base.h"
 #include "format.h"
 #include "map.h"

@@ -4,9 +4,7 @@
 #include <unistd.h>
 
 #include "base.h"
-#include "types.h"
 #include "map.h"
-#include "json.h"
 #include "world.h"
 #include "pathfinding.h"
 #include "battle.h"

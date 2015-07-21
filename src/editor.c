@@ -11,7 +11,7 @@ struct game;
 #include <GL/glx.h>
 #include <GL/glext.h>
 
-#include "types.h"
+#include "errors.h"
 #include "format.h"
 #include "json.h"
 #include "input.h"

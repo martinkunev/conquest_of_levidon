@@ -4,7 +4,7 @@
 
 #include <xcb/xcb.h>
 
-#include "types.h"
+#include "errors.h"
 #include "map.h"
 #include "input.h"
 
