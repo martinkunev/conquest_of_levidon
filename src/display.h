@@ -102,6 +102,8 @@ static inline int if_index(enum object object, struct point position)
 	return (object_group[object].columns * (position.y / height_padded) + (position.x / width_padded));
 }
 
+void display_troop(size_t unit, unsigned x, unsigned y, enum color color, enum color text, unsigned count);
+
 void if_storage_init(const struct game *game, int width, int height);
 void if_storage_term(void);
 

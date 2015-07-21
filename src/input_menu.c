@@ -241,7 +241,6 @@ int input_load(struct game *restrict game)
 finally:
 	free(state.worlds);
 	return status;
-
 }
 
 int input_save(const struct game *restrict game)

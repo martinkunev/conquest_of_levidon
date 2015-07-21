@@ -16,6 +16,7 @@
 #include "input_menu.h"
 #include "input_map.h"
 #include "input_battle.h"
+#include "input_report.h"
 #include "interface.h"
 #include "display.h"
 #include "menu.h"
@@ -96,7 +97,6 @@ static int play_battle(struct game *restrict game, struct battle *restrict battl
 		battle->round += 1;
 	}
 
-	// TODO show battle overview // this is player-specific
 	// winner team is status
 
 	return status;
@@ -218,6 +218,7 @@ static int play(struct game *restrict game)
 				struct battle battle;
 				if (battlefield_init(game, &battle, region, 0) < 0) abort(); // TODO
 				winner = play_battle(game, &battle, game->players[battle.region->owner].alliance);
+				input_report(game, &battle); // TODO this is player-specific
 				battlefield_term(game, &battle);
 			}
 			else if (region->garrison.assault) // assault
@@ -225,6 +226,7 @@ static int play(struct game *restrict game)
 				struct battle battle;
 				if (battlefield_init(game, &battle, region, 1) < 0) abort(); // TODO
 				winner = play_battle(game, &battle, game->players[battle.region->garrison.owner].alliance);
+				input_report(game, &battle); // TODO this is player-specific
 				battlefield_term(game, &battle);
 
 				assault = 1;
