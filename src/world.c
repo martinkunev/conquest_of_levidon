@@ -70,7 +70,7 @@ const struct building buildings[] =
 	[BuildingPalisade] = {NAME("Palisade"), .cost = {.gold = 10, .wood = 20}, .time = 4},
 	[BuildingFortress] = {NAME("Fortress"), .cost = {.gold = 20, .stone = 20}, .time = 8, .requires = (1 << BuildingPalisade)},
 	[BuildingWorkshop] = {NAME("Workshop"), .cost = {.gold = 8, .wood = 10}, .time = 5, .requires = (1 << BuildingSawmill)},
-	[BuildingForge] = {NAME("Forge"), .cost = {.gold = 4, .wood = 5, .stone = 5, .iron = 3}, .time = 4, .requires = (1 << BuildingBarracks)},
+	[BuildingForge] = {NAME("Forge"), .cost = {.gold = 5, .wood = 5, .stone = 5, .iron = 3}, .time = 4, .requires = (1 << BuildingBarracks)},
 };
 const size_t buildings_count = sizeof(buildings) / sizeof(*buildings);
 
