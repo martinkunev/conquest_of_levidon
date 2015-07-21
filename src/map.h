@@ -89,7 +89,7 @@ struct region
 	size_t index;
 	struct region *neighbors[NEIGHBORS_LIMIT];
 	struct polygon *location;
-	struct point location_garrison;
+	struct point location_garrison, center;
 
 	unsigned char owner;
 

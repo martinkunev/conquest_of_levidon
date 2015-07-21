@@ -1,4 +1,5 @@
 #include <sys/time.h>
+#include <unistd.h>
 
 #define GL_GLEXT_PROTOTYPES
 
@@ -27,6 +28,9 @@
 #define RESOURCE_STONE 740
 
 #define HEALTH_BAR 64
+
+#define TROOPS_BAR_WIDTH 5
+#define TROOPS_BAR_HEIGHT 48
 
 // TODO compatibility with OpenGL 2.1 (necessary in MacOS X)
 #define glGenFramebuffers(...) glGenFramebuffersEXT(__VA_ARGS__)
@@ -770,6 +774,45 @@ static inline void show_flag_small(unsigned x, unsigned y, unsigned player)
 	image_draw(&image_flag_small, x, y);
 }
 
+void if_map_troops(const struct region *region, const struct state_map *state, const struct game *game)
+{
+	unsigned count_self = 0, count_allies = 0, count_enemies = 0, count;
+
+	const struct troop *troop;
+	for(troop = region->troops; troop; troop = troop->_next)
+		if (troop->owner == state->player) count_self += troop->count;
+		else if (allies(game, troop->owner, state->player)) count_allies += troop->count;
+		else count_enemies += troop->count;
+
+	// Display a bar showing the number of troops in the region.
+	// Don't include garrison troops.
+	if (allies(game, state->player, region->owner))
+	{
+		// Calculate the height of the troops bar.
+		count_self = (count_self + 5) / 10;
+		count_allies = (count_allies + 5) / 10;
+		count = count_self + count_allies;
+
+		if (count_self)
+			fill_rectangle(region->center.x, region->center.y - count_self, TROOPS_BAR_WIDTH, count_self, Self);
+		if (count_allies)
+			fill_rectangle(region->center.x, region->center.y - count, TROOPS_BAR_WIDTH, count_allies, Ally);
+		if (count)
+			draw_rectangle(region->center.x - 1, region->center.y - count - 1, TROOPS_BAR_WIDTH + 2, count + 2, Black);
+	}
+	else
+	{
+		// Calculate the height of the troops bar.
+		count = (count_enemies + 5) / 10;
+
+		if (count)
+		{
+			fill_rectangle(region->center.x, region->center.y - count, TROOPS_BAR_WIDTH, count, Enemy);
+			draw_rectangle(region->center.x - 1, region->center.y - count - 1, TROOPS_BAR_WIDTH + 2, count + 2, Black);
+		}
+	}
+}
+
 static void if_map_region(const struct region *region, const struct state_map *state, const struct game *game)
 {
 	unsigned state_alliance = game->players[state->player].alliance;
@@ -867,7 +910,11 @@ static void if_map_region(const struct region *region, const struct state_map *s
 
 					display_arrow(from, to, MAP_X, MAP_Y, Self); // TODO change color
 				}
-				else ; // TODO buggy map
+				else
+				{
+					// TODO do something better
+					write(2, S("Neighboring regions have no common border\n"));
+				}
 			}
 		}
 
@@ -915,27 +962,6 @@ static void if_map_region(const struct region *region, const struct state_map *s
 				}
 			}
 		}
-	}
-	else if (state->regions_visible[region->index])
-	{
-		// Display an estimation of the number troops in the region.
-		// Don't include garrison troops.
-
-		// TODO fix this
-
-		unsigned count = 0;
-		char buffer[16], *end; // TODO make sure this is enough
-
-		// TODO exclude troops going out of the garrison
-
-		for(troop = region->troops; troop; troop = troop->_next)
-			count += troop->count;
-
-		count = ((count + 5) / 10) * 10;
-		end = format_uint(buffer, count, 10);
-
-		draw_string(S("estimated troops:"), PANEL_X + 2, PANEL_Y + 32, &font12, Black);
-		draw_string(buffer, end - buffer, PANEL_X + 140, PANEL_Y + 32, &font12, Black);
 	}
 
 	if ((state->player == region->owner) && !siege)
@@ -1063,8 +1089,9 @@ void if_map(const void *argument, const struct game *game)
 	{
 		if (!state->regions_visible[i]) continue;
 
-		// Display garrison if built.
 		const struct region *region = game->regions + i;
+
+		// Display garrison if built.
 		const struct garrison_info *restrict garrison = garrison_info(region);
 		if (garrison)
 		{
@@ -1074,6 +1101,9 @@ void if_map(const void *argument, const struct game *game)
 			display_image(image, location_x, location_y, image->width, image->height);
 			show_flag_small(MAP_X + region->location_garrison.x, location_y - image_flag_small.height + 8, region->garrison.owner);
 		}
+
+		// Display troops bar.
+		if_map_troops(region, state, game);
 	}
 
 	if (state->region >= 0)

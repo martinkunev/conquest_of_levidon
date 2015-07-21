@@ -302,6 +302,13 @@ static int region_init(struct game *restrict game, struct region *restrict regio
 	if ((json_type(x) != JSON_INTEGER) || (json_type(y) != JSON_INTEGER)) return -1;
 	region->location_garrison = (struct point){x->integer, y->integer};
 
+	item = value_get_try(data, "center", JSON_ARRAY);
+	if (!item || (item->array.count != 2)) return -1;
+	x = item->array.data[0];
+	y = item->array.data[1];
+	if ((json_type(x) != JSON_INTEGER) || (json_type(y) != JSON_INTEGER)) return -1;
+	region->center = (struct point){x->integer, y->integer};
+
 	return 0;
 }
 
