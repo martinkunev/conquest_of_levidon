@@ -8,6 +8,8 @@
 
 #define ACCURACY 0.5
 
+#define MISS_MAX 25 /* 25% */
+
 static const double damage_boost[6][6] =
 {
 // ARMOR:					NONE		LEATHER		CHAINMAIL	PLATE		WOODEN		STONE
@@ -19,20 +21,63 @@ static const double damage_boost[6][6] =
 	[WEAPON_BLUNT] = {		1.0,		1.0,		1.0,		0.5,		1.0,		0.7},
 };
 
+static void damage_deal(double damage, unsigned attacker_troops, struct pawn *restrict victim)
+{
+	const struct unit *restrict unit = victim->troop->unit;
+
+	// The attacking troops can sometimes miss.
+	damage *= attacker_troops * (100 - random() % (MISS_MAX + 1)) / 100.0;
+
+	unsigned damage_total = (unsigned)(damage + victim->hurt + 0.5);
+
+	// Decide how many troops to kill.
+	unsigned dead_max = damage_total / unit->health;
+	unsigned dead_min = dead_max / 2;
+	unsigned dead = dead_min + random() % (dead_max - dead_min + 1);
+	if (dead > attacker_troops) dead = attacker_troops;
+	unsigned alive = victim->count - dead;
+	if (alive > (victim->count * unit->health - damage_total)) dead = damage_total - victim->count * (unit->health - 1);
+
+	victim->hurt = damage_total - dead * unit->health;
+	victim->dead += dead;
+}
+
 static void damage_fight(const struct pawn *restrict fighter, struct pawn *restrict victims[], size_t victims_count)
 {
-	enum weapon weapon = fighter->troop->unit->melee.weapon;
-	double damage = fighter->troop->unit->melee.damage * fighter->count * fighter->troop->unit->melee.agility;
-	damage /= victims_count;
-
-	// TODO kill no more troops than the number of attacking troops
-
 	size_t i;
+
+	enum weapon weapon = fighter->troop->unit->melee.weapon;
+	double damage = fighter->troop->unit->melee.damage * fighter->troop->unit->melee.agility;
+
+	// assert(victims_count <= 4);
+
+	// Distribute the attacking troops equally between the victims.
+	// Choose targets for the remainder randomly.
+	unsigned attackers = fighter->count / victims_count;
+	unsigned targets_attackers[] = {attackers, attackers, attackers, attackers};
+	unsigned left = fighter->count % victims_count;
+	while (left--) targets_attackers[random() % victims_count] += 1;
+
 	for(i = 0; i < victims_count; ++i)
-	{
-		enum armor armor = victims[i]->troop->unit->armor;
-		victims[i]->hurt += (unsigned)(damage * damage_boost[weapon][armor] + 0.5);
-	}
+		damage_deal(damage * damage_boost[weapon][victims[i]->troop->unit->armor], targets_attackers[i], victims[i]);
+
+		//const struct unit *restrict unit = victims[i]->troop->unit;
+
+		// The figher can sometimes miss.
+		//damage *= (100 - random() % (MISS_MAX + 1)) / 100.0;
+
+		//unsigned damage_total = (unsigned)(targets_attackers[i] * damage * damage_boost[weapon][unit->armor] + victims[i]->hurt + 0.5);
+		//damage_deal(targets_attackers[i], damage_total, victims[i]);
+
+		/*unsigned dead_max = damage_total / unit->health;
+		unsigned dead_min = dead_max / 2;
+		unsigned dead = dead_min + random() % (dead_max - dead_min + 1);
+		if (dead > targets_attackers[i]) dead = targets_attackers[i];
+		unsigned alive = victims[i]->count - dead;
+		if (alive > (victims[i]->count * unit->health - damage_total)) dead = damage_total - victims[i]->count * (unit->health - 1);
+
+		victims[i]->hurt = damage_total - dead * unit->health;
+		victims[i]->dead += dead;*/
 }
 
 static void damage_assault(struct battle *restrict battle, const struct pawn *restrict fighter, struct point target)
@@ -47,14 +92,12 @@ static void damage_assault(struct battle *restrict battle, const struct pawn *re
 	else field->strength -= damage;
 }
 
-// Deals damage to a pawn.
-static void pawn_deal(struct pawn **victims, size_t victims_count, unsigned damage)
+static void damage_shoot(struct pawn *shooter, struct pawn *victim, double damage)
 {
-	if (!*victims) return;
+	if (!victim) return;
 
-	size_t j;
-	for(j = 0; j < victims_count; ++j)
-		victims[j]->hurt += damage;
+	// Assume all troops can shoot this victim.
+	damage_deal(damage * damage_boost[shooter->troop->unit->ranged.weapon][victim->troop->unit->armor], shooter->count, victim);
 }
 
 void battlefield_fight(const struct game *restrict game, struct battle *restrict battle) // TODO rename to something like combat_melee
@@ -145,63 +188,29 @@ void battlefield_shoot(struct battle *battle, const struct obstacles *restrict o
 
 		target_index = 0;
 		on_target = targets[target_index][0] * (1 - miss) + targets[target_index][1] * miss;
-		pawn_deal(&battle->field[y][x].pawn, 1, (unsigned)(damage_total * on_target + 0.5));
+		damage_shoot(shooter, battle->field[y][x].pawn, damage_total * on_target);
 
 		target_index = 1;
 		on_target = targets[target_index][0] * (1 - miss) + targets[target_index][1] * miss;
-		damage = (unsigned)(damage_total * on_target + 0.5);
-		if (x > 0) pawn_deal(&battle->field[y][x - 1].pawn, 1, damage);
-		if (x < (BATTLEFIELD_WIDTH - 1)) pawn_deal(&battle->field[y][x + 1].pawn, 1, damage);
-		if (y > 0) pawn_deal(&battle->field[y - 1][x].pawn, 1, damage);
-		if (y < (BATTLEFIELD_HEIGHT - 1)) pawn_deal(&battle->field[y + 1][x].pawn, 1, damage);
+		damage = damage_total * on_target;
+		if (x > 0) damage_shoot(shooter, battle->field[y][x - 1].pawn, damage);
+		if (x < (BATTLEFIELD_WIDTH - 1)) damage_shoot(shooter, battle->field[y][x + 1].pawn, damage);
+		if (y > 0) damage_shoot(shooter, battle->field[y - 1][x].pawn, damage);
+		if (y < (BATTLEFIELD_HEIGHT - 1)) damage_shoot(shooter, battle->field[y + 1][x].pawn, damage);
 
 		target_index = 2;
 		on_target = targets[target_index][0] * (1 - miss) + targets[target_index][1] * miss;
-		damage = (unsigned)(damage_total * on_target + 0.5);
+		damage = damage_total * on_target;
 		if (x > 0)
 		{
-			if (y > 0) pawn_deal(&battle->field[y - 1][x - 1].pawn, 1, damage);
-			if (y < (BATTLEFIELD_HEIGHT - 1)) pawn_deal(&battle->field[y + 1][x - 1].pawn, 1, damage);
+			if (y > 0) damage_shoot(shooter, battle->field[y - 1][x - 1].pawn, damage);
+			if (y < (BATTLEFIELD_HEIGHT - 1)) damage_shoot(shooter, battle->field[y + 1][x - 1].pawn, damage);
 		}
 		if (x < (BATTLEFIELD_WIDTH - 1))
 		{
-			if (y > 0) pawn_deal(&battle->field[y - 1][x + 1].pawn, 1, damage);
-			if (y < (BATTLEFIELD_HEIGHT - 1)) pawn_deal(&battle->field[y + 1][x + 1].pawn, 1, damage);
+			if (y > 0) damage_shoot(shooter, battle->field[y - 1][x + 1].pawn, damage);
+			if (y < (BATTLEFIELD_HEIGHT - 1)) damage_shoot(shooter, battle->field[y + 1][x + 1].pawn, damage);
 		}
-	}
-}
-
-// Determine how many units to kill.
-static unsigned pawn_victims(unsigned min, unsigned max)
-{
-	// The possible outcomes are all the integers in [min, max].
-	if (max == min) return min;
-	unsigned outcomes = (max - min + 1);
-
-	// TODO ?use a better algorithm here
-	// For the outcomes min and max there is 1 chance value (least probable).
-	// Outcomes closer to the middle of the interval are more probable than the ones farther from it.
-	// When going from the end of the interval to the middle, the number of chance values increases by 2 with every integer.
-	// Example: for the interval [2, 6], the chance values are: 1, 3, 5, 3, 1
-
-	unsigned chances, chance;
-	chances = 2 * (outcomes / 2) * (outcomes / 2);
-	if (outcomes % 2) chances += outcomes;
-	chance = random() % chances;
-
-	// Find the outcome corresponding to the chosen chance value.
-	size_t distance = 0;
-	if (chance < chances / 2)
-	{
-		// left half of the interval [min, max]
-		while ((distance + 1) * (distance + 1) <= chance) distance += 1;
-		return min + distance;
-	}
-	else
-	{
-		// right half of the interval [min, max]
-		while ((distance + 1) * (distance + 1) <= (chances - chance)) distance += 1;
-		return max - distance;
 	}
 }
 
@@ -223,28 +232,15 @@ void battlefield_clean(struct battle *battle)
 	for(p = 0; p < battle->pawns_count; ++p)
 	{
 		struct pawn *pawn = battle->pawns + p;
-		struct troop *troop = pawn->troop;
 
 		if (!pawn->count) continue;
 
-		if ((pawn->count * troop->unit->health) <= pawn->hurt)
-		{
-			// All troops in this pawn are killed.
-			pawn->count = 0;
-			battle->field[pawn->moves[0].location.y][pawn->moves[0].location.x].pawn = 0;
-		}
-		else
-		{
-			// Find the minimum and maximum of units that can be killed.
-			unsigned max = pawn->hurt / troop->unit->health;
-			unsigned min;
-			if ((troop->unit->health - 1) * pawn->count >= pawn->hurt) min = 0;
-			else min = pawn->hurt % pawn->count;
+		pawn->count -= pawn->dead;
+		pawn->dead = 0;
 
-			unsigned victims = pawn_victims(min, max);
-			pawn->count -= victims;
-			pawn->hurt -= victims * troop->unit->health;
-		}
+		// Remove dead pawns from the battlefield.
+		if (!pawn->count)
+			battle->field[pawn->moves[0].location.y][pawn->moves[0].location.x].pawn = 0;
 	}
 
 	// Stop pawns from attacking dead pawns and destroyed obstacles.
