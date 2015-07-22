@@ -67,7 +67,7 @@ static struct image image_selected, image_assault, image_flag, image_flag_small,
 static struct image image_pawn_fight, image_pawn_assault, image_pawn_shoot;
 static struct image image_terrain[1];
 static struct image image_garrison[2]; // TODO this must be big enough for all garrison types
-static struct image image_map_garrison[2]; // TODO this must be big enough for all garrison types
+static struct image image_map_village, image_map_garrison[2]; // TODO this must be big enough for all garrison types
 static struct image image_gold, image_food, image_wood, image_stone, image_iron, image_time;
 static struct image image_scroll_left, image_scroll_right;
 static struct image image_units[7]; // TODO the array must be enough to hold units_count units
@@ -155,6 +155,7 @@ void if_load_images(void)
 	image_load_png(&image_garrison[PALISADE], PREFIX_IMG "garrison_palisade.png", 0);
 	image_load_png(&image_garrison[FORTRESS], PREFIX_IMG "garrison_fortress.png", 0);
 
+	image_load_png(&image_map_village, PREFIX_IMG "map_village.png", 0);
 	image_load_png(&image_map_garrison[PALISADE], PREFIX_IMG "map_palisade.png", 0);
 	image_load_png(&image_map_garrison[FORTRESS], PREFIX_IMG "map_fortress.png", 0);
 
@@ -774,8 +775,10 @@ static inline void show_flag_small(unsigned x, unsigned y, unsigned player)
 	image_draw(&image_flag_small, x, y);
 }
 
-static void if_map_troops(const struct region *region, const struct state_map *state, const struct game *game)
+static void if_map_troops(const struct region *region, const struct state_map *state, const struct game *game) // TODO rename this
 {
+	unsigned x, y;
+
 	unsigned count_self = 0, count_allies = 0, count_enemies = 0, count;
 
 	const struct troop *troop;
@@ -783,6 +786,13 @@ static void if_map_troops(const struct region *region, const struct state_map *s
 		if (troop->owner == state->player) count_self += troop->count;
 		else if (allies(game, troop->owner, state->player)) count_allies += troop->count;
 		else count_enemies += troop->count;
+
+	// Display village image.
+	x = MAP_X + region->center.x - image_map_village.width;
+	y = MAP_Y + region->center.y - image_map_village.height;
+	display_image(&image_map_village, x, y, image_map_village.width, image_map_village.height);
+
+	// TODO padding between village image and troops bar
 
 	// Display a bar showing the number of troops in the region.
 	// Don't include garrison troops.
@@ -795,6 +805,8 @@ static void if_map_troops(const struct region *region, const struct state_map *s
 
 		if (count)
 		{
+			if (count > image_map_village.height) count = image_map_village.height;
+
 			if (count_self)
 				fill_rectangle(MAP_X + region->center.x, MAP_Y + region->center.y - count_self, TROOPS_BAR_WIDTH, count_self, Self);
 			if (count_allies)
@@ -809,6 +821,8 @@ static void if_map_troops(const struct region *region, const struct state_map *s
 
 		if (count)
 		{
+			if (count > image_map_village.height) count = image_map_village.height;
+
 			fill_rectangle(MAP_X + region->center.x, MAP_Y + region->center.y - count, TROOPS_BAR_WIDTH, count, Enemy);
 			draw_rectangle(MAP_X + region->center.x - 1, MAP_Y + region->center.y - count - 1, TROOPS_BAR_WIDTH + 2, count + 2, Black);
 		}
@@ -859,6 +873,7 @@ static void if_map_region(const struct region *region, const struct state_map *s
 		// * current player owns the region
 		// * building requirements are satisfied
 		// * there is no siege
+		fill_rectangle(object_group[Building].left, object_group[Building].top, object_group[Building].span_x, object_group[Building].span_y, Black);
 		for(i = 0; i < buildings_count; ++i)
 		{
 			struct point position = if_position(Building, i);
