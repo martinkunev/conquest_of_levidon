@@ -777,7 +777,7 @@ static inline void show_flag_small(unsigned x, unsigned y, unsigned player)
 
 static void if_map_troops(const struct region *region, const struct state_map *state, const struct game *game) // TODO rename this
 {
-	unsigned x, y;
+	//unsigned x, y;
 
 	unsigned count_self = 0, count_allies = 0, count_enemies = 0, count;
 
@@ -788,9 +788,10 @@ static void if_map_troops(const struct region *region, const struct state_map *s
 		else count_enemies += troop->count;
 
 	// Display village image.
-	x = MAP_X + region->center.x - image_map_village.width;
+	// TODO fix this; it requires bigger regions and grass as background
+	/*x = MAP_X + region->center.x - image_map_village.width;
 	y = MAP_Y + region->center.y - image_map_village.height;
-	display_image(&image_map_village, x, y, image_map_village.width, image_map_village.height);
+	display_image(&image_map_village, x, y, image_map_village.width, image_map_village.height);*/
 
 	// TODO padding between village image and troops bar
 

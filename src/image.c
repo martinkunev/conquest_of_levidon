@@ -1,4 +1,5 @@
 #include <fcntl.h>
+#include <math.h>
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -129,7 +130,11 @@ int image_load_png(struct image *restrict image, const char *restrict filename, 
 		{
 			for(x = 0; x < image->width; ++x)
 			{
-				n = (rows[y][x * 4] + rows[y][x * 4 + 1] + rows[y][x * 4 + 2]) / 3;
+				unsigned p0 = rows[y][x * 4];
+				unsigned p1 = rows[y][x * 4 + 1];
+				unsigned p2 = rows[y][x * 4 + 2];
+
+				n = sqrt((p0 * p0 + p1 * p1 + p2 * p2) / 3);
 				rows[y][x * 4] = n;
 				rows[y][x * 4 + 1] = n;
 				rows[y][x * 4 + 2] = n;
