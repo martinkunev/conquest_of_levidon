@@ -424,7 +424,10 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 			i = offset[troop->unit->speed]++;
 
 			pawns[i].troop = troop;
+			pawns[i].count = troop->count;
+			pawns[i].dead = 0;
 			pawns[i].hurt = 0;
+
 			pawns[i].action = 0;
 
 			pawns[i].startup = NEIGHBOR_GARRISON;

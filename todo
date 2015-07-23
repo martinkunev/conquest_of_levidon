@@ -1,0 +1,81 @@
+features:
+H	name the game
+H	do something to prevent endless battles; clean up the code related to the end of the battle
+H	artificial intelligence
+ H	a pawn should not be able to kill more units than the number of troops
+ H	fix damage algorithm
+H	movement in and out of the garrison should be visible only for the owner
+H	don't allow attacking if the attacker cannot do damage to the defender (due to weapon and armor type)
+M	keyboard support in various places in the interface
+M	assault garrison destruction and repair
+M	assault tower support
+M	forge, armory, pikeman, swordsman, crossbowman, heavy cavalry, horse archer
+M	do something when there is not enough food for all units (?kill some units)
+M	better battle animations (shooting, fighting, etc.)
+M	region population; income should be calculated as a function of the population; army recruitment should reduce population
+M	region-specific features
+L	assault moat
+L	network game
+L	sound
+L	water; naval battles
+L	roads
+L	religions
+L	ethnicities
+L	map scrolling
+L	dynamic alliances
+L	seasons
+L	buildings should not generate income on the day they are built
+L	implement exit game while in battle
+L	draw a border around the selected region
+L	change movement icon to boots
+L	auto combat
+L	player names and flag patterns
+L	limited number of arrows
+
+TODO ? change direction of everything to counterclockwise; currently the y axis is in the opposite direction (and the cross product is negated)
+TODO ? rename field to tile
+
+TODO ? make generic data structures be used through code generation (maybe a better solution is to use a union instead of multiple implementations)
+
+TODO ? redesign input functions
+
+don't allow pawns to attack their own walls (currently only gates are not attacked)
+
+make it simpler to check if two players are allies
+
+input_construct, input_train, input_troop, input_garrison
+
+improve player colors
+
+? dynamic battlefield size
+
+bugs
+	it looks like allies see which troops have just exited the garrison; this should also be considered for troop count estimation for watch tower
+
+images
+	fortress*.png, fortress_gate*.png
+	assault.png (indicator on the map)
+
+	armory.png
+	swordsman.png
+	crossbowman.png
+	heavy_cavalry.png
+	horse_archer.png
+
+-- interface --
+
+menu
+	directory tabs images
+
+battle
+	when two pawns from different alliances are next to each other, display red line between them (to show that they are fighting)
+	display round number and end round button
+	hide mouse pointer during animation
+
+map
+	village image (will be displayed to the left of troops bar)
+	show only estimation of the garrison troops to sieging enemies
+	more tooltips
+	display current month and year and end turn button
+	don't show flag for the neutral player
+	right clicking on a garrison on the map should be the same as clicking for assault

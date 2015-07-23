@@ -8,7 +8,7 @@
 
 #define ACCURACY 0.5
 
-#define MISS_MAX 25 /* 25% */
+#define MISS_MAX 20 /* 20% */
 
 static const double damage_boost[7][6] =
 {
@@ -22,25 +22,38 @@ static const double damage_boost[7][6] =
 	[WEAPON_BLUNT] = {		1.0,		1.0,		1.0,		0.5,		1.0,		0.7},
 };
 
+static unsigned deaths(unsigned damage, unsigned troops, unsigned health)
+{
+	unsigned min, max;
+
+	if ((health - 1) * troops >= damage) min = 0;
+	else min = damage % troops;
+	max = damage / health;
+	if (max > troops) max = troops;
+
+	return min + random() % (max - min + 1);
+}
+
 static void damage_deal(double damage, unsigned attacker_troops, struct pawn *restrict victim)
 {
 	const struct unit *restrict unit = victim->troop->unit;
 
 	// The attacking troops can sometimes miss.
-	damage *= attacker_troops * (100 - random() % (MISS_MAX + 1)) / 100.0;
+	damage *= (100 - random() % (MISS_MAX + 1)) / 100.0;
 
-	unsigned damage_total = (unsigned)(damage + victim->hurt + 0.5);
+	// Each attacker deals damage to a single troop.
+	// The attacker cannot deal more damage than the health of the troop.
+	if (damage > unit->health) damage = unit->health;
 
-	// Decide how many troops to kill.
-	unsigned dead_max = damage_total / unit->health;
-	unsigned dead_min = dead_max / 2;
-	unsigned dead = dead_min + random() % (dead_max - dead_min + 1);
-	if (dead > attacker_troops) dead = attacker_troops;
-	unsigned alive = victim->count - dead;
-	if (alive > (victim->count * unit->health - damage_total)) dead = damage_total - victim->count * (unit->health - 1);
+	unsigned damage_total = (unsigned)(damage * attacker_troops + 0.5);
 
-	victim->hurt = damage_total - dead * unit->health;
+	unsigned defender_troops = victim->count;
+	if (defender_troops > attacker_troops) defender_troops = attacker_troops;
+
+	unsigned dead = deaths(damage_total, defender_troops, unit->health);
+
 	victim->dead += dead;
+	victim->hurt += damage_total - (dead * unit->health);
 }
 
 static void damage_fight(const struct pawn *restrict fighter, struct pawn *restrict victims[], size_t victims_count)
@@ -61,24 +74,6 @@ static void damage_fight(const struct pawn *restrict fighter, struct pawn *restr
 
 	for(i = 0; i < victims_count; ++i)
 		damage_deal(damage * damage_boost[weapon][victims[i]->troop->unit->armor], targets_attackers[i], victims[i]);
-
-		//const struct unit *restrict unit = victims[i]->troop->unit;
-
-		// The figher can sometimes miss.
-		//damage *= (100 - random() % (MISS_MAX + 1)) / 100.0;
-
-		//unsigned damage_total = (unsigned)(targets_attackers[i] * damage * damage_boost[weapon][unit->armor] + victims[i]->hurt + 0.5);
-		//damage_deal(targets_attackers[i], damage_total, victims[i]);
-
-		/*unsigned dead_max = damage_total / unit->health;
-		unsigned dead_min = dead_max / 2;
-		unsigned dead = dead_min + random() % (dead_max - dead_min + 1);
-		if (dead > targets_attackers[i]) dead = targets_attackers[i];
-		unsigned alive = victims[i]->count - dead;
-		if (alive > (victims[i]->count * unit->health - damage_total)) dead = damage_total - victims[i]->count * (unit->health - 1);
-
-		victims[i]->hurt = damage_total - dead * unit->health;
-		victims[i]->dead += dead;*/
 }
 
 static void damage_assault(struct battle *restrict battle, const struct pawn *restrict fighter, struct point target)
@@ -233,15 +228,23 @@ void battlefield_clean(struct battle *battle)
 	for(p = 0; p < battle->pawns_count; ++p)
 	{
 		struct pawn *pawn = battle->pawns + p;
+		unsigned health = pawn->troop->unit->health;
 
 		if (!pawn->count) continue;
 
-		pawn->count -= pawn->dead;
-		pawn->dead = 0;
+		unsigned dead = deaths(pawn->hurt, pawn->count, health);
 
-		// Remove dead pawns from the battlefield.
-		if (!pawn->count)
+		pawn->dead += dead;
+		pawn->hurt -= dead * health;
+
+		if (pawn->count < pawn->dead)
+		{
+			// Remove dead pawns from the battlefield.
 			battle->field[pawn->moves[0].location.y][pawn->moves[0].location.x].pawn = 0;
+			pawn->count = 0;
+		}
+		else pawn->count -= pawn->dead;
+		pawn->dead = 0;
 	}
 
 	// Stop pawns from attacking dead pawns and destroyed obstacles.
