@@ -78,7 +78,7 @@ struct troop
 	unsigned count;
 	unsigned char owner;
 
-	struct region *location, *move;
+	struct region *location, *move; // TODO indicate here that the troop will move in/out of the garrison or assault
 };
 
 struct region

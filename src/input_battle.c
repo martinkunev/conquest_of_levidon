@@ -1,3 +1,5 @@
+#include <X11/keysym.h>
+
 #include <stdlib.h>
 
 #include "errors.h"
@@ -30,6 +32,24 @@ static int input_round(int code, unsigned x, unsigned y, uint16_t modifiers, con
 		}
 	default:
 		return INPUT_IGNORE;
+
+	case XK_Escape:
+		{
+			int status;
+			struct pawn *pawn = state->pawn;
+			if (!pawn || (pawn->troop->owner != state->player)) return INPUT_IGNORE;
+
+			// Cancel the actions of the current pawn.
+
+			if ((pawn->moves_count == 1) && !pawn->action)
+				return INPUT_IGNORE;
+
+			movement_stay(pawn);
+			status = path_reachable(pawn, state->graph, state->obstacles, state->reachable);
+			if (status < 0) return status;
+			pawn->action = 0;
+		}
+		return 0;
 
 	case 'q': // surrender
 		{
@@ -142,7 +162,7 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 		// Cancel actions if the clicked field is the one on which the pawn stands.
 		if (point_eq(point, pawn->moves[0].location))
 		{
-			if (pawn->moves_count == 1)
+			if ((pawn->moves_count == 1) && !pawn->action)
 				return INPUT_IGNORE;
 
 			movement_stay(pawn);
