@@ -775,67 +775,28 @@ static inline void show_flag_small(unsigned x, unsigned y, unsigned player)
 	image_draw(&image_flag_small, x, y);
 }
 
-static void if_map_troops(const struct region *region, const struct state_map *state, const struct game *game) // TODO rename this
+static void if_map_troops(unsigned x, unsigned y, unsigned count_self, unsigned count_allies, unsigned count_enemies)
 {
-	//unsigned x, y;
+	unsigned count;
 
-	unsigned count_self = 0, count_allies = 0, count_enemies = 0, count;
+	// Calculate the height of the troops bar.
+	count_self = (count_self + 5) / 10;
+	count_allies = (count_allies + 5) / 10;
+	count_enemies = (count_enemies + 5) / 10;
+	count = count_self + count_allies + count_enemies;
 
-	const struct troop *troop;
-	for(troop = region->troops; troop; troop = troop->_next)
+	if (count)
 	{
-		if (troop->owner == state->player)
-		{
-			if (troop->move == LOCATION_GARRISON) continue;
-			count_self += troop->count;
-		}
-		else if (allies(game, troop->owner, state->player)) count_allies += troop->count;
-		else count_enemies += troop->count;
-	}
-	for(troop = region->garrison.troops; troop; troop = troop->_next)
-		if ((troop->owner == state->player) && (troop->move != LOCATION_GARRISON))
-			count_self += troop->count;
+		// TODO indicate this overflow somehow
+		if (count > image_map_village.height) count = image_map_village.height;
 
-	// Display village image.
-	// TODO fix this; it requires bigger regions and grass as background
-	/*x = MAP_X + region->center.x - image_map_village.width;
-	y = MAP_Y + region->center.y - image_map_village.height;
-	display_image(&image_map_village, x, y, image_map_village.width, image_map_village.height);*/
-
-	// TODO padding between village image and troops bar
-
-	// Display a bar showing the number of troops in the region.
-	// Don't include garrison troops.
-	if (allies(game, state->player, region->owner))
-	{
-		// Calculate the height of the troops bar.
-		count_self = (count_self + 5) / 10;
-		count_allies = (count_allies + 5) / 10;
-		count = count_self + count_allies;
-
-		if (count)
-		{
-			if (count > image_map_village.height) count = image_map_village.height;
-
-			if (count_self)
-				fill_rectangle(MAP_X + region->center.x, MAP_Y + region->center.y - count_self, TROOPS_BAR_WIDTH, count_self, Self);
-			if (count_allies)
-				fill_rectangle(MAP_X + region->center.x, MAP_Y + region->center.y - count, TROOPS_BAR_WIDTH, count_allies, Ally);
-			draw_rectangle(MAP_X + region->center.x - 1, MAP_Y + region->center.y - count - 1, TROOPS_BAR_WIDTH + 2, count + 2, Black);
-		}
-	}
-	else
-	{
-		// Calculate the height of the troops bar.
-		count = (count_enemies + 5) / 10;
-
-		if (count)
-		{
-			if (count > image_map_village.height) count = image_map_village.height;
-
-			fill_rectangle(MAP_X + region->center.x, MAP_Y + region->center.y - count, TROOPS_BAR_WIDTH, count, Enemy);
-			draw_rectangle(MAP_X + region->center.x - 1, MAP_Y + region->center.y - count - 1, TROOPS_BAR_WIDTH + 2, count + 2, Black);
-		}
+		if (count_self)
+			fill_rectangle(x, y - count_self, TROOPS_BAR_WIDTH, count_self, Self);
+		if (count_allies)
+			fill_rectangle(x, y - count_self - count_allies, TROOPS_BAR_WIDTH, count_allies, Ally);
+		if (count_enemies)
+			fill_rectangle(x, y - count, TROOPS_BAR_WIDTH, count_enemies, Enemy);
+		draw_rectangle(x - 1, y - count - 1, TROOPS_BAR_WIDTH + 2, count + 2, Black);
 	}
 }
 
@@ -1000,22 +961,39 @@ static void if_map_region(const struct region *region, const struct state_map *s
 			if (garrison)
 			{
 				image_draw(&image_garrison[garrison->index], GARRISON_X, GARRISON_Y);
+				show_flag(GARRISON_X, GARRISON_Y - GARRISON_MARGIN, region->garrison.owner);
 
-				fill_rectangle(GARRISON_X + 4, GARRISON_Y - GARRISON_MARGIN + 4, 24, 12, Player + region->garrison.owner);
-				image_draw(&image_flag, GARRISON_X, GARRISON_Y - GARRISON_MARGIN);
-
-				// TODO exclude troops moving out of the garrison
-				i = 0;
-				for(troop = region->garrison.troops; troop; troop = troop->_next)
+				if (allies(game, region->garrison.owner, state->player))
 				{
-					if ((troop->owner == state->player) && (troop->move == region)) continue;
+					i = 0;
+					for(troop = region->garrison.troops; troop; troop = troop->_next)
+					{
+						if ((troop->owner == state->player) && (troop->move == region)) continue;
 
-					struct point position = if_position(TroopGarrison, i);
-					display_troop(troop->unit->index, position.x, position.y, Player + troop->owner, Black, troop->count);
-					i += 1;
+						struct point position = if_position(TroopGarrison, i);
+						display_troop(troop->unit->index, position.x, position.y, Player + troop->owner, Black, troop->count);
+						i += 1;
+					}
+				}
+				else
+				{
+					// Display an estimation of the number of troops in the garrison.
+
+					char buffer[32], *end; // TODO make sure this is enough
+
+					unsigned count = 0;
+					for(troop = region->garrison.troops; troop; troop = troop->_next)
+						count += troop->count;
+					count = ((count + 5) / 10) * 10;
+
+					end = format_bytes(buffer, S("about "));
+					end = format_uint(end, count, 10);
+					end = format_bytes(end, S(" troops"));
+
+					draw_string(buffer, end - buffer, object_group[TroopGarrison].left, object_group[TroopGarrison].top, &font12, Black);
 				}
 
-				// If the garrison is under siege, display siege information.
+				// If the garrison is under siege, display the remaining provisions.
 				if (siege)
 				{
 					unsigned provisions = garrison->provisions - region->garrison.siege;
@@ -1164,6 +1142,8 @@ void if_map(const void *argument, const struct game *game)
 
 		const struct region *region = game->regions + i;
 
+		unsigned count_self, count_allies, count_enemies;
+
 		// Display garrison if built.
 		const struct garrison_info *restrict garrison = garrison_info(region);
 		if (garrison)
@@ -1173,10 +1153,58 @@ void if_map(const void *argument, const struct game *game)
 			unsigned location_y = MAP_Y + region->location_garrison.y - image->height / 2;
 			display_image(image, location_x, location_y, image->width, image->height);
 			show_flag_small(MAP_X + region->location_garrison.x, location_y - image_flag_small.height + 10, region->garrison.owner);
+
+			if (allies(game, region->owner, state->player) || allies(game, region->garrison.owner, state->player))
+			{
+				count_self = 0;
+				count_allies = 0;
+				count_enemies = 0;
+
+				for(troop = region->troops; troop; troop = troop->_next)
+					if ((troop->owner == state->player) && (troop->move == LOCATION_GARRISON))
+						count_self += troop->count;
+				for(troop = region->garrison.troops; troop; troop = troop->_next)
+				{
+					if (troop->owner == state->player)
+					{
+						if (troop->move == LOCATION_GARRISON)
+							count_self += troop->count;
+					}
+					else if (allies(game, troop->owner, state->player)) count_allies += troop->count;
+					else count_enemies += troop->count;
+				}
+
+				if_map_troops(location_x + image->width + MARGIN, location_y, count_self, count_allies, count_enemies);
+			}
 		}
 
-		// Display troops bar.
-		if_map_troops(region, state, game);
+		// Display village image.
+		// TODO fix this; it requires bigger regions and grass as background
+		// unsigned x, y;
+		/*x = MAP_X + region->center.x - image_map_village.width;
+		y = MAP_Y + region->center.y - image_map_village.height;
+		display_image(&image_map_village, x, y, image_map_village.width, image_map_village.height);*/
+		// TODO padding between village image and troops bar
+
+		// Display a bar showing the number of troops in the region.
+		// Don't include garrison troops.
+		count_self = 0;
+		count_allies = 0;
+		count_enemies = 0;
+		for(troop = region->troops; troop; troop = troop->_next)
+		{
+			if (troop->owner == state->player)
+			{
+				if (troop->move != LOCATION_GARRISON)
+					count_self += troop->count;
+			}
+			else if (allies(game, troop->owner, state->player)) count_allies += troop->count;
+			else count_enemies += troop->count;
+		}
+		for(troop = region->garrison.troops; troop; troop = troop->_next)
+			if ((troop->owner == state->player) && (troop->move != LOCATION_GARRISON))
+				count_self += troop->count;
+		if_map_troops(MAP_X + region->center.x, MAP_Y + region->center.y, count_self, count_allies, count_enemies);
 	}
 
 	if (state->region >= 0)
