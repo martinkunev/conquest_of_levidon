@@ -81,6 +81,36 @@ int polygons_border(const struct polygon *restrict a, const struct polygon *rest
 	return 0;
 }
 
+// TODO unify map_train and map_build in something like region_turn
+// TODO implement something like region_stop that stops all trainings and constructions
+
+void map_train(struct region *region)
+{
+	// Update training time and check if there are trained units.
+	if (region->train[0] && (++region->train_progress == region->train[0]->time))
+	{
+		size_t i;
+
+		if (troop_spawn(region, &region->troops, region->train[0], region->train[0]->troops_count, region->owner) < 0) abort(); // TODO
+
+		region->train_progress = 0;
+		for(i = 1; i < TRAIN_QUEUE; ++i)
+			region->train[i - 1] = region->train[i];
+		region->train[TRAIN_QUEUE - 1] = 0;
+	}
+}
+
+void map_build(struct region *region)
+{
+	// Update construction time and check if the building is finished.
+	if ((region->construct >= 0) && (++region->build_progress == buildings[region->construct].time))
+	{
+		region->built |= (1 << region->construct);
+		region->construct = -1;
+		region->build_progress = 0;
+	}
+}
+
 // Determine which regions are visible for the current player.
 void map_visible(const struct game *restrict game, unsigned char player, unsigned char visible[REGIONS_LIMIT])
 {

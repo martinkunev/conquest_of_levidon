@@ -783,9 +783,18 @@ static void if_map_troops(const struct region *region, const struct state_map *s
 
 	const struct troop *troop;
 	for(troop = region->troops; troop; troop = troop->_next)
-		if (troop->owner == state->player) count_self += troop->count;
+	{
+		if (troop->owner == state->player)
+		{
+			if (troop->move == LOCATION_GARRISON) continue;
+			count_self += troop->count;
+		}
 		else if (allies(game, troop->owner, state->player)) count_allies += troop->count;
 		else count_enemies += troop->count;
+	}
+	for(troop = region->garrison.troops; troop; troop = troop->_next)
+		if ((troop->owner == state->player) && (troop->move != LOCATION_GARRISON))
+			count_self += troop->count;
 
 	// Display village image.
 	// TODO fix this; it requires bigger regions and grass as background
@@ -862,10 +871,11 @@ static void if_map_region(const struct region *region, const struct state_map *s
 	show_flag(PANEL_X, PANEL_Y, region->owner);
 
 	// Display the troops at the selected region.
-	if ((game->players[region->owner].alliance == state_alliance) || (game->players[region->garrison.owner].alliance == state_alliance))
+	if (allies(game, region->owner, state->player) || allies(game, region->garrison.owner, state->player))
 	{
 		enum object object;
 		size_t offset;
+		size_t x;
 
 		unsigned char self_count = 0, other_count = 0;
 
@@ -885,19 +895,20 @@ static void if_map_region(const struct region *region, const struct state_map *s
 		// Display troops in the region.
 		for(troop = region->troops; troop; troop = troop->_next)
 		{
-			size_t x;
 			enum color color_text;
-			int movement = 0;
+			int moving = 0;
 
 			if (troop->owner == state->player)
 			{
+				if (troop->move == LOCATION_GARRISON) continue;
+
 				if (!self_count) fill_rectangle(PANEL_X, object_group[TroopSelf].top - 2, PANEL_WIDTH, 2 + object_group[TroopSelf].height + 12 + 2, Self);
 				x = self_count++;
 				object = TroopSelf;
 				offset = state->self_offset;
 				color_text = Black;
 
-				movement = (troop->move != troop->location);
+				moving = (troop->move != troop->location);
 			}
 			else if (game->players[troop->owner].alliance == state_alliance)
 			{
@@ -921,12 +932,48 @@ static void if_map_region(const struct region *region, const struct state_map *s
 			{
 				struct point position = if_position(object, x - offset);
 				display_troop(troop->unit->index, position.x, position.y, Player + troop->owner, color_text, troop->count);
-				if (movement) image_draw(&image_movement, position.x, position.y);
+				if (moving) image_draw(&image_movement, position.x, position.y);
 				if (troop == state->troop) draw_rectangle(position.x - 1, position.y - 1, object_group[object].width + 2, object_group[object].height + 2, White);
 			}
 
 			// Draw the destination of each moving troop owned by current player.
-			if ((troop->owner == state->player) && (!state->troop || (troop == state->troop)) && (troop->move->index != state->region))
+			if ((troop->owner == state->player) && (!state->troop || (troop == state->troop)) && troop->move && (troop->move->index != state->region))
+			{
+				struct point p0, p1;
+				if (polygons_border(troop->location->location, troop->move->location, &p0, &p1)) // TODO this is slow; don't do it every time
+				{
+					display_troop_destination(p0, p1);
+				}
+				else
+				{
+					// TODO do something better
+					write(2, S("Neighboring regions have no common border\n"));
+				}
+			}
+		}
+		for(troop = region->garrison.troops; troop; troop = troop->_next)
+		{
+			int moving;
+
+			if (troop->owner != state->player) continue;
+			if (troop->move != region) continue;
+
+			if (!self_count) fill_rectangle(PANEL_X, object_group[TroopSelf].top - 2, PANEL_WIDTH, 2 + object_group[TroopSelf].height + 12 + 2, Self);
+			x = self_count++;
+			offset = state->self_offset;
+			moving = (troop->move != troop->location);
+
+			// Draw troops that are visible on the screen.
+			if ((x >= offset) && (x < offset + TROOPS_VISIBLE))
+			{
+				struct point position = if_position(TroopSelf, x - offset);
+				display_troop(troop->unit->index, position.x, position.y, Player + troop->owner, Black, troop->count);
+				if (moving) image_draw(&image_movement, position.x, position.y);
+				if (troop == state->troop) draw_rectangle(position.x - 1, position.y - 1, object_group[TroopSelf].width + 2, object_group[TroopSelf].height + 2, White);
+			}
+
+			// Draw the destination of each moving troop owned by current player.
+			if ((troop->owner == state->player) && (!state->troop || (troop == state->troop)) && troop->move && (troop->move->index != state->region))
 			{
 				struct point p0, p1;
 				if (polygons_border(troop->location->location, troop->move->location, &p0, &p1)) // TODO this is slow; don't do it every time
@@ -957,9 +1004,12 @@ static void if_map_region(const struct region *region, const struct state_map *s
 				fill_rectangle(GARRISON_X + 4, GARRISON_Y - GARRISON_MARGIN + 4, 24, 12, Player + region->garrison.owner);
 				image_draw(&image_flag, GARRISON_X, GARRISON_Y - GARRISON_MARGIN);
 
+				// TODO exclude troops moving out of the garrison
 				i = 0;
 				for(troop = region->garrison.troops; troop; troop = troop->_next)
 				{
+					if ((troop->owner == state->player) && (troop->move == region)) continue;
+
 					struct point position = if_position(TroopGarrison, i);
 					display_troop(troop->unit->index, position.x, position.y, Player + troop->owner, Black, troop->count);
 					i += 1;

@@ -78,8 +78,10 @@ struct troop
 	unsigned count;
 	unsigned char owner;
 
-	struct region *location, *move; // TODO indicate here that the troop will move in/out of the garrison or assault
+	struct region *location, *move;
 };
+
+#define LOCATION_GARRISON ((struct region *)0)
 
 struct region
 {
@@ -163,6 +165,9 @@ void troop_remove(struct troop **troops, struct troop *troop);
 int troop_spawn(struct region *restrict region, struct troop **restrict troops, const struct unit *restrict unit, unsigned count, unsigned char owner);
 
 int polygons_border(const struct polygon *restrict a, const struct polygon *restrict b, struct point *restrict first, struct point *restrict second);
+
+void map_train(struct region *region);
+void map_build(struct region *region);
 
 void map_visible(const struct game *restrict game, unsigned char player, unsigned char visible[REGIONS_LIMIT]);
 

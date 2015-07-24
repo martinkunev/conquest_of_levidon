@@ -94,8 +94,17 @@ valid:
 		{
 			// Set the move destination of all troops in the region.
 			for(troop = region->troops; troop; troop = troop->_next)
+			{
+				if (troop->move == LOCATION_GARRISON) continue;
 				if (state->player == troop->owner)
 					troop->move = destination;
+			}
+			for(troop = region->garrison.troops; troop; troop = troop->_next)
+			{
+				if (troop->move == LOCATION_GARRISON) continue;
+				if (state->player == troop->owner)
+					troop->move = destination;
+			}
 		}
 
 		return 0;
@@ -425,6 +434,7 @@ static int input_garrison(int code, unsigned x, unsigned y, uint16_t modifiers, 
 		}
 
 		// Move the clicked troop out of the garrison.
+		troop->move = region;
 		troop_detach(&region->garrison.troops, troop);
 		troop_attach(&region->troops, troop);
 	}
@@ -442,6 +452,7 @@ static int input_garrison(int code, unsigned x, unsigned y, uint16_t modifiers, 
 			if (count < garrison->troops) // if there is place for one more troop
 			{
 				// Move the selected troop to the garrison.
+				troop->move = LOCATION_GARRISON;
 				troop_detach(&region->troops, state->troop);
 				troop_attach(&region->garrison.troops, state->troop);
 			}

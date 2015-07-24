@@ -160,37 +160,38 @@ static int play(struct game *restrict game)
 				}
 			}
 
-			// Update training time and check if there are trained units.
-			if (region->train[0] && (++region->train_progress == region->train[0]->time))
-			{
-				if (troop_spawn(region, &region->troops, region->train[0], region->train[0]->troops_count, region->owner) < 0) abort(); // TODO
-
-				region->train_progress = 0;
-				for(i = 1; i < TRAIN_QUEUE; ++i)
-					region->train[i - 1] = region->train[i];
-				region->train[TRAIN_QUEUE - 1] = 0;
-			}
-
-			// Update construction time and check if the building is finished.
-			if ((region->construct >= 0) && (++region->build_progress == buildings[region->construct].time))
-			{
-				region->built |= (1 << region->construct);
-				region->construct = -1;
-				region->build_progress = 0;
-			}
+			map_train(region);
+			map_build(region);
 
 			// Move each troop for which movement is specified.
-			troop = region->troops;
-			while (troop)
+			for(troop = region->troops; troop; troop = next)
 			{
 				next = troop->_next;
-				if (troop->move != troop->location)
+				if (troop->move == troop->location) continue;
+
+				if (troop->move == LOCATION_GARRISON)
 				{
-					// Move the troop to its new location.
+					// Move the troop to the garrison.
+					troop->location = LOCATION_GARRISON;
+					troop_detach(&region->troops, troop);
+					troop_attach(&region->garrison.troops, troop);
+				}
+				else
+				{
+					// Move the troop to the specified region.
 					troop_detach(&region->troops, troop);
 					troop_attach(&troop->move->troops, troop);
 				}
-				troop = next;
+			}
+			for(troop = region->garrison.troops; troop; troop = next)
+			{
+				next = troop->_next;
+				if (troop->move == troop->location) continue;
+
+				// Move the troop out of the garrison.
+				troop->location = region;
+				troop_detach(&region->garrison.troops, troop);
+				troop_attach(&troop->move->troops, troop);
 			}
 		}
 
@@ -251,7 +252,7 @@ static int play(struct game *restrict game)
 				if (game->players[troop->owner].alliance == winner)
 				{
 					// Set troop location to the current region.
-					troop->location = region;
+					troop->location = troop->move;
 					slots += 1;
 				}
 				else
@@ -262,16 +263,13 @@ static int play(struct game *restrict game)
 					troop->move = troop->location;
 				}
 			}
-			if (assault)
+			for(troop = region->garrison.troops; troop; troop = troop->_next)
 			{
-				for(troop = region->garrison.troops; troop; troop = troop->_next)
+				// Remove dead troops.
+				if (!troop->count)
 				{
-					// Remove dead troops.
-					if (!troop->count)
-					{
-						troop_detach(&region->garrison.troops, troop);
-						free(troop);
-					}
+					troop_detach(&region->garrison.troops, troop);
+					free(troop);
 				}
 			}
 
