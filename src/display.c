@@ -27,7 +27,8 @@
 #define RESOURCE_IRON 720
 #define RESOURCE_STONE 740
 
-#define HEALTH_BAR 64
+//#define HEALTH_BAR 64
+#define HEALTH_BAR_MARGIN 2
 
 #define TROOPS_BAR_WIDTH 5
 #define TROOPS_BAR_HEIGHT 48
@@ -1174,7 +1175,7 @@ void if_map(const void *argument, const struct game *game)
 					else count_enemies += troop->count;
 				}
 
-				if_map_troops(location_x + image->width + MARGIN, location_y, count_self, count_allies, count_enemies);
+				if_map_troops(location_x + image->width + HEALTH_BAR_MARGIN, location_y + image->height, count_self, count_allies, count_enemies);
 			}
 		}
 

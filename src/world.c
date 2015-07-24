@@ -182,7 +182,7 @@ static int region_init(struct game *restrict game, struct region *restrict regio
 
 				unit = unit_find(&name->string);
 				if (!unit) return -1;
-				if (troop_spawn(region, &region->garrison.troops, unit, count->integer, owner->integer)) return -1;
+				if (troop_spawn(LOCATION_GARRISON, &region->garrison.troops, unit, count->integer, owner->integer)) return -1;
 			}
 		}
 

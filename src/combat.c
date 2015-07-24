@@ -27,9 +27,10 @@ static unsigned deaths(unsigned damage, unsigned troops, unsigned health)
 	unsigned min, max;
 
 	if ((health - 1) * troops >= damage) min = 0;
-	else min = damage % troops;
+	else min = damage;
 	max = damage / health;
 	if (max > troops) max = troops;
+	if (min > max) min = max;
 
 	return min + random() % (max - min + 1);
 }
@@ -238,7 +239,7 @@ void battlefield_clean(struct battle *battle)
 		pawn->dead += dead;
 		pawn->hurt -= dead * health;
 
-		if (pawn->count < pawn->dead)
+		if (pawn->count <= pawn->dead)
 		{
 			// Remove dead pawns from the battlefield.
 			battle->field[pawn->moves[0].location.y][pawn->moves[0].location.x].pawn = 0;

@@ -463,7 +463,6 @@ void battlefield_term(const struct game *restrict game, struct battle *restrict 
 int battle_end(const struct game *restrict game, struct battle *restrict battle, unsigned char defender)
 {
 	int end = 1;
-	int alive;
 
 	signed char winner = -1;
 	unsigned char alliance;

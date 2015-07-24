@@ -1,10 +1,8 @@
-features:
 H	name the game
 H	do something to prevent endless battles; clean up the code related to the end of the battle
 H	artificial intelligence
-H	movement in and out of the garrison should be visible only for the owner
 H	don't allow attacking if the attacker cannot do damage to the defender (due to weapon and armor type)
-H	in the battle end report, display the dead troops of the players who lost (currently battle->pawns_count == 0)
+M	follow pawn that is target for fighting but is moving away from the attacker (the movement should be updated)
 M	map scrolling
 M	keyboard support in various places in the interface
 M	assault garrison destruction and repair
@@ -47,9 +45,6 @@ improve player colors
 
 ? dynamic battlefield size
 
-bugs
-	it looks like allies see which troops have just exited the garrison; this should also be considered for troop count estimation for watch tower
-
 images
 	fortress*.png, fortress_gate*.png
 	assault.png (indicator on the map)
@@ -72,7 +67,6 @@ battle
 
 map
 	village image (will be displayed to the left of troops bar)
-	show only estimation of the garrison troops to sieging enemies
 	more tooltips
 	display current month and year and end turn button
 	don't show flag for the neutral player
