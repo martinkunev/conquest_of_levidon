@@ -52,14 +52,7 @@ static int input_round(int code, unsigned x, unsigned y, uint16_t modifiers, con
 		return 0;
 
 	case 'q': // surrender
-		{
-			// Kill all the pawns of the player.
-			size_t i;
-			struct pawn *const *pawns = battle->players[state->player].pawns;
-			size_t pawns_count = battle->players[state->player].pawns_count;
-			for(i = 0; i < pawns_count; ++i)
-				pawns[i]->count = 0;
-		}
+		battle->players[state->player].alive = 0;
 	case 'n':
 		return INPUT_DONE;
 	}

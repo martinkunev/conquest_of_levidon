@@ -66,8 +66,11 @@ void if_report(const void *argument, const struct game *game_)
 			display_troop(pawn->troop->unit->index, position_before[owner], offset[owner], Player + owner, White, pawn->troop->count);
 			position_before[owner] += MARGIN_X;
 
-			display_troop(pawn->troop->unit->index, position_after[owner], offset[owner], Player + owner, White, pawn->count);
-			position_after[owner] += MARGIN_X;
+			if (battle->players[player].alive)
+			{
+				display_troop(pawn->troop->unit->index, position_after[owner], offset[owner], Player + owner, White, pawn->count);
+				position_after[owner] += MARGIN_X;
+			}
 		}
 	}
 

@@ -35,7 +35,7 @@ static int play_battle(struct game *restrict game, struct battle *restrict battl
 	// Ask each player to position their pawns.
 	for(player = 0; player < game->players_count; ++player)
 	{
-		if (!battle->players[player].pawns_count) continue; // skip players with no pawns
+		if (!battle->players[player].alive) continue;
 
 		switch (game->players[player].type)
 		{
@@ -59,7 +59,7 @@ static int play_battle(struct game *restrict game, struct battle *restrict battl
 		// TODO implement Computer and Remote
 		for(player = 0; player < game->players_count; ++player)
 		{
-			if (!battle->players[player].pawns_count) continue; // skip players with no pawns
+			if (!battle->players[player].alive) continue;
 
 			switch (game->players[player].type)
 			{

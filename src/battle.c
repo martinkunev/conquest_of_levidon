@@ -374,6 +374,7 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 		if (!battle->players[i].pawns_count)
 		{
 			battle->players[i].pawns = 0;
+			battle->players[i].alive = 0;
 			continue;
 		}
 
@@ -384,6 +385,7 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 			free(pawns);
 			return -1;
 		}
+		battle->players[i].alive = 1;
 	}
 
 	// Sort the pawns by speed descending using bucket sort.
@@ -471,25 +473,22 @@ int battle_end(const struct game *restrict game, struct battle *restrict battle,
 	size_t i, j;
 	for(i = 0; i < game->players_count; ++i)
 	{
-		if (!battle->players[i].pawns_count) continue; // skip dead players
+		if (!battle->players[i].alive) continue;
 
 		alliance = game->players[i].alliance;
 
-		alive = 0;
+		battle->players[i].alive = 0;
 		for(j = 0; j < battle->players[i].pawns_count; ++j)
 		{
 			pawn = battle->players[i].pawns[j];
 			if (pawn->count)
 			{
-				alive = 1;
+				battle->players[i].alive = 1;
 
 				if (winner < 0) winner = alliance;
 				else if (alliance != winner) end = 0;
 			}
 		}
-
-		// Mark players with no pawns left as dead.
-		if (!alive) battle->players[i].pawns_count = 0;
 	}
 
 	if (end) return ((winner >= 0) ? winner : defender);

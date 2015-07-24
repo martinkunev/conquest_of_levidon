@@ -56,6 +56,7 @@ struct battle
 	{
 		size_t pawns_count;
 		struct pawn **pawns;
+		int alive;
 	} players[PLAYERS_LIMIT];
 
 	unsigned round;
