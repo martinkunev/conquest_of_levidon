@@ -159,15 +159,15 @@ void battlefield_shoot(struct battle *battle, const struct obstacles *restrict o
 		if (!shooter->count) continue;
 		if (shooter->action != PAWN_SHOOT) continue;
 
-		double damage_total = shooter->troop->unit->ranged.damage * shooter->count;
-		unsigned damage;
-
 		unsigned target_index;
 		double miss, on_target;
 		unsigned range;
 
 		int x = shooter->target.field.x;
 		int y = shooter->target.field.y;
+
+		double damage_total = shooter->troop->unit->ranged.damage;
+		unsigned damage;
 
 		// TODO what if there is a tower on one of the fields
 
@@ -184,11 +184,12 @@ void battlefield_shoot(struct battle *battle, const struct obstacles *restrict o
 
 		target_index = 0;
 		on_target = targets[target_index][0] * (1 - miss) + targets[target_index][1] * miss;
-		damage_shoot(shooter, battle->field[y][x].pawn, damage_total * on_target);
+		damage = (unsigned)(damage_total * on_target + 0.5);
+		damage_shoot(shooter, battle->field[y][x].pawn, damage);
 
 		target_index = 1;
 		on_target = targets[target_index][0] * (1 - miss) + targets[target_index][1] * miss;
-		damage = damage_total * on_target;
+		damage = (unsigned)(damage_total * on_target + 0.5);
 		if (x > 0) damage_shoot(shooter, battle->field[y][x - 1].pawn, damage);
 		if (x < (BATTLEFIELD_WIDTH - 1)) damage_shoot(shooter, battle->field[y][x + 1].pawn, damage);
 		if (y > 0) damage_shoot(shooter, battle->field[y - 1][x].pawn, damage);
@@ -196,7 +197,7 @@ void battlefield_shoot(struct battle *battle, const struct obstacles *restrict o
 
 		target_index = 2;
 		on_target = targets[target_index][0] * (1 - miss) + targets[target_index][1] * miss;
-		damage = damage_total * on_target;
+		damage = (unsigned)(damage_total * on_target + 0.5);
 		if (x > 0)
 		{
 			if (y > 0) damage_shoot(shooter, battle->field[y - 1][x - 1].pawn, damage);
