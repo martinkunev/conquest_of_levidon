@@ -1,4 +1,4 @@
-O=main.o menu.o world.o map.o resources.o battle.o movement.o combat.o pathfinding.o interface.o interface_menu.o interface_report.o display.o input.o input_menu.o input_map.o input_battle.o input_report.o draw.o image.o format.o json.o
+O=main.o menu.o world.o map.o resources.o battle.o movement.o combat.o pathfinding.o interface.o interface_menu.o interface_report.o display.o input.o input_menu.o input_map.o input_battle.o input_report.o computer.o draw.o image.o format.o json.o
 
 all: medieval
 

@@ -15,6 +15,7 @@
 #include "input_map.h"
 #include "input_battle.h"
 #include "input_report.h"
+#include "computer.h"
 #include "interface.h"
 #include "display.h"
 #include "menu.h"
@@ -42,6 +43,11 @@ static int play_battle(struct game *restrict game, struct battle *restrict battl
 		case Neutral:
 			continue;
 
+		case Computer:
+			if (computer_formation(game, battle, player) < 0)
+				return -1;
+			break;
+
 		case Local:
 			if (input_formation(game, battle, player) < 0)
 				return -1;
@@ -56,7 +62,6 @@ static int play_battle(struct game *restrict game, struct battle *restrict battl
 		struct obstacles *restrict obstacles = path_obstacles(game, battle, PLAYER_NEUTRAL);
 
 		// Ask each player to perform battle actions.
-		// TODO implement Computer and Remote
 		for(player = 0; player < game->players_count; ++player)
 		{
 			if (!battle->players[player].alive) continue;
@@ -65,6 +70,11 @@ static int play_battle(struct game *restrict game, struct battle *restrict battl
 			{
 			case Neutral:
 				continue;
+
+			case Computer:
+				if (computer_battle(game, battle, player) < 0)
+					return -1;
+				break;
 
 			case Local:
 				if (input_battle(game, battle, player) < 0)
@@ -132,6 +142,7 @@ static int play(struct game *restrict game)
 			case Neutral:
 				continue;
 
+			case Computer: // TODO implement this
 			case Local:
 				if (input_map(game, player) < 0) return WINNER_NOBODY; // TODO
 				break;

@@ -2,7 +2,7 @@
 
 #define REACHABLE_LIMIT 625 /* TODO fix this */
 
-#define OWNER_NONE 0 /* sentinel alliance value used for walls */ /* TODO fix this: there could actually be an alliance with number 0 */
+#define OWNER_NONE 0 /* sentinel alliance value used for walls */ /* TODO fix this: neutral players should not own walls */
 
 struct pawn
 {
@@ -15,7 +15,7 @@ struct pawn
 	size_t moves_size; // TODO rename this
 	size_t moves_count;
 
-	enum {PAWN_FIGHT = 1, PAWN_SHOOT, PAWN_ASSAULT} action;
+	enum pawn_action {PAWN_FIGHT = 1, PAWN_SHOOT, PAWN_ASSAULT} action;
 	union
 	{
 		struct pawn *pawn;
