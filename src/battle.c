@@ -2,9 +2,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "errors.h"
 #include "map.h"
 #include "pathfinding.h"
 #include "battle.h"
+#include "movement.h"
 
 #define FORMATION_RADIUS_ATTACK 3
 #define FORMATION_RADIUS_DEFEND 4
@@ -445,6 +447,54 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 
 	if (assault) battlefield_init_assault(game, battle);
 	else battlefield_init_open(game, battle);
+
+	return 0;
+}
+
+// Plan the necessary movements so that pawns can attack their targets.
+int battle_attack_plan(const struct game *restrict game, struct battle *restrict battle)
+{
+	size_t i;
+
+	struct adjacency_list *graph[PLAYERS_LIMIT] = {0};
+	struct obstacles *obstacles[PLAYERS_LIMIT] = {0};
+
+	for(i = 0; i < battle->pawns_count; ++i)
+	{
+		struct pawn *restrict pawn = battle->pawns + i;
+		unsigned alliance;
+
+		int status;
+
+		if (!pawn->count) continue;
+		if (pawn->action != PAWN_FIGHT) continue;
+
+		// Nothing to do if the target pawn is immobile.
+		if (pawn->target.pawn->moves_count == 1) continue;
+
+		alliance = game->players[pawn->troop->owner].alliance;
+		if (!obstacles[alliance])
+		{
+			obstacles[alliance] = path_obstacles(game, battle, pawn->troop->owner);
+			if (!obstacles[alliance]) abort();
+			graph[alliance] = visibility_graph_build(battle, obstacles[alliance]);
+			if (!graph[alliance]) abort();
+		}
+
+		status = movement_follow(pawn, pawn->target.pawn, graph[alliance], obstacles[alliance]);
+		if (status == ERROR_MEMORY) abort();
+		else if (status)
+		{
+			movement_stay(pawn);
+			pawn->action = 0;
+		}
+	}
+
+	for(i = 0; i < PLAYERS_LIMIT; ++i)
+	{
+		free(obstacles[i]);
+		free(graph[i]);
+	}
 
 	return 0;
 }

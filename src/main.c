@@ -89,6 +89,8 @@ static int play_battle(struct game *restrict game, struct battle *restrict battl
 		battlefield_shoot(battle, obstacles);
 		battlefield_clean(battle);
 
+		battle_attack_plan(game, battle); // TODO ? error check
+
 		battlefield_movement_plan(game->players, game->players_count, battle->field, battle->pawns, battle->pawns_count);
 
 		input_animation(game, battle); // TODO this should be part of player-specific input

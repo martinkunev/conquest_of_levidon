@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "errors.h"
 #include "map.h"
 #include "pathfinding.h"
 #include "battle.h"
@@ -80,9 +81,68 @@ int movement_queue(struct pawn *restrict pawn, struct point target, struct adjac
 	return error;
 }
 
+int movement_follow(struct pawn *restrict pawn, const struct pawn *restrict target, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles)
+{
+	//
+
+	// TODO implement this
+
+	//movement_queue(pawn, pawn->target.pawn->moves[0].location, );
+
+	// TODO if the target moves, move our pawn behind it (or disable the action if it becomes unreachable)
+
+	return 0;
+}
+
 void movement_stay(struct pawn *restrict pawn)
 {
 	pawn->moves_count = 1;
+}
+
+// Moves the pawn to the closest position for attacking the specified target.
+// ERROR_MEMORY
+// ERROR_MISSING - there is no attacking position available
+int movement_attack(struct pawn *restrict pawn, struct point target, const struct battlefield field[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH], double reachable[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH], struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles)
+{
+	if (!battlefield_neighbors(pawn->moves[pawn->moves_count - 1].location, target))
+	{
+		double move_distance = INFINITY;
+		int move_x, move_y;
+
+		int x = target.x, y = target.y;
+
+		if ((x > 0) && !field[y][x - 1].pawn && (reachable[y][x - 1] < move_distance))
+		{
+			move_x = x - 1;
+			move_y = y;
+			move_distance = reachable[move_y][move_x];
+		}
+		if ((x < (BATTLEFIELD_WIDTH - 1)) && !field[y][x + 1].pawn && (reachable[y][x + 1] < move_distance))
+		{
+			move_x = x + 1;
+			move_y = y;
+			move_distance = reachable[move_y][move_x];
+		}
+		if ((y > 0) && !field[y - 1][x].pawn && (reachable[y - 1][x] < move_distance))
+		{
+			move_x = x;
+			move_y = y - 1;
+			move_distance = reachable[move_y][move_x];
+		}
+		if ((y < (BATTLEFIELD_HEIGHT - 1)) && !field[y + 1][x].pawn && (reachable[y + 1][x] < move_distance))
+		{
+			move_x = x;
+			move_y = y + 1;
+			move_distance = reachable[move_y][move_x];
+		}
+
+		if (move_distance < INFINITY)
+			return movement_queue(pawn, (struct point){move_x, move_y}, graph, obstacles);
+		else
+			return ERROR_MISSING;
+	}
+
+	return 0;
 }
 
 static struct point location_field(const struct point location)

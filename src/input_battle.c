@@ -61,49 +61,15 @@ static int input_round(int code, unsigned x, unsigned y, uint16_t modifiers, con
 static int attack(const struct game *restrict game, const struct battle *restrict battle, struct state_battle *restrict state, struct point target)
 {
 	struct pawn *pawn = state->pawn;
-	int x = target.x, y = target.y;
 
 	// If the pawn is not next to its target, move before attacking it.
-	if (!battlefield_neighbors(pawn->moves[pawn->moves_count - 1].location, target))
-	{
-		double move_distance = INFINITY;
-		int move_x, move_y;
+	int status = movement_attack(state->pawn, target, battle->field, state->reachable, state->graph, state->obstacles);
+	if (status) return status;
 
-		if ((x > 0) && !battle->field[y][x - 1].pawn && (state->reachable[y][x - 1] < move_distance))
-		{
-			move_x = x - 1;
-			move_y = y;
-			move_distance = state->reachable[move_y][move_x];
-		}
-		if ((x < (BATTLEFIELD_WIDTH - 1)) && !battle->field[y][x + 1].pawn && (state->reachable[y][x + 1] < move_distance))
-		{
-			move_x = x + 1;
-			move_y = y;
-			move_distance = state->reachable[move_y][move_x];
-		}
-		if ((y > 0) && !battle->field[y - 1][x].pawn && (state->reachable[y - 1][x] < move_distance))
-		{
-			move_x = x;
-			move_y = y - 1;
-			move_distance = state->reachable[move_y][move_x];
-		}
-		if ((y < (BATTLEFIELD_HEIGHT - 1)) && !battle->field[y + 1][x].pawn && (state->reachable[y + 1][x] < move_distance))
-		{
-			move_x = x;
-			move_y = y + 1;
-			move_distance = state->reachable[move_y][move_x];
-		}
+	if (path_reachable(pawn, state->graph, state->obstacles, state->reachable) < 0)
+		return ERROR_MEMORY;
 
-		if (move_distance < INFINITY)
-		{
-			movement_queue(pawn, (struct point){move_x, move_y}, state->graph, state->obstacles);
-			if (path_reachable(pawn, state->graph, state->obstacles, state->reachable) < 0)
-				return ERROR_MEMORY;
-		}
-		else return ERROR_MISSING;
-	}
-
-	combat_order_fight(game, battle, state->obstacles, pawn, battle->field[y][x].pawn);
+	combat_order_fight(game, battle, state->obstacles, pawn, battle->field[target.y][target.x].pawn); // TODO support assault
 
 	return 0;
 }
