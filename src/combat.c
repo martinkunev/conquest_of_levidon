@@ -97,7 +97,7 @@ static void damage_shoot(struct pawn *shooter, struct pawn *victim, double damag
 	damage_deal(damage * damage_boost[shooter->troop->unit->ranged.weapon][victim->troop->unit->armor], shooter->count, victim);
 }
 
-void battlefield_fight(const struct game *restrict game, struct battle *restrict battle) // TODO rename to something like combat_melee
+void battle_fight(const struct game *restrict game, struct battle *restrict battle) // TODO rename to something like combat_melee
 {
 	size_t i;
 	for(i = 0; i < battle->pawns_count; ++i)
@@ -148,7 +148,7 @@ void battlefield_fight(const struct game *restrict game, struct battle *restrict
 	}
 }
 
-void battlefield_shoot(struct battle *battle, const struct obstacles *restrict obstacles)
+void battle_shoot(struct battle *battle, const struct obstacles *restrict obstacles)
 {
 	const double targets[3][2] = {{1, 0.5}, {0, 0.078125}, {0, 0.046875}}; // 1/2, 5/64, 3/64
 

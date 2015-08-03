@@ -25,11 +25,18 @@
 #define WINNER_NOBODY -1
 #define WINNER_BATTLE -2
 
+// Returns the number of the alliance that won the battle.
 static int play_battle(struct game *restrict game, struct battle *restrict battle, unsigned char defender)
 {
-	unsigned char player;
+	unsigned player, alliance;
 
 	int status;
+	int winner;
+
+	struct adjacency_list *graph[PLAYERS_LIMIT] = {0};
+	struct obstacles *obstacles[PLAYERS_LIMIT] = {0};
+
+	size_t i;
 
 	battle->round = 0;
 
@@ -57,14 +64,22 @@ static int play_battle(struct game *restrict game, struct battle *restrict battl
 
 	battle->round = 1;
 
-	while ((status = battle_end(game, battle, defender)) < 0)
+	while ((winner = battle_end(game, battle, defender)) < 0)
 	{
-		struct obstacles *restrict obstacles = path_obstacles(game, battle, PLAYER_NEUTRAL);
-
-		// Ask each player to perform battle actions.
+		// Ask each player to give commands to their pawns.
 		for(player = 0; player < game->players_count; ++player)
 		{
 			if (!battle->players[player].alive) continue;
+
+			alliance = game->players[player].alliance;
+
+			if (!obstacles[alliance])
+			{
+				obstacles[alliance] = path_obstacles(game, battle, player);
+				if (!obstacles[alliance]) abort();
+				graph[alliance] = visibility_graph_build(battle, obstacles[alliance]);
+				if (!graph[alliance]) abort();
+			}
 
 			switch (game->players[player].type)
 			{
@@ -86,29 +101,41 @@ static int play_battle(struct game *restrict game, struct battle *restrict battl
 		// TODO ?Deal damage to each pawn escaping from enemy pawns.
 
 		// TODO shoot animation // TODO this should be part of player-specific input
-		battlefield_shoot(battle, obstacles);
+		battle_shoot(battle, obstacles[PLAYER_NEUTRAL]); // treat all gates as closed for shooting
 		battlefield_clean(battle);
 
-		battle_attack_plan(game, battle); // TODO ? error check
+		for(i = 0; i < battle->pawns_count; ++i)
+		{
+			if (!battle->pawns[i].count) continue;
+			status = movement_attack_plan(battle->pawns + i, graph[alliance], obstacles[alliance]);
+			if (status < 0) abort(); // TODO
+		}
 
 		battlefield_movement_plan(game->players, game->players_count, battle->field, battle->pawns, battle->pawns_count);
 
 		input_animation(game, battle); // TODO this should be part of player-specific input
 
-		battlefield_movement_perform(game, battle, battle->field, battle->pawns, battle->pawns_count);
+		for(i = 0; i < battle->pawns_count; ++i)
+		{
+			if (!battle->pawns[i].count) continue;
+			status = battlefield_movement_perform(battle, battle->pawns + i, graph[alliance], obstacles[alliance]);
+			if (status < 0) abort(); // TODO
+		}
 
 		// TODO fight animation // TODO this should be part of player-specific input
-		battlefield_fight(game, battle);
+		battle_fight(game, battle);
 		battlefield_clean(battle);
 
-		free(obstacles);
-
 		battle->round += 1;
+
+		for(i = 0; i < PLAYERS_LIMIT; ++i)
+		{
+			free(obstacles[i]);
+			free(graph[i]);
+		}
 	}
 
-	// winner team is status
-
-	return status;
+	return winner;
 }
 
 static int play(struct game *restrict game)

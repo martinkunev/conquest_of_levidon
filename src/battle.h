@@ -65,8 +65,6 @@ struct battle
 size_t formation_reachable_open(const struct game *restrict game, const struct battle *restrict battle, const struct pawn *restrict pawn, struct point reachable[REACHABLE_LIMIT]);
 size_t formation_reachable_assault(const struct game *restrict game, const struct battle *restrict battle, const struct pawn *restrict pawn, struct point reachable[REACHABLE_LIMIT]);
 
-int battle_attack_plan(const struct game *restrict game, struct battle *restrict battle);
-
 int battlefield_neighbors(struct point a, struct point b);
 
 int battlefield_init(const struct game *restrict game, struct battle *restrict battle, struct region *restrict region, int assault);

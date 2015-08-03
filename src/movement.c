@@ -55,6 +55,18 @@ size_t movement_location(const struct pawn *restrict pawn, double time_now, doub
 	return pawn->moves_count;
 }
 
+void pawn_place(struct pawn *restrict pawn, struct point location)
+{
+	pawn->moves[0].location = location;
+	pawn->moves[0].time = 0.0;
+	pawn->moves_count = 1;
+}
+
+void movement_stay(struct pawn *restrict pawn)
+{
+	pawn->moves_count = 1;
+}
+
 int movement_set(struct pawn *restrict pawn, struct point target, struct adjacency_list *restrict nodes, const struct obstacles *restrict obstacles)
 {
 	// TODO should I check whether the field is blocked
@@ -114,18 +126,6 @@ int movement_follow(struct pawn *restrict pawn, const struct pawn *restrict targ
 	return 0;
 }
 
-void pawn_place(struct pawn *restrict pawn, struct point location)
-{
-	pawn->moves[0].location = location;
-	pawn->moves[0].time = 0.0;
-	pawn->moves_count = 1;
-}
-
-void movement_stay(struct pawn *restrict pawn)
-{
-	pawn->moves_count = 1;
-}
-
 // Moves the pawn to the closest position for attacking the specified target.
 // ERROR_MEMORY
 // ERROR_MISSING - there is no attacking position available
@@ -167,6 +167,34 @@ int movement_attack(struct pawn *restrict pawn, struct point target, const struc
 			return movement_queue(pawn, (struct point){move_x, move_y}, graph, obstacles);
 		else
 			return ERROR_MISSING;
+	}
+
+	return 0;
+}
+
+// Plan the necessary movements for a pawn to attack its target.
+int movement_attack_plan(struct pawn *restrict pawn, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles)
+{
+	int status;
+
+	if (pawn->action != PAWN_FIGHT) return 0;
+
+	pawn->moves_manual = pawn->moves_count;
+
+	// Nothing to do if the target pawn is immobile.
+	if (pawn->target.pawn->moves_count == 1) return 0;
+
+	status = movement_follow(pawn, pawn->target.pawn, graph, obstacles);
+	switch (status)
+	{
+	case ERROR_MISSING: // target pawn is not reachable
+		// TODO move until possible (the field before the wall)
+		movement_stay(pawn);
+		pawn->action = 0;
+		return 0;
+
+	default:
+		return status;
 	}
 
 	return 0;
@@ -520,85 +548,67 @@ retry:
 	}
 }
 
-void battlefield_movement_perform(const struct game *restrict game, const struct battle *restrict battle, struct battlefield battlefield[][BATTLEFIELD_HEIGHT], struct pawn *restrict pawns, size_t pawns_count)
+// Update pawn position, action and movement.
+int battlefield_movement_perform(struct battle *restrict battle, struct pawn *restrict pawn, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles)
 {
-	size_t i, j;
+	size_t i;
 
-	struct adjacency_list *graph[PLAYERS_LIMIT] = {0};
-	struct obstacles *obstacles[PLAYERS_LIMIT] = {0};
+	size_t index = pawn_position(pawn, 1.0, &pawn->step);
 
-	// Update occupied squares for each pawn.
-	for(i = 0; i < pawns_count; ++i)
+	// assert(index);
+	index -= 1;
+
+	// Change pawn position on the battlefield.
+	struct point location_old = pawn->moves[0].location;
+	struct point location_new = location_field(pawn->step);
+	if (battle->field[location_old.y][location_old.x].pawn == pawn)
+		battle->field[location_old.y][location_old.x].pawn = 0;
+	battle->field[location_new.y][location_new.x].pawn = pawn;
+
+	if (index < pawn->moves_count)
 	{
-		struct pawn *pawn = pawns + i;
-		if (!pawn->count) continue;
-
-		size_t index = pawn_position(pawn, 1.0, &pawn->step);
-
-		// assert(index);
-		index -= 1;
-
-		// Change pawn position on the battlefield.
-		struct point location_old = pawn->moves[0].location;
-		struct point location_new = location_field(pawn->step);
-		if (battlefield[location_old.y][location_old.x].pawn == pawn)
-			battlefield[location_old.y][location_old.x].pawn = 0;
-		battlefield[location_new.y][location_new.x].pawn = pawn;
-
-		if (index < pawn->moves_count)
+		// Remove finished moves.
+		if (index)
 		{
-			// Remove finished moves.
-			if (index)
-			{
-				pawn->moves_count -= index;
-				pawn->moves_manual -= index;
+			pawn->moves_count -= index;
+			pawn->moves_manual -= index;
 
-				memmove(pawn->moves, pawn->moves + index, pawn->moves_count * sizeof(*pawn->moves));
-			}
-			pawn->moves[0].location = location_new;
-			pawn->moves[0].time = 0.0;
-			for(j = 1; j < pawn->moves_count; ++j)
-			{
-				double distance = battlefield_distance(pawn->moves[j - 1].location, pawn->moves[j].location);
-				pawn->moves[j].time = pawn->moves[j - 1].time + distance / pawn->troop->unit->speed;
-			}
+			memmove(pawn->moves, pawn->moves + index, pawn->moves_count * sizeof(*pawn->moves));
+		}
+		pawn->moves[0].location = location_new;
+		pawn->moves[0].time = 0.0;
+		for(i = 1; i < pawn->moves_count; ++i)
+		{
+			double distance = battlefield_distance(pawn->moves[i - 1].location, pawn->moves[i].location);
+			pawn->moves[i].time = pawn->moves[i - 1].time + distance / pawn->troop->unit->speed;
+		}
 
-			if (pawn->action == PAWN_FIGHT) // TODO is this okay
-			{
-				unsigned alliance;
-				int status;
+		// If the pawn follows another pawn, update its movement to correspond to the current battlefield situation.
+		if (pawn->action == PAWN_FIGHT)
+		{
+			int status;
 
+			// Delete automatically generated moves.
+			if (pawn->moves_manual < pawn->moves_count)
 				pawn->moves_count = pawn->moves_manual;
 
-				alliance = game->players[pawn->troop->owner].alliance;
-				if (!obstacles[alliance])
-				{
-					obstacles[alliance] = path_obstacles(game, battle, pawn->troop->owner);
-					if (!obstacles[alliance]) abort();
-					graph[alliance] = visibility_graph_build(battle, obstacles[alliance]);
-					if (!graph[alliance]) abort();
-				}
-
-				status = movement_follow(pawn, pawn->target.pawn, graph[alliance], obstacles[alliance]);
-				if (status == ERROR_MEMORY) abort();
-				else if (status)
-				{
-					movement_stay(pawn);
-					pawn->action = 0;
-				}
+			status = movement_follow(pawn, pawn->target.pawn, graph, obstacles);
+			if (status == ERROR_MISSING) 
+			{
+				movement_stay(pawn);
+				pawn->action = 0;
 			}
+			else return status;
 		}
-		else
-		{
-			movement_stay(pawn);
-			pawn->moves[0].location = location_new;
-			pawn->moves[0].time = 0.0;
-		}
+	}
+	else
+	{
+		movement_stay(pawn);
+		pawn->moves[0].location = location_new;
+		pawn->moves[0].time = 0.0;
+
+		// TODO remove fight target if it is unreachable
 	}
 
-	for(i = 0; i < PLAYERS_LIMIT; ++i)
-	{
-		free(obstacles[i]);
-		free(graph[i]);
-	}
+	return 0;
 }

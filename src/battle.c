@@ -125,6 +125,17 @@ size_t formation_reachable_assault(const struct game *restrict game, const struc
 	return reachable_count;
 }
 
+int battlefield_neighbors(struct point a, struct point b)
+{
+	int distance;
+
+	if (a.x == b.x) distance = (int)b.y - (int)a.y;
+	else if (a.y == b.y) distance = (int)b.x - (int)a.x;
+	else return 0;
+
+	return ((distance == -1) || (distance == 1));
+}
+
 static void battlefield_init_open(const struct game *restrict game, struct battle *restrict battle)
 {
 	unsigned players_count = 0;
@@ -445,67 +456,6 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 	return 0;
 }
 
-// Plan the necessary movements so that pawns can attack their targets.
-int battle_attack_plan(const struct game *restrict game, struct battle *restrict battle)
-{
-	size_t i;
-
-	struct adjacency_list *graph[PLAYERS_LIMIT] = {0};
-	struct obstacles *obstacles[PLAYERS_LIMIT] = {0};
-
-	for(i = 0; i < battle->pawns_count; ++i)
-	{
-		struct pawn *restrict pawn = battle->pawns + i;
-		unsigned alliance;
-
-		int status;
-
-		if (!pawn->count) continue;
-
-		pawn->moves_manual = pawn->moves_count;
-
-		if (pawn->action != PAWN_FIGHT) continue;
-
-		// Nothing to do if the target pawn is immobile.
-		if (pawn->target.pawn->moves_count == 1) continue;
-
-		alliance = game->players[pawn->troop->owner].alliance;
-		if (!obstacles[alliance])
-		{
-			obstacles[alliance] = path_obstacles(game, battle, pawn->troop->owner);
-			if (!obstacles[alliance]) abort();
-			graph[alliance] = visibility_graph_build(battle, obstacles[alliance]);
-			if (!graph[alliance]) abort();
-		}
-
-		status = movement_follow(pawn, pawn->target.pawn, graph[alliance], obstacles[alliance]);
-		if (status == ERROR_MEMORY) abort();
-		else if (status)
-		{
-			movement_stay(pawn);
-			pawn->action = 0;
-		}
-	}
-
-	for(i = 0; i < PLAYERS_LIMIT; ++i)
-	{
-		free(obstacles[i]);
-		free(graph[i]);
-	}
-
-	return 0;
-}
-
-void battlefield_term(const struct game *restrict game, struct battle *restrict battle)
-{
-	size_t i;
-	for(i = 0; i < battle->pawns_count; ++i)
-		battle->pawns[i].troop->count = battle->pawns[i].count;
-	for(i = 0; i < game->players_count; ++i)
-		free(battle->players[i].pawns);
-	free(battle->pawns);
-}
-
 // Returns winner alliance number if the battle ended and -1 otherwise.
 int battle_end(const struct game *restrict game, struct battle *restrict battle, unsigned char defender)
 {
@@ -541,13 +491,12 @@ int battle_end(const struct game *restrict game, struct battle *restrict battle,
 	else return -1;
 }
 
-int battlefield_neighbors(struct point a, struct point b)
+void battlefield_term(const struct game *restrict game, struct battle *restrict battle)
 {
-	int distance;
-
-	if (a.x == b.x) distance = (int)b.y - (int)a.y;
-	else if (a.y == b.y) distance = (int)b.x - (int)a.x;
-	else return 0;
-
-	return ((distance == -1) || (distance == 1));
+	size_t i;
+	for(i = 0; i < battle->pawns_count; ++i)
+		battle->pawns[i].troop->count = battle->pawns[i].count;
+	for(i = 0; i < game->players_count; ++i)
+		free(battle->players[i].pawns);
+	free(battle->pawns);
 }
