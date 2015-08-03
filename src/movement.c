@@ -83,15 +83,42 @@ int movement_queue(struct pawn *restrict pawn, struct point target, struct adjac
 
 int movement_follow(struct pawn *restrict pawn, const struct pawn *restrict target, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles)
 {
-	//
+	size_t i;
 
-	// TODO implement this
+	int status;
 
-	//movement_queue(pawn, pawn->target.pawn->moves[0].location, );
+	status = movement_queue(pawn, target->moves[i].location, graph, obstacles);
+	if (status < 0) return status;
 
-	// TODO if the target moves, move our pawn behind it (or disable the action if it becomes unreachable)
+	for(i = 1; i < target->moves_count; ++i)
+	{
+		double time_start, time_end;
+		double target_duration;
+
+		target_duration = target->moves[i].time - target->moves[i - 1].time;
+		time_start = pawn->moves[pawn->moves_count - 1].time;
+
+		// TODO in the case of missing, move while possible?
+		status = movement_queue(pawn, target->moves[i].location, graph, obstacles);
+		if (status < 0) return status;
+
+		time_end = pawn->moves[pawn->moves_count - 1].time;
+
+		if (time_end - time_start < target_duration)
+		{
+			pawn->moves[pawn->moves_count - 1].time = time_start + target_duration;
+			time_end = pawn->moves[pawn->moves_count - 1].time;
+		}
+	}
 
 	return 0;
+}
+
+void pawn_place(struct pawn *restrict pawn, struct point location)
+{
+	pawn->moves[0].location = location;
+	pawn->moves[0].time = 0.0;
+	pawn->moves_count = 1;
 }
 
 void movement_stay(struct pawn *restrict pawn)
@@ -157,7 +184,6 @@ static struct point location_field(const struct point location)
 static size_t pawn_position(const struct pawn *restrict pawn, double time_now, struct point *restrict location)
 {
 	double real_x, real_y;
-
 	size_t index = movement_location(pawn, time_now, &real_x, &real_y);
 
 	location->x = real_x * 2 + 0.5;
@@ -494,14 +520,17 @@ retry:
 	}
 }
 
-void battlefield_movement_perform(struct battlefield battlefield[][BATTLEFIELD_HEIGHT], struct pawn *restrict pawns, size_t pawns_count)
+void battlefield_movement_perform(const struct game *restrict game, const struct battle *restrict battle, struct battlefield battlefield[][BATTLEFIELD_HEIGHT], struct pawn *restrict pawns, size_t pawns_count)
 {
-	size_t p, i;
+	size_t i, j;
+
+	struct adjacency_list *graph[PLAYERS_LIMIT] = {0};
+	struct obstacles *obstacles[PLAYERS_LIMIT] = {0};
 
 	// Update occupied squares for each pawn.
-	for(p = 0; p < pawns_count; ++p)
+	for(i = 0; i < pawns_count; ++i)
 	{
-		struct pawn *pawn = pawns + p;
+		struct pawn *pawn = pawns + i;
 		if (!pawn->count) continue;
 
 		size_t index = pawn_position(pawn, 1.0, &pawn->step);
@@ -522,14 +551,41 @@ void battlefield_movement_perform(struct battlefield battlefield[][BATTLEFIELD_H
 			if (index)
 			{
 				pawn->moves_count -= index;
+				pawn->moves_manual -= index;
+
 				memmove(pawn->moves, pawn->moves + index, pawn->moves_count * sizeof(*pawn->moves));
 			}
 			pawn->moves[0].location = location_new;
 			pawn->moves[0].time = 0.0;
-			for(i = 1; i < pawn->moves_count; ++i)
+			for(j = 1; j < pawn->moves_count; ++j)
 			{
-				double distance = battlefield_distance(pawn->moves[i - 1].location, pawn->moves[i].location);
-				pawn->moves[i].time = pawn->moves[i - 1].time + distance / pawn->troop->unit->speed;
+				double distance = battlefield_distance(pawn->moves[j - 1].location, pawn->moves[j].location);
+				pawn->moves[j].time = pawn->moves[j - 1].time + distance / pawn->troop->unit->speed;
+			}
+
+			if (pawn->action == PAWN_FIGHT) // TODO is this okay
+			{
+				unsigned alliance;
+				int status;
+
+				pawn->moves_count = pawn->moves_manual;
+
+				alliance = game->players[pawn->troop->owner].alliance;
+				if (!obstacles[alliance])
+				{
+					obstacles[alliance] = path_obstacles(game, battle, pawn->troop->owner);
+					if (!obstacles[alliance]) abort();
+					graph[alliance] = visibility_graph_build(battle, obstacles[alliance]);
+					if (!graph[alliance]) abort();
+				}
+
+				status = movement_follow(pawn, pawn->target.pawn, graph[alliance], obstacles[alliance]);
+				if (status == ERROR_MEMORY) abort();
+				else if (status)
+				{
+					movement_stay(pawn);
+					pawn->action = 0;
+				}
 			}
 		}
 		else
@@ -538,5 +594,11 @@ void battlefield_movement_perform(struct battlefield battlefield[][BATTLEFIELD_H
 			pawn->moves[0].location = location_new;
 			pawn->moves[0].time = 0.0;
 		}
+	}
+
+	for(i = 0; i < PLAYERS_LIMIT; ++i)
+	{
+		free(obstacles[i]);
+		free(graph[i]);
 	}
 }

@@ -13,7 +13,7 @@ struct pawn
 
 	struct move *moves; // TODO allocate this
 	size_t moves_size; // TODO rename this
-	size_t moves_count;
+	size_t moves_count, moves_manual;
 
 	enum pawn_action {PAWN_FIGHT = 1, PAWN_SHOOT, PAWN_ASSAULT} action;
 	union

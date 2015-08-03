@@ -124,6 +124,8 @@ struct game
 
 	struct region *regions;
 	size_t regions_count;
+
+	unsigned turn;
 };
 
 enum {PALISADE, FORTRESS};

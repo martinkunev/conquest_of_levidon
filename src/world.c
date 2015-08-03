@@ -355,6 +355,8 @@ int world_load(const union json *restrict json, struct game *restrict game)
 	game->regions_count = 0;
 	game->regions = 0;
 
+	game->turn = 0; // TODO get this from the world file
+
 	if (json_type(json) != JSON_OBJECT) goto error;
 
 	node = value_get_try(&json->object, "players", JSON_ARRAY);
@@ -550,6 +552,8 @@ union json *world_save(const struct game *restrict game)
 		regions = json_object_insert(regions, game->regions[i].name, game->regions[i].name_length, region);
 	}
 	json = json_object_insert(json, S("regions"), regions);
+
+	// game->turn // TODO write this to the world file
 
 	return json;
 }

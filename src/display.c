@@ -1092,6 +1092,11 @@ void if_map(const void *argument, const struct game *game)
 	// Display panel background pattern.
 	display_image(&image_panel, PANEL_X, PANEL_Y, PANEL_WIDTH, PANEL_HEIGHT);
 
+	// TODO display year and month
+	// {"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"}
+	// game->turn / 12;
+	// game->turn % 12;
+
 	// TODO remove this color display box
 	/*for(i = 0; i < PLAYERS_LIMIT; ++i)
 		fill_rectangle(PANEL_X + (i % 4) * 32, PANEL_Y + 300 + (i / 4) * 32, 32, 32, Player + i);*/

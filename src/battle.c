@@ -221,10 +221,7 @@ static void battlefield_init_open(const struct game *restrict game, struct battl
 			if (!field->pawn)
 			{
 				battle->pawns[i].moves = malloc(32 * sizeof(*battle->pawns[i].moves)); // TODO fix this
-				battle->pawns[i].moves[0].location = reachable[j];
-				battle->pawns[i].moves[0].time = 0.0;
-				battle->pawns[i].moves_count = 1;
-
+				pawn_place(battle->pawns + i, reachable[j]);
 				field->pawn = battle->pawns + i;
 
 				break;
@@ -313,10 +310,7 @@ static void battlefield_init_assault(const struct game *restrict game, struct ba
 			if (!field->pawn)
 			{
 				pawn->moves = malloc(32 * sizeof(*pawn->moves)); // TODO fix this
-				pawn->moves[0].location = reachable[j];
-				pawn->moves[0].time = 0.0;
-				pawn->moves_count = 1;
-
+				pawn_place(pawn, reachable[j]);
 				field->pawn = pawn;
 
 				break;
@@ -467,6 +461,9 @@ int battle_attack_plan(const struct game *restrict game, struct battle *restrict
 		int status;
 
 		if (!pawn->count) continue;
+
+		pawn->moves_manual = pawn->moves_count;
+
 		if (pawn->action != PAWN_FIGHT) continue;
 
 		// Nothing to do if the target pawn is immobile.
