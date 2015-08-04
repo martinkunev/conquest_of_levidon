@@ -918,12 +918,12 @@ static void if_map_region(const struct region *region, const struct state_map *s
 			int moving;
 
 			if (troop->owner != state->player) continue;
-			if (troop->move != region) continue;
+			if (troop->move == LOCATION_GARRISON) continue;
 
 			if (!self_count) fill_rectangle(PANEL_X, object_group[TroopSelf].top - 2, PANEL_WIDTH, 2 + object_group[TroopSelf].height + 12 + 2, Self);
 			x = self_count++;
 			offset = state->self_offset;
-			moving = (troop->move != troop->location);
+			moving = (troop->move != region);
 
 			// Draw troops that are visible on the screen.
 			if ((x >= offset) && (x < offset + TROOPS_VISIBLE))
@@ -969,7 +969,7 @@ static void if_map_region(const struct region *region, const struct state_map *s
 					i = 0;
 					for(troop = region->garrison.troops; troop; troop = troop->_next)
 					{
-						if ((troop->owner == state->player) && (troop->move == region)) continue;
+						if ((troop->owner == state->player) && (troop->move != LOCATION_GARRISON)) continue;
 
 						struct point position = if_position(TroopGarrison, i);
 						display_troop(troop->unit->index, position.x, position.y, Player + troop->owner, Black, troop->count);

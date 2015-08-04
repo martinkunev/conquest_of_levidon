@@ -435,8 +435,6 @@ static int input_garrison(int code, unsigned x, unsigned y, uint16_t modifiers, 
 
 		// Move the clicked troop out of the garrison.
 		troop->move = region;
-		troop_detach(&region->garrison.troops, troop);
-		troop_attach(&region->troops, troop);
 	}
 	else if (code == EVENT_MOUSE_RIGHT)
 	{
@@ -452,12 +450,9 @@ static int input_garrison(int code, unsigned x, unsigned y, uint16_t modifiers, 
 			if (count < garrison->troops) // if there is place for one more troop
 			{
 				// Move the selected troop to the garrison.
-				troop->move = LOCATION_GARRISON;
-				troop_detach(&region->troops, state->troop);
-				troop_attach(&region->garrison.troops, state->troop);
+				state->troop->move = LOCATION_GARRISON;
+				state->troop = 0;
 			}
-
-			state->troop = 0;
 		}
 		else if (!allies(game, state->player, region->garrison.owner))
 		{
