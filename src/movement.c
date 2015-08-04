@@ -67,30 +67,9 @@ void movement_stay(struct pawn *restrict pawn)
 	pawn->moves_count = 1;
 }
 
-int movement_set(struct pawn *restrict pawn, struct point target, struct adjacency_list *restrict nodes, const struct obstacles *restrict obstacles)
-{
-	// TODO should I check whether the field is blocked
-	// if (battle->field[y][x].blockage && !allies(game, pawn->troop->owner, battle->field[y][x].owner))
-
-	// Erase moves but remember their count so that we can restore them if necessary.
-	size_t moves_count = pawn->moves_count;
-	pawn->moves_count = 1;
-
-	int error = path_queue(pawn, target, nodes, obstacles);
-	if (error) pawn->moves_count = moves_count; // restore moves
-	else pawn->action = 0;
-
-	return error;
-}
-
 int movement_queue(struct pawn *restrict pawn, struct point target, struct adjacency_list *restrict nodes, const struct obstacles *restrict obstacles)
 {
-	// TODO should I check whether the field is blocked
-	// if (battle->field[y][x].blockage && !allies(game, pawn->troop->owner, battle->field[y][x].owner))
-
-	int error = path_queue(pawn, target, nodes, obstacles);
-	if (!error) pawn->action = 0;
-	return error;
+	return path_queue(pawn, target, nodes, obstacles);
 }
 
 int movement_follow(struct pawn *restrict pawn, const struct pawn *restrict target, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles)
@@ -99,7 +78,7 @@ int movement_follow(struct pawn *restrict pawn, const struct pawn *restrict targ
 
 	int status;
 
-	status = movement_queue(pawn, target->moves[i].location, graph, obstacles);
+	status = movement_queue(pawn, target->moves[0].location, graph, obstacles);
 	if (status < 0) return status;
 
 	for(i = 1; i < target->moves_count; ++i)
@@ -386,7 +365,7 @@ static int pawn_move_step(struct pawn *pawns[OVERLAP_LIMIT], size_t pawn_index, 
 	return -1;
 }
 
-static void battlefield_collision_resolve(const struct player *restrict players, struct pawn *occupied[BATTLEFIELD_HEIGHT * 2][BATTLEFIELD_WIDTH * 2][OVERLAP_LIMIT], size_t x, size_t y, unsigned step)
+static void collision_resolve(const struct player *restrict players, struct pawn *occupied[BATTLEFIELD_HEIGHT * 2][BATTLEFIELD_WIDTH * 2][OVERLAP_LIMIT], size_t x, size_t y, unsigned step)
 {
 	size_t i;
 
@@ -513,7 +492,7 @@ retry:
 			{
 				if (occupied[y][x][1]) // movement overlap
 				{
-					battlefield_collision_resolve(players, occupied, x, y, step);
+					collision_resolve(players, occupied, x, y, step);
 					goto retry;
 				}
 			}

@@ -4,7 +4,7 @@ struct state_battle
 
 	struct point hover; // position of the hovered field
 
-	struct obstacles *obstacles; // obstacles on the battlefield
+	const struct obstacles *obstacles; // obstacles on the battlefield
 	struct adjacency_list *graph; // graph used for pathfinding
 
 	struct point field; // selected field
@@ -26,5 +26,4 @@ struct state_formation
 };
 
 int input_formation(const struct game *restrict game, struct battle *restrict battle, unsigned char player);
-
-int input_battle(const struct game *restrict game, struct battle *restrict battle, unsigned char player);
+int input_battle(const struct game *restrict game, struct battle *restrict battle, unsigned char player, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles);

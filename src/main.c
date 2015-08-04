@@ -33,9 +33,6 @@ static int play_battle(struct game *restrict game, struct battle *restrict battl
 	int status;
 	int winner;
 
-	struct adjacency_list *graph[PLAYERS_LIMIT] = {0};
-	struct obstacles *obstacles[PLAYERS_LIMIT] = {0};
-
 	size_t i;
 
 	battle->round = 0;
@@ -66,6 +63,9 @@ static int play_battle(struct game *restrict game, struct battle *restrict battl
 
 	while ((winner = battle_end(game, battle, defender)) < 0)
 	{
+		struct adjacency_list *graph[PLAYERS_LIMIT] = {0};
+		struct obstacles *obstacles[PLAYERS_LIMIT] = {0};
+
 		// Ask each player to give commands to their pawns.
 		for(player = 0; player < game->players_count; ++player)
 		{
@@ -92,7 +92,7 @@ static int play_battle(struct game *restrict game, struct battle *restrict battl
 				break;
 
 			case Local:
-				if (input_battle(game, battle, player) < 0)
+				if (input_battle(game, battle, player, graph[alliance], obstacles[alliance]) < 0)
 					return -1;
 				break;
 			}
@@ -131,7 +131,7 @@ static int play_battle(struct game *restrict game, struct battle *restrict battl
 		for(i = 0; i < PLAYERS_LIMIT; ++i)
 		{
 			free(obstacles[i]);
-			free(graph[i]);
+			visibility_graph_free(graph[i]);
 		}
 	}
 

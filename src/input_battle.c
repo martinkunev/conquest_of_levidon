@@ -58,20 +58,49 @@ static int input_round(int code, unsigned x, unsigned y, uint16_t modifiers, con
 	}
 }
 
-static int attack(const struct game *restrict game, const struct battle *restrict battle, struct state_battle *restrict state, struct point target)
+static int pawn_command(const struct game *restrict game, const struct battle *restrict battle, struct point point, struct state_battle *restrict state)
 {
-	struct pawn *pawn = state->pawn;
+	struct pawn *restrict pawn = state->pawn;
 
-	// If the pawn is not next to its target, move before attacking it.
-	int status = movement_attack(state->pawn, target, battle->field, state->reachable, state->graph, state->obstacles);
-	if (status) return status;
+	const struct battlefield *restrict target = &battle->field[point.y][point.x];
 
-	if (path_reachable(pawn, state->graph, state->obstacles, state->reachable) < 0)
-		return ERROR_MEMORY;
+	// // Perform the first reasonable action: shoot, fight, move
 
-	combat_order_fight(game, battle, state->obstacles, pawn, battle->field[target.y][target.x].pawn); // TODO support assault
+	// TODO tower support
 
-	return 0;
+	if (target->pawn)
+	{
+		if (allies(game, pawn->troop->owner, target->pawn->troop->owner))
+		{
+			return movement_queue(pawn, point, state->graph, state->obstacles);
+		}
+		else if (combat_order_shoot(game, battle, state->obstacles, pawn, point))
+		{
+			return 0;
+		}
+		else
+		{
+			// If the pawn is not next to its target, move before attacking it.
+			int status = movement_attack(pawn, point, battle->field, state->reachable, state->graph, state->obstacles);
+			if (status < 0) return status;
+
+			combat_order_fight(game, battle, state->obstacles, pawn, target->pawn); // the check above ensure this will succeed
+			return ERROR_MISSING;
+		}
+	}
+	else if (target->blockage == BLOCKAGE_OBSTACLE)
+	{
+		// If the pawn is not next to its target, move before attacking it.
+		int status = movement_attack(pawn, point, battle->field, state->reachable, state->graph, state->obstacles);
+		if (status < 0) return status;
+
+		combat_order_assault(game, battle, state->obstacles, pawn, point); // the check above ensure this will succeed
+		return 0;
+	}
+	else
+	{
+		return movement_queue(pawn, point, state->graph, state->obstacles);
+	}
 }
 
 static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
@@ -125,53 +154,53 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 				return INPUT_IGNORE;
 
 			movement_stay(pawn);
+			pawn->action = 0;
 			status = path_reachable(pawn, state->graph, state->obstacles, state->reachable);
 			if (status < 0) return status;
-			pawn->action = 0;
 			return 0;
 		}
 
 		// if CONTROL is pressed, shoot
-		// if SHIFT is pressed, move
+		// if SHIFT is pressed, don't overwrite the current command
 		if (modifiers & XCB_MOD_MASK_CONTROL) combat_order_shoot(game, battle, state->obstacles, pawn, point);
 		else if (modifiers & XCB_MOD_MASK_SHIFT)
 		{
-			movement_queue(pawn, point, state->graph, state->obstacles);
-			status = path_reachable(pawn, state->graph, state->obstacles, state->reachable);
-			if (status < 0) return status;
+			status = pawn_command(game, battle, point, state);
+			switch (status)
+			{
+			case 0:
+				status = path_reachable(pawn, state->graph, state->obstacles, state->reachable);
+				if (status < 0) return status;
+			case ERROR_MISSING:
+				return 0;
+
+			case ERROR_MEMORY:
+				return status;
+			}
 		}
 		else
 		{
-			const struct battlefield *restrict field = &battle->field[y][x];
+			// Erase moves but remember their count so that we can restore them if necessary.
+			size_t moves_count = pawn->moves_count;
+			pawn->moves_count = 1;
 
-			// Perform the first reasonable action: shoot, fight, move
-			if (field->pawn)
+			status = pawn_command(game, battle, point, state);
+			switch (status)
 			{
-				if (allies(game, pawn->troop->owner, field->pawn->troop->owner))
-				{
-					movement_set(pawn, point, state->graph, state->obstacles);
-					status = path_reachable(pawn, state->graph, state->obstacles, state->reachable);
-					if (status < 0) return status;
-				}
-				else
-				{
-					if (combat_order_shoot(game, battle, state->obstacles, pawn, point))
-						;
-					else
-						attack(game, battle, state, point); // TODO error check
-				}
-			}
-			else if (combat_order_assault(game, battle, state->obstacles, pawn, point))
-				;
-			else
-			{
-				movement_set(pawn, point, state->graph, state->obstacles);
+			case 0:
 				status = path_reachable(pawn, state->graph, state->obstacles, state->reachable);
 				if (status < 0) return status;
+				return 0;
+
+			case ERROR_MISSING:
+				// The command failed. Restore moves.
+				pawn->moves_count = moves_count;
+				return 0;
+
+			case ERROR_MEMORY:
+				return status;
 			}
 		}
-
-		return 0;
 	}
 	else if (code == EVENT_MOTION)
 	{
@@ -275,7 +304,7 @@ int input_formation(const struct game *restrict game, struct battle *restrict ba
 	return input_local(areas, sizeof(areas) / sizeof(*areas), if_formation, game, &state);
 }
 
-int input_battle(const struct game *restrict game, struct battle *restrict battle, unsigned char player)
+int input_battle(const struct game *restrict game, struct battle *restrict battle, unsigned char player, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles)
 {
 	if_set(battle); // TODO remove this
 
@@ -305,15 +334,8 @@ int input_battle(const struct game *restrict game, struct battle *restrict battl
 	state.pawn = 0;
 	state.hover = POINT_NONE;
 
-	state.obstacles = path_obstacles(game, battle, player);
-	if (!state.obstacles) abort();
-	state.graph = visibility_graph_build(battle, state.obstacles);
-	if (!state.graph) abort();
+	state.obstacles = obstacles;
+	state.graph = graph;
 
-	int status = input_local(areas, sizeof(areas) / sizeof(*areas), if_battle, game, &state);
-
-	visibility_graph_free(state.graph);
-	free(state.obstacles);
-
-	return status;
+	return input_local(areas, sizeof(areas) / sizeof(*areas), if_battle, game, &state);
 }

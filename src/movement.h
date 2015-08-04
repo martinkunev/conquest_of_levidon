@@ -6,7 +6,6 @@ void pawn_place(struct pawn *restrict pawn, struct point location);
 
 struct adjacency_list;
 void movement_stay(struct pawn *restrict pawn);
-int movement_set(struct pawn *restrict pawn, struct point target, struct adjacency_list *restrict nodes, const struct obstacles *restrict obstacles);
 int movement_queue(struct pawn *restrict pawn, struct point target, struct adjacency_list *restrict nodes, const struct obstacles *restrict obstacles);
 
 int movement_follow(struct pawn *restrict pawn, const struct pawn *restrict target, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles);
