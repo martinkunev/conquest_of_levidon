@@ -331,6 +331,7 @@ static int input_troop(int code, unsigned x, unsigned y, uint16_t modifiers, con
 	struct troop *troop;
 	ssize_t offset;
 	int found;
+	int garrison;
 
 	struct state_map *state = argument;
 
@@ -354,7 +355,15 @@ static int input_troop(int code, unsigned x, unsigned y, uint16_t modifiers, con
 		if (!found || offset)
 		{
 			troop = troop->_next;
-			if (!troop) goto reset; // no troop clicked
+			if (!troop)
+			{
+				if (garrison) goto reset; // no troop clicked
+				else
+				{
+					troop = region->garrison.troops;
+					garrison = 1;
+				}
+			}
 			if (found) offset -= 1;
 		}
 		else if (found) break;

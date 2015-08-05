@@ -832,7 +832,6 @@ static void if_map_region(const struct region *region, const struct state_map *s
 
 	show_flag(PANEL_X, PANEL_Y, region->owner);
 
-	// Display the troops at the selected region.
 	if (allies(game, region->owner, state->player) || allies(game, region->garrison.owner, state->player))
 	{
 		enum object object;
@@ -899,10 +898,10 @@ static void if_map_region(const struct region *region, const struct state_map *s
 			}
 
 			// Draw the destination of each moving troop owned by current player.
-			if ((troop->owner == state->player) && (!state->troop || (troop == state->troop)) && troop->move && (troop->move->index != state->region))
+			if ((troop->owner == state->player) && (!state->troop || (troop == state->troop)) && troop->move && (troop->move != region))
 			{
 				struct point p0, p1;
-				if (polygons_border(troop->location->location, troop->move->location, &p0, &p1)) // TODO this is slow; don't do it every time
+				if (polygons_border(region->location, troop->move->location, &p0, &p1)) // TODO this is slow; don't do it every time
 				{
 					display_troop_destination(p0, p1);
 				}
@@ -935,10 +934,10 @@ static void if_map_region(const struct region *region, const struct state_map *s
 			}
 
 			// Draw the destination of each moving troop owned by current player.
-			if ((troop->owner == state->player) && (!state->troop || (troop == state->troop)) && troop->move && (troop->move->index != state->region))
+			if ((troop->owner == state->player) && (!state->troop || (troop == state->troop)) && troop->move && (troop->move != region))
 			{
 				struct point p0, p1;
-				if (polygons_border(troop->location->location, troop->move->location, &p0, &p1)) // TODO this is slow; don't do it every time
+				if (polygons_border(region->location, troop->move->location, &p0, &p1)) // TODO this is slow; don't do it every time
 				{
 					display_troop_destination(p0, p1);
 				}
@@ -970,6 +969,14 @@ static void if_map_region(const struct region *region, const struct state_map *s
 					for(troop = region->garrison.troops; troop; troop = troop->_next)
 					{
 						if ((troop->owner == state->player) && (troop->move != LOCATION_GARRISON)) continue;
+
+						struct point position = if_position(TroopGarrison, i);
+						display_troop(troop->unit->index, position.x, position.y, Player + troop->owner, Black, troop->count);
+						i += 1;
+					}
+					for(troop = region->troops; troop; troop = troop->_next)
+					{
+						if ((troop->owner != state->player) || (troop->move != LOCATION_GARRISON)) continue;
 
 						struct point position = if_position(TroopGarrison, i);
 						display_troop(troop->unit->index, position.x, position.y, Player + troop->owner, Black, troop->count);
