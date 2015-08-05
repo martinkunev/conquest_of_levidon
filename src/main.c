@@ -87,7 +87,7 @@ static int play_battle(struct game *restrict game, struct battle *restrict battl
 				continue;
 
 			case Computer:
-				if (computer_battle(game, battle, player) < 0)
+				if (computer_battle(game, battle, player, graph[alliance], obstacles[alliance]) < 0)
 					return -1;
 				break;
 

@@ -495,6 +495,8 @@ void visibility_graph_free(struct adjacency_list *graph)
 	size_t i;
 	struct neighbor *item, *next;
 
+	if (!graph) return;
+
 	for(i = 0; i < graph->count; ++i)
 	{
 		item = graph->list[i].neighbors;

@@ -1,6 +1,7 @@
 #include <X11/keysym.h>
 
 #include <stdlib.h>
+#include <string.h>
 
 #include "errors.h"
 #include "map.h"
@@ -58,13 +59,9 @@ static int input_round(int code, unsigned x, unsigned y, uint16_t modifiers, con
 	}
 }
 
-static int pawn_command(const struct game *restrict game, const struct battle *restrict battle, struct point point, struct state_battle *restrict state)
+static int pawn_command(const struct game *restrict game, const struct battle *restrict battle, struct pawn *restrict pawn, struct point point, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles, double reachable[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH])
 {
-	struct pawn *restrict pawn = state->pawn;
-
 	const struct battlefield *restrict target = &battle->field[point.y][point.x];
-
-	// // Perform the first reasonable action: shoot, fight, move
 
 	// TODO tower support
 
@@ -72,34 +69,34 @@ static int pawn_command(const struct game *restrict game, const struct battle *r
 	{
 		if (allies(game, pawn->troop->owner, target->pawn->troop->owner))
 		{
-			return movement_queue(pawn, point, state->graph, state->obstacles);
+			return movement_queue(pawn, point, graph, obstacles);
 		}
-		else if (combat_order_shoot(game, battle, state->obstacles, pawn, point))
+		else if (combat_order_shoot(game, battle, obstacles, pawn, point))
 		{
 			return 0;
 		}
 		else
 		{
 			// If the pawn is not next to its target, move before attacking it.
-			int status = movement_attack(pawn, point, battle->field, state->reachable, state->graph, state->obstacles);
+			int status = movement_attack(pawn, point, battle->field, reachable, graph, obstacles);
 			if (status < 0) return status;
 
-			combat_order_fight(game, battle, state->obstacles, pawn, target->pawn); // the check above ensure this will succeed
-			return ERROR_MISSING;
+			combat_order_fight(game, battle, obstacles, pawn, target->pawn); // the check above ensure this will succeed
+			return 0;
 		}
 	}
 	else if (target->blockage == BLOCKAGE_OBSTACLE)
 	{
 		// If the pawn is not next to its target, move before attacking it.
-		int status = movement_attack(pawn, point, battle->field, state->reachable, state->graph, state->obstacles);
+		int status = movement_attack(pawn, point, battle->field, reachable, graph, obstacles);
 		if (status < 0) return status;
 
-		combat_order_assault(game, battle, state->obstacles, pawn, point); // the check above ensure this will succeed
+		combat_order_assault(game, battle, obstacles, pawn, point); // the check above ensure this will succeed
 		return 0;
 	}
 	else
 	{
-		return movement_queue(pawn, point, state->graph, state->obstacles);
+		return movement_queue(pawn, point, graph, obstacles);
 	}
 }
 
@@ -165,7 +162,7 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 		if (modifiers & XCB_MOD_MASK_CONTROL) combat_order_shoot(game, battle, state->obstacles, pawn, point);
 		else if (modifiers & XCB_MOD_MASK_SHIFT)
 		{
-			status = pawn_command(game, battle, point, state);
+			status = pawn_command(game, battle, pawn, point, state->graph, state->obstacles, state->reachable);
 			switch (status)
 			{
 			case 0:
@@ -180,16 +177,21 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 		}
 		else
 		{
+			double reachable[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH];
+
 			// Erase moves but remember their count so that we can restore them if necessary.
 			size_t moves_count = pawn->moves_count;
 			pawn->moves_count = 1;
 
-			status = pawn_command(game, battle, point, state);
+			// Initialize reachable distances for stationary pawn.
+			status = path_reachable(pawn, state->graph, state->obstacles, reachable);
+			if (status < 0) return status;
+
+			status = pawn_command(game, battle, pawn, point, state->graph, state->obstacles, reachable);
 			switch (status)
 			{
 			case 0:
-				status = path_reachable(pawn, state->graph, state->obstacles, state->reachable);
-				if (status < 0) return status;
+				memcpy(state->reachable, reachable, sizeof(state->reachable));
 				return 0;
 
 			case ERROR_MISSING:

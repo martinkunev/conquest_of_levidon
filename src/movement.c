@@ -69,7 +69,9 @@ void movement_stay(struct pawn *restrict pawn)
 
 int movement_queue(struct pawn *restrict pawn, struct point target, struct adjacency_list *restrict nodes, const struct obstacles *restrict obstacles)
 {
-	return path_queue(pawn, target, nodes, obstacles);
+	int error = path_queue(pawn, target, nodes, obstacles);
+	if (!error) pawn->action = 0;
+	return error;
 }
 
 int movement_follow(struct pawn *restrict pawn, const struct pawn *restrict target, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles)
@@ -169,14 +171,12 @@ int movement_attack_plan(struct pawn *restrict pawn, struct adjacency_list *rest
 	case ERROR_MISSING: // target pawn is not reachable
 		// TODO move until possible (the field before the wall)
 		movement_stay(pawn);
-		pawn->action = 0;
 		return 0;
 
 	default:
+		pawn->action = PAWN_FIGHT;
 		return status;
 	}
-
-	return 0;
 }
 
 static struct point location_field(const struct point location)
@@ -572,12 +572,12 @@ int battlefield_movement_perform(struct battle *restrict battle, struct pawn *re
 				pawn->moves_count = pawn->moves_manual;
 
 			status = movement_follow(pawn, pawn->target.pawn, graph, obstacles);
-			if (status == ERROR_MISSING) 
+			if (status == ERROR_MISSING) movement_stay(pawn);
+			else
 			{
-				movement_stay(pawn);
-				pawn->action = 0;
+				pawn->action = PAWN_FIGHT;
+				return status;
 			}
-			else return status;
 		}
 	}
 	else
