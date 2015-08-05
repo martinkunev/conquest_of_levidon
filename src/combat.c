@@ -22,6 +22,14 @@ static const double damage_boost[7][6] =
 	[WEAPON_BLUNT] = {		1.0,		1.0,		1.0,		0.5,		1.0,		0.7},
 };
 
+double damage_expected(const struct pawn *restrict fighter, double troops_count, const struct pawn *restrict victim)
+{
+	enum weapon weapon = fighter->troop->unit->melee.weapon;
+	enum armor armor = victim->troop->unit->armor;
+	double damage = fighter->troop->unit->melee.damage * fighter->troop->unit->melee.agility;
+	return troops_count * damage * damage_boost[weapon][armor];
+}
+
 static unsigned deaths(unsigned damage, unsigned troops, unsigned health)
 {
 	unsigned min, max;
