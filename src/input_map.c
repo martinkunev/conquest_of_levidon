@@ -340,8 +340,7 @@ static int input_troop(int code, unsigned x, unsigned y, uint16_t modifiers, con
 
 	if (state->region == REGION_NONE) goto reset; // no region selected
 	region = game->regions + state->region;
-	troop = region->troops;
-	if (!troop) goto reset; // no troops in this region
+	if (!region->troops && !region->garrison.troops) goto reset; // no troops in this region
 
 	// Find which troop was clicked.
 	offset = if_index(TroopSelf, (struct point){x, y});
@@ -349,6 +348,12 @@ static int input_troop(int code, unsigned x, unsigned y, uint16_t modifiers, con
 	offset += state->self_offset;
 
 	// Find the clicked troop in the linked list.
+	if (region->troops) troop = region->troops;
+	else
+	{
+		troop = region->garrison.troops;
+		garrison = 1;
+	}
 	while (1)
 	{
 		found = (troop->owner == state->player);

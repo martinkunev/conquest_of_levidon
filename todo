@@ -1,6 +1,8 @@
-H	name the game
+H	name the game (?levidon)
 H	do something to prevent endless battles; clean up the code related to the end of the battle
 H	artificial intelligence
+H	function making a list of fields traversed by a pawn (used for opening gates and detecting last reachable square when a targeted pawn becomes unreachable)
+M	store troops at a single place in the region
 M	pawns should be smart enough to sidestep self pawns on the way
 M	map scrolling
 M	keyboard support in various places in the interface
@@ -45,6 +47,8 @@ improve player colors
 ? dynamic battlefield size
 
 images
+	gold icon: stacked coins
+
 	fortress*.png, fortress_gate*.png
 	assault.png (indicator on the map)
 

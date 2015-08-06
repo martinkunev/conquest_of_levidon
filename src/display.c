@@ -333,6 +333,8 @@ static int if_animation(const struct player *restrict players, const struct batt
 						image = &image_palisade_gate[0];
 					else // field->position == (POSITION_TOP | POSITION_BOTTOM)
 						image = &image_palisade_gate[1];
+
+					// TODO don't display anything if a pawn will pass through this gate
 				}
 
 				image_draw(image, BATTLE_X + x * object_group[Battlefield].width, BATTLE_Y + y * object_group[Battlefield].height);

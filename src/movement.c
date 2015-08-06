@@ -22,6 +22,8 @@ When enemy pawns try to occupy the same square, they are redirected to their fai
 When allied pawns try to occupy the same squre, one of them stays where it is and the other are detoured to their failback locations to wait.
 */
 
+// TODO make sure moves_manual does not overflow
+
 // Returns the index of the first not yet reached move location or pawn->moves_count if there is no unreached location. Sets current location in real_x and real_y.
 size_t movement_location(const struct pawn *restrict pawn, double time_now, double *restrict real_x, double *restrict real_y)
 {
@@ -53,6 +55,32 @@ size_t movement_location(const struct pawn *restrict pawn, double time_now, doub
 	*real_x = pawn->moves[pawn->moves_count - 1].location.x;
 	*real_y = pawn->moves[pawn->moves_count - 1].location.y;
 	return pawn->moves_count;
+}
+
+unsigned movement_fields(const struct pawn *restrict pawn, struct point fields[static UNIT_SPEED_LIMIT])
+{
+	unsigned fields_count;
+	unsigned step;
+
+	fields[0] = pawn->moves[0].location;
+	fields_count = 1;
+
+	// TODO this can be optimized to not repeat some stuff on each iteration
+
+	for(step = 1; step <= UNIT_SPEED_LIMIT; ++step)
+	{
+		double time = (double)step / UNIT_SPEED_LIMIT;
+		double real_x, real_y;
+		struct point location;
+
+		movement_location(pawn, time, &real_x, &real_y);
+		location = (struct point){real_x + 0.5, real_y + 0.5};
+
+		if (!point_eq(location, fields[fields_count - 1]))
+			fields[fields_count++] = location;
+	}
+
+	return fields_count;
 }
 
 void pawn_place(struct pawn *restrict pawn, struct point location)
@@ -158,9 +186,10 @@ int movement_attack_plan(struct pawn *restrict pawn, struct adjacency_list *rest
 {
 	int status;
 
-	if (pawn->action != PAWN_FIGHT) return 0;
-
+	// Mark all movements as manually assigned.
 	pawn->moves_manual = pawn->moves_count;
+
+	if (pawn->action != PAWN_FIGHT) return 0;
 
 	// Nothing to do if the target pawn is immobile.
 	if (pawn->target.pawn->moves_count == 1) return 0;
@@ -175,6 +204,7 @@ int movement_attack_plan(struct pawn *restrict pawn, struct adjacency_list *rest
 
 	default:
 		pawn->action = PAWN_FIGHT;
+	case ERROR_MEMORY:
 		return status;
 	}
 }
@@ -263,6 +293,7 @@ static int pawn_wait(struct pawn *occupied[BATTLEFIELD_HEIGHT * 2][BATTLEFIELD_W
 		// Make the pawn wait at its present location.
 		memmove(pawn->moves + index + 1, pawn->moves + index, (pawn->moves_count - index) * sizeof(*pawn->moves));
 		pawn->moves_count += 1;
+		if (index < pawn->moves_manual) pawn->moves_manual += 1;
 		pawn->moves[index].location = location_field(location);
 		distance = battlefield_distance(pawn->moves[index - 1].location, pawn->moves[index].location);
 		pawn->moves[index].time = pawn->moves[index - 1].time + distance / pawn->troop->unit->speed;
@@ -273,6 +304,7 @@ static int pawn_wait(struct pawn *occupied[BATTLEFIELD_HEIGHT * 2][BATTLEFIELD_W
 		if (index < pawn->moves_count)
 			memmove(pawn->moves + index + 1, pawn->moves + index, (pawn->moves_count - index) * sizeof(*pawn->moves));
 		pawn->moves_count += 1;
+		if (index < pawn->moves_manual) pawn->moves_manual += 1;
 		pawn->moves[index].location = location_field(pawn->failback);
 		pawn->moves[index].time = (double)step_continue / MOVEMENT_STEPS;
 
@@ -306,11 +338,16 @@ static int pawn_stop(struct pawn *occupied[BATTLEFIELD_HEIGHT * 2][BATTLEFIELD_W
 
 	if (time_detour > pawn->moves[0].time)
 	{
-		// The pawn has started moving at the time of the detour.
+		// The pawn has started moving by the time of the detour.
+
+		int manual; // whether the inserted moves were manually assigned
 
 		struct point location;
 		size_t index = pawn_position(pawn, time_detour, &location);
 		if (index == pawn->moves_count) return 0; // the pawn is immobile
+
+		if (index < pawn->moves_manual) manual = 1;
+		else manual = 0;
 
 		pawn->moves[index].location = location_field(location);
 		pawn->moves[index].time = time_detour;
@@ -325,6 +362,7 @@ static int pawn_stop(struct pawn *occupied[BATTLEFIELD_HEIGHT * 2][BATTLEFIELD_W
 		}
 
 		pawn->moves_count = index + 1;
+		if (manual) pawn->moves_manual = pawn->moves_count;
 	}
 	else
 	{
@@ -520,6 +558,7 @@ retry:
 		{
 			memmove(pawn->moves + index + 1, pawn->moves + index, (pawn->moves_count - index) * sizeof(*pawn->moves));
 			pawn->moves_count += 1;
+			if (index < pawn->moves_manual) pawn->moves_manual += 1;
 
 			pawn->moves[index].location = location_field(pawn->step);
 			pawn->moves[index].time = 1.0;
@@ -550,7 +589,8 @@ int battlefield_movement_perform(struct battle *restrict battle, struct pawn *re
 		if (index)
 		{
 			pawn->moves_count -= index;
-			pawn->moves_manual -= index;
+			if (pawn->moves_manual <= index) pawn->moves_manual = 1;
+			else pawn->moves_manual -= index;
 
 			memmove(pawn->moves, pawn->moves + index, pawn->moves_count * sizeof(*pawn->moves));
 		}
@@ -566,16 +606,25 @@ int battlefield_movement_perform(struct battle *restrict battle, struct pawn *re
 		if (pawn->action == PAWN_FIGHT)
 		{
 			int status;
+			double reachable[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH];
 
 			// Delete automatically generated moves.
 			if (pawn->moves_manual < pawn->moves_count)
 				pawn->moves_count = pawn->moves_manual;
 
-			status = movement_follow(pawn, pawn->target.pawn, graph, obstacles);
-			if (status == ERROR_MISSING) movement_stay(pawn);
-			else
+			status = path_reachable(pawn, graph, obstacles, reachable);
+			if (status < 0) return status;
+
+			status = movement_attack(pawn, pawn->target.pawn->moves[0].location, ((const struct battle *)battle)->field, reachable, graph, obstacles);
+			switch (status)
 			{
+			case ERROR_MISSING: // target pawn is not reachable
+				movement_stay(pawn);
+				return 0;
+
+			default:
 				pawn->action = PAWN_FIGHT;
+			case ERROR_MEMORY:
 				return status;
 			}
 		}
