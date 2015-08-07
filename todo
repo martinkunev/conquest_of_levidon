@@ -1,7 +1,6 @@
-H	name the game (?levidon)
+H	name the game (?rulers of levidon)
 H	do something to prevent endless battles; clean up the code related to the end of the battle
 H	artificial intelligence
-H	function making a list of fields traversed by a pawn (used for opening gates and detecting last reachable square when a targeted pawn becomes unreachable)
 M	store troops at a single place in the region
 M	pawns should be smart enough to sidestep self pawns on the way
 M	map scrolling
@@ -13,6 +12,7 @@ M	better battle animations (shooting, fighting, etc.)
 M	region population; income should be calculated as a function of the population; army recruitment should reduce population
 M	region-specific features
 M	limited number of arrows
+M	select only specific troops for an assault (display icon like movement.png for such pawns)
 L	armory, swordsman, crossbowman, heavy cavalry, horse archer
 L	assault moat
 L	network game
@@ -25,7 +25,6 @@ L	dynamic alliances
 L	seasons
 L	buildings should not generate income on the day they are built
 L	implement exit game while in battle
-L	change movement icon to boots
 L	auto combat
 L	player names and flag patterns
 
@@ -40,11 +39,12 @@ bugs
 
 make it simpler to check if two players are allies
 
-input_construct, input_train, input_troop, input_garrison
-
-improve player colors
-
 ? dynamic battlefield size
+
+-- interface --
+
+custom mouse pointer
+improve player colors
 
 images
 	gold icon: stacked coins
@@ -58,8 +58,6 @@ images
 	heavy_cavalry.png
 	horse_archer.png
 
--- interface --
-
 menu
 	directory tabs images
 
@@ -67,6 +65,10 @@ battle
 	when two pawns from different alliances are next to each other, display red line between them (to show that they are fighting)
 	display round number and end round button
 	hide mouse pointer during animation
+
+report
+	display name of the region the battle is fought for
+	display minimap
 
 map
 	village image (will be displayed to the left of troops bar)

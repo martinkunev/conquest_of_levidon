@@ -303,7 +303,7 @@ static void show_progress(unsigned current, unsigned total, unsigned x, unsigned
 }
 
 // TODO write this better
-static int if_animation(const struct player *restrict players, const struct battle *restrict battle, double progress)
+static int if_animation(const struct player *restrict players, const struct battle *restrict battle, double progress, unsigned char traversed[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH])
 {
 	int finished = 1;
 
@@ -320,7 +320,7 @@ static int if_animation(const struct player *restrict players, const struct batt
 		for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
 		{
 			const struct battlefield *field = &battle->field[y][x];
-			if (field->blockage)
+			if (field->blockage && !traversed[y][x]) // TODO change this when there is an image for open gate
 			{
 				// TODO decide whether to use palisade or fortress
 
@@ -333,8 +333,6 @@ static int if_animation(const struct player *restrict players, const struct batt
 						image = &image_palisade_gate[0];
 					else // field->position == (POSITION_TOP | POSITION_BOTTOM)
 						image = &image_palisade_gate[1];
-
-					// TODO don't display anything if a pawn will pass through this gate
 				}
 
 				image_draw(image, BATTLE_X + x * object_group[Battlefield].width, BATTLE_Y + y * object_group[Battlefield].height);
@@ -370,12 +368,24 @@ void input_animation(const struct game *restrict game, const struct battle *rest
 {
 	struct timeval start, now;
 	double progress;
+
+	// Mark each field that is traversed by a pawn (used to display gates as open).
+	unsigned char traversed[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH] = {0};
+	size_t i, j;
+	for(i = 0; i < battle->pawns_count; ++i)
+	{
+		struct point visited[UNIT_SPEED_LIMIT];
+		unsigned visited_count = movement_visited(battle->pawns + i, visited);
+		for(j = 0; j < visited_count; ++j)
+			traversed[visited[j].y][visited[j].x] = 1;
+	}
+
 	gettimeofday(&start, 0);
 	do
 	{
 		gettimeofday(&now, 0);
 		progress = timediff(&now, &start) / (ANIMATION_DURATION * 1000000.0);
-		if (if_animation(game->players, battle, progress))
+		if (if_animation(game->players, battle, progress, traversed))
 			break;
 	} while (progress < 1.0);
 }

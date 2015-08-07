@@ -22,8 +22,6 @@ When enemy pawns try to occupy the same square, they are redirected to their fai
 When allied pawns try to occupy the same squre, one of them stays where it is and the other are detoured to their failback locations to wait.
 */
 
-// TODO make sure moves_manual does not overflow
-
 // Returns the index of the first not yet reached move location or pawn->moves_count if there is no unreached location. Sets current location in real_x and real_y.
 size_t movement_location(const struct pawn *restrict pawn, double time_now, double *restrict real_x, double *restrict real_y)
 {
@@ -57,28 +55,46 @@ size_t movement_location(const struct pawn *restrict pawn, double time_now, doub
 	return pawn->moves_count;
 }
 
-unsigned movement_fields(const struct pawn *restrict pawn, struct point fields[static UNIT_SPEED_LIMIT])
+unsigned movement_visited(const struct pawn *restrict pawn, struct point visited[static UNIT_SPEED_LIMIT])
 {
+	struct point location;
 	unsigned fields_count;
+
+	size_t move_index;
 	unsigned step;
 
-	fields[0] = pawn->moves[0].location;
+	// Add the start location to the visited fields.
+	visited[0] = pawn->moves[0].location;
 	fields_count = 1;
 
-	// TODO this can be optimized to not repeat some stuff on each iteration
-
+	move_index = 0;
 	for(step = 1; step <= UNIT_SPEED_LIMIT; ++step)
 	{
-		double time = (double)step / UNIT_SPEED_LIMIT;
-		double real_x, real_y;
-		struct point location;
+		double time_now = (double)step / UNIT_SPEED_LIMIT, time_start;
+		double progress; // progress of the current move; 0 == start point; 1 == end point
 
-		movement_location(pawn, time, &real_x, &real_y);
-		location = (struct point){real_x + 0.5, real_y + 0.5};
+		if (time_now < pawn->moves[0].time) continue; // no movement yet
 
-		if (!point_eq(location, fields[fields_count - 1]))
-			fields[fields_count++] = location;
+		while (time_now >= pawn->moves[move_index].time)
+		{
+			move_index += 1;
+			if (move_index == pawn->moves_count) goto finally;
+		}
+
+		time_start = pawn->moves[move_index - 1].time;
+		progress = (time_now - time_start) / (pawn->moves[move_index - 1].time - time_start);
+		location.x = pawn->moves[move_index].location.x * progress + pawn->moves[move_index - 1].location.x * (1 - progress) + 0.5;
+		location.y = pawn->moves[move_index].location.y * progress + pawn->moves[move_index - 1].location.y * (1 - progress) + 0.5;
+
+		if (!point_eq(location, visited[fields_count - 1]))
+			visited[fields_count++] = location;
 	}
+
+finally:
+	// Add the final location to the visited fields.
+	location = pawn->moves[pawn->moves_count - 1].location;
+	if (!point_eq(location, visited[fields_count - 1]))
+		visited[fields_count++] = location;
 
 	return fields_count;
 }
@@ -102,7 +118,8 @@ int movement_queue(struct pawn *restrict pawn, struct point target, struct adjac
 	return error;
 }
 
-int movement_follow(struct pawn *restrict pawn, const struct pawn *restrict target, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles)
+// WARNING: This function cancels the action of the pawn.
+static int movement_follow(struct pawn *restrict pawn, const struct pawn *restrict target, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles)
 {
 	size_t i;
 
@@ -114,20 +131,49 @@ int movement_follow(struct pawn *restrict pawn, const struct pawn *restrict targ
 	for(i = 1; i < target->moves_count; ++i)
 	{
 		double time_start, time_end;
-		double target_duration;
+		double target_time_duration;
 
-		target_duration = target->moves[i].time - target->moves[i - 1].time;
 		time_start = pawn->moves[pawn->moves_count - 1].time;
+		if (time_start >= 1.0) break; // no need to add moves that won't be started this round
 
-		// TODO in the case of missing, move while possible?
+		target_time_duration = target->moves[i].time - target->moves[i - 1].time;
+
 		status = movement_queue(pawn, target->moves[i].location, graph, obstacles);
-		if (status < 0) return status;
+		if (status < 0)
+		{
+			if (status == ERROR_MISSING)
+			{
+				// The pawn can't reach its target.
+				// Follow the target to the last field possible.
+
+				double reachable[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH];
+
+				struct point visited[UNIT_SPEED_LIMIT];
+				unsigned visited_count = movement_visited(pawn, visited);
+
+				status = path_reachable(pawn, graph, obstacles, reachable);
+				if (status < 0) return status;
+
+				while (visited_count--)
+				{
+					struct point field = visited[visited_count];
+					if (reachable[field.y][field.x] < INFINITY)
+					{
+						status = movement_queue(pawn, target->moves[i].location, graph, obstacles);
+						if (status < 0) return status;
+						break;
+					}
+				}
+
+				status = ERROR_MISSING;
+			}
+			return status;
+		}
 
 		time_end = pawn->moves[pawn->moves_count - 1].time;
-
-		if (time_end - time_start < target_duration)
+		if (time_end - time_start < target_time_duration)
 		{
-			pawn->moves[pawn->moves_count - 1].time = time_start + target_duration;
+			pawn->moves[pawn->moves_count - 1].time = time_start + target_time_duration;
 			time_end = pawn->moves[pawn->moves_count - 1].time;
 		}
 	}
@@ -198,8 +244,6 @@ int movement_attack_plan(struct pawn *restrict pawn, struct adjacency_list *rest
 	switch (status)
 	{
 	case ERROR_MISSING: // target pawn is not reachable
-		// TODO move until possible (the field before the wall)
-		movement_stay(pawn);
 		return 0;
 
 	default:
