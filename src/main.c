@@ -294,7 +294,7 @@ static int play(struct game *restrict game)
 					troop->location = troop->move;
 					slots += 1;
 				}
-				else
+				else if (!assault)
 				{
 					// Move the troop back to its original location.
 					troop_detach(&region->troops, troop);

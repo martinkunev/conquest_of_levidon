@@ -82,7 +82,7 @@ unsigned movement_visited(const struct pawn *restrict pawn, struct point visited
 		}
 
 		time_start = pawn->moves[move_index - 1].time;
-		progress = (time_now - time_start) / (pawn->moves[move_index - 1].time - time_start);
+		progress = (time_now - time_start) / (pawn->moves[move_index].time - time_start);
 		location.x = pawn->moves[move_index].location.x * progress + pawn->moves[move_index - 1].location.x * (1 - progress) + 0.5;
 		location.y = pawn->moves[move_index].location.y * progress + pawn->moves[move_index - 1].location.y * (1 - progress) + 0.5;
 
@@ -646,40 +646,38 @@ int battlefield_movement_perform(struct battle *restrict battle, struct pawn *re
 			pawn->moves[i].time = pawn->moves[i - 1].time + distance / pawn->troop->unit->speed;
 		}
 
-		// If the pawn follows another pawn, update its movement to correspond to the current battlefield situation.
-		if (pawn->action == PAWN_FIGHT)
-		{
-			int status;
-			double reachable[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH];
-
-			// Delete automatically generated moves.
-			if (pawn->moves_manual < pawn->moves_count)
-				pawn->moves_count = pawn->moves_manual;
-
-			status = path_reachable(pawn, graph, obstacles, reachable);
-			if (status < 0) return status;
-
-			status = movement_attack(pawn, pawn->target.pawn->moves[0].location, ((const struct battle *)battle)->field, reachable, graph, obstacles);
-			switch (status)
-			{
-			case ERROR_MISSING: // target pawn is not reachable
-				movement_stay(pawn);
-				return 0;
-
-			default:
-				pawn->action = PAWN_FIGHT;
-			case ERROR_MEMORY:
-				return status;
-			}
-		}
+		// Delete automatically generated moves.
+		if (pawn->moves_manual < pawn->moves_count)
+			pawn->moves_count = pawn->moves_manual;
 	}
 	else
 	{
 		movement_stay(pawn);
 		pawn->moves[0].location = location_new;
 		pawn->moves[0].time = 0.0;
+	}
 
-		// TODO remove fight target if it is unreachable
+	// If the pawn follows another pawn, update its movement to correspond to the current battlefield situation.
+	if (pawn->action == PAWN_FIGHT)
+	{
+		int status;
+		double reachable[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH];
+
+		status = path_reachable(pawn, graph, obstacles, reachable);
+		if (status < 0) return status;
+
+		status = movement_attack(pawn, pawn->target.pawn->moves[0].location, ((const struct battle *)battle)->field, reachable, graph, obstacles);
+		switch (status)
+		{
+		case ERROR_MISSING: // target pawn is not reachable
+			movement_stay(pawn);
+			return 0;
+
+		default:
+			pawn->action = PAWN_FIGHT;
+		case ERROR_MEMORY:
+			return status;
+		}
 	}
 
 	return 0;

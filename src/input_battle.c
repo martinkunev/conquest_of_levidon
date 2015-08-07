@@ -85,7 +85,7 @@ static int pawn_command(const struct game *restrict game, const struct battle *r
 			return 0;
 		}
 	}
-	else if (target->blockage == BLOCKAGE_OBSTACLE)
+	else if ((target->blockage == BLOCKAGE_OBSTACLE) && !allies(game, target->owner, pawn->troop->owner))
 	{
 		// If the pawn is not next to its target, move before attacking it.
 		int status = movement_attack(pawn, point, battle->field, reachable, graph, obstacles);
