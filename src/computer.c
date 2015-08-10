@@ -1,5 +1,7 @@
 #include <stdlib.h>
+#include <string.h>
 
+#include "errors.h"
 #include "map.h"
 #include "pathfinding.h"
 #include "battle.h"
@@ -32,7 +34,6 @@ struct unit
 	} ranged;
 };
 */
-
 /*
 int combat_order_fight(const struct game *restrict game, const struct battle *restrict battle, const struct obstacles *restrict obstacles, struct pawn *restrict fighter, struct pawn *restrict victim);
 int combat_order_assault(const struct game *restrict game, const struct battle *restrict battle, const struct obstacles *restrict obstacles, struct pawn *restrict fighter, struct point target);
@@ -48,6 +49,8 @@ struct pawn_command
 	size_t moves_count;
 	struct move moves[];
 };
+
+enum {SEARCH_TRIES = 1048576};
 
 // TODO importance should depend on battle obstacles (e.g. the more they are, the more important is battering ram)
 static double unit_importance(const struct battle *restrict battle, const struct unit *restrict unit)
@@ -90,11 +93,7 @@ static unsigned pawn_victims(const struct game *restrict game, const struct pawn
 	return victims_count;
 }
 
-/*
-damage that is done to the pawn is subtracted (more if it's done by stronger units)
-closeness to allies
-*/
-static double state_assess(const struct game *restrict game, struct battle *restrict battle, unsigned char player, const struct pawn_command *restrict commands)
+static double state_assess(const struct game *restrict game, struct battle *restrict battle, unsigned char player, struct pawn_command **restrict commands)
 {
 	size_t i, j;
 
@@ -117,7 +116,7 @@ static double state_assess(const struct game *restrict game, struct battle *rest
 
 		if (!pawn->count) continue;
 
-		if (pawn->troop->owner == player) location = commands[i].moves[commands[i].moves_count - 1].location;
+		if (pawn->troop->owner == player) location = commands[i]->moves[commands[i]->moves_count - 1].location;
 		else location = pawn->moves[0].location; // TODO do better estimation here
 		pawns_moved[location.y][location.x] = pawn;
 	}
@@ -126,7 +125,7 @@ static double state_assess(const struct game *restrict game, struct battle *rest
 	for(i = 0; i < battle->players[player].pawns_count; ++i) // loop the pawns the player controls
 	{
 		const struct pawn *restrict pawn = battle->players[i].pawns[i];
-		const struct pawn_command *restrict command = commands + i;
+		const struct pawn_command *restrict command = commands[i];
 
 		if (!pawn->count) continue;
 
@@ -187,11 +186,99 @@ int computer_formation(const struct game *restrict game, struct battle *restrict
 	return 0;
 }
 
+static void state_change(const struct game *restrict game, const struct battle *restrict battle, const struct pawn *restrict pawn, struct pawn_command *restrict command, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles)
+{
+	//
+}
+
+// Decide the behavior of the comuter using simulated annealing.
 int computer_battle(const struct game *restrict game, struct battle *restrict battle, unsigned char player, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles)
 {
+	unsigned step;
+	size_t i;
+
+	size_t pawns_count = battle->players[player].pawns_count;
+	struct pawn_command **commands, *backup;
+
+	int status;
+
+	double rate, rate_new;
+
+	commands = malloc(pawns_count * sizeof(*commands));
+	if (!commands) return ERROR_MEMORY;
+	for(i = 0; i < pawns_count; ++i)
+	{
+		struct pawn *restrict pawn = battle->players[player].pawns[i];
+
+		commands[i] = malloc(offsetof(struct pawn_command, moves) + 32 * sizeof(struct move)); // TODO fix this 32
+		if (!commands[i])
+		{
+			status = ERROR_MEMORY;
+			goto finally;
+		}
+
+		commands[i]->action = 0;
+
+		commands[i]->moves_count = 1;
+		commands[i]->moves[0] = pawn->moves[0];
+	}
+	backup = malloc(offsetof(struct pawn_command, moves) + 32 * sizeof(struct move)); // TODO fix this 32
+
 	// TODO generate reachable for each pawn (is this necessary since it can change?)
 
-	// TODO simulated annealing
+	// Choose suitable commands for the pawns of the player.
+	rate = state_assess(game, battle, player, commands);
+	for(step = 0; step < SEARCH_TRIES; ++step) // TODO think about this
+	{
+		struct pawn_command *restrict command = commands[i];
 
-	return 0;
+		i = random() % pawns_count;
+
+		backup->action = command->action;
+		backup->target = command->target;
+		backup->moves_count = command->moves_count;
+		memcpy(backup->moves, command->moves, command->moves_count);
+
+		state_change(game, battle, battle->players[player].pawns[i], commands[i], graph, obstacles);
+
+		// Calculate the rate of the new set of commands.
+		// Revert the new command if it is unacceptably worse than the current one.
+		rate_new = state_assess(game, battle, player, commands);
+		if (rate_new + (SEARCH_TRIES - step - 1) < rate)
+		{
+			struct pawn_command *swap = command;
+			command = backup;
+			backup = swap;
+		}
+	}
+
+	// Apply the chosen commands to the pawns.
+	for(i = 0; i < pawns_count; ++i)
+	{
+		struct pawn *restrict pawn = battle->players[player].pawns[i];
+		struct pawn_command *restrict command = commands[i];
+
+		pawn->action = command->action;
+		switch (command->action)
+		{
+		case PAWN_FIGHT:
+			pawn->target.pawn = battle->field[command->target.y][command->target.x].pawn;
+			break;
+
+		case PAWN_ASSAULT:
+		case PAWN_SHOOT:
+			pawn->target.field = command->target;
+			break;
+		}
+
+		pawn->moves_count = command->moves_count;
+		memcpy(pawn->moves, command->moves, command->moves_count);
+	}
+
+	free(backup);
+finally:
+	while (i--) free(commands[i]);
+	free(commands);
+
+	return status;
 }
