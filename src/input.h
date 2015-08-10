@@ -8,7 +8,7 @@ struct area
 {
 	unsigned left, right, top, bottom;
 	int (*callback)(int, unsigned, unsigned, uint16_t, const struct game *restrict, void *);
-	// TODO event mask
+	// TODO ? event mask
 };
 
 int input_local(const struct area *restrict areas, size_t areas_count, void (*display)(const void *, const struct game *), const struct game *restrict game, void *state);

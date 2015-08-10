@@ -141,6 +141,7 @@ static int input_menu(int code, unsigned x, unsigned y, uint16_t modifiers, cons
 	if (modifiers & (XCB_MOD_MASK_CONTROL | XCB_MOD_MASK_1 | XCB_MOD_MASK_4)) return INPUT_NOTME;
 
 	if (code == XK_Escape) return INPUT_DONE;
+	else return INPUT_NOTME;
 }
 
 static int input_tab(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
@@ -294,11 +295,12 @@ int input_save(const struct game *restrict game)
 	state.worlds = 0;
 	if (tab_select(&state, 2) < 0) return -1; // TODO
 
-	// TODO ? generate some name
+	// TODO ? generate some filename
 
 	while (1)
 	{
-		if (status = input_local(areas, sizeof(areas) / sizeof(*areas), if_menu, game, &state)) goto finally;
+		status = input_local(areas, sizeof(areas) / sizeof(*areas), if_menu, game, &state);
+		if (status < 0) goto finally;
 
 		status = menu_save(state.directory, state.name, state.name_size, game);
 		if (status == ERROR_MEMORY) goto finally;

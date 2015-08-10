@@ -34,6 +34,7 @@ static int is_modifier(int code)
 	}
 }
 
+// ERROR_CANCEL - user-specified termination
 int input_local(const struct area *restrict areas, size_t areas_count, void (*display)(const void *, const struct game *), const struct game *restrict game, void *state)
 {
 	xcb_generic_event_t *event;
@@ -110,7 +111,7 @@ wait:
 				switch (status)
 				{
 				case INPUT_TERMINATE:
-					status = -1; // TODO fix this
+					status = ERROR_CANCEL;
 				default: // runtime error
 					return status;
 

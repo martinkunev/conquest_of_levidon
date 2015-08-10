@@ -33,6 +33,8 @@ TODO ? change direction of everything to counterclockwise; currently the y axis 
 TODO ? rename field to tile
 TODO ? make generic data structures be used through code generation (maybe a better solution is to use a union instead of multiple implementations)
 TODO ? redesign input functions
+TODO make it simpler to check if two players are allies
+TODO ? dynamic battlefield size
 
 bugs
 	don't allow pawns to attack their own walls (currently only gates are not attacked)
@@ -40,10 +42,6 @@ bugs
 
 surrender can be abused for scouting (this should be renamed and changed)
 	report does not handle surrender properly
-
-make it simpler to check if two players are allies
-
-? dynamic battlefield size
 
 -- interface --
 

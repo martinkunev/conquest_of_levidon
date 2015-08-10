@@ -166,6 +166,10 @@ static int play(struct game *restrict game)
 	struct resources expenses[PLAYERS_LIMIT];
 	unsigned char alive[PLAYERS_LIMIT];
 
+	int status;
+
+	// TODO display report at the end of the game
+
 	do
 	{
 		memset(expenses, 0, sizeof(expenses));
@@ -181,7 +185,8 @@ static int play(struct game *restrict game)
 
 			case Computer: // TODO implement this
 			case Local:
-				if (input_map(game, player) < 0) return WINNER_NOBODY; // TODO
+				status = input_map(game, player);
+				if (status < 0) return status;
 				break;
 			}
 
@@ -265,6 +270,7 @@ static int play(struct game *restrict game)
 				struct battle battle;
 				if (battlefield_init(game, &battle, region, 0) < 0) abort(); // TODO
 				winner = play_battle(game, &battle, game->players[battle.region->owner].alliance);
+				if (winner < 0) ; // TODO
 				input_report(game, &battle); // TODO this is player-specific
 				battlefield_term(game, &battle);
 			}
@@ -273,6 +279,7 @@ static int play(struct game *restrict game)
 				struct battle battle;
 				if (battlefield_init(game, &battle, region, 1) < 0) abort(); // TODO
 				winner = play_battle(game, &battle, game->players[battle.region->garrison.owner].alliance);
+				if (winner < 0) ; // TODO
 				input_report(game, &battle); // TODO this is player-specific
 				battlefield_term(game, &battle);
 
@@ -430,7 +437,6 @@ static int play(struct game *restrict game)
 int main(int argc, char *argv[])
 {
 	struct game game;
-	int winner;
 	int status;
 
 	srandom(time(0));
@@ -442,22 +448,19 @@ int main(int argc, char *argv[])
 
 	if_display();
 
-	status = input_load(&game);
-	if (status < 0)
+	while (1)
 	{
-		// TODO
-		return -1;
+		status = input_load(&game);
+		if (status < 0) return -1; // TODO
+
+		// Initialize region input recognition.
+		if_storage_init(&game, MAP_WIDTH, MAP_HEIGHT);
+
+		if_display();
+
+		status = play(&game);
+		if (status < 0) return -1; // TODO
 	}
-
-	// Initialize region input recognition.
-	if_storage_init(&game, MAP_WIDTH, MAP_HEIGHT);
-
-	if_display();
-
-	winner = play(&game);
-
-	// TODO display game end message
-	write(2, S("game finished\n"));
 
 	if_storage_term();
 	if_term();
