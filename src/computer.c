@@ -8,6 +8,25 @@
 #include "combat.h"
 #include "computer.h"
 
+struct pawn_command
+{
+	enum pawn_action action;
+	struct point target;
+
+	size_t moves_count;
+	struct move moves[];
+};
+
+enum {SEARCH_TRIES = 1048576};
+
+// TODO importance should depend on battle obstacles (e.g. the more they are, the more important is battering ram)
+static double unit_importance(const struct battle *restrict battle, const struct unit *restrict unit)
+{
+	return 1.0;
+
+	//
+}
+
 /*
 struct unit
 {
@@ -40,23 +59,8 @@ int combat_order_assault(const struct game *restrict game, const struct battle *
 int combat_order_shoot(const struct game *restrict game, const struct battle *restrict battle, const struct obstacles *restrict obstacles, struct pawn *restrict shooter, struct point target);
 int movement_queue(struct pawn *restrict pawn, struct point target, struct adjacency_list *restrict nodes, const struct obstacles *restrict obstacles);
 */
-
-struct pawn_command
+static void state_change(const struct game *restrict game, const struct battle *restrict battle, const struct pawn *restrict pawn, struct pawn_command *restrict command, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles)
 {
-	enum pawn_action action;
-	struct point target;
-
-	size_t moves_count;
-	struct move moves[];
-};
-
-enum {SEARCH_TRIES = 1048576};
-
-// TODO importance should depend on battle obstacles (e.g. the more they are, the more important is battering ram)
-static double unit_importance(const struct battle *restrict battle, const struct unit *restrict unit)
-{
-	return 1.0;
-
 	//
 }
 
@@ -184,11 +188,6 @@ int computer_formation(const struct game *restrict game, struct battle *restrict
 	//
 
 	return 0;
-}
-
-static void state_change(const struct game *restrict game, const struct battle *restrict battle, const struct pawn *restrict pawn, struct pawn_command *restrict command, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles)
-{
-	//
 }
 
 // Decide the behavior of the comuter using simulated annealing.
