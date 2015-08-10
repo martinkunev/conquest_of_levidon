@@ -25,6 +25,8 @@
 #define WINNER_NOBODY -1
 #define WINNER_BATTLE -2
 
+enum {ROUNDS_STALE_LIMIT = 10};
+
 // Returns the number of the alliance that won the battle.
 static int play_battle(struct game *restrict game, struct battle *restrict battle, unsigned char defender)
 {
@@ -34,6 +36,8 @@ static int play_battle(struct game *restrict game, struct battle *restrict battl
 	int winner;
 
 	size_t i;
+
+	unsigned round_activity_last;
 
 	battle->round = 0;
 
@@ -60,6 +64,7 @@ static int play_battle(struct game *restrict game, struct battle *restrict battl
 	}
 
 	battle->round = 1;
+	round_activity_last = 1;
 
 	while ((winner = battle_end(game, battle, defender)) < 0)
 	{
@@ -102,7 +107,7 @@ static int play_battle(struct game *restrict game, struct battle *restrict battl
 
 		// TODO shoot animation // TODO this should be part of player-specific input
 		battle_shoot(battle, obstacles[PLAYER_NEUTRAL]); // treat all gates as closed for shooting
-		battlefield_clean(battle);
+		if (battlefield_clean(battle)) round_activity_last = battle->round;
 
 		for(i = 0; i < battle->pawns_count; ++i)
 		{
@@ -124,15 +129,19 @@ static int play_battle(struct game *restrict game, struct battle *restrict battl
 
 		// TODO fight animation // TODO this should be part of player-specific input
 		battle_fight(game, battle);
-		battlefield_clean(battle);
-
-		battle->round += 1;
+		if (battlefield_clean(battle)) round_activity_last = battle->round;
 
 		for(i = 0; i < PLAYERS_LIMIT; ++i)
 		{
 			free(obstacles[i]);
 			visibility_graph_free(graph[i]);
 		}
+
+		// Cancel the battle if nothing is killed/destroyed for a certain number of rounds.
+		if ((battle->round - round_activity_last) >= ROUNDS_STALE_LIMIT)
+			return defender;
+
+		battle->round += 1;
 	}
 
 	return winner;

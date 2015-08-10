@@ -220,10 +220,12 @@ void battle_shoot(struct battle *battle, const struct obstacles *restrict obstac
 	}
 }
 
-void battlefield_clean(struct battle *battle)
+int battlefield_clean(struct battle *battle)
 {
 	size_t p;
 	size_t x, y;
+
+	int activity = 0;
 
 	// Remove destroyed obstacles.
 	for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
@@ -231,7 +233,10 @@ void battlefield_clean(struct battle *battle)
 		{
 			struct battlefield *restrict field = &battle->field[y][x];
 			if ((field->blockage == BLOCKAGE_OBSTACLE) && !field->strength)
+			{
+				activity = 1;
 				field->blockage = BLOCKAGE_NONE;
+			}
 		}
 
 	// Remove dead pawns.
@@ -243,6 +248,7 @@ void battlefield_clean(struct battle *battle)
 		if (!pawn->count) continue;
 
 		unsigned dead = deaths(pawn->hurt, pawn->count, health);
+		if (dead) activity = 1;
 
 		pawn->dead += dead;
 		pawn->hurt -= dead * health;
@@ -268,6 +274,8 @@ void battlefield_clean(struct battle *battle)
 		if ((pawn->action == PAWN_ASSAULT) && !battle->field[pawn->target.field.y][pawn->target.field.x].blockage)
 			pawn->action = 0;
 	}
+
+	return activity;
 }
 
 int combat_order_fight(const struct game *restrict game, const struct battle *restrict battle, const struct obstacles *restrict obstacles, struct pawn *restrict fighter, struct pawn *restrict victim)

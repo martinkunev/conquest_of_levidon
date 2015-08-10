@@ -1,7 +1,7 @@
 H	name the game (?rulers of levidon)
-H	do something to prevent endless battles; clean up the code related to the end of the battle
 H	artificial intelligence
-H	escape in map should lead to the save game page; there should be an exit button there
+H	some handling for pawn whose path passes through a field occupied by another pawn
+M	clean up the code related to the end of the battle
 M	store troops at a single place in the region
 M	pawns should be smart enough to sidestep self pawns on the way
 M	map scrolling
@@ -51,10 +51,12 @@ custom mouse pointer
 improve player colors
 
 images
-	gold icon: stacked coins
+	mine.png, blast_furnace.png
 
 	fortress*.png, fortress_gate*.png
 	assault.png (indicator on the map)
+
+	? gold icon: stacked coins
 
 	armory.png
 	swordsman.png
@@ -64,6 +66,7 @@ images
 
 menu
 	directory tabs images
+	title and exit button
 
 battle
 	when two pawns from different alliances are next to each other, display red line between them (to show that they are fighting)
