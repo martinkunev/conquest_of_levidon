@@ -64,6 +64,7 @@ static int input_none(int code, unsigned x, unsigned y, uint16_t modifiers, cons
 		if (state->name_size) return INPUT_DONE;
 		return 0;
 
+	case 'q':
 	case XK_Escape:
 		return INPUT_TERMINATE;
 
@@ -129,6 +130,17 @@ static int input_none(int code, unsigned x, unsigned y, uint16_t modifiers, cons
 		state->name_position += 1;
 		return 0;
 	}
+}
+
+static int input_menu(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
+{
+	//struct state *state = argument;
+
+	// Ignore input if control, alt or super is pressed.
+	// TODO is this necessary?
+	if (modifiers & (XCB_MOD_MASK_CONTROL | XCB_MOD_MASK_1 | XCB_MOD_MASK_4)) return INPUT_NOTME;
+
+	if (code == XK_Escape) return INPUT_DONE;
 }
 
 static int input_tab(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
@@ -252,6 +264,13 @@ int input_save(const struct game *restrict game)
 			.top = 0,
 			.bottom = SCREEN_HEIGHT - 1,
 			.callback = input_none
+		},
+		{
+			.left = 0,
+			.right = SCREEN_WIDTH - 1,
+			.top = 0,
+			.bottom = SCREEN_HEIGHT - 1,
+			.callback = input_menu
 		},
 		{
 			.left = object_group[WorldTabs].left,

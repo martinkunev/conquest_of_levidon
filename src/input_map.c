@@ -25,12 +25,11 @@ static int input_turn(int code, unsigned x, unsigned y, uint16_t modifiers, cons
 	default:
 		return INPUT_IGNORE;
 
-	case 's':
+	case XK_Escape:
+	//case 's':
 		input_save(game); // TODO error check
 		return 0;
-
-	case XK_Escape:
-		return INPUT_TERMINATE;
+		//return INPUT_TERMINATE;
 
 	case 'n':
 		return INPUT_DONE;
