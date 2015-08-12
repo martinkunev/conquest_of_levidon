@@ -59,29 +59,27 @@ int combat_order_assault(const struct game *restrict game, const struct battle *
 int combat_order_shoot(const struct game *restrict game, const struct battle *restrict battle, const struct obstacles *restrict obstacles, struct pawn *restrict shooter, struct point target);
 int movement_queue(struct pawn *restrict pawn, struct point target, struct adjacency_list *restrict nodes, const struct obstacles *restrict obstacles);
 */
-static void state_change(const struct game *restrict game, const struct battle *restrict battle, const struct pawn *restrict pawn, struct pawn_command *restrict command, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles)
+static void state_change(const struct game *restrict game, const struct battle *restrict battle, const struct pawn *restrict pawn, double reachable[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH])
 {
 	//
 }
 
-static unsigned pawn_victims(const struct game *restrict game, const struct pawn *pawns[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH], const struct pawn *restrict pawn, const struct pawn_command *restrict command, const struct pawn *restrict victims[static 4])
+static unsigned pawn_victims(const struct game *restrict game, const struct pawn *pawns[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH], const struct pawn *restrict pawn, struct point location, unsigned char player, const struct pawn *restrict victims[static 4])
 {
 	const struct pawn *victim;
 	unsigned victims_count = 0;
 
-	struct point destination = command->moves[command->moves_count - 1].location;
-
 	// TODO what if one of the pawns is on a tower
 
 	// If the pawn has a specific fight target and is able to fight it, fight only that target.
-	if ((command->action == PAWN_FIGHT) && battlefield_neighbors(destination, command->target))
+	if ((pawn->troop->owner == player) && (pawn->action == PAWN_FIGHT) && battlefield_neighbors(location, pawn->target.pawn->moves[0].location))
 	{
-		victims[victims_count++] = pawns[command->target.y][command->target.x];
+		victims[victims_count++] = pawn->target.pawn;
 	}
 	else
 	{
-		int x = destination.x;
-		int y = destination.y;
+		int x = location.x;
+		int y = location.y;
 
 		// Look for pawns to fight at the neighboring fields.
 		if ((x > 0) && (victim = pawns[y][x - 1]) && !allies(game, pawn->troop->owner, victim->troop->owner))
@@ -97,7 +95,7 @@ static unsigned pawn_victims(const struct game *restrict game, const struct pawn
 	return victims_count;
 }
 
-static double state_assess(const struct game *restrict game, struct battle *restrict battle, unsigned char player, struct pawn_command **restrict commands)
+static double state_assess(const struct game *restrict game, struct battle *restrict battle, unsigned char player)
 {
 	size_t i, j;
 
@@ -107,8 +105,6 @@ static double state_assess(const struct game *restrict game, struct battle *rest
 
 	const struct pawn *victims[4];
 	unsigned victims_count;
-
-	struct pawn_command *command = malloc(offsetof(struct pawn_command, moves) + sizeof(*command->moves));
 
 	// WARNING: We assume the locations where the pawns are commanded to go will be non-occupied.
 
@@ -120,7 +116,7 @@ static double state_assess(const struct game *restrict game, struct battle *rest
 
 		if (!pawn->count) continue;
 
-		if (pawn->troop->owner == player) location = commands[i]->moves[commands[i]->moves_count - 1].location;
+		if (pawn->troop->owner == player) location = pawn->moves[pawn->moves_count - 1].location;
 		else location = pawn->moves[0].location; // TODO do better estimation here
 		pawns_moved[location.y][location.x] = pawn;
 	}
@@ -129,16 +125,15 @@ static double state_assess(const struct game *restrict game, struct battle *rest
 	for(i = 0; i < battle->players[player].pawns_count; ++i) // loop the pawns the player controls
 	{
 		const struct pawn *restrict pawn = battle->players[i].pawns[i];
-		const struct pawn_command *restrict command = commands[i];
 
 		if (!pawn->count) continue;
 
-		if (command->action == PAWN_SHOOT)
+		if (pawn->action == PAWN_SHOOT)
 		{
 			// estimate shoot impact
 			// TODO
 		}
-		else if ((command->action == PAWN_ASSAULT) && battlefield_neighbors(command->moves[command->moves_count - 1].location, command->target))
+		else if ((pawn->action == PAWN_ASSAULT) && battlefield_neighbors(pawn->moves[pawn->moves_count - 1].location, pawn->target.field))
 		{
 			// estimate assault impact
 			// TODO
@@ -147,7 +142,7 @@ static double state_assess(const struct game *restrict game, struct battle *rest
 		{
 			// estimate fight impact
 
-			victims_count = pawn_victims(game, pawns_moved, pawn, command, victims);
+			victims_count = pawn_victims(game, pawns_moved, pawn, pawn->moves[pawn->moves_count - 1].location, player, victims);
 
 			for(j = 0; j < victims_count; ++j)
 				rating += damage_expected(pawn, (double)pawn->count / victims_count, victims[j]) * unit_importance(battle, victims[j]->troop->unit);
@@ -169,16 +164,11 @@ static double state_assess(const struct game *restrict game, struct battle *rest
 		if (allies(game, pawn->troop->owner, player)) continue;
 
 		// TODO guess when a pawn will prefer shoot/assault or fighting specific target
-		command->action = 0;
-		command->moves_count = 1;
-		command->moves[0] = pawn->moves[0];
 
-		victims_count = pawn_victims(game, pawns_moved, pawn, command, victims);
+		victims_count = pawn_victims(game, pawns_moved, pawn, pawn->moves[0].location, player, victims);
 		for(j = 0; j < victims_count; ++j)
 			rating -= damage_expected(pawn, (double)pawn->count / victims_count, victims[j]) * unit_importance(battle, victims[j]->troop->unit);
 	}
-
-	free(command);
 
 	return 1.0;
 }
@@ -197,87 +187,67 @@ int computer_battle(const struct game *restrict game, struct battle *restrict ba
 	size_t i;
 
 	size_t pawns_count = battle->players[player].pawns_count;
-	struct pawn_command **commands, *backup;
+	struct pawn_command *backup;
+	double (*reachable)[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH];
 
-	int status;
+	int status = 0;
 
 	double rate, rate_new;
 
-	commands = malloc(pawns_count * sizeof(*commands));
-	if (!commands) return ERROR_MEMORY;
+	reachable = malloc(pawns_count * sizeof(*reachable));
+	if (!reachable) return ERROR_MEMORY;
+	backup = malloc(offsetof(struct pawn_command, moves) + 32 * sizeof(struct move)); // TODO fix this 32
+	if (!backup)
+	{
+		free(reachable);
+		return ERROR_MEMORY;
+	}
+
+	// Cancel pawn actions and determine the reachable fields for each pawn.
 	for(i = 0; i < pawns_count; ++i)
 	{
 		struct pawn *restrict pawn = battle->players[player].pawns[i];
 
-		commands[i] = malloc(offsetof(struct pawn_command, moves) + 32 * sizeof(struct move)); // TODO fix this 32
-		if (!commands[i])
-		{
-			status = ERROR_MEMORY;
-			goto finally;
-		}
+		pawn->action = 0;
+		pawn->moves_count = 1;
 
-		commands[i]->action = 0;
-
-		commands[i]->moves_count = 1;
-		commands[i]->moves[0] = pawn->moves[0];
+		status = path_reachable(pawn, graph, obstacles, reachable[i]);
+		if (status < 0) goto finally;
 	}
-	backup = malloc(offsetof(struct pawn_command, moves) + 32 * sizeof(struct move)); // TODO fix this 32
-
-	// TODO generate reachable for each pawn (is this necessary since it can change?)
 
 	// Choose suitable commands for the pawns of the player.
-	rate = state_assess(game, battle, player, commands);
+	//rate = state_assess(game, battle, player, commands);
+	rate = state_assess(game, battle, player);
 	for(step = 0; step < SEARCH_TRIES; ++step) // TODO think about this
 	{
-		struct pawn_command *restrict command = commands[i];
+		struct pawn *restrict pawn = battle->players[player].pawns[i];
 
 		i = random() % pawns_count;
 
-		backup->action = command->action;
-		backup->target = command->target;
-		backup->moves_count = command->moves_count;
-		memcpy(backup->moves, command->moves, command->moves_count);
+		backup->action = pawn->action;
+		if (pawn->action == PAWN_FIGHT) backup->target = pawn->target.pawn->moves[0].location;
+		else backup->target = pawn->target.field;
+		backup->moves_count = pawn->moves_count;
+		memcpy(backup->moves, pawn->moves, pawn->moves_count * sizeof(*pawn->moves));
 
-		state_change(game, battle, battle->players[player].pawns[i], commands[i], graph, obstacles);
+		state_change(game, battle, pawn, reachable[i]);
 
 		// Calculate the rate of the new set of commands.
 		// Revert the new command if it is unacceptably worse than the current one.
-		rate_new = state_assess(game, battle, player, commands);
+		rate_new = state_assess(game, battle, player);
 		if (rate_new + (SEARCH_TRIES - step - 1) < rate)
 		{
-			struct pawn_command *swap = command;
-			command = backup;
-			backup = swap;
+			pawn->action = backup->action;
+			if (backup->action == PAWN_FIGHT) pawn->target.pawn = battle->field[backup->target.y][backup->target.x].pawn;
+			else pawn->target.field = backup->target;
+			pawn->moves_count = backup->moves_count;
+			memcpy(pawn->moves, backup->moves, backup->moves_count * sizeof(*backup->moves));
 		}
 	}
 
-	// Apply the chosen commands to the pawns.
-	for(i = 0; i < pawns_count; ++i)
-	{
-		struct pawn *restrict pawn = battle->players[player].pawns[i];
-		struct pawn_command *restrict command = commands[i];
-
-		pawn->action = command->action;
-		switch (command->action)
-		{
-		case PAWN_FIGHT:
-			pawn->target.pawn = battle->field[command->target.y][command->target.x].pawn;
-			break;
-
-		case PAWN_ASSAULT:
-		case PAWN_SHOOT:
-			pawn->target.field = command->target;
-			break;
-		}
-
-		pawn->moves_count = command->moves_count;
-		memcpy(pawn->moves, command->moves, command->moves_count);
-	}
-
-	free(backup);
 finally:
-	while (i--) free(commands[i]);
-	free(commands);
+	free(backup);
+	free(reachable);
 
 	return status;
 }
