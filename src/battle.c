@@ -136,6 +136,13 @@ int battlefield_neighbors(struct point a, struct point b)
 	return ((distance == -1) || (distance == 1));
 }
 
+int battlefield_passable(const struct game *restrict game, const struct battlefield *restrict field, unsigned player)
+{
+	if (!field->blockage) return 1;
+	if ((field->blockage == BLOCKAGE_OBSTACLE) && allies(game, player, field->owner)) return 1;
+	return 0;
+}
+
 static void battlefield_init_open(const struct game *restrict game, struct battle *restrict battle)
 {
 	unsigned players_count = 0;

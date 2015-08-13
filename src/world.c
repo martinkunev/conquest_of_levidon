@@ -394,11 +394,12 @@ int world_load(const union json *restrict json, struct game *restrict game)
 		if (!field) goto error;
 		game->players[index].treasury.stone = field->integer;
 
-		game->players[index].type = Local; // TODO set this
+		game->players[index].type = Computer; // TODO fix this
 		//game->players[index].input_formation = input_formation;
 	}
 
-	game->players[PLAYER_NEUTRAL].type = Neutral;
+	game->players[PLAYER_NEUTRAL].type = Neutral; // TODO fix this
+	game->players[1].type = Local; // TODO fix this
 	//game->players[0].input_formation = input_formation_none;
 
 	node = value_get_try(&json->object, "regions", JSON_OBJECT);

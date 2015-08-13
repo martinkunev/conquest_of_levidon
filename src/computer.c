@@ -6,6 +6,7 @@
 #include "pathfinding.h"
 #include "battle.h"
 #include "combat.h"
+#include "movement.h"
 #include "computer.h"
 
 struct pawn_command
@@ -27,41 +28,47 @@ static double unit_importance(const struct battle *restrict battle, const struct
 	//
 }
 
-/*
-struct unit
+static void state_change(const struct game *restrict game, const struct battle *restrict battle, struct pawn *restrict pawn, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles, double reachable[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH])
 {
-	uint32_t requires;
-	unsigned troops_count;
-	struct resources cost, expense;
-	unsigned char time;
+	unsigned speed = pawn->troop->unit->speed;
+	struct point location = pawn->moves[pawn->moves_count - 1].location, target;
 
-	unsigned char speed;
-	unsigned char health;
-	enum armor armor;
+	struct point neighbors[4];
+	unsigned neighbors_count = 0;
 
-	struct
+	/* TODO support actions other than just move
+	int combat_order_fight(const struct game *restrict game, const struct battle *restrict battle, const struct obstacles *restrict obstacles, struct pawn *restrict fighter, struct pawn *restrict victim);
+	int combat_order_assault(const struct game *restrict game, const struct battle *restrict battle, const struct obstacles *restrict obstacles, struct pawn *restrict fighter, struct point target);
+	int combat_order_shoot(const struct game *restrict game, const struct battle *restrict battle, const struct obstacles *restrict obstacles, struct pawn *restrict shooter, struct point target);
+	int movement_queue(struct pawn *restrict pawn, struct point target, struct adjacency_list *restrict nodes, const struct obstacles *restrict obstacles);
+	*/
+
+	target.x = (int)location.x - 1;
+	target.y = location.y;
+	if ((target.x >= 0) && (speed >= reachable[target.y][target.x]) && battlefield_passable(game, &battle->field[target.y][target.x], pawn->troop->owner))
+		neighbors[neighbors_count++] = target;
+
+	target.x = (int)location.x + 1;
+	target.y = location.y;
+	if ((target.x < BATTLEFIELD_WIDTH) && (speed >= reachable[target.y][target.x]) && battlefield_passable(game, &battle->field[target.y][target.x], pawn->troop->owner))
+		neighbors[neighbors_count++] = target;
+
+	target.x = location.x;
+	target.y = (int)location.y - 1;
+	if ((target.y >= 0) && (speed >= reachable[target.y][target.x]) && battlefield_passable(game, &battle->field[target.y][target.x], pawn->troop->owner))
+		neighbors[neighbors_count++] = target;
+
+	target.x = location.x;
+	target.y = (int)location.y + 1;
+	if ((target.y < BATTLEFIELD_HEIGHT) && (speed >= reachable[target.y][target.x]) && battlefield_passable(game, &battle->field[target.y][target.x], pawn->troop->owner))
+		neighbors[neighbors_count++] = target;
+
+	if (neighbors_count)
 	{
-		enum weapon weapon;
-		double damage;
-		double agility;
-	} melee;
-	struct
-	{
-		enum weapon weapon;
-		double damage;
-		unsigned char range;
-	} ranged;
-};
-*/
-/*
-int combat_order_fight(const struct game *restrict game, const struct battle *restrict battle, const struct obstacles *restrict obstacles, struct pawn *restrict fighter, struct pawn *restrict victim);
-int combat_order_assault(const struct game *restrict game, const struct battle *restrict battle, const struct obstacles *restrict obstacles, struct pawn *restrict fighter, struct point target);
-int combat_order_shoot(const struct game *restrict game, const struct battle *restrict battle, const struct obstacles *restrict obstacles, struct pawn *restrict shooter, struct point target);
-int movement_queue(struct pawn *restrict pawn, struct point target, struct adjacency_list *restrict nodes, const struct obstacles *restrict obstacles);
-*/
-static void state_change(const struct game *restrict game, const struct battle *restrict battle, const struct pawn *restrict pawn, double reachable[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH])
-{
-	//
+		struct point neighbor = neighbors[random() % neighbors_count];
+		pawn->moves_count = 1;
+		movement_queue(pawn, neighbor, graph, obstacles);
+	}
 }
 
 static unsigned pawn_victims(const struct game *restrict game, const struct pawn *pawns[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH], const struct pawn *restrict pawn, struct point location, unsigned char player, const struct pawn *restrict victims[static 4])
@@ -70,6 +77,8 @@ static unsigned pawn_victims(const struct game *restrict game, const struct pawn
 	unsigned victims_count = 0;
 
 	// TODO what if one of the pawns is on a tower
+
+	// TODO: ugly; too many arguments; too hard to follow what arguments are necessary
 
 	// If the pawn has a specific fight target and is able to fight it, fight only that target.
 	if ((pawn->troop->owner == player) && (pawn->action == PAWN_FIGHT) && battlefield_neighbors(location, pawn->target.pawn->moves[0].location))
@@ -230,7 +239,7 @@ int computer_battle(const struct game *restrict game, struct battle *restrict ba
 		backup->moves_count = pawn->moves_count;
 		memcpy(backup->moves, pawn->moves, pawn->moves_count * sizeof(*pawn->moves));
 
-		state_change(game, battle, pawn, reachable[i]);
+		state_change(game, battle, pawn, graph, obstacles, reachable[i]);
 
 		// Calculate the rate of the new set of commands.
 		// Revert the new command if it is unacceptably worse than the current one.
