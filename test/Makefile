@@ -11,7 +11,7 @@ LDFLAGS:=$(LDFLAGS) -lcmocka
 #export CFLAGS=-std=c99 -fPIC -pthread -DRUN_MODE=1 -O2 -g -DDEBUG $(DEF) $(INC) $(WARNINGS) -Wno-unused-value
 #export LDFLAGS=-pthread $(LIB) -lz -lcheck
 
-check: check.o ../format.o ../json.o
+check: check.o ../src/format.o ../src/json.o
 	$(CC) $^ $(LDFLAGS) -o $@
 	./check
 

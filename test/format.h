@@ -39,11 +39,6 @@ static void test_format_byte(void **state)
 	// Use 10100101 as canary.
 	memset(canary, '\xa5', SIZE);
 
-	/*memcpy(buffer, canary, SIZE);
-	end = format_byte(buffer + OFFSET, '0', 0);
-	ck_assert(end == (buffer + OFFSET));
-	ck_assert(!memcmp(buffer, canary, SIZE));*/
-
 	memcpy(buffer, canary, SIZE);
 	end = format_byte(buffer + OFFSET, '@', 1);
 	check_buffer_format(end, buffer, "@", 1, canary);

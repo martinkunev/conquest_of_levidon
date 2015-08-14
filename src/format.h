@@ -2,9 +2,11 @@
 #include <stdint.h>
 #include <string.h>
 
-// TODO don't use memset and memcpy
-
 #define _VA_ARGS_EMPTY(...) (sizeof(#__VA_ARGS__) == 1)
+
+// TODO ? don't use memset and memcpy
+
+// TODO should the functions work for length == 0
 
 // Supported values for base are the integers in the interval [2, 36].
 
@@ -16,12 +18,12 @@ uint8_t *format_int(uint8_t *buffer, intmax_t number, uint8_t base);
 uint8_t *format_int_pad(uint8_t *buffer, intmax_t number, uint8_t base, uint32_t length, uint8_t fill);
 uint32_t format_int_length(intmax_t number, uint8_t base);
 
-static inline char *format_byte_one(char *restrict buffer, uint8_t byte) // TODO is this necessary
+static inline uint8_t *format_byte_one(uint8_t *restrict buffer, uint8_t byte) // TODO is this necessary
 {
 	*buffer = byte;
-	return buffer + sizeof(byte);
+	return buffer + 1;
 }
-static inline char *format_byte_many(char *restrict buffer, uint8_t byte, size_t size)
+static inline uint8_t *format_byte_many(uint8_t *restrict buffer, uint8_t byte, size_t size)
 {
 	memset(buffer, byte, size);
 	return buffer + size;
@@ -29,7 +31,7 @@ static inline char *format_byte_many(char *restrict buffer, uint8_t byte, size_t
 #define format_byte(buffer, byte, ...) (_VA_ARGS_EMPTY(__VA_ARGS__) ? format_byte_one((buffer), (byte)) : format_byte_many((buffer), (byte), __VA_ARGS__))
 
 // TODO mempcpy does exactly what format_bytes is supposed to do but is GNU extension; could I use it?
-static inline char *format_bytes(char *restrict buffer, const uint8_t *restrict bytes, size_t size)
+static inline uint8_t *format_bytes(uint8_t *restrict buffer, const uint8_t *restrict bytes, size_t size)
 {
 	memcpy(buffer, bytes, size);
 	return buffer + size;
@@ -40,9 +42,8 @@ char *format_hex(char *restrict buffer, const uint8_t *restrict bin, size_t leng
 
 char *format_base64(char *restrict buffer, const uint8_t *restrict bin, size_t length);
 
-// TODO: this should not be here
+// TODO: these should not be here
 size_t hex2bin(unsigned char *restrict dest, const unsigned char *src, size_t length);
-
 size_t parse_base64_length(const unsigned char *restrict data, size_t length);
 size_t parse_base64(const unsigned char *src, unsigned char *restrict dest, size_t length);
 
@@ -87,8 +88,4 @@ size_t parse_base64(const unsigned char *src, unsigned char *restrict dest, size
 #define expand16(arg) expand4(expand4(expand4(expand4(arg))))
 #define expand64(arg) expand16(expand16(expand16(expand16(arg))))
 
-#if !defined(OS_IOS)
-# define format(...) expand64(format_internal(__VA_ARGS__, final(), 0))
-#else
-# define format_ios(...) expand64(format_internal(__VA_ARGS__, final(), 0))
-#endif
+#define format(...) expand64(format_internal(__VA_ARGS__, final(), 0))
