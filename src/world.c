@@ -350,6 +350,8 @@ int world_load(const union json *restrict json, struct game *restrict game)
 	const union json *item, *node, *field;
 	size_t index;
 
+	int local_initialized = 0;
+
 	game->players_count = 0;
 	game->players = 0;
 	game->regions_count = 0;
@@ -394,13 +396,16 @@ int world_load(const union json *restrict json, struct game *restrict game)
 		if (!field) goto error;
 		game->players[index].treasury.stone = field->integer;
 
-		game->players[index].type = Computer; // TODO fix this
-		//game->players[index].input_formation = input_formation;
+		if (index == PLAYER_NEUTRAL) game->players[index].type = Neutral;
+		else if (local_initialized) game->players[index].type = Computer;
+		else
+		{
+			game->players[index].type = Local;
+			local_initialized = 1;
+		}
 	}
 
-	game->players[PLAYER_NEUTRAL].type = Neutral; // TODO fix this
-	game->players[1].type = Local; // TODO fix this
-	//game->players[0].input_formation = input_formation_none;
+	//game->players[...].input_formation = input_formation_none;
 
 	node = value_get_try(&json->object, "regions", JSON_OBJECT);
 	if (!node || (node->object.count < 1) || (node->object.count > REGIONS_LIMIT)) goto error;

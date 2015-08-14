@@ -10,6 +10,7 @@
 #include "display.h"
 #include "interface_menu.h"
 #include "menu.h"
+#include "world.h"
 
 // TODO handle long filenames properly
 
@@ -200,6 +201,64 @@ reset:
 	else return INPUT_IGNORE;
 }
 
+static int input_setup(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
+{
+	//struct state *state = argument;
+
+	switch (code)
+	{
+	case XK_Return:
+		return INPUT_DONE;
+	case XK_Escape:
+		return INPUT_TERMINATE;
+	default:
+		return INPUT_NOTME;
+	}
+}
+
+static int input_player(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
+{
+	//struct state *state = argument;
+
+	ssize_t index;
+
+	if (code == EVENT_MOTION) return INPUT_NOTME;
+	if (code >= 0) return INPUT_NOTME; // ignore keyboard events
+
+	// TODO customize player alliances, colors, etc.
+
+	// Find which player was clicked. Ignore the neutral player.
+	index = if_index(Players, (struct point){x, y});
+	if ((index < 0) || (index >= game->players_count)) return INPUT_IGNORE; // no player clicked
+	if (index == PLAYER_NEUTRAL) return INPUT_IGNORE;
+
+	if (code == EVENT_MOUSE_LEFT)
+	{
+		if (game->players[index].type == Local)
+		{
+			// Make sure there is another player of type Local.
+			size_t i;
+			for(i = 0; i < game->players_count; ++i)
+			{
+				if (i == index) continue;
+				if (game->players[i].type == Local)
+				{
+					game->players[index].type = Computer;
+					return 0;
+				}
+			}
+			return INPUT_IGNORE;
+		}
+		else
+		{
+			game->players[index].type = Local;
+			return 0;
+		}
+	}
+
+	return INPUT_IGNORE;
+}
+
 int input_load(struct game *restrict game)
 {
 	struct area areas[] = {
@@ -226,6 +285,23 @@ int input_load(struct game *restrict game)
 		},
 	};
 
+	struct area areas_setup[] = {
+		{
+			.left = 0,
+			.right = SCREEN_WIDTH - 1,
+			.top = 0,
+			.bottom = SCREEN_HEIGHT - 1,
+			.callback = input_setup
+		},
+		{
+			.left = object_group[Players].left,
+			.right = object_group[Players].right,
+			.top = object_group[Players].top,
+			.bottom = object_group[Players].bottom,
+			.callback = input_player
+		},
+	};
+
 	struct state state;
 	int status;
 
@@ -237,22 +313,38 @@ int input_load(struct game *restrict game)
 
 	while (1)
 	{
-		if (status = input_local(areas, sizeof(areas) / sizeof(*areas), if_menu, game, &state)) goto finally;
+		state.loaded = 0;
 
-		status = menu_load(state.directory, state.name, state.name_size, game);
-		if (status == ERROR_MEMORY) goto finally;
-		if (!status) break;
+		while (1)
+		{
+			status = input_local(areas, sizeof(areas) / sizeof(*areas), if_menu, game, &state);
+			if (status) goto finally;
 
-		// TODO indicate the error with something in red
-		state.name_size = 0;
-		state.name_position = 0;
-		state.world_index = -1;
+			status = menu_load(state.directory, state.name, state.name_size, game);
+			if (status == ERROR_MEMORY) goto finally;
+			if (!status) break;
+
+			// TODO indicate the error with something in red
+			state.name_size = 0;
+			state.name_position = 0;
+			state.world_index = -1;
+		}
+
+		state.loaded = 1;
+
+		status = input_local(areas_setup, sizeof(areas_setup) / sizeof(*areas_setup), if_menu, game, &state);
+		if (status == ERROR_CANCEL)
+		{
+			world_unload(game);
+			continue;
+		}
+		else if (status) goto finally;
+
+		break;
 	}
 
-	// TODO customize player types, alliances, etc.
-
 finally:
-	free(state.worlds);
+	menu_free(state.worlds);
 	return status;
 }
 
@@ -315,6 +407,6 @@ int input_save(const struct game *restrict game)
 	// TODO customize player types, alliances, etc.
 
 finally:
-	free(state.worlds);
+	menu_free(state.worlds);
 	return status;
 }

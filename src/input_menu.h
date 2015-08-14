@@ -10,6 +10,8 @@ struct state
 	char name[FILENAME_LIMIT];
 	size_t name_size;
 	size_t name_position;
+
+	int loaded;
 };
 
 int input_load(struct game *restrict game);

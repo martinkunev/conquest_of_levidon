@@ -2,6 +2,11 @@
 #define TABS_Y 32
 #define TAB_PADDING 2
 
+#define PLAYERS_X 384
+#define PLAYERS_Y 32
+#define PLAYERS_INDICATOR_SIZE 32
+#define PLAYERS_PADDING 4
+
 #define WORLDS_X 32
 #define WORLDS_Y 56
 
@@ -41,7 +46,7 @@
 #define GARRISON_Y (PANEL_Y + 160)
 #define GARRISON_MARGIN 24
 
-enum object {Worlds, WorldTabs, Building, Train, Dismiss, TroopSelf, TroopOther, TroopGarrison, Battlefield};
+enum object {Worlds, WorldTabs, Players, Building, Train, Dismiss, TroopSelf, TroopOther, TroopGarrison, Battlefield};
 
 // rows, columns, left, top, width, height, padding
 #define OBJECT_GROUP(r, c, l, t, w, h, p) \
@@ -71,8 +76,9 @@ static const struct object_group
 	unsigned padding;
 	unsigned count;
 } object_group[] = {
-	[WorldTabs] = OBJECT_GROUP(1, 3, TABS_X, TABS_Y, 80, 24, 0),
 	[Worlds] = OBJECT_GROUP(24, 1, WORLDS_X, WORLDS_Y, 240, 20, 0),
+	[WorldTabs] = OBJECT_GROUP(1, 3, TABS_X, TABS_Y, 80, 24, 0),
+	[Players] = OBJECT_GROUP(1, PLAYERS_LIMIT, PLAYERS_X, PLAYERS_Y, 160, PLAYERS_INDICATOR_SIZE, PLAYERS_PADDING),
 	[Building] = OBJECT_GROUP(3, 5, PANEL_X + 1, PANEL_Y + 400, 48, 48, 1),
 	[Train] = OBJECT_GROUP(1, 7, PANEL_X + 1, PANEL_Y + 340, 32, 32, 1),
 	[Dismiss] = OBJECT_GROUP(1, TRAIN_QUEUE, PANEL_X + 81, PANEL_Y + 300, 32, 32, 1),

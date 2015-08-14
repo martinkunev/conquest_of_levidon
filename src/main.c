@@ -455,17 +455,16 @@ int main(int argc, char *argv[])
 
 		// Initialize region input recognition.
 		if_storage_init(&game, MAP_WIDTH, MAP_HEIGHT);
-
 		if_display();
 
 		status = play(&game);
 		if (status < 0) return -1; // TODO
+
+		if_storage_term();
+		world_unload(&game);
 	}
 
-	if_storage_term();
 	if_term();
-
-	world_unload(&game);
 
 	menu_term();
 
