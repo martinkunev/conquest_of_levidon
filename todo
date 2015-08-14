@@ -50,12 +50,10 @@ custom mouse pointer
 improve player colors
 
 images
-	mine.png, blast_furnace.png
+	blast_furnace.png
 
 	fortress*.png, fortress_gate*.png
 	assault.png (indicator on the map)
-
-	? gold icon: stacked coins
 
 	armory.png
 	swordsman.png
@@ -68,6 +66,7 @@ menu
 	title and exit button
 
 battle
+	during formation, display relative locations of ally and enemy pawns
 	when two pawns from different alliances are next to each other, display red line between them (to show that they are fighting)
 	display round number and end round button
 	hide mouse pointer during animation
