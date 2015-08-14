@@ -387,6 +387,8 @@ int input_save(const struct game *restrict game)
 	state.worlds = 0;
 	if (tab_select(&state, 2) < 0) return -1; // TODO
 
+	state.loaded = 0;
+
 	// TODO ? generate some filename
 
 	while (1)
