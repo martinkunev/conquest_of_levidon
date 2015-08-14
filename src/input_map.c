@@ -47,7 +47,11 @@ static int input_region(int code, unsigned x, unsigned y, uint16_t modifiers, co
 	{
 		struct troop *troop;
 
-		if (region_index < 0) state->region = REGION_NONE;
+		if (region_index < 0)
+		{
+			state->region = REGION_NONE;
+			return 0;
+		}
 		else state->region = region_index;
 
 		state->troop = 0;
