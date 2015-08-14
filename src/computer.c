@@ -25,6 +25,7 @@ static double unit_importance(const struct battle *restrict battle, const struct
 {
 	return 1.0;
 
+	// TODO return unit->health;
 	//
 }
 
@@ -133,7 +134,7 @@ static double state_assess(const struct game *restrict game, struct battle *rest
 	// Estimate how beneficial is the command given to each of the player's pawns.
 	for(i = 0; i < battle->players[player].pawns_count; ++i) // loop the pawns the player controls
 	{
-		const struct pawn *restrict pawn = battle->players[i].pawns[i];
+		const struct pawn *restrict pawn = battle->players[player].pawns[i];
 
 		if (!pawn->count) continue;
 
@@ -229,9 +230,10 @@ int computer_battle(const struct game *restrict game, struct battle *restrict ba
 	rate = state_assess(game, battle, player);
 	for(step = 0; step < SEARCH_TRIES; ++step) // TODO think about this
 	{
-		struct pawn *restrict pawn = battle->players[player].pawns[i];
+		struct pawn *restrict pawn;
 
 		i = random() % pawns_count;
+		pawn = battle->players[player].pawns[i];
 
 		backup->action = pawn->action;
 		if (pawn->action == PAWN_FIGHT) backup->target = pawn->target.pawn->moves[0].location;

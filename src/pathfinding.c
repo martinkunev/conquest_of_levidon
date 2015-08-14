@@ -527,7 +527,7 @@ static ssize_t find_next(struct heap *restrict closest, struct path_node *restri
 		neighbor = neighbor->next;
 	}
 
-	next = heap_front(closest) - traverse_info;
+	next = closest->data[0] - traverse_info;
 	if (traverse_info[next].distance == INFINITY) return ERROR_MISSING; // no more reachable vertices
 	heap_pop(closest);
 

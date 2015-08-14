@@ -119,7 +119,11 @@ static void heapify(struct heap *heap)
 			heap_update(heap, index);
 			index = swap;
 		}
-		if (index != item) heap->data[index] = temp;
+		if (index != item)
+		{
+			heap->data[index] = temp;
+			heap_update(heap, index);
+		}
 
 		if (!item) return;
 		--item;
