@@ -151,7 +151,7 @@ static int movement_follow(struct pawn *restrict pawn, const struct pawn *restri
 				struct point visited[UNIT_SPEED_LIMIT];
 				unsigned visited_count = movement_visited(pawn, visited);
 
-				status = path_reachable(pawn, graph, obstacles, reachable);
+				status = path_distances(pawn, graph, obstacles, reachable);
 				if (status < 0) return status;
 
 				while (visited_count--)
@@ -663,7 +663,7 @@ int battlefield_movement_perform(struct battle *restrict battle, struct pawn *re
 		int status;
 		double reachable[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH];
 
-		status = path_reachable(pawn, graph, obstacles, reachable);
+		status = path_distances(pawn, graph, obstacles, reachable);
 		if (status < 0) return status;
 
 		status = movement_attack(pawn, pawn->target.pawn->moves[0].location, ((const struct battle *)battle)->field, reachable, graph, obstacles);

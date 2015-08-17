@@ -46,7 +46,7 @@ static int input_round(int code, unsigned x, unsigned y, uint16_t modifiers, con
 				return INPUT_IGNORE;
 
 			movement_stay(pawn);
-			status = path_reachable(pawn, state->graph, state->obstacles, state->reachable);
+			status = path_distances(pawn, state->graph, state->obstacles, state->reachable);
 			if (status < 0) return status;
 			pawn->action = 0;
 		}
@@ -133,7 +133,7 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 
 		if (state->pawn)
 		{
-			status = path_reachable(state->pawn, state->graph, state->obstacles, state->reachable);
+			status = path_distances(state->pawn, state->graph, state->obstacles, state->reachable);
 			if (status < 0) return status;
 		}
 
@@ -152,7 +152,7 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 
 			movement_stay(pawn);
 			pawn->action = 0;
-			status = path_reachable(pawn, state->graph, state->obstacles, state->reachable);
+			status = path_distances(pawn, state->graph, state->obstacles, state->reachable);
 			if (status < 0) return status;
 			return 0;
 		}
@@ -166,7 +166,7 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 			switch (status)
 			{
 			case 0:
-				status = path_reachable(pawn, state->graph, state->obstacles, state->reachable);
+				status = path_distances(pawn, state->graph, state->obstacles, state->reachable);
 				if (status < 0) return status;
 			case ERROR_MISSING:
 				return 0;
@@ -184,7 +184,7 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 			pawn->moves_count = 1;
 
 			// Initialize reachable distances for stationary pawn.
-			status = path_reachable(pawn, state->graph, state->obstacles, reachable);
+			status = path_distances(pawn, state->graph, state->obstacles, reachable);
 			if (status < 0) return status;
 
 			status = pawn_command(game, battle, pawn, point, state->graph, state->obstacles, reachable);

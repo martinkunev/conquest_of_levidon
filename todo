@@ -1,4 +1,4 @@
-H	name the game (?rulers of levidon)
+H	name the game (?conquest of levidon)
 H	AI for the map
 H	some handling for pawn whose path passes through a field occupied by another pawn
 M	clean up the code related to the end of the battle
