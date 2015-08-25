@@ -1,6 +1,7 @@
 *.o
 src/medieval
 src/editor
+src/generic/*
 test/check
 Makefile
 .*

@@ -1,34 +1,62 @@
 // The arguments with which the macro functions are called are guaranteed to produce no side effects.
 
-// #define heap_type int
+#if !defined(heap_suffix)
+# define heap_suffix
+#endif
+
 #if !defined(heap_type)
-# error "Generic header argument heap_type not defined"
+# define heap_type void *
 #endif
 
 // Returns whether a is on top of b in the heap.
-#if !defined(heap_diff)
-# define heap_diff(a, b) ((a) >= (b))
+#if !defined(heap_above)
+# define heap_above(a, b) ((a) >= (b))
 #endif
 
 // Called after an element changes its position in the heap (including initial push).
-// #define heap_update(heap, position)
 #if !defined(heap_update)
 # define heap_update(heap, position)
 #endif
 
-#include <stdlib.h>
+#define NAME_CAT_EXPAND(a, b) a ## b
+#define NAME_CAT(a, b) NAME_CAT_EXPAND(a, b)
+#define NAME(name, ...) NAME_CAT(NAME_CAT(name, heap_suffix), __VA_ARGS__)
 
-// Returns the biggest element in the heap
-#define heap_front(h) (*(h)->data)
+#define STRING_EXPAND(string) #string
+#define STRING(string) STRING_EXPAND(string)
 
-struct heap
+#if defined(HEADER) || defined(SOURCE)
+# define STATIC
+#else
+# define STATIC static
+#endif
+
+#if !defined(SOURCE)
+struct NAME(heap)
 {
 	heap_type *data; // Array with the elements.
 	size_t count; // Number of elements actually in the heap.
 };
 
+STATIC void NAME(heap, _push)(struct NAME(heap) *heap, heap_type value);
+STATIC void NAME(heap, _pop)(struct NAME(heap) *heap);
+STATIC void NAME(heap, _emerge)(struct NAME(heap) *heap, size_t index);
+STATIC void NAME(heap, _heapify)(struct NAME(heap) *heap);
+#endif
+
+#if !defined(HEADER)
+
+#if defined(SOURCE)
+# define INCLUDE0 #include <stdlib.h>
+# define INCLUDE1 #include STRING(NAME(heap).h)
+INCLUDE0
+INCLUDE1
+#else
+# include <stdlib.h>
+#endif
+
 // Push element to the heap.
-static void heap_push(struct heap *restrict heap, heap_type value)
+STATIC void NAME(heap, _push)(struct NAME(heap) *heap, heap_type value)
 {
 	size_t index, parent;
 
@@ -36,7 +64,7 @@ static void heap_push(struct heap *restrict heap, heap_type value)
 	for(index = heap->count++; index; index = parent)
 	{
 		parent = (index - 1) / 2;
-		if (heap_diff(heap->data[parent], value)) break;
+		if (heap_above(heap->data[parent], value)) break;
 		heap->data[index] = heap->data[parent];
 		heap_update(heap, index);
 	}
@@ -45,7 +73,7 @@ static void heap_push(struct heap *restrict heap, heap_type value)
 }
 
 // Removes the biggest element from the heap.
-static void heap_pop(struct heap *heap)
+STATIC void NAME(heap, _pop)(struct NAME(heap) *heap)
 {
 	size_t index, swap, other;
 
@@ -60,8 +88,8 @@ static void heap_pop(struct heap *heap)
 		swap = index * 2 + 1;
 		if (swap >= heap->count) break; // If there are no children, the heap is reordered.
 		other = swap + 1;
-		if ((other < heap->count) && heap_diff(heap->data[other], heap->data[swap])) swap = other;
-		if (heap_diff(temp, heap->data[swap])) break; // If the bigger child is less than or equal to its parent, the heap is reordered.
+		if ((other < heap->count) && heap_above(heap->data[other], heap->data[swap])) swap = other;
+		if (heap_above(temp, heap->data[swap])) break; // If the bigger child is less than or equal to its parent, the heap is reordered.
 
 		heap->data[index] = heap->data[swap];
 		heap_update(heap, index);
@@ -72,7 +100,7 @@ static void heap_pop(struct heap *heap)
 }
 
 // Move an element closer to the front of the heap.
-static void heap_emerge(struct heap *restrict heap, size_t index)
+STATIC void NAME(heap, _emerge)(struct NAME(heap) *heap, size_t index) // TODO ? rename to heap_sift_up
 {
 	size_t parent;
 
@@ -81,7 +109,7 @@ static void heap_emerge(struct heap *restrict heap, size_t index)
 	for(; index; index = parent)
 	{
 		parent = (index - 1) / 2;
-		if (heap_diff(heap->data[parent], temp)) break;
+		if (heap_above(heap->data[parent], temp)) break;
 		heap->data[index] = heap->data[parent];
 		heap_update(heap, index);
 	}
@@ -90,14 +118,14 @@ static void heap_emerge(struct heap *restrict heap, size_t index)
 }
 
 // Heapifies a non-empty array.
-static void heapify(struct heap *heap)
+STATIC void NAME(heap, _heapify)(struct NAME(heap) *heap)
 {
 	unsigned item, index, swap, other;
 	heap_type temp;
 
 	if (heap->count < 2) return;
 
-	// Move each non-leaf element to its correct position in its subtree.
+	// Move each non-leaf element down in its subtree until it satisfies the heap property.
 	item = (heap->count / 2) - 1;
 	while (1)
 	{
@@ -108,10 +136,10 @@ static void heapify(struct heap *heap)
 		{
 			// Find the child to swap with.
 			swap = index * 2 + 1;
-			if (swap >= heap->count) break; // If there are no children, the current element is positioned.
+			if (swap >= heap->count) break; // If there are no children, the element is placed properly.
 			other = swap + 1;
-			if ((other < heap->count) && heap_diff(heap->data[other], heap->data[swap])) swap = other;
-			if (heap_diff(temp, heap->data[swap])) break; // If the bigger child is less than or equal to the parent, the heap is reordered.
+			if ((other < heap->count) && heap_above(heap->data[other], heap->data[swap])) swap = other;
+			if (heap_above(temp, heap->data[swap])) break; // If the bigger child is less than or equal to the parent, the element is placed properly.
 
 			heap->data[index] = heap->data[swap];
 			heap_update(heap, index);
@@ -128,6 +156,18 @@ static void heapify(struct heap *heap)
 	}
 }
 
+#endif /* !defined(HEADER) */
+
+#undef STATIC
+
+#undef STRING
+#undef STRING_EXPAND
+
+#undef NAME
+#undef NAME_CAT
+#undef NAME_CAT_EXPAND
+
 #undef heap_update
-#undef heap_diff
+#undef heap_above
 #undef heap_type
+#undef heap_suffix

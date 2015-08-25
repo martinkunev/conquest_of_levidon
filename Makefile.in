@@ -25,10 +25,11 @@ mrproper: clean
 	rm -f Makefile
 
 install:
-	cp -p src/medieval @{PREFIX}bin/
-	mkdir -p @{PREFIX}share/medieval/img/
-	cp -rp img/*.png @{PREFIX}share/medieval/img/
-	cp -rp worlds @{PREFIX}share/medieval/
+	# TODO the strip option should not be added in debug
+	install -s src/medieval @{PREFIX}bin/
+	install -d @{PREFIX}share/medieval/img/
+	install img/*.png @{PREFIX}share/medieval/img/
+	install worlds @{PREFIX}share/medieval/
 	# TODO ?fonts
 
 uninstall:
