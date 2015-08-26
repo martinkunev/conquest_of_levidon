@@ -13,9 +13,9 @@ struct path_node
 };
 
 #define heap_type struct path_node *
-#define heap_diff(a, b) ((a)->distance <= (b)->distance)
+#define heap_above(a, b) ((a)->distance <= (b)->distance)
 #define heap_update(heap, position) ((heap)->data[position]->heap_index = (position))
-#include "heap.g"
+#include "generic/heap.g"
 
 // Find the shortest path from an origin field to a target field.
 // The path consists of a sequence of straight lines with each intermediate point being at the corner of an obstacle.

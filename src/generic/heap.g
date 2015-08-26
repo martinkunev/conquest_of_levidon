@@ -1,7 +1,7 @@
 // The arguments with which the macro functions are called are guaranteed to produce no side effects.
 
-#if !defined(heap_suffix)
-# define heap_suffix
+#if !defined(heap_name)
+# define heap_name heap
 #endif
 
 #if !defined(heap_type)
@@ -20,7 +20,7 @@
 
 #define NAME_CAT_EXPAND(a, b) a ## b
 #define NAME_CAT(a, b) NAME_CAT_EXPAND(a, b)
-#define NAME(name, ...) NAME_CAT(NAME_CAT(name, heap_suffix), __VA_ARGS__)
+#define NAME(suffix) NAME_CAT(heap_name, suffix)
 
 #define STRING_EXPAND(string) #string
 #define STRING(string) STRING_EXPAND(string)
@@ -32,23 +32,23 @@
 #endif
 
 #if !defined(SOURCE)
-struct NAME(heap)
+struct heap_name
 {
 	heap_type *data; // Array with the elements.
 	size_t count; // Number of elements actually in the heap.
 };
 
-STATIC void NAME(heap, _push)(struct NAME(heap) *heap, heap_type value);
-STATIC void NAME(heap, _pop)(struct NAME(heap) *heap);
-STATIC void NAME(heap, _emerge)(struct NAME(heap) *heap, size_t index);
-STATIC void NAME(heap, _heapify)(struct NAME(heap) *heap);
+STATIC void NAME(_push)(struct heap_name *heap, heap_type value);
+STATIC void NAME(_pop)(struct heap_name *heap);
+STATIC void NAME(_emerge)(struct heap_name *heap, size_t index);
+STATIC void NAME(_heapify)(struct heap_name *heap);
 #endif
 
 #if !defined(HEADER)
 
 #if defined(SOURCE)
 # define INCLUDE0 #include <stdlib.h>
-# define INCLUDE1 #include STRING(NAME(heap).h)
+# define INCLUDE1 #include STRING(HEADER_NAME)
 INCLUDE0
 INCLUDE1
 #else
@@ -56,7 +56,7 @@ INCLUDE1
 #endif
 
 // Push element to the heap.
-STATIC void NAME(heap, _push)(struct NAME(heap) *heap, heap_type value)
+STATIC void NAME(_push)(struct heap_name *heap, heap_type value)
 {
 	size_t index, parent;
 
@@ -73,7 +73,7 @@ STATIC void NAME(heap, _push)(struct NAME(heap) *heap, heap_type value)
 }
 
 // Removes the biggest element from the heap.
-STATIC void NAME(heap, _pop)(struct NAME(heap) *heap)
+STATIC void NAME(_pop)(struct heap_name *heap)
 {
 	size_t index, swap, other;
 
@@ -100,7 +100,7 @@ STATIC void NAME(heap, _pop)(struct NAME(heap) *heap)
 }
 
 // Move an element closer to the front of the heap.
-STATIC void NAME(heap, _emerge)(struct NAME(heap) *heap, size_t index) // TODO ? rename to heap_sift_up
+STATIC void NAME(_emerge)(struct heap_name *heap, size_t index) // TODO ? rename to heap_sift_up
 {
 	size_t parent;
 
@@ -118,7 +118,7 @@ STATIC void NAME(heap, _emerge)(struct NAME(heap) *heap, size_t index) // TODO ?
 }
 
 // Heapifies a non-empty array.
-STATIC void NAME(heap, _heapify)(struct NAME(heap) *heap)
+STATIC void NAME(_heapify)(struct heap_name *heap)
 {
 	unsigned item, index, swap, other;
 	heap_type temp;
@@ -170,4 +170,4 @@ STATIC void NAME(heap, _heapify)(struct NAME(heap) *heap)
 #undef heap_update
 #undef heap_above
 #undef heap_type
-#undef heap_suffix
+#undef heap_name
