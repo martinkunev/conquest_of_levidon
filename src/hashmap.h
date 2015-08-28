@@ -38,4 +38,4 @@ void hashmap_term(struct hashmap *hashmap);
 
 enum {HASHMAP_SIZE_DEFAULT = 32};
 
-//int hashmap_set(struct hashmap *restrict hashmap, const bytes_t *restrict key, hashmap_type value, hashmap_type *value_old);
+//int hashmap_set(struct hashmap *restrict hashmap, const struct bytes *restrict key, hashmap_type value, hashmap_type *value_old);

@@ -22,15 +22,15 @@
 #define DIRECTORY_WORLDS "/.medieval/worlds/"
 #define DIRECTORY_SAVE "/.medieval/save/"
 
-static bytes_t *directories[DIRECTORIES_COUNT];
+static struct bytes *directories[DIRECTORIES_COUNT];
 
-static bytes_t *path_cat(const unsigned char *restrict prefix, size_t prefix_size, const unsigned char *restrict suffix, size_t suffix_size)
+static struct bytes *path_cat(const unsigned char *restrict prefix, size_t prefix_size, const unsigned char *restrict suffix, size_t suffix_size)
 {
 	size_t size;
-	bytes_t *path;
+	struct bytes *path;
 
 	size = prefix_size + suffix_size;
-	path = malloc(offsetof(bytes_t, data) + size + 1);
+	path = malloc(offsetof(struct bytes, data) + size + 1);
 	if (!path) return 0;
 	path->size = size;
 	*format_bytes(format_bytes(path->data, prefix, prefix_size), suffix, suffix_size) = 0;
@@ -43,7 +43,7 @@ int menu_init(void)
 	const char *home;
 	size_t home_size;
 
-	bytes_t *game_home;
+	struct bytes *game_home;
 
 	home = getenv("HOME");
 	if (!home) return ERROR_MISSING;
@@ -129,14 +129,14 @@ struct files *menu_worlds(size_t index)
 	}
 	rewinddir(dir);
 
-	list = malloc(offsetof(struct files, names) + sizeof(bytes_t *) * count);
+	list = malloc(offsetof(struct files, names) + sizeof(struct bytes *) * count);
 	if (!list) goto error;
 	list->count = 0;
 
 	while (1)
 	{
 		size_t name_length;
-		bytes_t *name;
+		struct bytes *name;
 
 		if (readdir_r(dir, entry, &more)) goto error;
 		if (!more) break; // no more entries
@@ -152,7 +152,7 @@ struct files *menu_worlds(size_t index)
 
 		// TODO don't allocate memory for the path
 
-		name = malloc(offsetof(bytes_t, data) + path_size + name_length + 1);
+		name = malloc(offsetof(struct bytes, data) + path_size + name_length + 1);
 		if (!name) goto error;
 		//name->size = path_size + name_length;
 		name->size = name_length;
@@ -199,7 +199,7 @@ int menu_load(size_t index, const unsigned char *restrict filename, size_t filen
 	const unsigned char *restrict location = directories[index]->data;
 	size_t location_size = directories[index]->size;
 
-	bytes_t *filepath = path_cat(location, location_size, filename, filename_size);
+	struct bytes *filepath = path_cat(location, location_size, filename, filename_size);
 	if (!filepath) return ERROR_MEMORY;
 
 	file = open(filepath->data, O_RDONLY);
@@ -250,7 +250,7 @@ int menu_save(size_t index, const unsigned char *restrict filename, size_t filen
 	json_dump(buffer, json);
 	json_free(json);
 
-	bytes_t *filepath = path_cat(location, location_size, filename, filename_size);
+	struct bytes *filepath = path_cat(location, location_size, filename, filename_size);
 	if (!filepath)
 	{
 		free(buffer);

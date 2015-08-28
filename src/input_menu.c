@@ -33,7 +33,7 @@ static int tab_select(struct state *restrict state, size_t index)
 
 static void world_select(struct state *restrict state, size_t index)
 {
-	const bytes_t *filename = state->worlds->names[index];
+	const struct bytes *filename = state->worlds->names[index];
 	state->world_index = index;
 	format_bytes(state->name, filename->data, filename->size); // TODO buffer overflow
 	state->name_position = state->name_size = filename->size;

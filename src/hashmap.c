@@ -278,7 +278,7 @@ void hashmap_term(struct hashmap *hashmap)
 }
 
 // TODO remove this?
-/*int hashmap_set(struct hashmap *restrict hashmap, const bytes_t *restrict key, hashmap_type value, hashmap_type *value_old)
+/*int hashmap_set(struct hashmap *restrict hashmap, const struct bytes *restrict key, hashmap_type value, hashmap_type *value_old)
 {
 	uint32_t hash = hashmap_hash(key->data, key->size);
 	struct slot *slot = hashmap_slot(hashmap->slot, hashmap->count_slots, hash);

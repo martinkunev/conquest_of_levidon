@@ -183,9 +183,13 @@ static int play(struct game *restrict game)
 			case Neutral:
 				continue;
 
-			case Computer: // TODO implement this
 			case Local:
 				status = input_map(game, player);
+				if (status < 0) return status;
+				break;
+
+			case Computer:
+				status = computer_map(game, player);
 				if (status < 0) return status;
 				break;
 			}

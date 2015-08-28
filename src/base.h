@@ -104,13 +104,13 @@ static inline void *dupalloc(void *old, size_t size)
 
 ////////////////
 
-typedef struct
+struct bytes
 {
 	size_t size;
 	unsigned char data[];
-} bytes_t;
+};
 
-#define bytes_t(n) struct \
+/*#define bytes_t(n) struct \
 	{ \
 		size_t size; \
 		char data[n]; \
@@ -127,4 +127,4 @@ typedef struct
 			size_t size; \
 			char data[sizeof(s) - 1]; \
 		} \
-	){sizeof(s) - 1, (s)}
+	){sizeof(s) - 1, (s)}*/

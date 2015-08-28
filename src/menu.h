@@ -1,7 +1,7 @@
 struct files
 {
 	size_t count;
-	bytes_t *names[];
+	struct bytes *names[];
 };
 
 #define DIRECTORIES_COUNT 3
