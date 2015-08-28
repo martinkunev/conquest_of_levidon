@@ -11,6 +11,24 @@
 
 #define FLOAT_PRECISION 0.001
 
+#define MAP_COMMAND_PRIORITY_THRESHOLD 0.0 /* TODO maybe this should not be a macro */
+
+struct region_command
+{
+	struct region *region;
+	enum {COMMAND_BUILD, COMMAND_TRAIN} type;
+	union
+	{
+		uint32_t building;
+		size_t unit;
+	} target;
+	double priority;
+};
+
+#define heap_type struct region_command *
+#define heap_above(a, b) ((a)->priority >= (b)->priority)
+#include "generic/heap.g"
+
 struct pawn_command
 {
 	enum pawn_action action;
@@ -214,6 +232,88 @@ static double state_assess(const struct game *restrict game, struct battle *rest
 	}
 
 	return rating;
+}
+
+void computer_map_perform(struct heap *restrict commands, const struct game *restrict game, unsigned char player)
+{
+	size_t i;
+
+	while (commands->count)
+	{
+		struct region_command *command = commands->data[0];
+		heap_pop(commands);
+
+		if (command->priority < MAP_COMMAND_PRIORITY_THRESHOLD)
+			break;
+
+		switch (command->type)
+		{
+		case COMMAND_BUILD:
+			if (!resource_enough(&game->players[player].treasury, &buildings[command->target.building].cost))
+				break;
+			if (command->region->construct >= 0)
+				break;
+			resource_subtract(&game->players[player].treasury, &buildings[command->target.building].cost);
+			command->region->construct = command->target.building;
+			break;
+
+		case COMMAND_TRAIN:
+			if (!resource_enough(&game->players[player].treasury, &UNITS[command->target.unit].cost))
+				break;
+			for(i = 0; i < TRAIN_QUEUE; ++i)
+				if (!command->region->train[i])
+					goto train;
+			break;
+		train:
+			resource_subtract(&game->players[player].treasury, &UNITS[command->target.unit].cost);
+			command->region->train[i] = UNITS + command->target.unit;
+			break;
+		}
+	}
+}
+
+int computer_map(const struct game *restrict game, unsigned char player)
+{
+	// TODO support cancelling buildings and trainings
+
+	size_t i;
+
+	size_t commands_allocated = 8, commands_count = 0; // TODO fix this 8
+	struct region_command *commands = malloc(commands_allocated * sizeof(*commands));
+	if (!commands)
+		return ERROR_MEMORY;
+
+	// Make a list of the commands available for the player.
+	for(i = 0; i < game->regions_count; ++i)
+	{
+		// TODO add the commands
+	}
+
+	if (!commands_count)
+	{
+		free(commands);
+		return 0;
+	}
+
+	// Create a priority queue with the available commands.
+	struct heap commands_queue;
+	commands_queue.count = commands_count;
+	commands_queue.data = malloc(commands_count * sizeof(*commands_queue.data));
+	if (!commands_queue.data)
+	{
+		free(commands);
+		return ERROR_MEMORY;
+	}
+	for(i = 0; i < commands_count; ++i)
+		commands_queue.data[i] = commands + i;
+	heap_heapify(&commands_queue);
+
+	computer_map_perform(&commands_queue, game, player);
+
+	free(commands_queue.data);
+	free(commands);
+
+	return 0;
 }
 
 int computer_formation(const struct game *restrict game, struct battle *restrict battle, unsigned char player)
