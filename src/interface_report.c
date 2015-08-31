@@ -22,7 +22,7 @@
 extern Display *display;
 extern GLXDrawable drawable;
 
-extern struct font font12;
+extern struct font font12, font24;
 
 void if_report(const void *argument, const struct game *game_)
 {

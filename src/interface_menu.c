@@ -9,14 +9,17 @@
 #include "menu.h"
 #include "world.h"
 
+#define TITLE "Conquest of Levidon"
+
 // TODO display long filenames properly
 
 #define S(s) (s), sizeof(s) - 1
 
 extern Display *display;
 extern GLXDrawable drawable;
+extern xcb_screen_t *screen;
 
-extern struct font font12;
+extern struct font font12, font24;
 
 void if_menu(const void *argument, const struct game *game)
 {
@@ -25,6 +28,9 @@ void if_menu(const void *argument, const struct game *game)
 	size_t i;
 
 	struct point position;
+
+	struct box box = string_box(string, length, font);
+	draw_string(S(TITLE), (screen->width_in_pixels - box.width) / 2, TITLE_Y, &font24, White);
 
 	// TODO maybe use 2 separate functions for loaded and !loaded
 

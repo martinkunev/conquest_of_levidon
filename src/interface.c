@@ -39,7 +39,7 @@ KeySym *keymap;
 int keysyms_per_keycode;
 int keycode_min, keycode_max;
 
-struct font font12;
+struct font font12, font24;
 
 unsigned SCREEN_WIDTH, SCREEN_HEIGHT;
 
@@ -123,6 +123,13 @@ int if_init(void)
 		glXDestroyContext(display, context);
 		goto error;
 	}
+	if (font_init(display, &font24, "-misc-dejavu sans-bold-r-normal--24-0-0-0-p-0-ascii-0") < 0)
+	{
+		font_term(display, &font12);
+		xcb_destroy_window(connection, window);
+		glXDestroyContext(display, context);
+		goto error;
+	}
 
 	// TODO handle modifier keys
 	// TODO handle dead keys
@@ -131,7 +138,12 @@ int if_init(void)
 	// Initialize keyboard mapping table.
 	XDisplayKeycodes(display, &keycode_min, &keycode_max);
 	keymap = XGetKeyboardMapping(display, keycode_min, (keycode_max - keycode_min + 1), &keysyms_per_keycode);
-	if (!keymap) goto error; // TODO error
+	if (!keymap)
+	{
+		font_term(display, &font24);
+		font_term(display, &font12);
+		goto error; // TODO error
+	}
 
 	// enable transparency
 	glEnable(GL_BLEND);
@@ -183,6 +195,8 @@ void if_display(void)
 void if_term(void)
 {
 	XFree(keymap);
+	font_term(display, &font24);
+	font_term(display, &font12);
 
 	glXDestroyWindow(display, drawable);
 	xcb_destroy_window(connection, window);

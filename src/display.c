@@ -55,7 +55,7 @@ extern KeySym *keymap;
 extern int keysyms_per_keycode;
 extern int keycode_min, keycode_max;
 
-extern struct font font12;
+extern struct font font12, font24;
 
 static GLuint map_framebuffer;
 

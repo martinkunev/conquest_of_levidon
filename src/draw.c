@@ -247,13 +247,12 @@ int font_init(Display *restrict display, struct font *restrict font, const char 
 	return 0;
 }
 
-// TODO is this necessary?
-/*void font_term(Display *restrict display, struct font *restrict font)
+void font_term(Display *restrict display, struct font *restrict font)
 {
 	XUnloadFont(display, font);
-}*/
+}
 
-static struct box string_box(const char *string, size_t length, struct font *restrict font)
+struct box string_box(const char *string, size_t length, struct font *restrict font)
 {
 	struct box box = {0, 0};
 

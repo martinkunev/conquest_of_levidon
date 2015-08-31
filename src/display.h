@@ -46,6 +46,8 @@
 #define GARRISON_Y (PANEL_Y + 160)
 #define GARRISON_MARGIN 24
 
+#define TITLE_Y 60
+
 enum object {Worlds, WorldTabs, Players, Building, Train, Dismiss, TroopSelf, TroopOther, TroopGarrison, Battlefield};
 
 // rows, columns, left, top, width, height, padding
