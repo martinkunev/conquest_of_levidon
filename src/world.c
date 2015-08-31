@@ -75,7 +75,7 @@ const size_t buildings_count = sizeof(buildings) / sizeof(*buildings);
 
 #undef NAME
 
-static int region_build(uint32_t *restrict built, const struct array *restrict list)
+static int region_build(uint32_t *restrict built, const struct array_json *restrict list)
 {
 	size_t i, j;
 	const union json *entry;

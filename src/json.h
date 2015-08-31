@@ -4,8 +4,7 @@
 
 union json;
 
-#define array_type union json *
-#include "array.h"
+#include "generic/array_json.h"
 
 #define hashmap_type union json *
 #include "hashmap.h"
@@ -26,7 +25,7 @@ union json
 		size_t size;
 		char *data;
 	} string;
-	struct array array;
+	struct array_json array;
 	struct hashmap object;
 };
 struct json_internal

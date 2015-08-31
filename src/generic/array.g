@@ -35,16 +35,14 @@ static inline void NAME(_term)(struct array_name *restrict array)
 	free(array->data);
 }
 STATIC int NAME(_expand)(struct array_name *restrict array, size_t count);
-STATIC int NAME(_append)(struct array_name *restrict array, array_type value);
-STATIC int NAME(_append_multiple)(struct array_name *restrict array, array_type values[restrict], size_t count);
 #endif
 
 #if !defined(HEADER)
 
 #if defined(SOURCE)
 # define INCLUDE0 #include <stdlib.h>
-# define INCLUDE1 #include STRING(HEADER_NAME)
 INCLUDE0
+# define INCLUDE1 #include STRING(HEADER_NAME)
 INCLUDE1
 #else
 # include <stdlib.h>
@@ -55,7 +53,7 @@ STATIC int NAME(_init)(struct array_name *restrict array, size_t count_allocated
 	array->count = 0;
 	array->count_allocated = count_allocated;
 	array->data = malloc(count_allocated * sizeof(*array->data));
-	if (!array->data) return ERROR_MEMORY;
+	if (!array->data) return -1;
 
 	return 0;
 }
@@ -72,34 +70,10 @@ STATIC int NAME(_expand)(struct array_name *restrict array, size_t count)
 			;
 
 		buffer = realloc(array->data, count_allocated * sizeof(*array->data));
-		if (!buffer) return ERROR_MEMORY;
+		if (!buffer) return -1;
 		array->data = buffer;
 		array->count_allocated = count_allocated;
 	}
-	return 0;
-}
-
-STATIC int NAME(_append)(struct array_name *restrict array, array_type value)
-{
-	int status = NAME(_expand)(array, array->count + 1);
-	if (status) return status;
-	array->data[array->count] = value;
-	array->count += 1;
-	return 0;
-}
-
-STATIC int NAME(_append_multiple)(struct array_name *restrict array, array_type values[restrict], size_t count)
-{
-	size_t i;
-	int status = NAME(_expand)(array, array->count + count);
-	if (status) return status;
-
-	for(i = 0; i < count; ++i)
-	{
-		array->data[array->count] = values[i];
-		array->count += 1;
-	}
-
 	return 0;
 }
 

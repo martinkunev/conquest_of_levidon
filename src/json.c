@@ -35,8 +35,9 @@ SOFTWARE.
 
 #include "format.h"
 #include "json.h"
-#include "array.c"
 #include "hashmap.c"
+
+enum {ARRAY_SIZE_DEFAULT = 16};
 
 // Parses extended JSON format.
 // Extensions: null as a separate type, floating point as a separate type, string as root node
@@ -1270,11 +1271,12 @@ static int token_add(void *restrict context, int type, const JSON_value *value)
 		switch (json_type(parent))
 		{
 		case JSON_ARRAY:
-			if (array_push(&parent->array, item) < 0)
+			if (array_json_expand(&parent->array, parent->array.count + 1) < 0)
 			{
 				free(item);
 				return 0; // memory error
 			}
+			parent->array.data[parent->array.count - 1] = item;
 			break;
 		case JSON_OBJECT:
 			*stack->object_value = item;
@@ -1303,7 +1305,7 @@ void json_free(union json *restrict json)
 	case JSON_ARRAY:
 		while (json->array.count--)
 			json_free(json->array.data[json->array.count]);
-		array_term(&json->array);
+		array_json_term(&json->array);
 		break;
 	}
 	free(json);
@@ -1607,7 +1609,7 @@ union json *json_array(void)
 {
 	struct json_internal *json = malloc(sizeof(struct json_internal));
 	if (!json) return 0; // memory error
-	if (array_init(&json->data.array, ARRAY_SIZE_DEFAULT) < 0)
+	if (array_json_init(&json->data.array, ARRAY_SIZE_DEFAULT) < 0)
 	{
 		free(json);
 		return 0; // memory error
@@ -1631,7 +1633,11 @@ union json *json_object(void)
 
 union json *json_array_insert(union json *restrict container, union json *restrict value)
 {
-	if (container && value && !array_push(&container->array, value)) return container;
+	if (container && value && !array_json_expand(&container->array, container->array.count + 1))
+	{
+		container->array.data[container->array.count - 1] = value;
+		return container;
+	}
 	json_free(container);
 	json_free(value);
 	return 0;
