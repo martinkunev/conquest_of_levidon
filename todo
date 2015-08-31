@@ -31,7 +31,6 @@ L	player names and flag patterns
 
 TODO ? change direction of everything to counterclockwise; currently the y axis is in the opposite direction (and the cross product is negated)
 TODO ? rename field to tile
-TODO ? make generic data structures be used through code generation (maybe a better solution is to use a union instead of multiple implementations)
 TODO ? redesign input functions
 TODO make it simpler to check if two players are allies
 TODO ? dynamic battlefield size

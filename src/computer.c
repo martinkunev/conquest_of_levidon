@@ -25,7 +25,12 @@ struct region_command
 	double priority;
 };
 
+#define array_type struct region_command
+#define array_name array_commands
+#include "generic/array.g"
+
 #define heap_type struct region_command *
+#define heap_name heap_commands
 #define heap_above(a, b) ((a)->priority >= (b)->priority)
 #include "generic/heap.g"
 
@@ -234,14 +239,14 @@ static double state_assess(const struct game *restrict game, struct battle *rest
 	return rating;
 }
 
-void computer_map_perform(struct heap *restrict commands, const struct game *restrict game, unsigned char player)
+void computer_map_perform(struct heap_commands *restrict commands, const struct game *restrict game, unsigned char player)
 {
 	size_t i;
 
 	while (commands->count)
 	{
 		struct region_command *command = commands->data[0];
-		heap_pop(commands);
+		heap_commands_pop(commands);
 
 		if (command->priority < MAP_COMMAND_PRIORITY_THRESHOLD)
 			break;
@@ -272,46 +277,98 @@ void computer_map_perform(struct heap *restrict commands, const struct game *res
 	}
 }
 
-int computer_map(const struct game *restrict game, unsigned char player)
+static int computer_map_commands(struct array_commands *restrict commands, const struct game *restrict game, unsigned char player)
 {
-	// TODO support cancelling buildings and trainings
+	size_t i, j;
 
-	size_t i;
-
-	size_t commands_allocated = 8, commands_count = 0; // TODO fix this 8
-	struct region_command *commands = malloc(commands_allocated * sizeof(*commands));
-	if (!commands)
+	if (array_commands_init(commands, 8) < 0) // TODO fix this 8
 		return ERROR_MEMORY;
 
 	// Make a list of the commands available for the player.
 	for(i = 0; i < game->regions_count; ++i)
 	{
-		// TODO add the commands
+		struct region *restrict region = game->regions + i;
+
+		if ((region->owner != player) || (region->garrison.owner != player)) continue;
+
+		if (region->construct < 0) // no construction in progress
+		{
+			for(j = 0; j < buildings_count; ++j)
+			{
+				if (region_built(region, j)) continue;
+				if (!region_building_available(region, buildings[j])) continue;
+
+				// Don't check if there are enough resources as the first performed command will invalidate the check.
+
+				if (array_commands_expand(commands, commands->count + 1) < 0)
+					goto error;
+
+				commands->data[commands->count].region = region;
+				commands->data[commands->count].type = COMMAND_BUILD;
+				commands->data[commands->count].target.building = j;
+				commands->data[commands->count].priority = 1.0; // TODO fix this
+				commands->count += 1;
+			}
+		}
+
+		if (!region->train[0]) // no training in progress
+		{
+			for(j = 0; j < UNITS_COUNT; ++j)
+			{
+				if (!region_unit_available(region, UNITS[j])) continue;
+
+				// Don't check if there are enough resources as the first performed command will invalidate the check.
+
+				if (array_commands_expand(commands, commands->count + 1) < 0)
+					goto error;
+
+				commands->data[commands->count].region = region;
+				commands->data[commands->count].type = COMMAND_TRAIN;
+				commands->data[commands->count].target.unit = j;
+				commands->data[commands->count].priority = 1.0; // TODO fix this
+				commands->count += 1;
+			}
+		}
 	}
 
-	if (!commands_count)
-	{
-		free(commands);
+	return 0;
+
+error:
+	array_commands_term(commands);
+	return ERROR_MEMORY;
+}
+
+int computer_map(const struct game *restrict game, unsigned char player)
+{
+	// TODO support cancelling buildings and trainings
+
+	// TODO troop movement in/out of garrison and between regions
+
+	size_t i;
+
+	struct array_commands commands;
+	if (computer_map_commands(&commands, game, player) < 0)
+		return ERROR_MEMORY;
+	if (!commands.count)
 		return 0;
-	}
 
 	// Create a priority queue with the available commands.
-	struct heap commands_queue;
-	commands_queue.count = commands_count;
-	commands_queue.data = malloc(commands_count * sizeof(*commands_queue.data));
+	struct heap_commands commands_queue;
+	commands_queue.count = commands.count;
+	commands_queue.data = malloc(commands.count * sizeof(*commands_queue.data));
 	if (!commands_queue.data)
 	{
-		free(commands);
+		array_commands_term(&commands);
 		return ERROR_MEMORY;
 	}
-	for(i = 0; i < commands_count; ++i)
-		commands_queue.data[i] = commands + i;
-	heap_heapify(&commands_queue);
+	for(i = 0; i < commands.count; ++i)
+		commands_queue.data[i] = commands.data + i;
+	heap_commands_heapify(&commands_queue);
 
 	computer_map_perform(&commands_queue, game, player);
 
 	free(commands_queue.data);
-	free(commands);
+	array_commands_term(&commands);
 
 	return 0;
 }
