@@ -11,7 +11,7 @@
 
 #define FLOAT_PRECISION 0.001
 
-#define MAP_COMMAND_PRIORITY_THRESHOLD 0.0 /* TODO maybe this should not be a macro */
+#define MAP_COMMAND_PRIORITY_THRESHOLD 0.5 /* TODO maybe this should not be a macro */
 
 struct region_command
 {
@@ -45,6 +45,34 @@ struct pawn_command
 
 //enum {SEARCH_TRIES = 1048576};
 enum {SEARCH_TRIES = 256};
+
+static const double desire_buildings[] =
+{
+	[BuildingFarm] = 1.0,
+	[BuildingIrrigation] = 0.5,
+	[BuildingSawmill] = 1.1,
+	[BuildingMine] = 0.7,
+	[BuildingBlastFurnace] = 0.5,
+	[BuildingBarracks] = 0.8,
+	[BuildingArcheryRange] = 0.8,
+	[BuildingStables] = 0.4,
+	[BuildingWatchTower] = 0.9,
+	[BuildingPalisade] = 0.6,
+	[BuildingFortress] = 0.4,
+	[BuildingWorkshop] = 0.3,
+	[BuildingForge] = 0.5,
+};
+
+static const double desire_units[] =
+{
+	[UnitPeasant] = 0.3,
+	[UnitMilitia] = 0.5,
+	[UnitPikeman] = 0.6,
+	[UnitArcher] = 0.5,
+	[UnitLongbow] = 0.6,
+	[UnitLightCavalry] = 0.7,
+	[UnitBatteringRam] = 0.4,
+};
 
 static double unit_importance(const struct battle *restrict battle, const struct unit *restrict unit)
 {
@@ -243,6 +271,9 @@ void computer_map_perform(struct heap_commands *restrict commands, const struct 
 {
 	size_t i;
 
+	// Perform map commands until all actions are complete or until the priority becomes too low.
+	// Skip commands for which there are not enough resources.
+
 	while (commands->count)
 	{
 		struct region_command *command = commands->data[0];
@@ -281,15 +312,31 @@ static int computer_map_commands(struct array_commands *restrict commands, const
 {
 	size_t i, j;
 
+	unsigned char regions_visible[REGIONS_LIMIT];
+
 	if (array_commands_init(commands, 8) < 0) // TODO fix this 8
 		return ERROR_MEMORY;
+
+	map_visible(game, player, regions_visible);
 
 	// Make a list of the commands available for the player.
 	for(i = 0; i < game->regions_count; ++i)
 	{
 		struct region *restrict region = game->regions + i;
 
+		unsigned neighbors_enemy = 0;
+
 		if ((region->owner != player) || (region->garrison.owner != player)) continue;
+
+		for(j = 0; j < NEIGHBORS_LIMIT; ++j)
+		{
+			const struct region *restrict neighbor = region->neighbors[j];
+
+			if (!regions_visible[neighbor->index]) continue;
+
+			if ((region->owner != PLAYER_NEUTRAL) && !allies(game, player, region->owner))
+				neighbors_enemy += 1;
+		}
 
 		if (region->construct < 0) // no construction in progress
 		{
@@ -306,7 +353,7 @@ static int computer_map_commands(struct array_commands *restrict commands, const
 				commands->data[commands->count].region = region;
 				commands->data[commands->count].type = COMMAND_BUILD;
 				commands->data[commands->count].target.building = j;
-				commands->data[commands->count].priority = 1.0; // TODO fix this
+				commands->data[commands->count].priority = desire_buildings[j] / (neighbors_enemy + 1); // TODO this is more complicated
 				commands->count += 1;
 			}
 		}
@@ -325,7 +372,7 @@ static int computer_map_commands(struct array_commands *restrict commands, const
 				commands->data[commands->count].region = region;
 				commands->data[commands->count].type = COMMAND_TRAIN;
 				commands->data[commands->count].target.unit = j;
-				commands->data[commands->count].priority = 1.0; // TODO fix this
+				commands->data[commands->count].priority = desire_units[j] * neighbors_enemy; // TODO this is more complicated
 				commands->count += 1;
 			}
 		}

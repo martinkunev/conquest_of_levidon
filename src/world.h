@@ -1,5 +1,3 @@
-#define PLAYER_NEUTRAL 0 /* player 0 is hard-coded as neutral */
-
 union json;
 
 int world_load(const union json *restrict json, struct game *restrict game);

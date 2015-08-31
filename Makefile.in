@@ -27,9 +27,9 @@ mrproper: clean
 install:
 	# TODO the strip option should not be added in debug
 	install -s src/medieval @{PREFIX}bin/
-	install -d @{PREFIX}share/medieval/img/
+	install -d @{PREFIX}share/medieval/img/ @{PREFIX}share/medieval/worlds/
 	install img/*.png @{PREFIX}share/medieval/img/
-	install worlds @{PREFIX}share/medieval/
+	install worlds/* -t @{PREFIX}share/medieval/worlds/
 	# TODO ?fonts
 
 uninstall:
