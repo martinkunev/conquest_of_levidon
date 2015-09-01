@@ -1,8 +1,8 @@
 H	AI for troop movement on the map
 H	pawns should be smart enough to sidestep self pawns on the way
 H	levidon map
+H	store region and garrison troops in a single variable (there are still bugs)
 M	clean up the code related to the end of the battle
-M	store region and garrison troops in a single variable
 M	map scrolling
 M	keyboard support in various places in the interface
 M	assault garrison destruction and repair
@@ -36,6 +36,9 @@ TODO ? dynamic battlefield size
 TODO ? separate constants for BLOCKAGE_WALL and BLOCKAGE_GATE
 
 bugs
+	return troops to origin regions when the battle timeouts
+	escape in the save menu does nothing
+	computer still plays battles randomly
 	don't allow pawns to attack their own walls (currently only gates are not attacked)
 	don't allow attacking if the attacker cannot do damage to the defender (due to weapon and armor type)
 

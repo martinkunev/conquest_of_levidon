@@ -27,7 +27,8 @@ $prefix .= '/';
 $prefix =~ s|/|\\/|g;
 
 my $cflags = ($debug ? '-O0 -g' : '-O2 -fstrict-aliasing');
+my $strip = ($debug ? '' : '-s');
 
 unlink 'Makefile';
-qx(sed -e "s/\@{PREFIX}/$prefix/" -e "s/\@{CFLAGS}/$cflags/" Makefile.in > Makefile);
+qx(sed -e "s/\@{PREFIX}/$prefix/g" -e "s/\@{CFLAGS}/$cflags/g" -e "s/\@{STRIP}/$strip/g" Makefile.in > Makefile);
 chmod 0444, 'Makefile';

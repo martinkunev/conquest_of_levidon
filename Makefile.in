@@ -26,7 +26,7 @@ mrproper: clean
 
 install:
 	# TODO the strip option should not be added in debug
-	install -s src/conquest_of_levidon @{PREFIX}bin/
+	install @{STRIP} src/conquest_of_levidon @{PREFIX}bin/
 	install -d @{PREFIX}share/conquest_of_levidon/img/ @{PREFIX}share/conquest_of_levidon/worlds/
 	install img/*.png @{PREFIX}share/conquest_of_levidon/img/
 	install worlds/* -t @{PREFIX}share/conquest_of_levidon/worlds/

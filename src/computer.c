@@ -332,6 +332,7 @@ static int computer_map_commands(struct array_commands *restrict commands, const
 		{
 			const struct region *restrict neighbor = region->neighbors[j];
 
+			if (!neighbor) continue;
 			if (!regions_visible[neighbor->index]) continue;
 
 			if ((region->owner != PLAYER_NEUTRAL) && !allies(game, player, region->owner))
