@@ -17,10 +17,10 @@
 #include "world.h"
 #include "menu.h"
 
-#define DIRECTORY_GAME "/.medieval/"
-#define DIRECTORY_SHARED "/share/medieval/worlds/"
-#define DIRECTORY_WORLDS "/.medieval/worlds/"
-#define DIRECTORY_SAVE "/.medieval/save/"
+#define DIRECTORY_GAME "/.conquest_of_levidon/"
+#define DIRECTORY_SHARED "/share/conquest_of_levidon/worlds/"
+#define DIRECTORY_WORLDS "/.conquest_of_levidon/worlds/"
+#define DIRECTORY_SAVE "/.conquest_of_levidon/save/"
 
 static struct bytes *directories[DIRECTORIES_COUNT];
 

@@ -1,0 +1,27 @@
+Conquest of Levidon is a turn-based strategic game.
+
+-- Install --
+At the moment the game is only tested on Linux but with no or very few changes it should be able to run on any UNIX-like operating system.
+
+Required libraries:
+
+Installation steps:
+$ ./configure
+	You can use --prefix=... to change the install location
+$ make
+# make install
+
+-- Uninstall --
+
+# make uninstall
+
+For each user who has started the game, there is a directory with saved games and custom worlds.
+~/.conquest_of_levidon
+As expected, "make uninstall" will not delete these directories (in case you need them later). You can manually delete these directories, if necessary.
+
+-- Comments --
+
+The game is in early stage of development. For details about future plans, see the TODO document.
+Due to my lack of painting skills, current in-game images are very basic. I'm working on improving them.
+
+Any gameplay ideas or contributions to the graphics are welcome :)

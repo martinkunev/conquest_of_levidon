@@ -1,6 +1,6 @@
-H	name the game (?conquest of levidon)
 H	AI for troop movement on the map
 H	pawns should be smart enough to sidestep self pawns on the way
+H	levidon map
 M	clean up the code related to the end of the battle
 M	store region and garrison troops in a single variable
 M	map scrolling

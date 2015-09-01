@@ -1,5 +1,5 @@
 *.o
-src/medieval
+src/conquest_of_levidon
 src/editor
 src/generic/*
 test/check

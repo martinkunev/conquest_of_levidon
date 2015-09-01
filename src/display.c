@@ -45,7 +45,7 @@
 
 #define ARROW_LENGTH 60
 
-#define PREFIX_IMG PREFIX "share/medieval/img/"
+#define PREFIX_IMG PREFIX "share/conquest_of_levidon/img/"
 
 extern Display *display;
 extern GLXDrawable drawable;

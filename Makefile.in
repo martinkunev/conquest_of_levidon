@@ -1,6 +1,6 @@
 export CC=gcc
 export CFLAGS=-std=c99 -pthread @{CFLAGS} -I/usr/X11/include -D_BSD_SOURCE -D_DEFAULT_SOURCE -DPREFIX=\"@{PREFIX}\" -pedantic -Werror -Wstrict-aliasing -Wchar-subscripts -Wimplicit -Wsequence-point -Wwrite-strings -Wunused-variable -Wvla -Wno-pointer-sign -Wno-parentheses -Wno-unused-result
-export LDFLAGS=-pthread -L/usr/X11/lib -lm -lpng -lGL -lX11 -lxcb -lX11-xcb -lOSMesa
+export LDFLAGS=-pthread -L/usr/X11/lib -lm -lpng -lGL -lX11 -lxcb -lX11-xcb
 
 all:
 	make -C src $@
@@ -8,8 +8,8 @@ all:
 force:
 	@true
 
-medieval: force
-	make -C src medieval
+conquest_of_levidon: force
+	make -C src conquest_of_levidon
 
 editor: force
 	make -C src editor
@@ -26,12 +26,12 @@ mrproper: clean
 
 install:
 	# TODO the strip option should not be added in debug
-	install -s src/medieval @{PREFIX}bin/
-	install -d @{PREFIX}share/medieval/img/ @{PREFIX}share/medieval/worlds/
-	install img/*.png @{PREFIX}share/medieval/img/
-	install worlds/* -t @{PREFIX}share/medieval/worlds/
+	install -s src/conquest_of_levidon @{PREFIX}bin/
+	install -d @{PREFIX}share/conquest_of_levidon/img/ @{PREFIX}share/conquest_of_levidon/worlds/
+	install img/*.png @{PREFIX}share/conquest_of_levidon/img/
+	install worlds/* -t @{PREFIX}share/conquest_of_levidon/worlds/
 	# TODO ?fonts
 
 uninstall:
-	rm -f @{PREFIX}bin/medieval
-	rm -rf @{PREFIX}share/medieval/
+	rm -f @{PREFIX}bin/conquest_of_levidon
+	rm -rf @{PREFIX}share/conquest_of_levidon/
