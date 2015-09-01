@@ -349,7 +349,6 @@ static int computer_map_commands(struct array_commands *restrict commands, const
 
 				if (array_commands_expand(commands, commands->count + 1) < 0)
 					goto error;
-
 				commands->data[commands->count].region = region;
 				commands->data[commands->count].type = COMMAND_BUILD;
 				commands->data[commands->count].target.building = j;
@@ -368,7 +367,6 @@ static int computer_map_commands(struct array_commands *restrict commands, const
 
 				if (array_commands_expand(commands, commands->count + 1) < 0)
 					goto error;
-
 				commands->data[commands->count].region = region;
 				commands->data[commands->count].type = COMMAND_TRAIN;
 				commands->data[commands->count].target.unit = j;

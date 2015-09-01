@@ -29,7 +29,7 @@ void if_menu(const void *argument, const struct game *game)
 
 	struct point position;
 
-	struct box box = string_box(string, length, font);
+	struct box box = string_box(S(TITLE), &font24);
 	draw_string(S(TITLE), (screen->width_in_pixels - box.width) / 2, TITLE_Y, &font24, White);
 
 	// TODO maybe use 2 separate functions for loaded and !loaded

@@ -1276,7 +1276,7 @@ static int token_add(void *restrict context, int type, const JSON_value *value)
 				free(item);
 				return 0; // memory error
 			}
-			parent->array.data[parent->array.count - 1] = item;
+			parent->array.data[parent->array.count++] = item;
 			break;
 		case JSON_OBJECT:
 			*stack->object_value = item;
@@ -1635,7 +1635,7 @@ union json *json_array_insert(union json *restrict container, union json *restri
 {
 	if (container && value && !array_json_expand(&container->array, container->array.count + 1))
 	{
-		container->array.data[container->array.count - 1] = value;
+		container->array.data[container->array.count++] = value;
 		return container;
 	}
 	json_free(container);

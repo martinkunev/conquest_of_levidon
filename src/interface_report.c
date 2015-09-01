@@ -13,7 +13,7 @@
 #define REPORT_BEFORE_X 32
 #define REPORT_AFTER_X 416
 
-#define TITLE_Y 32
+#define LABEL_Y 32
 #define REPORT_Y 64
 
 #define MARGIN_X 40
@@ -44,8 +44,8 @@ void if_report(const void *argument, const struct game *game_)
 
 	// TODO for assault display whether the assault was successful, etc. (what is the damage to the garrison)
 
-	draw_string(S("Before the battle"), REPORT_BEFORE_X, TITLE_Y, &font12, White);
-	draw_string(S("After the battle"), REPORT_AFTER_X, TITLE_Y, &font12, White);
+	draw_string(S("Before the battle"), REPORT_BEFORE_X, LABEL_Y, &font12, White);
+	draw_string(S("After the battle"), REPORT_AFTER_X, LABEL_Y, &font12, White);
 
 	for(player = 0; player < game->players_count; ++player)
 	{

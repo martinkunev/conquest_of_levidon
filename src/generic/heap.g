@@ -13,9 +13,9 @@
 # define heap_above(a, b) ((a) >= (b))
 #endif
 
-// Called after an element changes its position in the heap (including initial push).
+// Called after an element changes its index in the heap (including initial push).
 #if !defined(heap_update)
-# define heap_update(heap, position)
+# define heap_update(heap, index)
 #endif
 
 #define NAME_CAT_EXPAND(a, b) a ## b

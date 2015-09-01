@@ -171,7 +171,7 @@ static int input_editor(int code, unsigned x, unsigned y, uint16_t modifiers, co
 
 				if (array_vertex_expand(&state->points, state->points.count + 1) < 0)
 					abort();
-				state->points.data[state->points.count - 1] = (struct vertex){x, y, index, state->region};
+				state->points.data[state->points.count++] = (struct vertex){x, y, index, state->region};
 
 				state->region_start = state->points.count;
 				state->region += 1;
@@ -181,7 +181,7 @@ static int input_editor(int code, unsigned x, unsigned y, uint16_t modifiers, co
 			if_storage_point(x, y, state->points.count);
 			if (array_vertex_expand(&state->points, state->points.count + 1) < 0)
 				abort();
-			state->points.data[state->points.count - 1] = (struct vertex){x, y, index, state->region};
+			state->points.data[state->points.count++] = (struct vertex){x, y, index, state->region};
 		}
 		return 0;
 
@@ -342,7 +342,7 @@ static void load_point(const union json *point, size_t region, struct array_vert
 	if_storage_point(x, y, points->count);
 	if (array_vertex_expand(points, points->count + 1) < 0)
 		abort();
-	points->data[points->count - 1] = (struct vertex){x, y, index, region};
+	points->data[points->count++] = (struct vertex){x, y, index, region};
 }
 
 static void load(const unsigned char *restrict buffer, size_t size, struct array_vertex *restrict points)

@@ -10,6 +10,11 @@ struct point
 	int x, y;
 };
 
+struct box
+{
+	unsigned width, height;
+};
+
 struct polygon
 {
 	size_t vertices_count;

@@ -22,11 +22,6 @@ struct polygon_draw
 	struct polygon_draw *prev, *next;
 };
 
-struct box
-{
-	unsigned width, height;
-};
-
 extern struct font font;
 
 unsigned char display_colors[][4] = {
@@ -249,7 +244,7 @@ int font_init(Display *restrict display, struct font *restrict font, const char 
 
 void font_term(Display *restrict display, struct font *restrict font)
 {
-	XUnloadFont(display, font);
+	XUnloadFont(display, font->info->fid);
 }
 
 struct box string_box(const char *string, size_t length, struct font *restrict font)
