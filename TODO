@@ -1,14 +1,12 @@
 H	AI for troop movement on the map
 H	pawns should be smart enough to sidestep self pawns on the way
 H	levidon map
-H	store region and garrison troops in a single variable (there are still bugs)
 M	clean up the code related to the end of the battle
 M	map scrolling
 M	keyboard support in various places in the interface
 M	assault garrison destruction and repair
 M	assault tower support
 M	do something when there is not enough food for all units (?kill some units)
-M	better battle animations (shooting, fighting, etc.)
 M	region population; income should be calculated as a function of the population; army recruitment should reduce population
 M	region-specific features
 M	limited number of arrows
@@ -28,22 +26,21 @@ L	implement exit game while in battle
 L	auto combat
 L	player names and flag patterns
 
+bugs / issues
+	return troops to origin regions when the battle timeouts (? looks working now)
+	computer still plays battles randomly (? should be fixed)
+	report does not handle surrender properly (? if I remember, this is fixed)
+	setting pawn destination is slower than before
+	don't allow pawns to attack their own walls (currently only gates are not attacked)
+	don't allow attacking if the attacker cannot do damage to the defender (due to weapon and armor type)
+	surrender can be abused for scouting (this should be renamed and changed)
+
 TODO ? change direction of everything to counterclockwise; currently the y axis is in the opposite direction (and the cross product is negated)
 TODO ? rename field to tile
 TODO ? redesign input functions
-TODO make it simpler to check if two players are allies
+TODO ? make it simpler to check if two players are allies
 TODO ? dynamic battlefield size
 TODO ? separate constants for BLOCKAGE_WALL and BLOCKAGE_GATE
-
-bugs
-	return troops to origin regions when the battle timeouts
-	escape in the save menu does nothing
-	computer still plays battles randomly
-	don't allow pawns to attack their own walls (currently only gates are not attacked)
-	don't allow attacking if the attacker cannot do damage to the defender (due to weapon and armor type)
-
-surrender can be abused for scouting (this should be renamed and changed)
-	report does not handle surrender properly
 
 -- interface --
 
@@ -71,6 +68,7 @@ battle
 	when two pawns from different alliances are next to each other, display red line between them (to show that they are fighting)
 	display round number and end round button
 	hide mouse pointer during animation
+	better animations (shooting, fighting, etc.)
 
 report
 	display name of the region the battle is fought for

@@ -155,7 +155,6 @@ static int region_init(struct game *restrict game, struct region *restrict regio
 	region->owner = item->integer;
 
 	region->garrison.owner = region->owner;
-	region->garrison.troops = 0;
 	region->garrison.siege = 0;
 	region->garrison.assault = 0;
 
@@ -182,7 +181,7 @@ static int region_init(struct game *restrict game, struct region *restrict regio
 
 				unit = unit_find(&name->string);
 				if (!unit) return -1;
-				if (troop_spawn(LOCATION_GARRISON, &region->garrison.troops, unit, count->integer, owner->integer)) return -1;
+				if (troop_spawn(LOCATION_GARRISON, &region->troops, unit, count->integer, owner->integer)) return -1;
 			}
 		}
 
@@ -460,17 +459,20 @@ static union json *world_save_point(struct point p)
 	return point;
 }
 
-static union json *world_save_troops(const struct troop *troop)
+static union json *world_save_troops(const struct troop *troop, const struct region *restrict location)
 {
 	union json *troops = json_array();
-	while (troop)
+	for(; troop; troop = troop->_next)
 	{
-		union json *t = json_array();
+		union json *t;
+
+		if (troop->location != location) continue;
+
+		t = json_array();
 		t = json_array_insert(t, json_string(troop->unit->name, troop->unit->name_length));
 		t = json_array_insert(t, json_integer(troop->count));
 		t = json_array_insert(t, json_integer(troop->owner));
 		troops = json_array_insert(troops, t);
-		troop = troop->_next;
 	}
 	return troops;
 }
@@ -543,13 +545,13 @@ union json *world_save(const struct game *restrict game)
 			region = json_object_insert(region, S("build_progress"), json_integer(game->regions[i].build_progress));
 		}
 
-		region = json_object_insert(region, S("troops"), world_save_troops(game->regions[i].troops));
+		region = json_object_insert(region, S("troops"), world_save_troops(game->regions[i].troops, game->regions + i));
 
 		if (garrison_info(game->regions + i))
 		{
 			union json *garrison = json_object();
 			garrison = json_object_insert(garrison, S("owner"), json_integer(game->regions[i].garrison.owner));
-			garrison = json_object_insert(garrison, S("troops"), world_save_troops(game->regions[i].garrison.troops));
+			garrison = json_object_insert(garrison, S("troops"), world_save_troops(game->regions[i].troops, LOCATION_GARRISON));
 			garrison = json_object_insert(garrison, S("siege"), json_integer(game->regions[i].garrison.siege));
 			garrison = json_object_insert(garrison, S("assault"), json_boolean(game->regions[i].garrison.assault));
 			region = json_object_insert(region, S("garrison"), garrison);

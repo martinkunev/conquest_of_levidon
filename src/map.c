@@ -54,6 +54,57 @@ int troop_spawn(struct region *restrict region, struct troop **restrict troops, 
 	return 0;
 }
 
+// Sets region owner to the owner of a troop chosen at random.
+void region_conquer(struct region *restrict region, size_t troops_count)
+{
+	struct troop *troop;
+	unsigned char owner_troop = random() % troops_count;
+
+	for(troop = region->troops; owner_troop; troop = troop->_next)
+		owner_troop -= 1;
+
+	region->owner = troop->owner;
+
+	// If there are no troops in the garrison, it is conquered by the owner of the region.
+	for(troop = region->troops; troop; troop = troop->_next)
+		if (troop->location == LOCATION_GARRISON)
+			return;
+	region->garrison.owner = region->owner;
+}
+
+void region_siege_continue(struct region *restrict region)
+{
+	struct troop *troop, *next;
+	const struct garrison_info *restrict garrison = garrison_info(region);
+
+	region->garrison.siege += 1;
+
+	// If there are no more provisions in the garrison, kill the troops in it.
+	if (region->garrison.siege > garrison->provisions) 
+	{
+		for(troop = region->troops; troop; troop = next)
+		{
+			next = troop->_next;
+			if (troop->location == LOCATION_GARRISON)
+			{
+				troop_detach(&region->troops, troop);
+				free(troop);
+			}
+		}
+	}
+	else
+	{
+		for(troop = region->troops; troop; troop = troop->_next)
+			if (troop->location == LOCATION_GARRISON)
+				return;
+	}
+
+	// There are no more troops in the garrison.
+	// The siege ends. The garrison is conquered by the owner of the region.
+	region->garrison.siege = 0;
+	region->garrison.owner = region->owner;
+}
+
 // Returns whether the polygons share a border. Stores the border points in first and second (in the order of polygon a).
 int polygons_border(const struct polygon *restrict a, const struct polygon *restrict b, struct point *restrict first, struct point *restrict second)
 {

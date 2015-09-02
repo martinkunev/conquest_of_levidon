@@ -107,7 +107,7 @@ struct region
 		// enum {East, NorthEast, North, NorthWest, West, SouthWest, South, SouthEast} position;
 
 		unsigned char owner;
-		struct troop *troops;
+		//struct troop *troops;
 
 		unsigned siege;
 
@@ -167,6 +167,9 @@ void troop_detach(struct troop **troops, struct troop *troop);
 void troop_remove(struct troop **troops, struct troop *troop);
 
 int troop_spawn(struct region *restrict region, struct troop **restrict troops, const struct unit *restrict unit, unsigned count, unsigned char owner);
+
+void region_conquer(struct region *restrict region, size_t troops_count);
+void region_siege_continue(struct region *restrict region);
 
 int polygons_border(const struct polygon *restrict a, const struct polygon *restrict b, struct point *restrict first, struct point *restrict second);
 

@@ -836,7 +836,6 @@ static void display_troop_destination(struct point p0, struct point p1)
 
 static void if_map_region(const struct region *region, const struct state_map *state, const struct game *game)
 {
-	unsigned state_alliance = game->players[state->player].alliance;
 	int siege = (region->owner != region->garrison.owner);
 
 	const struct troop *troop;
@@ -882,17 +881,36 @@ static void if_map_region(const struct region *region, const struct state_map *s
 				color_text = Black;
 
 				moving = (troop->move != troop->location);
+
+				// Display troop destination if necessary.
+				if (moving && (!state->troop || (troop == state->troop)))
+				{
+					struct point p0, p1;
+					if (polygons_border(region->location, troop->move->location, &p0, &p1)) // TODO this is slow; don't do it every time
+					{
+						display_troop_destination(p0, p1);
+					}
+					else
+					{
+						// TODO do something better
+						write(2, S("Neighboring regions have no common border\n"));
+					}
+				}
 			}
-			else if (game->players[troop->owner].alliance == state_alliance)
+			else if (allies(game, troop->owner, state->player))
 			{
+				if (troop->location == LOCATION_GARRISON) continue;
+
 				if (!other_count) fill_rectangle(PANEL_X, object_group[TroopOther].top - 2, PANEL_WIDTH, 2 + object_group[TroopOther].height + 12 + 2, Ally);
 				x = other_count++;
 				object = TroopOther;
 				offset = state->other_offset;
 				color_text = White;
 			}
-			else if (region->garrison.owner == state->player)
+			else
 			{
+				if (troop->location == LOCATION_GARRISON) continue;
+
 				if (!other_count) fill_rectangle(PANEL_X, object_group[TroopOther].top - 2, PANEL_WIDTH, 2 + object_group[TroopOther].height + 12 + 2, Enemy);
 				x = other_count++;
 				object = TroopOther;
@@ -907,57 +925,6 @@ static void if_map_region(const struct region *region, const struct state_map *s
 				display_troop(troop->unit->index, position.x, position.y, Player + troop->owner, color_text, troop->count);
 				if (moving) image_draw(&image_movement, position.x, position.y);
 				if (troop == state->troop) draw_rectangle(position.x - 1, position.y - 1, object_group[object].width + 2, object_group[object].height + 2, White);
-			}
-
-			// Draw the destination of each moving troop owned by current player.
-			if ((troop->owner == state->player) && (!state->troop || (troop == state->troop)) && troop->move && (troop->move != region))
-			{
-				struct point p0, p1;
-				if (polygons_border(region->location, troop->move->location, &p0, &p1)) // TODO this is slow; don't do it every time
-				{
-					display_troop_destination(p0, p1);
-				}
-				else
-				{
-					// TODO do something better
-					write(2, S("Neighboring regions have no common border\n"));
-				}
-			}
-		}
-		for(troop = region->garrison.troops; troop; troop = troop->_next)
-		{
-			int moving;
-
-			if (troop->owner != state->player) continue;
-			if (troop->move == LOCATION_GARRISON) continue;
-
-			if (!self_count) fill_rectangle(PANEL_X, object_group[TroopSelf].top - 2, PANEL_WIDTH, 2 + object_group[TroopSelf].height + 12 + 2, Self);
-			x = self_count++;
-			offset = state->self_offset;
-			moving = (troop->move != region);
-
-			// Draw troops that are visible on the screen.
-			if ((x >= offset) && (x < offset + TROOPS_VISIBLE))
-			{
-				struct point position = if_position(TroopSelf, x - offset);
-				display_troop(troop->unit->index, position.x, position.y, Player + troop->owner, Black, troop->count);
-				if (moving) image_draw(&image_movement, position.x, position.y);
-				if (troop == state->troop) draw_rectangle(position.x - 1, position.y - 1, object_group[TroopSelf].width + 2, object_group[TroopSelf].height + 2, White);
-			}
-
-			// Draw the destination of each moving troop owned by current player.
-			if ((troop->owner == state->player) && (!state->troop || (troop == state->troop)) && troop->move && (troop->move != region))
-			{
-				struct point p0, p1;
-				if (polygons_border(region->location, troop->move->location, &p0, &p1)) // TODO this is slow; don't do it every time
-				{
-					display_troop_destination(p0, p1);
-				}
-				else
-				{
-					// TODO do something better
-					write(2, S("Neighboring regions have no common border\n"));
-				}
 			}
 		}
 
@@ -978,17 +945,13 @@ static void if_map_region(const struct region *region, const struct state_map *s
 				if (allies(game, region->garrison.owner, state->player))
 				{
 					i = 0;
-					for(troop = region->garrison.troops; troop; troop = troop->_next)
-					{
-						if ((troop->owner == state->player) && (troop->move != LOCATION_GARRISON)) continue;
-
-						struct point position = if_position(TroopGarrison, i);
-						display_troop(troop->unit->index, position.x, position.y, Player + troop->owner, Black, troop->count);
-						i += 1;
-					}
 					for(troop = region->troops; troop; troop = troop->_next)
 					{
-						if ((troop->owner != state->player) || (troop->move != LOCATION_GARRISON)) continue;
+						if (troop->owner == state->player)
+						{
+							if (troop->move != LOCATION_GARRISON) continue;
+						}
+						else if (troop->location != LOCATION_GARRISON) continue;
 
 						struct point position = if_position(TroopGarrison, i);
 						display_troop(troop->unit->index, position.x, position.y, Player + troop->owner, Black, troop->count);
@@ -1002,8 +965,9 @@ static void if_map_region(const struct region *region, const struct state_map *s
 					char buffer[32], *end; // TODO make sure this is enough
 
 					unsigned count = 0;
-					for(troop = region->garrison.troops; troop; troop = troop->_next)
-						count += troop->count;
+					for(troop = region->troops; troop; troop = troop->_next)
+						if (troop->location == LOCATION_GARRISON)
+							count += troop->count;
 					count = ((count + 5) / 10) * 10;
 
 					end = format_bytes(buffer, S("about "));
@@ -1020,17 +984,10 @@ static void if_map_region(const struct region *region, const struct state_map *s
 					for(i = 0; i < provisions; ++i)
 						image_draw(&image_food, object_group[TroopGarrison].right + 9, object_group[TroopGarrison].bottom - (i + 1) * image_food.height);
 				}
-			}
 
-			if (region->garrison.assault && (state->player == region->owner)) // current player is doing an assault
-			{
-				i = 0;
-				for(troop = region->garrison.troops; troop; troop = troop->_next)
-				{
-					struct point position = if_position(TroopGarrison, i);
-					image_draw(&image_assault, position.x, position.y);
-					i += 1;
-				}
+				// If the current player is doing an assault, display indicator.
+				if (region->garrison.assault && (state->player == region->owner))
+					image_draw(&image_assault, object_group[TroopGarrison].left, object_group[TroopGarrison].top); // TODO choose a better indicator
 			}
 		}
 	}
@@ -1139,16 +1096,18 @@ void if_map(const void *argument, const struct game *game)
 		// Remember income and expenses.
 		if (region->owner == state->player) region_income(region, &income);
 		for(troop = region->troops; troop; troop = troop->_next)
-			if (troop->owner == state->player)
+		{
+			if (troop->owner != state->player) continue;
+			if (troop->location == LOCATION_GARRISON) continue;
+
+			if (region->owner != region->garrison.owner) // Troops expenses are covered by another region. Double expenses.
 			{
-				if (region->owner != region->garrison.owner)
-				{
-					struct resources expense;
-					resource_multiply(&expense, &troop->unit->expense, 2);
-					resource_add(&expenses, &expense);
-				}
-				else resource_add(&expenses, &troop->unit->expense);
+				struct resources expense;
+				resource_multiply(&expense, &troop->unit->expense, 2);
+				resource_add(&expenses, &expense);
 			}
+			else resource_add(&expenses, &troop->unit->expense);
+		}
 	}
 
 	// Draw region borders.
@@ -1186,17 +1145,17 @@ void if_map(const void *argument, const struct game *game)
 				count_enemies = 0;
 
 				for(troop = region->troops; troop; troop = troop->_next)
-					if ((troop->owner == state->player) && (troop->move == LOCATION_GARRISON))
-						count_self += troop->count;
-				for(troop = region->garrison.troops; troop; troop = troop->_next)
 				{
 					if (troop->owner == state->player)
 					{
 						if (troop->move == LOCATION_GARRISON)
 							count_self += troop->count;
 					}
-					else if (allies(game, troop->owner, state->player)) count_allies += troop->count;
-					else count_enemies += troop->count;
+					else if (troop->location == LOCATION_GARRISON)
+					{
+						if (allies(game, troop->owner, state->player)) count_allies += troop->count;
+						else count_enemies += troop->count;
+					}
 				}
 
 				if_map_troops(location_x + image->width + HEALTH_BAR_MARGIN, location_y + image->height, count_self, count_allies, count_enemies);
@@ -1223,12 +1182,12 @@ void if_map(const void *argument, const struct game *game)
 				if (troop->move != LOCATION_GARRISON)
 					count_self += troop->count;
 			}
-			else if (allies(game, troop->owner, state->player)) count_allies += troop->count;
-			else count_enemies += troop->count;
+			else if (troop->location != LOCATION_GARRISON)
+			{
+				if (allies(game, troop->owner, state->player)) count_allies += troop->count;
+				else count_enemies += troop->count;
+			}
 		}
-		for(troop = region->garrison.troops; troop; troop = troop->_next)
-			if ((troop->owner == state->player) && (troop->move != LOCATION_GARRISON))
-				count_self += troop->count;
 		if_map_troops(MAP_X + region->center.x, MAP_Y + region->center.y, count_self, count_allies, count_enemies);
 	}
 

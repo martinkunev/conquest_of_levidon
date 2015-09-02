@@ -366,18 +366,11 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 	for(i = 0; i < PLAYERS_LIMIT; ++i) battle->players[i].pawns_count = 0;
 	for(troop = region->troops; troop; troop = troop->_next)
 	{
+		if (troop->location == LOCATION_GARRISON) continue;
 		if (assault && (troop->move != troop->location)) continue; // troops coming to the region don't participate in the assault
 
 		battle->players[troop->owner].pawns_count += 1;
 		pawns_count += 1;
-	}
-	if (assault)
-	{
-		for(troop = region->garrison.troops; troop; troop = troop->_next)
-		{
-			battle->players[troop->owner].pawns_count += 1;
-			pawns_count += 1;
-		}
 	}
 
 	// Allocate memory for the pawns array and the player-specific pawns arrays.
@@ -407,9 +400,7 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 	// Use the counts to initialize offsets in the pawns array.
 	unsigned count[1 + UNIT_SPEED_LIMIT] = {0}, offset[1 + UNIT_SPEED_LIMIT];
 	for(troop = region->troops; troop; troop = troop->_next)
-		count[troop->unit->speed] += 1;
-	if (assault)
-		for(troop = region->garrison.troops; troop; troop = troop->_next)
+		if (assault || (troop->location != LOCATION_GARRISON))
 			count[troop->unit->speed] += 1;
 	offset[UNIT_SPEED_LIMIT] = 0;
 	i = UNIT_SPEED_LIMIT;
@@ -418,7 +409,8 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 	// Initialize a pawn for each troop.
 	for(troop = region->troops; troop; troop = troop->_next)
 	{
-		if (assault && (troop->move != troop->location)) continue; // troops coming to the region don't participate in the assault
+		if (!assault && (troop->location == LOCATION_GARRISON)) continue; // garrison troops don't participate in open battle
+		if (assault && (troop->move != troop->location)) continue; // troops arriving at the region don't participate in assault
 
 		i = offset[troop->unit->speed]++;
 
@@ -429,27 +421,10 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 
 		pawns[i].action = 0;
 
-		pawns[i].startup = 0; // this will be initialized later
+		if (troop->location == LOCATION_GARRISON) pawns[i].startup = NEIGHBOR_GARRISON;
+		else pawns[i].startup = 0; // this will be initialized later
 
 		battle->players[troop->owner].pawns[pawn_offset[troop->owner]++] = pawns + i;
-	}
-	if (assault)
-	{
-		for(troop = region->garrison.troops; troop; troop = troop->_next)
-		{
-			i = offset[troop->unit->speed]++;
-
-			pawns[i].troop = troop;
-			pawns[i].count = troop->count;
-			pawns[i].dead = 0;
-			pawns[i].hurt = 0;
-
-			pawns[i].action = 0;
-
-			pawns[i].startup = NEIGHBOR_GARRISON;
-
-			battle->players[troop->owner].pawns[pawn_offset[troop->owner]++] = pawns + i;
-		}
 	}
 
 	battle->region = region;
