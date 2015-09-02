@@ -685,8 +685,8 @@ finally:
 	return traverse_info;
 }
 
-// Returns whether the pawn can reach the target. On error, returns negative error code.
-int path_distance(const struct pawn *restrict pawn, struct point target, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles, double *restrict distance)
+// Calculates the distance between origin and target and stores it in distance. On error, returns negative error code.
+int path_distance(struct point origin, struct point target, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles, double *restrict distance)
 {
 	ssize_t vertex_target, vertex_origin;
 	struct path_node *traverse_info;
@@ -695,22 +695,21 @@ int path_distance(const struct pawn *restrict pawn, struct point target, struct 
 	vertex_target = graph_insert(graph, obstacles, target);
 	if (vertex_target < 0) return vertex_target;
 
-	vertex_origin = graph_insert(graph, obstacles, pawn->moves[pawn->moves_count - 1].location);
+	vertex_origin = graph_insert(graph, obstacles, origin);
 	if (vertex_origin < 0)
 	{
 		graph_remove(graph, vertex_target);
 		return vertex_origin;
 	}
 
-	// Look for a path from the pawn's final location to the target vector.
+	// Look for a path from the pawn's final location to the target vertex.
 	traverse_info = path_find(graph, vertex_target);
 	if (!traverse_info)
 	{
 		status = ERROR_MEMORY;
 		goto finally;
 	}
-	*distance = (pawn->moves[pawn->moves_count - 1].time * pawn->troop->unit->speed); // TODO this is ugly
-	*distance += traverse_info[vertex_target].distance;
+	*distance = traverse_info[vertex_target].distance;
 
 	free(traverse_info);
 	status = 0;

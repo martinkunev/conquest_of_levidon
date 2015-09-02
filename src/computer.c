@@ -43,8 +43,7 @@ struct pawn_command
 	struct move moves[];
 };
 
-//enum {SEARCH_TRIES = 1048576};
-enum {SEARCH_TRIES = 256};
+enum {SEARCH_TRIES = 1024};
 
 static const double desire_buildings[] =
 {
@@ -56,7 +55,7 @@ static const double desire_buildings[] =
 	[BuildingBarracks] = 0.8,
 	[BuildingArcheryRange] = 0.8,
 	[BuildingStables] = 0.4,
-	[BuildingWatchTower] = 0.9,
+	[BuildingWatchTower] = 1.0,
 	[BuildingPalisade] = 0.6,
 	[BuildingFortress] = 0.4,
 	[BuildingWorkshop] = 0.3,
@@ -76,7 +75,7 @@ static const double desire_units[] =
 
 static double unit_importance(const struct battle *restrict battle, const struct unit *restrict unit)
 {
-	// TODO better implementation for this
+	// TODO more sophisticated logic here
 	// TODO importance should depend on battle obstacles (e.g. the more they are, the more important is battering ram)
 
 	return unit->health + unit->melee.damage * 2 + unit->ranged.damage * 3;
@@ -89,15 +88,6 @@ static void state_change(const struct game *restrict game, const struct battle *
 
 	struct point neighbors[4];
 	unsigned neighbors_count = 0;
-
-	// int path_distance(struct pawn *restrict pawn, struct point target, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles, double *restrict distance);
-
-	/* TODO support actions other than just move
-	int combat_order_fight(const struct game *restrict game, const struct battle *restrict battle, const struct obstacles *restrict obstacles, struct pawn *restrict fighter, struct pawn *restrict victim);
-	int combat_order_assault(const struct game *restrict game, const struct battle *restrict battle, const struct obstacles *restrict obstacles, struct pawn *restrict fighter, struct point target);
-	int combat_order_shoot(const struct game *restrict game, const struct battle *restrict battle, const struct obstacles *restrict obstacles, struct pawn *restrict shooter, struct point target);
-	int movement_queue(struct pawn *restrict pawn, struct point target, struct adjacency_list *restrict nodes, const struct obstacles *restrict obstacles);
-	*/
 
 	target = (struct point){location.x - 1, location.y};
 	if ((target.x >= 0) && (speed >= reachable[target.y][target.x]) && battlefield_passable(game, &battle->field[target.y][target.x], pawn->troop->owner))
@@ -231,10 +221,9 @@ static double state_assess(const struct game *restrict game, struct battle *rest
 			if (!pawn->count) continue;
 			if (allies(game, other->troop->owner, player)) continue;
 
-			status = path_distance(pawn, other->moves[0].location, graph, obstacles, &distance);
+			status = path_distance(pawn->moves[pawn->moves_count - 1].location, other->moves[0].location, graph, obstacles, &distance);
 			if (status < 0) ; // TODO memory error
 			if (distance == INFINITY) continue; // TODO this information is available through reachable
-			//if (reachable[i][other->moves[0].location.y][other->moves[0].location.x] == INFINITY) continue;
 			if (distance <= (1.0 + FLOAT_PRECISION)) continue; // ignore neighbors
 
 			rating += unit_importance(battle, other->troop->unit) * pawn->troop->unit->speed / distance;
