@@ -115,7 +115,7 @@ wait:
 				default: // runtime error
 					return status;
 
-				case INPUT_DONE:
+				case INPUT_FINISH:
 					return 0;
 
 				case INPUT_NOTME:

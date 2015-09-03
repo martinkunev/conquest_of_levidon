@@ -1,4 +1,11 @@
-enum {INPUT_NOTME = 1, INPUT_DONE, INPUT_IGNORE, INPUT_TERMINATE};
+enum
+{
+	INPUT_HANDLED = 0,	// event handled
+	INPUT_NOTME,		// pass the event to the next handler
+	INPUT_IGNORE,		// ignore event
+	INPUT_FINISH,		// don't wait for more input
+	INPUT_TERMINATE,	// user requests termination
+};
 
 #define EVENT_MOUSE_LEFT -1
 #define EVENT_MOUSE_RIGHT -3

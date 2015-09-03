@@ -12,6 +12,8 @@
 #include "menu.h"
 #include "world.h"
 
+#define ERROR_STRING_SAVE "Unable to save game"
+
 // TODO handle long filenames properly
 
 extern unsigned SCREEN_WIDTH, SCREEN_HEIGHT;
@@ -62,7 +64,7 @@ static int input_none(int code, unsigned x, unsigned y, uint16_t modifiers, cons
 		return 0;
 
 	case XK_Return:
-		if (state->name_size) return INPUT_DONE;
+		if (state->name_size) return INPUT_FINISH;
 		return 0;
 
 	case 'q':
@@ -135,14 +137,36 @@ static int input_none(int code, unsigned x, unsigned y, uint16_t modifiers, cons
 
 static int input_menu(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
 {
-	//struct state *state = argument;
+	struct state *state = argument;
+
+	int status;
 
 	// Ignore input if control, alt or super is pressed.
 	// TODO is this necessary?
 	if (modifiers & (XCB_MOD_MASK_CONTROL | XCB_MOD_MASK_1 | XCB_MOD_MASK_4)) return INPUT_NOTME;
 
-	if (code == XK_Escape) return INPUT_DONE;
-	else return INPUT_NOTME;
+	switch (code)
+	{
+	case XK_Return:
+		break;
+	case XK_Escape:
+		return INPUT_FINISH;
+	default:
+		return INPUT_NOTME;
+	}
+
+	status = menu_save(state->directory, state->name, state->name_size, game);
+	if (status == ERROR_MEMORY) return ERROR_MEMORY;
+	if (!status) return INPUT_FINISH;
+
+	state->error = ERROR_STRING_SAVE;
+	state->error_size = sizeof(ERROR_STRING_SAVE) - 1;
+
+	return 0;
+
+	/*state.name_size = 0;
+	state.name_position = 0;
+	state.world_index = -1;*/
 }
 
 static int input_tab(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
@@ -208,7 +232,7 @@ static int input_setup(int code, unsigned x, unsigned y, uint16_t modifiers, con
 	switch (code)
 	{
 	case XK_Return:
-		return INPUT_DONE;
+		return INPUT_FINISH;
 	case XK_Escape:
 		return INPUT_TERMINATE;
 	default:
@@ -311,36 +335,31 @@ int input_load(struct game *restrict game)
 	// TODO select some world by default (maybe the newest for saves and the oldest for other worlds)
 	//#define WORLD_DEFAULT "worlds/balkans"
 
+retry:
+	state.loaded = 0;
+
 	while (1)
 	{
-		state.loaded = 0;
+		status = input_local(areas, sizeof(areas) / sizeof(*areas), if_load, game, &state);
+		if (status) goto finally;
 
-		while (1)
-		{
-			status = input_local(areas, sizeof(areas) / sizeof(*areas), if_menu, game, &state);
-			if (status) goto finally;
+		status = menu_load(state.directory, state.name, state.name_size, game);
+		if (status == ERROR_MEMORY) goto finally;
+		if (!status) break;
 
-			status = menu_load(state.directory, state.name, state.name_size, game);
-			if (status == ERROR_MEMORY) goto finally;
-			if (!status) break;
+		// TODO indicate the error with something in red
+		state.name_size = 0;
+		state.name_position = 0;
+		state.world_index = -1;
+	}
 
-			// TODO indicate the error with something in red
-			state.name_size = 0;
-			state.name_position = 0;
-			state.world_index = -1;
-		}
+	state.loaded = 1;
 
-		state.loaded = 1;
-
-		status = input_local(areas_setup, sizeof(areas_setup) / sizeof(*areas_setup), if_menu, game, &state);
-		if (status == ERROR_CANCEL)
-		{
-			world_unload(game);
-			continue;
-		}
-		else if (status) goto finally;
-
-		break;
+	status = input_local(areas_setup, sizeof(areas_setup) / sizeof(*areas_setup), if_load, game, &state);
+	if (status == ERROR_CANCEL)
+	{
+		world_unload(game);
+		goto retry;
 	}
 
 finally:
@@ -391,22 +410,7 @@ int input_save(const struct game *restrict game)
 
 	// TODO ? generate some filename
 
-	while (1)
-	{
-		status = input_local(areas, sizeof(areas) / sizeof(*areas), if_menu, game, &state);
-		if (status < 0) goto finally;
-
-		status = menu_save(state.directory, state.name, state.name_size, game);
-		if (status == ERROR_MEMORY) goto finally;
-		if (!status) break;
-
-		// TODO indicate the error with something in red
-		state.name_size = 0;
-		state.name_position = 0;
-		state.world_index = -1;
-	}
-
-	// TODO customize player types, alliances, etc.
+	status = input_local(areas, sizeof(areas) / sizeof(*areas), if_save, game, &state);
 
 finally:
 	menu_free(state.worlds);

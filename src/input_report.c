@@ -17,7 +17,7 @@ static int input_end(int code, unsigned x, unsigned y, uint16_t modifiers, const
 	switch (code)
 	{
 	case XK_Escape:
-		return INPUT_DONE;
+		return INPUT_FINISH;
 
 	default:
 		return INPUT_IGNORE;

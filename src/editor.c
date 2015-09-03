@@ -150,7 +150,7 @@ static int input_editor(int code, unsigned x, unsigned y, uint16_t modifiers, co
 		return INPUT_IGNORE;
 
 	case 'q':
-		return INPUT_DONE;
+		return INPUT_FINISH;
 
 	case EVENT_MOUSE_LEFT:
 		{

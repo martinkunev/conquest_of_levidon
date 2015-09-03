@@ -55,7 +55,7 @@ static int input_round(int code, unsigned x, unsigned y, uint16_t modifiers, con
 	case 'q': // surrender
 		battle->players[state->player].alive = 0;
 	case 'n':
-		return INPUT_DONE;
+		return INPUT_FINISH;
 	}
 }
 

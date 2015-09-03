@@ -298,6 +298,7 @@ static int play(struct game *restrict game)
 			troops = 0;
 
 			// Set the location of each troop and count the troops in the region.
+			// TODO only do this after a battle?
 			for(troop = region->troops; troop; troop = troop->_next)
 			{
 				// Remove dead troops.
@@ -418,7 +419,7 @@ int main(int argc, char *argv[])
 
 	if_display();
 
-	while (1)
+	do
 	{
 		status = input_load(&game);
 		if (status < 0) return -1; // TODO
@@ -428,11 +429,12 @@ int main(int argc, char *argv[])
 		if_display();
 
 		status = play(&game);
-		if (status < 0) return -1; // TODO
 
 		if_storage_term();
 		world_unload(&game);
-	}
+
+		if (status && (status != ERROR_CANCEL)) return status;
+	} while (status)
 
 	if_term();
 

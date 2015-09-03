@@ -880,7 +880,7 @@ static void if_map_region(const struct region *region, const struct state_map *s
 				offset = state->self_offset;
 				color_text = Black;
 
-				moving = (troop->move != troop->location);
+				moving = (troop->move != region);
 
 				// Display troop destination if necessary.
 				if (moving && (!state->troop || (troop == state->troop)))

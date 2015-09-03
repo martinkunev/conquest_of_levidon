@@ -11,6 +11,9 @@ struct state
 	size_t name_size;
 	size_t name_position;
 
+	const char *error;
+	size_t error_size;
+
 	int loaded;
 };
 

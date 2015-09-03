@@ -29,7 +29,7 @@ static int input_turn(int code, unsigned x, unsigned y, uint16_t modifiers, cons
 		return input_save(game);
 
 	case 'n':
-		return INPUT_DONE;
+		return INPUT_FINISH;
 	}
 }
 
