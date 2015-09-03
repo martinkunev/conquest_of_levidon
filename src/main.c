@@ -160,7 +160,7 @@ static int play(struct game *restrict game)
 	unsigned char alliance;
 	uint16_t alliances; // this limits the alliance numbers to the number of bits
 
-	unsigned char troops;
+	unsigned troops_count;
 
 	struct resources income;
 	struct resources expenses[PLAYERS_LIMIT];
@@ -176,7 +176,6 @@ static int play(struct game *restrict game)
 		memset(alive, 0, sizeof(alive));
 
 		// Ask each player to perform map actions.
-		// TODO implement Computer and Remote
 		for(player = 0; player < game->players_count; ++player)
 			switch (game->players[player].type)
 			{
@@ -195,7 +194,6 @@ static int play(struct game *restrict game)
 			}
 
 		// Perform region-specific actions.
-
 		for(index = 0; index < game->regions_count; ++index)
 		{
 			region = game->regions + index;
@@ -246,6 +244,7 @@ static int play(struct game *restrict game)
 			}
 		}
 
+		// Perform region-specific actions related to battles.
 		for(index = 0; index < game->regions_count; ++index)
 		{
 			int assault = 0;
@@ -295,33 +294,34 @@ static int play(struct game *restrict game)
 			// If there are troops of more than one alliance, return any troop owned by enemy of the region's owner to its previous location.
 			// If there are troops of just one alliance and the region's owner is not in it, change region's owner to the owner of a random troop.
 
-			troops = 0;
+			if (winner != WINNER_NOBODY) // there has been a battle
+			{
+				for(troop = region->troops; troop; troop = troop->_next)
+				{
+					// Remove dead troops.
+					if (!troop->count)
+					{
+						troop_detach(&region->troops, troop);
+						free(troop);
+						continue;
+					}
+
+					// Move alive troops that lost the battle back to their original location.
+					if ((game->players[troop->owner].alliance != winner) && !assault)
+					{
+						troop_detach(&region->troops, troop);
+						troop_attach(&troop->location->troops, troop);
+						troop->move = troop->location;
+					}
+				}
+			}
 
 			// Set the location of each troop and count the troops in the region.
-			// TODO only do this after a battle?
+			troops_count = 0;
 			for(troop = region->troops; troop; troop = troop->_next)
 			{
-				// Remove dead troops.
-				if (!troop->count)
-				{
-					troop_detach(&region->troops, troop);
-					free(troop);
-					continue;
-				}
-
-				if (game->players[troop->owner].alliance == winner)
-				{
-					// Set troop location to the current region.
-					troop->location = troop->move;
-					troops += 1;
-				}
-				else if (!assault)
-				{
-					// Move the troop back to its original location.
-					troop_detach(&region->troops, troop);
-					troop_attach(&troop->location->troops, troop);
-					troop->move = troop->location;
-				}
+				troop->location = troop->move;
+				troops_count += 1;
 			}
 
 			if (winner != WINNER_NOBODY) // there has been a battle
@@ -353,8 +353,8 @@ static int play(struct game *restrict game)
 					}
 					else
 					{
-						// assert(troops);
-						region_conquer(region, troops);
+						// assert(troops_count);
+						region_conquer(region, troops_count);
 					}
 
 					region->garrison.siege = 0;
