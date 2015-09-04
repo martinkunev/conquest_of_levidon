@@ -327,14 +327,22 @@ static void if_map_region(const struct region *region, const struct state_map *s
 		// Display building information.
 		// Construct button is displayed if the following conditions are satisfied:
 		// * current player owns the region
+		// * the building is not built
 		// * building requirements are satisfied
 		// * there is no siege
-		fill_rectangle(object_group[Building].left, object_group[Building].top, object_group[Building].span_x, object_group[Building].span_y, Black);
 		for(i = 0; i < buildings_count; ++i)
 		{
 			struct point position = if_position(Building, i);
-			if (region_built(region, i)) image_draw(image_buildings + i, position.x, position.y);
-			else if ((state->player == region->owner) && region_building_available(region, buildings[i]) && !siege) image_draw(image_buildings_gray + i, position.x, position.y);
+			if (region_built(region, i))
+			{
+				draw_rectangle(position.x - 1, position.y - 1, image_buildings[i].width + 2, image_buildings[i].height + 2, Black);
+				image_draw(image_buildings + i, position.x, position.y);
+			}
+			else if ((state->player == region->owner) && region_building_available(region, buildings[i]) && !siege)
+			{
+				draw_rectangle(position.x - 1, position.y - 1, image_buildings[i].width + 2, image_buildings[i].height + 2, Black);
+				image_draw(image_buildings_gray + i, position.x, position.y);
+			}
 		}
 
 		// Display troops in the region.
