@@ -2,6 +2,11 @@
 
 #include <X11/keysym.h>
 
+#define GL_GLEXT_PROTOTYPES
+
+#include <GL/glx.h>
+#include <GL/glext.h>
+
 #include <xcb/xcb.h>
 
 #include "errors.h"
@@ -12,6 +17,9 @@ extern xcb_connection_t *connection;
 extern KeySym *keymap;
 extern int keysyms_per_keycode;
 extern int keycode_min, keycode_max;
+
+extern Display *display;
+extern GLXDrawable drawable;
 
 static int is_modifier(int code)
 {
@@ -32,6 +40,14 @@ static int is_modifier(int code)
 	case XK_Num_Lock:
 		return 1;
 	}
+}
+
+static void input_display(void (*if_display)(const void *, const struct game *), const struct game *restrict game, void *state)
+{
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	if_display(state, game);
+	glFlush();
+	glXSwapBuffers(display, drawable);
 }
 
 // ERROR_CANCEL - user-specified termination

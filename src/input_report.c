@@ -4,13 +4,12 @@
 #include "base.h"
 #include "format.h"
 #include "map.h"
+#include "interface.h"
 #include "input.h"
 #include "input_report.h"
 #include "interface_report.h"
 #include "pathfinding.h"
 #include "battle.h"
-
-extern unsigned SCREEN_WIDTH, SCREEN_HEIGHT;
 
 static int input_end(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
 {

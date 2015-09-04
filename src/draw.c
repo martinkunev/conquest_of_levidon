@@ -2,7 +2,6 @@
 #include <math.h>
 
 #define GL_GLEXT_PROTOTYPES
-
 #include <GL/glx.h>
 #include <GL/glext.h>
 
@@ -14,6 +13,8 @@
 #define FRONT_RADIUS 2 /* radius of the front of the arrow (behind the head) */
 #define HEAD_RADIUS 5 /* radius of the head of the arrow */
 #define HEAD_LENGTH 10 /* length of the head of the arrow */
+
+extern Display *display;
 
 struct polygon_draw
 {
@@ -28,6 +29,7 @@ unsigned char display_colors[][4] = {
 	[White] = {255, 255, 255, 255},
 	[Gray] = {128, 128, 128, 255},
 	[Black] = {0, 0, 0, 255},
+	[Error] = {255, 0, 0, 255},
 	[Unexplored] = {64, 64, 64, 128},
 	[Progress] = {96, 96, 96, 160},
 	[Select] = {192, 192, 0, 255},
@@ -222,7 +224,7 @@ void display_arrow(struct point from, struct point to, int offset_x, int offset_
 	glEnd();
 }
 
-int font_init(Display *restrict display, struct font *restrict font, const char *restrict name)
+int font_init(struct font *restrict font, const char *restrict name)
 {
 	unsigned first, last;
 
@@ -242,7 +244,7 @@ int font_init(Display *restrict display, struct font *restrict font, const char 
 	return 0;
 }
 
-void font_term(Display *restrict display, struct font *restrict font)
+void font_term(struct font *restrict font)
 {
 	XUnloadFont(display, font->info->fid);
 }

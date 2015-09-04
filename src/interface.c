@@ -1,9 +1,6 @@
 #define GL_GLEXT_PROTOTYPES
-
 #include <GL/glx.h>
 #include <GL/glext.h>
-
-#include <xcb/xcb.h>
 
 #include "draw.h"
 #include "interface.h"
@@ -30,10 +27,10 @@
 
 static xcb_window_t window;
 static GLXContext context;
+static xcb_screen_t *screen;
 
 Display *display;
 GLXDrawable drawable;
-xcb_screen_t *screen;
 xcb_connection_t *connection;
 KeySym *keymap;
 int keysyms_per_keycode;
@@ -117,15 +114,15 @@ int if_init(void)
 
 	// TODO use DPI-based font size
 	// https://wiki.archlinux.org/index.php/X_Logical_Font_Description
-	if (font_init(display, &font12, "-misc-dejavu sans-bold-r-normal--12-0-0-0-p-0-ascii-0") < 0)
+	if (font_init(&font12, "-misc-dejavu sans-bold-r-normal--12-0-0-0-p-0-ascii-0") < 0)
 	{
 		xcb_destroy_window(connection, window);
 		glXDestroyContext(display, context);
 		goto error;
 	}
-	if (font_init(display, &font24, "-misc-dejavu sans-bold-r-normal--24-0-0-0-p-0-ascii-0") < 0)
+	if (font_init(&font24, "-misc-dejavu sans-bold-r-normal--24-0-0-0-p-0-ascii-0") < 0)
 	{
-		font_term(display, &font12);
+		font_term(&font12);
 		xcb_destroy_window(connection, window);
 		glXDestroyContext(display, context);
 		goto error;
@@ -140,8 +137,8 @@ int if_init(void)
 	keymap = XGetKeyboardMapping(display, keycode_min, (keycode_max - keycode_min + 1), &keysyms_per_keycode);
 	if (!keymap)
 	{
-		font_term(display, &font24);
-		font_term(display, &font12);
+		font_term(&font24);
+		font_term(&font12);
 		goto error; // TODO error
 	}
 
@@ -195,8 +192,8 @@ void if_display(void)
 void if_term(void)
 {
 	XFree(keymap);
-	font_term(display, &font24);
-	font_term(display, &font12);
+	font_term(&font24);
+	font_term(&font12);
 
 	glXDestroyWindow(display, drawable);
 	xcb_destroy_window(connection, window);

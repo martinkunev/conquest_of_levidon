@@ -7,6 +7,7 @@
 #include "input.h"
 #include "input_map.h"
 #include "input_menu.h"
+#include "interface_map.h"
 #include "pathfinding.h"
 #include "display.h"
 

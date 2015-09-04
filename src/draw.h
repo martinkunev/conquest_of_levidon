@@ -1,3 +1,4 @@
+#define GL_GLEXT_PROTOTYPES
 #include <GL/gl.h>
 
 #include <X11/Xlib-xcb.h>
@@ -28,7 +29,7 @@ struct font
 	GLuint base;
 };
 
-enum color {White, Gray, Black, Unexplored, Progress, Select, Self, Ally, Enemy, PathReachable, PathUnreachable, Hover, FieldReachable, Player};
+enum color {White, Gray, Black, Error, Unexplored, Progress, Select, Self, Ally, Enemy, PathReachable, PathUnreachable, Hover, FieldReachable, Player};
 extern unsigned char display_colors[][4]; // TODO remove this
 
 static inline int point_eq(struct point a, struct point b)
@@ -43,9 +44,9 @@ void fill_polygon(const struct polygon *restrict polygon, int offset_x, int offs
 
 void display_arrow(struct point from, struct point to, int offset_x, int offset_y, enum color color);
 
-int font_init(Display *restrict display, struct font *restrict font, const char *restrict name);
+int font_init(struct font *restrict font, const char *restrict name);
 struct box string_box(const char *string, size_t length, struct font *restrict font);
-void font_term(Display *restrict display, struct font *restrict font);
+void font_term(struct font *restrict font);
 
 void draw_cursor(const char *string, size_t length, unsigned x, unsigned y, struct font *restrict font, enum color color);
 unsigned draw_string(const char *string, size_t length, unsigned x, unsigned y, struct font *restrict font, enum color color);
