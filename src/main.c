@@ -18,12 +18,15 @@
 #include "computer.h"
 #include "interface.h"
 #include "display.h"
+#include "interface_map.h"
 #include "menu.h"
 
 #define S(s) s, sizeof(s) - 1
 
 #define WINNER_NOBODY -1
 #define WINNER_BATTLE -2
+
+// WARNING: Player 0 and alliance 0 are hard-coded as neutral.
 
 enum {ROUNDS_STALE_LIMIT = 10};
 
@@ -105,13 +108,19 @@ static int play_battle(struct game *restrict game, struct battle *restrict battl
 
 		// TODO ?Deal damage to each pawn escaping from enemy pawns.
 
+		obstacles[PLAYER_NEUTRAL] = path_obstacles(game, battle, PLAYER_NEUTRAL);
+		if (!obstacles[PLAYER_NEUTRAL]) abort();
+
 		// TODO shoot animation // TODO this should be part of player-specific input
 		battle_shoot(battle, obstacles[PLAYER_NEUTRAL]); // treat all gates as closed for shooting
 		if (battlefield_clean(battle)) round_activity_last = battle->round;
 
+		// TODO alliance not set below
+
 		for(i = 0; i < battle->pawns_count; ++i)
 		{
 			if (!battle->pawns[i].count) continue;
+			alliance = game->players[battle->pawns[i].troop->owner].alliance;
 			status = movement_attack_plan(battle->pawns + i, graph[alliance], obstacles[alliance]);
 			if (status < 0) abort(); // TODO
 		}
@@ -123,6 +132,7 @@ static int play_battle(struct game *restrict game, struct battle *restrict battl
 		for(i = 0; i < battle->pawns_count; ++i)
 		{
 			if (!battle->pawns[i].count) continue;
+			alliance = game->players[battle->pawns[i].troop->owner].alliance;
 			status = battlefield_movement_perform(battle, battle->pawns + i, graph[alliance], obstacles[alliance]);
 			if (status < 0) abort(); // TODO
 		}
@@ -306,6 +316,8 @@ static int play(struct game *restrict game)
 						continue;
 					}
 
+					if (troop->location == LOCATION_GARRISON) continue;
+
 					// Move alive troops that lost the battle back to their original location.
 					if ((game->players[troop->owner].alliance != winner) && !assault)
 					{
@@ -377,8 +389,9 @@ done:
 			}
 			else region_siege_continue(region); // siege
 
-			// Each player that controls a region is alive.
+			// Each player that controls a region or a garrison is alive.
 			alive[region->owner] = 1;
+			alive[region->garrison.owner] = 1;
 		}
 
 		// Perform player-specific actions.
@@ -434,7 +447,7 @@ int main(int argc, char *argv[])
 		world_unload(&game);
 
 		if (status && (status != ERROR_CANCEL)) return status;
-	} while (status)
+	} while (status);
 
 	if_term();
 

@@ -14,6 +14,8 @@
 #include "resources.h"
 #include "draw.h"
 
+// TODO don't use struct point here
+
 #define region_unit_available(region, unit) (!((unit).requires & ~(region)->built))
 #define region_building_available(region, building) (!((building).requires & ~(region)->built))
 
