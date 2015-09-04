@@ -1,7 +1,9 @@
 #include <GL/glx.h>
 
 #include "base.h"
+#include "format.h"
 #include "map.h"
+#include "interface.h"
 #include "input_report.h"
 #include "interface_report.h"
 #include "pathfinding.h"
@@ -13,16 +15,10 @@
 #define REPORT_BEFORE_X 32
 #define REPORT_AFTER_X 416
 
-#define LABEL_Y 32
-#define REPORT_Y 64
-
 #define MARGIN_X 40
 #define MARGIN_Y 60
 
-extern Display *display;
-extern GLXDrawable drawable;
-
-extern struct font font12, font24;
+#define TITLE_SIZE_LIMIT 64
 
 void if_report(const void *argument, const struct game *game_)
 {
@@ -38,11 +34,18 @@ void if_report(const void *argument, const struct game *game_)
 	unsigned position_after[PLAYERS_LIMIT] = {0};
 	unsigned offset_next = REPORT_Y;
 
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
+	// TODO indicate whether the attacker or the defender wins and which players win/lose/surrender
 	// TODO somehow indicate which players are allies
+	// TODO for assault display the damage to the garrison
 
-	// TODO for assault display whether the assault was successful, etc. (what is the damage to the garrison)
+	// Display report title
+	char title[TITLE_SIZE_LIMIT], *end = title;
+	struct box box;
+	if (battle->assault) end = format_bytes(end, S("Assault in "));
+	else end = format_bytes(end, S("Open battle in "));
+	end = format_bytes(end, battle->region->name, battle->region->name_length);
+	box = string_box(title, end - title, &font24);
+	draw_string(title, end - title, (SCREEN_WIDTH - box.width) / 2, TITLE_Y, &font24, White);
 
 	draw_string(S("Before the battle"), REPORT_BEFORE_X, LABEL_Y, &font12, White);
 	draw_string(S("After the battle"), REPORT_AFTER_X, LABEL_Y, &font12, White);
@@ -73,7 +76,4 @@ void if_report(const void *argument, const struct game *game_)
 			}
 		}
 	}
-
-	glFlush();
-	glXSwapBuffers(display, drawable);
 }

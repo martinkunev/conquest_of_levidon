@@ -49,7 +49,9 @@
 #define MENU_MESSAGE_X 32
 #define MENU_MESSAGE_Y 600
 
-#define TITLE_Y 32
+#define TITLE_Y 16
+#define LABEL_Y 48
+#define REPORT_Y 80
 
 enum object {Worlds, WorldTabs, Players, Building, Train, Dismiss, TroopSelf, TroopOther, TroopGarrison, Battlefield};
 
@@ -115,14 +117,8 @@ static inline int if_index(enum object object, struct point position)
 
 void display_troop(size_t unit, unsigned x, unsigned y, enum color color, enum color text, unsigned count);
 
-void if_storage_init(const struct game *game, int width, int height);
-void if_storage_term(void);
-
-int if_storage_get(unsigned x, unsigned y);
-
 void if_load_images(void);
 
-void if_map(const void *argument, const struct game *game);
 void if_formation(const void *argument, const struct game *game);
 void if_battle(const void *argument, const struct game *game);
 

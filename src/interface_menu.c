@@ -2,6 +2,7 @@
 
 #include "base.h"
 #include "map.h"
+#include "interface.h"
 #include "input_menu.h"
 #include "pathfinding.h"
 #include "display.h"
@@ -10,16 +11,11 @@
 #include "world.h"
 
 #define TITLE "Conquest of Levidon"
+#define TITLE_SAVE "Save game"
 
 // TODO display long filenames properly
 
 #define S(s) (s), sizeof(s) - 1
-
-extern Display *display;
-extern GLXDrawable drawable;
-extern xcb_screen_t *screen;
-
-extern struct font font12, font24;
 
 void if_load(const void *argument, const struct game *game)
 {
@@ -30,11 +26,9 @@ void if_load(const void *argument, const struct game *game)
 	struct point position;
 
 	struct box box = string_box(S(TITLE), &font24);
-	draw_string(S(TITLE), (screen->width_in_pixels - box.width) / 2, TITLE_Y, &font24, White);
+	draw_string(S(TITLE), (SCREEN_WIDTH - box.width) / 2, TITLE_Y, &font24, White);
 
 	// TODO ? separate functions for loaded and !loaded
-
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	// Display world directories tabs.
 	if (!state->loaded)
@@ -93,9 +87,6 @@ void if_load(const void *argument, const struct game *game)
 			}
 		}
 	}
-
-	glFlush();
-	glXSwapBuffers(display, drawable);
 }
 
 void if_save(const void *argument, const struct game *game)
@@ -106,10 +97,8 @@ void if_save(const void *argument, const struct game *game)
 
 	struct point position;
 
-	struct box box = string_box(S(TITLE), &font24);
-	draw_string(S(TITLE), (screen->width_in_pixels - box.width) / 2, TITLE_Y, &font24, White);
-
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	struct box box = string_box(S(TITLE_SAVE), &font24);
+	draw_string(S(TITLE_SAVE), (SCREEN_WIDTH - box.width) / 2, TITLE_Y, &font24, White);
 
 	// Display world directories tabs.
 	position = if_position(WorldTabs, 0);
@@ -141,8 +130,5 @@ void if_save(const void *argument, const struct game *game)
 	draw_cursor(state->name, state->name_position, object_group[Worlds].left, object_group[Worlds].bottom + MARGIN, &font12, White);
 
 	if (state->error_size)
-		draw_string(state->error, state->error_size, MENU_MESSAGE_X, MENU_MESSAGE_Y, &font12, White);
-
-	glFlush();
-	glXSwapBuffers(display, drawable);
+		draw_string(state->error, state->error_size, MENU_MESSAGE_X, MENU_MESSAGE_Y, &font12, Error);
 }

@@ -4,12 +4,12 @@ H	levidon map
 H	error reporting on invalid map
 M	clean up the code related to the end of the battle
 M	map scrolling
-M	keyboard support in various places in the interface
+M	keyboard support in various places in the interface; mouse support in various places in the interface
 M	assault garrison destruction and repair
-M	assault tower support
+M	assault towers
 M	do something when there is not enough food for all units (?kill some units)
 M	region population; income should be calculated as a function of the population; army recruitment should reduce population
-M	region-specific features
+M	region-specific features (income, population, units, buildings, battlefield)
 M	limited number of arrows
 M	select only specific troops for an assault (display icon like movement.png for such pawns)
 L	armory, swordsman, crossbowman, heavy cavalry, horse archer
@@ -18,25 +18,27 @@ L	network game
 L	sound
 L	water; naval battles
 L	roads
-L	religions
-L	ethnicities
+L	religions, ethnicities, languages
 L	dynamic alliances
 L	seasons
 L	buildings should not generate income on the day they are built
-L	implement exit game while in battle
+L	? implement exit game while in battle
 L	auto combat
-L	player names and flag patterns
 
 bugs / issues
-	pawn behavior doesn't make sence (pawns blocking others when they shouldn't; follow does not update path; attacking a pawn sometimes sets a bizzare path; clicking on an empty field does not reset pawn action)
-	report does not handle surrender properly (no troops displayed for surrendered players)
+	setting pawn destination is slower than before (?fixed)
+	shoot target not cancelled when an enemy moves next to the pawn (?fixed)
+	segmentation fault on troop_attach because location and move are NULL (?fixed)
+	pawn behavior doesn't make sence (pawns blocking others when they shouldn't; follow does not update path (?fixed); attacking a pawn sometimes sets a bizzare path (?fixed))
 	computer never trains army and sometimes never builds some buildings
-	computer still plays battles randomly (? should be fixed)
-	setting pawn destination is slower than before
+	computer still plays battles randomly
 	don't allow pawns to attack their own walls (currently only gates are not attacked)
 	don't allow attacking if the attacker cannot do damage to the defender (due to weapon and armor type)
-	surrender can be abused for scouting (this should be renamed and changed)
 
+surrender
+	? rename surrender
+	surrender can be abused for scouting
+	report does not handle surrender properly (no troops displayed for surrendered players)
 TODO ? change direction of everything to counterclockwise; currently the y axis is in the opposite direction (and the cross product is negated)
 TODO ? rename field to tile
 TODO ? redesign input functions
@@ -48,6 +50,7 @@ TODO ? separate constants for BLOCKAGE_WALL and BLOCKAGE_GATE
 
 custom mouse pointer
 improve player colors
+player names and flag patterns
 
 images
 	blast_furnace.png
