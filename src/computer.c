@@ -13,10 +13,10 @@
 
 #define MAP_COMMAND_PRIORITY_THRESHOLD 0.5 /* TODO maybe this should not be a macro */
 
-struct region_command
+struct region_order
 {
 	struct region *region;
-	enum {COMMAND_BUILD, COMMAND_TRAIN} type;
+	enum {ORDER_BUILD, ORDER_TRAIN} type;
 	union
 	{
 		uint32_t building;
@@ -25,12 +25,12 @@ struct region_command
 	double priority;
 };
 
-#define array_type struct region_command
-#define array_name array_commands
+#define array_type struct region_order
+#define array_name array_orders
 #include "generic/array.g"
 
-#define heap_type struct region_command *
-#define heap_name heap_commands
+#define heap_type struct region_order *
+#define heap_name heap_orders
 #define heap_above(a, b) ((a)->priority >= (b)->priority)
 #include "generic/heap.g"
 
@@ -167,7 +167,7 @@ static double state_assess(const struct game *restrict game, struct battle *rest
 	const struct pawn *victims[4];
 	unsigned victims_count;
 
-	// WARNING: We assume the locations where the pawns are commanded to go will be non-occupied.
+	// WARNING: We assume the locations, where the pawns are commanded to go, will be non-occupied.
 
 	// Estimate which pawn will occupy a given location after the move.
 	for(i = 0; i < battle->pawns_count; ++i)
@@ -181,6 +181,8 @@ static double state_assess(const struct game *restrict game, struct battle *rest
 		else location = pawn->moves[0].location; // TODO do better estimation here
 		pawns_moved[location.y][location.x] = pawn;
 	}
+
+	// TODO send position estimation to pawn_victims
 
 	// TODO the code below seems to have very high complexity
 
@@ -248,67 +250,23 @@ static double state_assess(const struct game *restrict game, struct battle *rest
 
 		victims_count = pawn_victims(game, pawn, player, pawns_moved, victims);
 		for(j = 0; j < victims_count; ++j)
+		{
+			if (victims[j]->troop->owner != player) continue;
 			rating -= damage_expected(pawn, (double)pawn->count / victims_count, victims[j]) * unit_importance(battle, victims[j]->troop->unit);
-
-		// TODO estimate how the enemy can damage the player's pawns; the more the enemies and the fewer the player's pawns, the worse
+		}
 	}
 
 	return rating;
 }
 
-void computer_map_perform(struct heap_commands *restrict commands, const struct game *restrict game, unsigned char player)
-{
-	size_t i;
-
-	// Perform map commands until all actions are complete or until the priority becomes too low.
-	// Skip commands for which there are not enough resources.
-
-	while (commands->count)
-	{
-		struct region_command *command = commands->data[0];
-		heap_commands_pop(commands);
-
-		if (command->priority < MAP_COMMAND_PRIORITY_THRESHOLD)
-			break;
-
-		switch (command->type)
-		{
-		case COMMAND_BUILD:
-			if (!resource_enough(&game->players[player].treasury, &buildings[command->target.building].cost))
-				break;
-			if (command->region->construct >= 0)
-				break;
-			resource_subtract(&game->players[player].treasury, &buildings[command->target.building].cost);
-			command->region->construct = command->target.building;
-			break;
-
-		case COMMAND_TRAIN:
-			if (!resource_enough(&game->players[player].treasury, &UNITS[command->target.unit].cost))
-				break;
-			for(i = 0; i < TRAIN_QUEUE; ++i)
-				if (!command->region->train[i])
-					goto train;
-			break;
-		train:
-			resource_subtract(&game->players[player].treasury, &UNITS[command->target.unit].cost);
-			command->region->train[i] = UNITS + command->target.unit;
-			break;
-		}
-	}
-}
-
-static int computer_map_commands(struct array_commands *restrict commands, const struct game *restrict game, unsigned char player)
+static int computer_map_orders_list(struct array_orders *restrict orders, const struct game *restrict game, unsigned char player, unsigned char regions_visible[REGIONS_LIMIT])
 {
 	size_t i, j;
 
-	unsigned char regions_visible[REGIONS_LIMIT];
-
-	if (array_commands_init(commands, 8) < 0) // TODO fix this 8
+	if (array_orders_init(orders, 8) < 0) // TODO fix this 8
 		return ERROR_MEMORY;
 
-	map_visible(game, player, regions_visible);
-
-	// Make a list of the commands available for the player.
+	// Make a list of the orders available for the player.
 	for(i = 0; i < game->regions_count; ++i)
 	{
 		struct region *restrict region = game->regions + i;
@@ -335,15 +293,15 @@ static int computer_map_commands(struct array_commands *restrict commands, const
 				if (region_built(region, j)) continue;
 				if (!region_building_available(region, buildings[j])) continue;
 
-				// Don't check if there are enough resources as the first performed command will invalidate the check.
+				// Don't check if there are enough resources as the first performed order will invalidate the check.
 
-				if (array_commands_expand(commands, commands->count + 1) < 0)
+				if (array_orders_expand(orders, orders->count + 1) < 0)
 					goto error;
-				commands->data[commands->count].region = region;
-				commands->data[commands->count].type = COMMAND_BUILD;
-				commands->data[commands->count].target.building = j;
-				commands->data[commands->count].priority = desire_buildings[j] / (neighbors_enemy + 1); // TODO this is more complicated
-				commands->count += 1;
+				orders->data[orders->count].region = region;
+				orders->data[orders->count].type = ORDER_BUILD;
+				orders->data[orders->count].target.building = j;
+				orders->data[orders->count].priority = desire_buildings[j] / (neighbors_enemy + 1); // TODO this is more complicated
+				orders->count += 1;
 			}
 		}
 
@@ -353,15 +311,15 @@ static int computer_map_commands(struct array_commands *restrict commands, const
 			{
 				if (!region_unit_available(region, UNITS[j])) continue;
 
-				// Don't check if there are enough resources as the first performed command will invalidate the check.
+				// Don't check if there are enough resources as the first performed order will invalidate the check.
 
-				if (array_commands_expand(commands, commands->count + 1) < 0)
+				if (array_orders_expand(orders, orders->count + 1) < 0)
 					goto error;
-				commands->data[commands->count].region = region;
-				commands->data[commands->count].type = COMMAND_TRAIN;
-				commands->data[commands->count].target.unit = j;
-				commands->data[commands->count].priority = desire_units[j] * neighbors_enemy; // TODO this is more complicated
-				commands->count += 1;
+				orders->data[orders->count].region = region;
+				orders->data[orders->count].type = ORDER_TRAIN;
+				orders->data[orders->count].target.unit = j;
+				orders->data[orders->count].priority = desire_units[j] * neighbors_enemy; // TODO this is more complicated
+				orders->count += 1;
 			}
 		}
 	}
@@ -369,8 +327,49 @@ static int computer_map_commands(struct array_commands *restrict commands, const
 	return 0;
 
 error:
-	array_commands_term(commands);
+	array_orders_term(orders);
 	return ERROR_MEMORY;
+}
+
+static void computer_map_orders_execute(struct heap_orders *restrict orders, const struct game *restrict game, unsigned char player)
+{
+	size_t i;
+
+	// Perform map orders until all actions are complete or until the priority becomes too low.
+	// Skip orders for which there are not enough resources.
+
+	while (orders->count)
+	{
+		struct region_order *order = orders->data[0];
+		heap_orders_pop(orders);
+
+		if (order->priority < MAP_COMMAND_PRIORITY_THRESHOLD)
+			break;
+
+		switch (order->type)
+		{
+		case ORDER_BUILD:
+			if (!resource_enough(&game->players[player].treasury, &buildings[order->target.building].cost))
+				break;
+			if (order->region->construct >= 0)
+				break;
+			resource_subtract(&game->players[player].treasury, &buildings[order->target.building].cost);
+			order->region->construct = order->target.building;
+			break;
+
+		case ORDER_TRAIN:
+			if (!resource_enough(&game->players[player].treasury, &UNITS[order->target.unit].cost))
+				break;
+			for(i = 0; i < TRAIN_QUEUE; ++i)
+				if (!order->region->train[i])
+					goto train;
+			break;
+		train:
+			resource_subtract(&game->players[player].treasury, &UNITS[order->target.unit].cost);
+			order->region->train[i] = UNITS + order->target.unit;
+			break;
+		}
+	}
 }
 
 int computer_map(const struct game *restrict game, unsigned char player)
@@ -379,31 +378,95 @@ int computer_map(const struct game *restrict game, unsigned char player)
 
 	// TODO troop movement in/out of garrison and between regions
 
-	size_t i;
+	size_t i, j;
 
-	struct array_commands commands;
-	if (computer_map_commands(&commands, game, player) < 0)
+	unsigned char regions_visible[REGIONS_LIMIT];
+	struct array_orders orders;
+
+	// Determine which regions are visible to the player.
+	map_visible(game, player, regions_visible);
+
+	if (computer_map_orders_list(&orders, game, player, regions_visible) < 0)
 		return ERROR_MEMORY;
-	if (!commands.count)
+	if (!orders.count)
 		return 0;
 
-	// Create a priority queue with the available commands.
-	struct heap_commands commands_queue;
-	commands_queue.count = commands.count;
-	commands_queue.data = malloc(commands.count * sizeof(*commands_queue.data));
-	if (!commands_queue.data)
+	// Create a priority queue with the available orders.
+	struct heap_orders orders_queue;
+	orders_queue.count = orders.count;
+	orders_queue.data = malloc(orders.count * sizeof(*orders_queue.data));
+	if (!orders_queue.data)
 	{
-		array_commands_term(&commands);
+		array_orders_term(&orders);
 		return ERROR_MEMORY;
 	}
-	for(i = 0; i < commands.count; ++i)
-		commands_queue.data[i] = commands.data + i;
-	heap_commands_heapify(&commands_queue);
+	for(i = 0; i < orders.count; ++i)
+		orders_queue.data[i] = orders.data + i;
+	heap_orders_heapify(&orders_queue);
 
-	computer_map_perform(&commands_queue, game, player);
+	computer_map_orders_execute(&orders_queue, game, player);
 
-	free(commands_queue.data);
-	array_commands_term(&commands);
+	free(orders_queue.data);
+	array_orders_term(&orders);
+
+	// Move troops between regions.
+	/*for(i = 0; i < game->regions_count; ++i)
+	{
+		unsigned neighbors_neutral = 0, neighbors_ally = 0, neighbors_enemy = 0, neighbors_sieging = 0, neighbors_sieged = 0;
+		//const struct region *ne
+
+		const struct region *restrict region = game->regions + i;
+
+		if (region->owner != player) continue;
+		if (!region->troops) continue;
+
+		// Determine what is the most important thing to do with region troops.
+		for(j = 0; j < NEIGHBORS_LIMIT; ++j)
+		{
+			const struct region *neighbor = region->neighbors[j];
+
+			if (!neighbor) continue;
+			if (!regions_visible[neighbor->index]) continue;
+
+			if (neighbor->owner == PLAYER_NEUTRAL) // neutral region
+			{
+				neighbors_neutral += 1;
+			}
+			else if (!allies(game, player, neighbor->owner)) // enemy region
+			{
+				if (allies(game, player, neighbor->garrison.owner)) neighbors_sieged += 1;
+				else neighbors_enemy += 1;
+			}
+			else if (allies(game, player, neighbor->garrison.owner)) // self/ally region without siege
+			{
+				neighbors_ally += 1;
+			}
+			else if (player == neighbor->owner) // current player is sieging the region
+			{
+				neighbors_sieging += 1;
+			}
+		}
+
+		if (neighbors_sieged)
+		{
+			for(troop = region->troops; troop; troop = troop->_next)
+			{
+				//
+			}
+		}
+		else if (neighbors_sieging)
+		{
+		}
+		else if (neighbors_enemy)
+		{
+		}
+		else if (neighbors_neutral)
+		{
+		}
+		else if (neighbors_ally)
+		{
+		}
+	}*/
 
 	return 0;
 }
