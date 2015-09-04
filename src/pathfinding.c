@@ -558,7 +558,7 @@ int path_distances(const struct pawn *restrict pawn, struct adjacency_list *rest
 	size_t x, y;
 	ssize_t last;
 
-	int status = 0;
+	int status;
 
 	ssize_t vertex_origin;
 
@@ -625,6 +625,8 @@ int path_distances(const struct pawn *restrict pawn, struct adjacency_list *rest
 			}
 		}
 	}
+
+	status = 0;
 
 finally:
 	free(traverse_info);
@@ -724,12 +726,11 @@ finally:
 // On error, returns error code and pawn movement queue remains unchanged.
 int path_queue(struct pawn *restrict pawn, struct point target, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles)
 {
-	ssize_t vertex_target;
+	ssize_t vertex_target, vertex_origin;
 	struct path_node *traverse_info;
 	int status;
 
 	struct path_node *node, *prev, *next;
-	size_t vertex_origin;
 
 	vertex_target = graph_insert(graph, obstacles, target);
 	if (vertex_target < 0) return vertex_target;
@@ -776,6 +777,8 @@ int path_queue(struct pawn *restrict pawn, struct point target, struct adjacency
 		pawn->moves[pawn->moves_count].time = pawn->moves[pawn->moves_count - 1].time + distance / pawn->troop->unit->speed;
 		pawn->moves_count += 1;
 	}
+
+	status = 0;
 
 finally:
 	free(traverse_info);

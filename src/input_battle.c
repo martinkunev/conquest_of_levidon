@@ -59,6 +59,7 @@ static int input_round(int code, unsigned x, unsigned y, uint16_t modifiers, con
 	}
 }
 
+// On success, returns 0. On error no changes are made and error code (< 0) is returned.
 static int pawn_command(const struct game *restrict game, const struct battle *restrict battle, struct pawn *restrict pawn, struct point point, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles, double reachable[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH])
 {
 	const struct battlefield *restrict target = &battle->field[point.y][point.x];
@@ -150,28 +151,30 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 			if ((pawn->moves_count == 1) && !pawn->action)
 				return INPUT_IGNORE;
 
-			movement_stay(pawn);
+			pawn->moves_count = 1;
 			pawn->action = 0;
-			status = path_distances(pawn, state->graph, state->obstacles, state->reachable);
-			if (status < 0) return status;
-			return 0;
+			return path_distances(pawn, state->graph, state->obstacles, state->reachable);
 		}
 
 		// if CONTROL is pressed, shoot
 		// if SHIFT is pressed, don't overwrite the current command
-		if (modifiers & XCB_MOD_MASK_CONTROL) combat_order_shoot(game, battle, state->obstacles, pawn, point);
+		if (modifiers & XCB_MOD_MASK_CONTROL)
+		{
+			if (combat_order_shoot(game, battle, state->obstacles, pawn, point)) return 0;
+			else return INPUT_IGNORE;
+		}
 		else if (modifiers & XCB_MOD_MASK_SHIFT)
 		{
 			status = pawn_command(game, battle, pawn, point, state->graph, state->obstacles, state->reachable);
 			switch (status)
 			{
 			case 0:
-				status = path_distances(pawn, state->graph, state->obstacles, state->reachable);
-				if (status < 0) return status;
-			case ERROR_MISSING:
-				return 0;
+				break;
 
-			case ERROR_MEMORY:
+			case ERROR_MISSING:
+				return INPUT_IGNORE;
+
+			default:
 				return status;
 			}
 		}
@@ -180,10 +183,9 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 			double reachable[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH];
 
 			// Erase moves but remember their count so that we can restore them if necessary.
+			// Initialize reachable distances for stationary pawn.
 			size_t moves_count = pawn->moves_count;
 			pawn->moves_count = 1;
-
-			// Initialize reachable distances for stationary pawn.
 			status = path_distances(pawn, state->graph, state->obstacles, reachable);
 			if (status < 0) return status;
 
@@ -191,18 +193,18 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 			switch (status)
 			{
 			case 0:
-				memcpy(state->reachable, reachable, sizeof(state->reachable));
-				return 0;
+				break;
 
 			case ERROR_MISSING:
-				// The command failed. Restore moves.
-				pawn->moves_count = moves_count;
-				return 0;
+				pawn->moves_count = moves_count; // command failed; restore moves
+				return INPUT_IGNORE;
 
-			case ERROR_MEMORY:
+			default:
 				return status;
 			}
 		}
+
+		return path_distances(pawn, state->graph, state->obstacles, state->reachable);
 	}
 	else if (code == EVENT_MOTION)
 	{
