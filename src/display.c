@@ -23,6 +23,7 @@
 #define S(s) (s), sizeof(s) - 1
 
 #define ANIMATION_DURATION 3.0
+#define ANIMATION_SHOOT_DURATION 2.0
 
 #define PREFIX_IMG PREFIX "share/conquest_of_levidon/img/"
 
@@ -34,6 +35,7 @@ struct battle *battle;
 
 struct image image_selected, image_assault, image_flag, image_flag_small, image_panel, image_construction, image_movement;
 struct image image_pawn_fight, image_pawn_assault, image_pawn_shoot;
+struct image image_shoot_right, image_shoot_up, image_shoot_left, image_shoot_down; // TODO more directions?
 struct image image_terrain[1];
 struct image image_garrison[2]; // TODO this must be big enough for all garrison types
 struct image image_map_village, image_map_garrison[2]; // TODO this must be big enough for all garrison types
@@ -57,6 +59,11 @@ void if_load_images(void)
 	image_load_png(&image_pawn_fight, PREFIX_IMG "pawn_fight.png", 0);
 	image_load_png(&image_pawn_assault, PREFIX_IMG "pawn_assault.png", 0);
 	image_load_png(&image_pawn_shoot, PREFIX_IMG "pawn_shoot.png", 0);
+
+	image_load_png(&image_shoot_right, PREFIX_IMG "shoot_right.png", 0);
+	image_load_png(&image_shoot_up, PREFIX_IMG "shoot_up.png", 0);
+	image_load_png(&image_shoot_left, PREFIX_IMG "shoot_left.png", 0);
+	image_load_png(&image_shoot_down, PREFIX_IMG "shoot_down.png", 0);
 
 	image_load_png(&image_garrison[PALISADE], PREFIX_IMG "garrison_palisade.png", 0);
 	image_load_png(&image_garrison[FORTRESS], PREFIX_IMG "garrison_fortress.png", 0);
@@ -150,6 +157,11 @@ void display_troop(size_t unit, unsigned x, unsigned y, enum color color, enum c
 	}
 }
 
+static inline unsigned long timediff(const struct timeval *restrict end, const struct timeval *restrict start)
+{
+	return (end->tv_sec * 1000000 + end->tv_usec - start->tv_sec * 1000000 - start->tv_usec);
+}
+
 // TODO write this better
 static int if_animation(const struct player *restrict players, const struct battle *restrict battle, double progress, unsigned char traversed[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH])
 {
@@ -208,10 +220,6 @@ static int if_animation(const struct player *restrict players, const struct batt
 
 	return finished;
 }
-static inline unsigned long timediff(const struct timeval *restrict end, const struct timeval *restrict start)
-{
-	return (end->tv_sec * 1000000 + end->tv_usec - start->tv_sec * 1000000 - start->tv_usec);
-}
 void input_animation(const struct game *restrict game, const struct battle *restrict battle)
 {
 	struct timeval start, now;
@@ -235,6 +243,106 @@ void input_animation(const struct game *restrict game, const struct battle *rest
 		progress = timediff(&now, &start) / (ANIMATION_DURATION * 1000000.0);
 		if (if_animation(game->players, battle, progress, traversed))
 			break;
+	} while (progress < 1.0);
+}
+
+// TODO write this better
+static void if_animation_shoot(const struct player *restrict players, const struct battle *restrict battle, double progress)
+{
+	size_t x, y;
+	size_t p;
+
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	// Display panel background pattern.
+	display_image(&image_terrain[0], BATTLE_X - 8, BATTLE_Y - 8, BATTLEFIELD_WIDTH * FIELD_SIZE + 16, BATTLEFIELD_HEIGHT * FIELD_SIZE + 16);
+
+	// battlefield and pawns
+	for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
+		for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
+		{
+			// TODO tower support
+
+			const struct battlefield *field = &battle->field[y][x];
+			if (field->blockage)
+			{
+				// TODO decide whether to use palisade or fortress
+
+				const struct image *image;
+
+				if (field->owner == OWNER_NONE) image = &image_palisade[field->position];
+				else
+				{
+					if (field->position == (POSITION_LEFT | POSITION_RIGHT))
+						image = &image_palisade_gate[0];
+					else // field->position == (POSITION_TOP | POSITION_BOTTOM)
+						image = &image_palisade_gate[1];
+				}
+
+				image_draw(image, BATTLE_X + x * object_group[Battlefield].width, BATTLE_Y + y * object_group[Battlefield].height);
+			}
+			else if (field->pawn && field->pawn->count)
+			{
+				struct point position = field->pawn->moves[0].location;
+				struct troop *restrict troop = field->pawn->troop;
+				display_troop(troop->unit->index, BATTLE_X + position.x * object_group[Battlefield].width, BATTLE_Y + position.y * object_group[Battlefield].height, Player + troop->owner, 0, 0);
+			}
+		}
+
+	// arrows
+	for(p = 0; p < battle->pawns_count; ++p)
+	{
+		struct pawn *pawn = battle->pawns + p;
+		struct point origin, target;
+		unsigned dx, dy;
+		struct image *image;
+		double x, y;
+
+		if (!pawn->count || (pawn->action != PAWN_SHOOT)) continue;
+
+		// Determine arrows direction.
+		origin = pawn->moves[0].location;
+		target = pawn->target.field;
+		dx = abs(target.x - origin.x);
+		dy = abs(target.y - origin.y);
+		if (dx >= dy)
+		{
+			if (target.x > origin.x) image = &image_shoot_right;
+			else image = &image_shoot_left;
+		}
+		else
+		{
+			if (target.y > origin.y) image = &image_shoot_down;
+			else image = &image_shoot_up;
+		}
+
+		// Determine arrows position and draw image.
+		x = target.x * progress + origin.x * (1.0 - progress);
+		y = target.y * progress + origin.y * (1.0 - progress);
+		image_draw(image, BATTLE_X + x * object_group[Battlefield].width, BATTLE_Y + y * object_group[Battlefield].height);
+	}
+
+	glFlush();
+	glXSwapBuffers(display, drawable);
+}
+void input_animation_shoot(const struct game *restrict game, const struct battle *restrict battle)
+{
+	struct timeval start, now;
+	double progress;
+	size_t p;
+
+	// Skip animation if there are no pawns shooting.
+	for(p = 0; p < battle->pawns_count; ++p)
+		if (battle->pawns[p].count && (battle->pawns[p].action == PAWN_SHOOT)) goto shoot;
+	return;
+
+shoot:
+	gettimeofday(&start, 0);
+	do
+	{
+		gettimeofday(&now, 0);
+		progress = timediff(&now, &start) / (ANIMATION_SHOOT_DURATION * 1000000.0);
+		if_animation_shoot(game->players, battle, progress);
 	} while (progress < 1.0);
 }
 
@@ -456,14 +564,11 @@ void if_battle(const void *argument, const struct game *game)
 		{
 			if_battle_pawn(game, state, pawn);
 
-			if (!pawn->action)
-			{
-				// Show which fields are reachable by the pawn.
-				for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
-					for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
-						if ((state->reachable[y][x] <= pawn->troop->unit->speed) && !battle->field[y][x].pawn)
-							fill_rectangle(BATTLE_X + x * object_group[Battlefield].width, BATTLE_Y + y * object_group[Battlefield].height, object_group[Battlefield].width, object_group[Battlefield].height, FieldReachable);
-			}
+			// Show which fields are reachable by the pawn.
+			for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
+				for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
+					if ((state->reachable[y][x] <= pawn->troop->unit->speed) && !battle->field[y][x].pawn)
+						fill_rectangle(BATTLE_X + x * object_group[Battlefield].width, BATTLE_Y + y * object_group[Battlefield].height, object_group[Battlefield].width, object_group[Battlefield].height, FieldReachable);
 		}
 	}
 	else if (!point_eq(state->field, POINT_NONE))
