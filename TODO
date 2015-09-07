@@ -1,6 +1,7 @@
 H	AI for troop movement on the map
 H	battle mechanics fixes
 H	levidon map
+H	shoot animation
 M	error reporting on invalid map
 M	clean up the code related to the end of the battle
 M	map scrolling
@@ -31,9 +32,6 @@ battle mechanics
 	pawns don't understand how to sidestep other pawns to reach their destination
 
 bugs / issues
-	? shooters should be able to fight with move and shift+click on a pawn
-	movement_attack is not always updated on the next turn (because the other pawn's position is not yet updated)
-	reachable fields not shown when action is selected
 	computer never trains army and sometimes never builds some buildings
 	computer still plays battles randomly
 	don't allow pawns to attack their own walls (currently only gates are not attacked)

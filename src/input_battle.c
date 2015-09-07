@@ -72,7 +72,7 @@ static int pawn_command(const struct game *restrict game, const struct battle *r
 		{
 			return movement_queue(pawn, point, graph, obstacles);
 		}
-		else if (combat_order_shoot(game, battle, obstacles, pawn, point))
+		else if ((pawn->moves_count == 1) && combat_order_shoot(game, battle, obstacles, pawn, point))
 		{
 			return 0;
 		}

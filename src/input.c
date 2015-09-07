@@ -71,7 +71,7 @@ int input_local(const struct area *restrict areas, size_t areas_count, void (*di
 	while (event = xcb_poll_for_event(connection))
 		free(event);
 
-	display(state, game);
+	input_display(display, game, state);
 
 	while (1)
 	{
@@ -82,7 +82,7 @@ wait:
 		switch (event->response_type & ~0x80)
 		{
 		case XCB_EXPOSE:
-			display(state, game);
+			input_display(display, game, state);
 			continue;
 
 		case XCB_BUTTON_PRESS:
@@ -138,7 +138,7 @@ wait:
 					continue;
 
 				case 0:
-					display(state, game);
+					input_display(display, game, state);
 				case INPUT_IGNORE:
 					goto wait;
 				}

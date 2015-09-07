@@ -623,7 +623,7 @@ int battlefield_movement_perform(struct battle *restrict battle, struct pawn *re
 	// Change pawn position on the battlefield.
 	struct point location_old = pawn->moves[0].location;
 	struct point location_new = location_field(pawn->step);
-	if (battle->field[location_old.y][location_old.x].pawn == pawn)
+	if (battle->field[location_old.y][location_old.x].pawn == pawn) // TODO why is this check necessary?
 		battle->field[location_old.y][location_old.x].pawn = 0;
 	battle->field[location_new.y][location_new.x].pawn = pawn;
 
@@ -657,6 +657,12 @@ int battlefield_movement_perform(struct battle *restrict battle, struct pawn *re
 		pawn->moves[0].time = 0.0;
 	}
 
+	return 0;
+}
+
+// Update pawn action and movement.
+int battlefield_movement_attack(struct battle *restrict battle, struct pawn *restrict pawn, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles)
+{
 	// If the pawn follows another pawn, update its movement to correspond to the current battlefield situation.
 	if (pawn->action == PAWN_FIGHT)
 	{
@@ -679,6 +685,4 @@ int battlefield_movement_perform(struct battle *restrict battle, struct pawn *re
 			return status;
 		}
 	}
-
-	return 0;
 }

@@ -74,6 +74,9 @@ static int play_battle(struct game *restrict game, struct battle *restrict battl
 		struct adjacency_list *graph[PLAYERS_LIMIT] = {0};
 		struct obstacles *obstacles[PLAYERS_LIMIT] = {0};
 
+		obstacles[PLAYER_NEUTRAL] = path_obstacles(game, battle, PLAYER_NEUTRAL);
+		if (!obstacles[PLAYER_NEUTRAL]) abort();
+
 		// Ask each player to give commands to their pawns.
 		for(player = 0; player < game->players_count; ++player)
 		{
@@ -108,14 +111,9 @@ static int play_battle(struct game *restrict game, struct battle *restrict battl
 
 		// TODO ?Deal damage to each pawn escaping from enemy pawns.
 
-		obstacles[PLAYER_NEUTRAL] = path_obstacles(game, battle, PLAYER_NEUTRAL);
-		if (!obstacles[PLAYER_NEUTRAL]) abort();
-
-		// TODO shoot animation // TODO this should be part of player-specific input
+		input_animation_shoot(game, battle); // TODO this should be part of player-specific input
 		battle_shoot(battle, obstacles[PLAYER_NEUTRAL]); // treat all gates as closed for shooting
 		if (battlefield_clean(battle)) round_activity_last = battle->round;
-
-		// TODO alliance not set below
 
 		for(i = 0; i < battle->pawns_count; ++i)
 		{
@@ -129,11 +127,19 @@ static int play_battle(struct game *restrict game, struct battle *restrict battl
 
 		input_animation(game, battle); // TODO this should be part of player-specific input
 
+		// TODO ugly; there should be a way to unify these
 		for(i = 0; i < battle->pawns_count; ++i)
 		{
 			if (!battle->pawns[i].count) continue;
 			alliance = game->players[battle->pawns[i].troop->owner].alliance;
 			status = battlefield_movement_perform(battle, battle->pawns + i, graph[alliance], obstacles[alliance]);
+			if (status < 0) abort(); // TODO
+		}
+		for(i = 0; i < battle->pawns_count; ++i)
+		{
+			if (!battle->pawns[i].count) continue;
+			alliance = game->players[battle->pawns[i].troop->owner].alliance;
+			status = battlefield_movement_attack(battle, battle->pawns + i, graph[alliance], obstacles[alliance]);
 			if (status < 0) abort(); // TODO
 		}
 
@@ -254,6 +260,8 @@ static int play(struct game *restrict game)
 			}
 		}
 
+		// TODO troop returning should be done after all battles are complete
+
 		// Perform region-specific actions related to battles.
 		for(index = 0; index < game->regions_count; ++index)
 		{
@@ -306,8 +314,10 @@ static int play(struct game *restrict game)
 
 			if (winner != WINNER_NOBODY) // there has been a battle
 			{
-				for(troop = region->troops; troop; troop = troop->_next)
+				for(troop = region->troops; troop; troop = next)
 				{
+					next = troop->_next;
+
 					// Remove dead troops.
 					if (!troop->count)
 					{
