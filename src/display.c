@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <sys/time.h>
 #include <unistd.h>
 
@@ -16,7 +17,6 @@
 #include "interface.h"
 #include "image.h"
 #include "input.h"
-//#include "input_map.h"
 #include "input_battle.h"
 #include "display.h"
 
@@ -24,6 +24,8 @@
 
 #define ANIMATION_DURATION 3.0
 #define ANIMATION_SHOOT_DURATION 2.0
+
+#define PLAYER_INDICATOR_RADIUS 5
 
 #define PREFIX_IMG PREFIX "share/conquest_of_levidon/img/"
 
@@ -358,6 +360,34 @@ static void if_battlefield(unsigned char player, const struct game *game)
 	fill_rectangle(CTRL_X, CTRL_Y + CTRL_MARGIN, CTRL_WIDTH, CTRL_HEIGHT - CTRL_MARGIN, Gray);
 }
 
+static void if_formation_players(const struct game *restrict game, const struct battle *restrict battle)
+{
+	size_t i;
+
+	for(i = 0; i < game->players_count; ++i)
+	{
+		const struct pawn *restrict pawn;
+		const double *position;
+
+		if (!battle->players[i].pawns_count) continue;
+
+		pawn = battle->players[i].pawns[0];
+
+		if (battle->assault)
+		{
+			if (pawn->startup == NEIGHBOR_GARRISON) position = formation_position_garrison;
+			else position = formation_position_assault[pawn->startup];
+		}
+		else
+		{
+			if (pawn->startup == NEIGHBOR_SELF) position = formation_position_defend;
+			else position = formation_position_attack[pawn->startup];
+		}
+
+		fill_circle(BATTLE_X + position[0] * object_group[Battlefield].width, BATTLE_Y + position[1] * object_group[Battlefield].height, PLAYER_INDICATOR_RADIUS, Player + pawn->troop->owner);
+	}
+}
+
 void if_formation(const void *argument, const struct game *game)
 {
 	// TODO battle must be passed as argument
@@ -365,10 +395,9 @@ void if_formation(const void *argument, const struct game *game)
 	const struct state_formation *state = argument;
 
 	size_t x, y;
+	size_t i, j;
 
 	if_battlefield(state->player, game);
-
-	// TODO mark somehow that only self pawns are displayed
 
 	for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
 		for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
@@ -393,7 +422,9 @@ void if_formation(const void *argument, const struct game *game)
 			}
 		}
 
-	size_t i, j;
+	// Indicate where on the battlefield there will be pawns of other players.
+	if_formation_players(game, battle);
+
 	struct pawn *const *pawns = battle->players[state->player].pawns;
 	size_t pawns_count = battle->players[state->player].pawns_count;
 	for(i = 0; i < pawns_count; ++i)
@@ -564,11 +595,14 @@ void if_battle(const void *argument, const struct game *game)
 		{
 			if_battle_pawn(game, state, pawn);
 
-			// Show which fields are reachable by the pawn.
-			for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
-				for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
-					if ((state->reachable[y][x] <= pawn->troop->unit->speed) && !battle->field[y][x].pawn)
-						fill_rectangle(BATTLE_X + x * object_group[Battlefield].width, BATTLE_Y + y * object_group[Battlefield].height, object_group[Battlefield].width, object_group[Battlefield].height, FieldReachable);
+			if (!pawn->action)
+			{
+				// Show which fields are reachable by the pawn.
+				for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
+					for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
+						if ((state->reachable[y][x] <= pawn->troop->unit->speed) && !battle->field[y][x].pawn)
+							fill_rectangle(BATTLE_X + x * object_group[Battlefield].width, BATTLE_Y + y * object_group[Battlefield].height, object_group[Battlefield].width, object_group[Battlefield].height, FieldReachable);
+			}
 		}
 	}
 	else if (!point_eq(state->field, POINT_NONE))

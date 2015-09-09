@@ -37,6 +37,8 @@ static inline int point_eq(struct point a, struct point b)
 	return ((a.x == b.x) && (a.y == b.y));
 }
 
+void fill_circle(unsigned x, unsigned y, unsigned radius, enum color color);
+
 void draw_rectangle(unsigned x, unsigned y, unsigned width, unsigned height, enum color color);
 void fill_rectangle(unsigned x, unsigned y, unsigned width, unsigned height, enum color color);
 

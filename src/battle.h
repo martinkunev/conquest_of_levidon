@@ -4,6 +4,11 @@
 
 #define OWNER_NONE 0 /* sentinel alliance value used for walls */ /* TODO fix this: neutral players should not own walls */
 
+#define ASSAULT_LIMIT 5
+
+#define NEIGHBOR_SELF NEIGHBORS_LIMIT
+#define NEIGHBOR_GARRISON NEIGHBORS_LIMIT
+
 struct pawn
 {
 	struct troop *troop;
@@ -61,6 +66,11 @@ struct battle
 
 	unsigned round;
 };
+
+extern const double formation_position_defend[2];
+extern const double formation_position_attack[NEIGHBORS_LIMIT][2];
+extern const double formation_position_garrison[2];
+extern const double formation_position_assault[ASSAULT_LIMIT][2];
 
 size_t formation_reachable_open(const struct game *restrict game, const struct battle *restrict battle, const struct pawn *restrict pawn, struct point reachable[REACHABLE_LIMIT]);
 size_t formation_reachable_assault(const struct game *restrict game, const struct battle *restrict battle, const struct pawn *restrict pawn, struct point reachable[REACHABLE_LIMIT]);

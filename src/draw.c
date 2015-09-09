@@ -100,6 +100,21 @@ static int is_ear(const struct polygon_draw *prev, const struct polygon_draw *cu
 	return Ear;
 }
 
+void fill_circle(unsigned x, unsigned y, unsigned radius, enum color color)
+{
+	unsigned steps = radius * 4, step;
+
+	glBegin(GL_POLYGON);
+
+	for(step = 0; step < steps; ++step)
+	{
+		double angle = step * 2 * M_PI / steps;
+		glVertex2i(x + cos(angle), y + sin(angle));
+	}
+
+	glEnd();
+}
+
 void fill_rectangle(unsigned x, unsigned y, unsigned width, unsigned height, enum color color)
 {
 	glColor4ubv(display_colors[color]);

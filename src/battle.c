@@ -12,10 +12,10 @@
 #define FORMATION_RADIUS_DEFEND 4
 #define FORMATION_RADIUS_FREE 10
 
-#define NEIGHBOR_SELF NEIGHBORS_LIMIT
-#define NEIGHBOR_GARRISON NEIGHBORS_LIMIT
-
-#define ASSAULT_LIMIT 5
+const double formation_position_defend[2] = {12.5, 12.5};
+const double formation_position_attack[NEIGHBORS_LIMIT][2] = {{25.0, 12.5}, {21.5, 3.5}, {12.5, 0.0}, {3.5, 3.5}, {0.0, 12.5}, {3.5, 21.5}, {12.5, 25.0}, {21.5, 21.5}};
+const double formation_position_garrison[2] = {12.5, 0};
+const double formation_position_assault[ASSAULT_LIMIT][2] = {{12.5, 20.0}, {0.0, 7.5}, {25.0, 7.5}, {3.5, 16.5}, {21.5, 16.5}};
 
 static inline double distance(const double *restrict origin, const double *restrict target)
 {
@@ -45,9 +45,6 @@ static struct polygon *region_create(size_t count, ...)
 // Returns whether the troop can be placed at the given field.
 size_t formation_reachable_open(const struct game *restrict game, const struct battle *restrict battle, const struct pawn *restrict pawn, struct point reachable[REACHABLE_LIMIT])
 {
-	const double defend[2] = {12.5, 12.5};
-	const double attack[NEIGHBORS_LIMIT][2] = {{25.0, 12.5}, {21.5, 3.5}, {12.5, 0.0}, {3.5, 3.5}, {0.0, 12.5}, {3.5, 21.5}, {12.5, 25.0}, {21.5, 21.5}};
-
 	size_t x, y;
 
 	size_t reachable_count = 0;
@@ -60,7 +57,7 @@ size_t formation_reachable_open(const struct game *restrict game, const struct b
 				for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
 				{
 					if (battle->field[y][x].blockage) continue;
-					if (distance(defend, (double [2]){x + 0.5, y + 0.5}) <= FORMATION_RADIUS_DEFEND)
+					if (distance(formation_position_defend, (double [2]){x + 0.5, y + 0.5}) <= FORMATION_RADIUS_DEFEND)
 						reachable[reachable_count++] = (struct point){x, y};
 				}
 		}
@@ -70,8 +67,8 @@ size_t formation_reachable_open(const struct game *restrict game, const struct b
 				for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
 				{
 					if (battle->field[y][x].blockage) continue;
-					if (distance(defend, (double [2]){x + 0.5, y + 0.5}) <= FORMATION_RADIUS_DEFEND) continue;
-					if (distance(defend, (double [2]){x + 0.5, y + 0.5}) < FORMATION_RADIUS_FREE)
+					if (distance(formation_position_defend, (double [2]){x + 0.5, y + 0.5}) <= FORMATION_RADIUS_DEFEND) continue;
+					if (distance(formation_position_defend, (double [2]){x + 0.5, y + 0.5}) < FORMATION_RADIUS_FREE)
 						reachable[reachable_count++] = (struct point){x, y};
 				}
 		}
@@ -83,8 +80,8 @@ size_t formation_reachable_open(const struct game *restrict game, const struct b
 			{
 				double target[2] = {x + 0.5, y + 0.5};
 				if (battle->field[y][x].blockage) continue;
-				if (distance(defend, target) < FORMATION_RADIUS_FREE) continue;
-				if (distance(attack[pawn->startup], target) <= FORMATION_RADIUS_ATTACK)
+				if (distance(formation_position_defend, target) < FORMATION_RADIUS_FREE) continue;
+				if (distance(formation_position_attack[pawn->startup], target) <= FORMATION_RADIUS_ATTACK)
 					reachable[reachable_count++] = (struct point){x, y};
 			}
 	}
@@ -94,9 +91,6 @@ size_t formation_reachable_open(const struct game *restrict game, const struct b
 
 size_t formation_reachable_assault(const struct game *restrict game, const struct battle *restrict battle, const struct pawn *restrict pawn, struct point reachable[REACHABLE_LIMIT])
 {
-	const double defend[2] = {12.5, 0};
-	const double assault[ASSAULT_LIMIT][2] = {{12.5, 20.0}, {0.0, 7.5}, {25.0, 7.5}, {3.5, 16.5}, {21.5, 16.5}};
-
 	size_t x, y;
 
 	size_t reachable_count = 0;
@@ -107,7 +101,7 @@ size_t formation_reachable_assault(const struct game *restrict game, const struc
 			for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
 			{
 				if (battle->field[y][x].blockage) continue;
-				if (distance(defend, (double [2]){x + 0.5, y + 0.5}) <= FORMATION_RADIUS_DEFEND)
+				if (distance(formation_position_garrison, (double [2]){x + 0.5, y + 0.5}) <= FORMATION_RADIUS_DEFEND)
 					reachable[reachable_count++] = (struct point){x, y};
 			}
 	}
@@ -117,7 +111,7 @@ size_t formation_reachable_assault(const struct game *restrict game, const struc
 			for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
 			{
 				if (battle->field[y][x].blockage) continue;
-				if (distance(assault[pawn->startup], (double [2]){x + 0.5, y + 0.5}) <= FORMATION_RADIUS_ATTACK)
+				if (distance(formation_position_assault[pawn->startup], (double [2]){x + 0.5, y + 0.5}) <= FORMATION_RADIUS_ATTACK)
 					reachable[reachable_count++] = (struct point){x, y};
 			}
 	}
