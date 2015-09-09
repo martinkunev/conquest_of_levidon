@@ -50,6 +50,16 @@ static void input_display(void (*if_display)(const void *, const struct game *),
 	glXSwapBuffers(display, drawable);
 }
 
+int input_finish(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
+{
+	return INPUT_FINISH;
+}
+
+int input_terminate(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
+{
+	return INPUT_TERMINATE;
+}
+
 // ERROR_CANCEL - user-specified termination
 int input_local(const struct area *restrict areas, size_t areas_count, void (*display)(const void *, const struct game *), const struct game *restrict game, void *state)
 {

@@ -292,7 +292,7 @@ static int play(struct game *restrict game)
 				if (battlefield_init(game, &battle, region, 0) < 0) abort(); // TODO
 				winner = play_battle(game, &battle, game->players[battle.region->owner].alliance);
 				if (winner < 0) ; // TODO
-				input_report(game, &battle); // TODO this is player-specific
+				input_report_battle(game, &battle); // TODO this is player-specific
 				battlefield_term(game, &battle);
 			}
 			else if (region->garrison.assault) // assault
@@ -301,7 +301,7 @@ static int play(struct game *restrict game)
 				if (battlefield_init(game, &battle, region, 1) < 0) abort(); // TODO
 				winner = play_battle(game, &battle, game->players[battle.region->garrison.owner].alliance);
 				if (winner < 0) ; // TODO
-				input_report(game, &battle); // TODO this is player-specific
+				input_report_battle(game, &battle); // TODO this is player-specific
 				battlefield_term(game, &battle);
 
 				assault = 1;

@@ -12,6 +12,7 @@
 #include "input.h"
 #include "input_battle.h"
 #include "display.h"
+#include "interface_common.h"
 
 extern struct battle *battle;
 
@@ -36,19 +37,15 @@ static int input_round(int code, unsigned x, unsigned y, uint16_t modifiers, con
 
 	case XK_Escape:
 		{
-			int status;
 			struct pawn *pawn = state->pawn;
 			if (!pawn || (pawn->troop->owner != state->player)) return INPUT_IGNORE;
 
 			// Cancel the actions of the current pawn.
 
-			if ((pawn->moves_count == 1) && !pawn->action)
-				return INPUT_IGNORE;
-
-			movement_stay(pawn);
-			status = path_distances(pawn, state->graph, state->obstacles, state->reachable);
-			if (status < 0) return status;
+			if ((pawn->moves_count == 1) && !pawn->action) return INPUT_IGNORE;
+			pawn->moves_count = 1;
 			pawn->action = 0;
+			return path_distances(pawn, state->graph, state->obstacles, state->reachable);
 		}
 		return 0;
 
@@ -148,9 +145,7 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 		// Cancel actions if the clicked field is the one on which the pawn stands.
 		if (point_eq(point, pawn->moves[0].location))
 		{
-			if ((pawn->moves_count == 1) && !pawn->action)
-				return INPUT_IGNORE;
-
+			if ((pawn->moves_count == 1) && !pawn->action) return INPUT_IGNORE;
 			pawn->moves_count = 1;
 			pawn->action = 0;
 			return path_distances(pawn, state->graph, state->obstacles, state->reachable);
@@ -290,6 +285,13 @@ int input_formation(const struct game *restrict game, struct battle *restrict ba
 			.callback = input_round
 		},
 		{
+			.left = BUTTON_ENTER_X,
+			.right = BUTTON_ENTER_X + BUTTON_WIDTH,
+			.top = BUTTON_ENTER_Y,
+			.bottom = BUTTON_ENTER_Y + BUTTON_HEIGHT,
+			.callback = input_finish
+		},
+		{
 			.left = object_group[Battlefield].left,
 			.right = object_group[Battlefield].right,
 			.top = object_group[Battlefield].top,
@@ -319,6 +321,13 @@ int input_battle(const struct game *restrict game, struct battle *restrict battl
 			.top = 0,
 			.bottom = SCREEN_HEIGHT - 1,
 			.callback = input_round
+		},
+		{
+			.left = BUTTON_ENTER_X,
+			.right = BUTTON_ENTER_X + BUTTON_WIDTH,
+			.top = BUTTON_ENTER_Y,
+			.bottom = BUTTON_ENTER_Y + BUTTON_HEIGHT,
+			.callback = input_finish
 		},
 		{
 			.left = object_group[Battlefield].left,

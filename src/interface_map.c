@@ -9,6 +9,7 @@
 #include "map.h"
 #include "pathfinding.h"
 #include "interface.h"
+#include "interface_common.h"
 #include "image.h"
 #include "input_map.h"
 #include "display.h"
@@ -247,18 +248,6 @@ static void tooltip_cost(const char *restrict name, size_t name_length, const st
 		draw_string(buffer, length, TOOLTIP_X + offset, TOOLTIP_Y, &font12, White);
 		offset += 40;
 	}
-}
-
-void show_flag(unsigned x, unsigned y, unsigned player)
-{
-	fill_rectangle(x + 4, y + 4, 24, 12, Player + player);
-	image_draw(&image_flag, x, y);
-}
-
-void show_flag_small(unsigned x, unsigned y, unsigned player)
-{
-	fill_rectangle(x + 2, y + 2, 12, 6, Player + player);
-	image_draw(&image_flag_small, x, y);
 }
 
 static void if_map_troops(unsigned x, unsigned y, unsigned count_self, unsigned count_allies, unsigned count_enemies)
@@ -687,4 +676,7 @@ void if_map(const void *argument, const struct game *game)
 	show_resource(&image_wood, treasury->wood, income.wood, expenses.wood, RESOURCE_WOOD);
 	show_resource(&image_stone, treasury->stone, income.stone, expenses.stone, RESOURCE_STONE);
 	show_resource(&image_iron, treasury->iron, income.iron, expenses.iron, RESOURCE_IRON);
+
+	show_button(S("Ready"), BUTTON_READY_X, BUTTON_READY_Y);
+	show_button(S("Menu"), BUTTON_MENU_X, BUTTON_MENU_Y);
 }

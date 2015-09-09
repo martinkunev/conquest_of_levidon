@@ -8,6 +8,7 @@
 #include "input_menu.h"
 #include "pathfinding.h"
 #include "display.h"
+#include "interface_common.h"
 #include "interface_menu.h"
 #include "menu.h"
 #include "world.h"
@@ -41,6 +42,13 @@ static void world_select(struct state *restrict state, size_t index)
 	state->name_position = state->name_size = filename->size;
 }
 
+static int input_continue(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
+{
+	struct state *state = argument;
+	if (state->name_size) return INPUT_FINISH;
+	else return 0;
+}
+
 static int input_none(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
 {
 	struct state *state = argument;
@@ -64,8 +72,7 @@ static int input_none(int code, unsigned x, unsigned y, uint16_t modifiers, cons
 		return 0;
 
 	case XK_Return:
-		if (state->name_size) return INPUT_FINISH;
-		return 0;
+		return input_continue(code, x, y, modifiers, game, argument);
 
 	case 'q':
 	case XK_Escape:
@@ -135,25 +142,10 @@ static int input_none(int code, unsigned x, unsigned y, uint16_t modifiers, cons
 	}
 }
 
-static int input_menu(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
+static int input_write(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
 {
 	struct state *state = argument;
-
 	int status;
-
-	// Ignore input if control, alt or super is pressed.
-	// TODO is this necessary?
-	if (modifiers & (XCB_MOD_MASK_CONTROL | XCB_MOD_MASK_1 | XCB_MOD_MASK_4)) return INPUT_NOTME;
-
-	switch (code)
-	{
-	case XK_Return:
-		break;
-	case XK_Escape:
-		return INPUT_FINISH;
-	default:
-		return INPUT_NOTME;
-	}
 
 	status = menu_save(state->directory, state->name, state->name_size, game);
 	if (status == ERROR_MEMORY) return ERROR_MEMORY;
@@ -163,10 +155,25 @@ static int input_menu(int code, unsigned x, unsigned y, uint16_t modifiers, cons
 	state->error_size = sizeof(ERROR_STRING_SAVE) - 1;
 
 	return 0;
+}
 
-	/*state.name_size = 0;
-	state.name_position = 0;
-	state.world_index = -1;*/
+static int input_menu(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
+{
+	//struct state *state = argument;
+
+	// Ignore input if control, alt or super is pressed.
+	// TODO is this necessary?
+	if (modifiers & (XCB_MOD_MASK_CONTROL | XCB_MOD_MASK_1 | XCB_MOD_MASK_4)) return INPUT_NOTME;
+
+	switch (code)
+	{
+	case XK_Return:
+		return input_write(code, x, y, modifiers, game, argument);
+	case XK_Escape:
+		return INPUT_FINISH;
+	default:
+		return INPUT_NOTME;
+	}
 }
 
 static int input_tab(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
@@ -294,6 +301,20 @@ int input_load(struct game *restrict game)
 			.callback = input_none
 		},
 		{
+			.left = BUTTON_ENTER_X,
+			.right = BUTTON_ENTER_X + BUTTON_WIDTH,
+			.top = BUTTON_ENTER_Y,
+			.bottom = BUTTON_ENTER_Y + BUTTON_HEIGHT,
+			.callback = input_continue
+		},
+		{
+			.left = BUTTON_EXIT_X,
+			.right = BUTTON_EXIT_X + BUTTON_WIDTH,
+			.top = BUTTON_EXIT_Y,
+			.bottom = BUTTON_EXIT_Y + BUTTON_HEIGHT,
+			.callback = input_terminate
+		},
+		{
 			.left = object_group[WorldTabs].left,
 			.right = object_group[WorldTabs].right,
 			.top = object_group[WorldTabs].top,
@@ -316,6 +337,20 @@ int input_load(struct game *restrict game)
 			.top = 0,
 			.bottom = SCREEN_HEIGHT - 1,
 			.callback = input_setup
+		},
+		{
+			.left = BUTTON_ENTER_X,
+			.right = BUTTON_ENTER_X + BUTTON_WIDTH,
+			.top = BUTTON_ENTER_Y,
+			.bottom = BUTTON_ENTER_Y + BUTTON_HEIGHT,
+			.callback = input_finish
+		},
+		{
+			.left = BUTTON_CANCEL_X,
+			.right = BUTTON_CANCEL_X + BUTTON_WIDTH,
+			.top = BUTTON_CANCEL_Y,
+			.bottom = BUTTON_CANCEL_Y + BUTTON_HEIGHT,
+			.callback = input_terminate
 		},
 		{
 			.left = object_group[Players].left,
@@ -376,6 +411,27 @@ int input_save(const struct game *restrict game)
 			.top = 0,
 			.bottom = SCREEN_HEIGHT - 1,
 			.callback = input_none
+		},
+		{
+			.left = BUTTON_ENTER_X,
+			.right = BUTTON_ENTER_X + BUTTON_WIDTH,
+			.top = BUTTON_ENTER_Y,
+			.bottom = BUTTON_ENTER_Y + BUTTON_HEIGHT,
+			.callback = input_write
+		},
+		{
+			.left = BUTTON_CANCEL_X,
+			.right = BUTTON_CANCEL_X + BUTTON_WIDTH,
+			.top = BUTTON_CANCEL_Y,
+			.bottom = BUTTON_CANCEL_Y + BUTTON_HEIGHT,
+			.callback = input_finish
+		},
+		{
+			.left = BUTTON_EXIT_X,
+			.right = BUTTON_EXIT_X + BUTTON_WIDTH,
+			.top = BUTTON_EXIT_Y,
+			.bottom = BUTTON_EXIT_Y + BUTTON_HEIGHT,
+			.callback = input_terminate
 		},
 		{
 			.left = 0,

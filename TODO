@@ -66,19 +66,14 @@ images
 
 menu
 	directory tabs images
-	exit button in load game
-	cancel button and exit button in save game
 
 battle
 	when two pawns from different alliances are next to each other, display red line between them (to show that they are fighting)
 	hide mouse pointer during animation
 	display round number
-	start battle button during formation
-	end round button during battle
 
 report
 	display minimap
-	close button
 
 map
 	village image (will be displayed to the left of troops bar)
@@ -87,4 +82,3 @@ map
 	don't show flag for the neutral player
 	right clicking on a garrison on the map should be the same as clicking for assault
 	indicate on the map which region is selected (maybe with a border around it?)
-	game menu and end turn button

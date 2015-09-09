@@ -6,6 +6,7 @@
 #include "input_menu.h"
 #include "pathfinding.h"
 #include "display.h"
+#include "interface_common.h"
 #include "interface_menu.h"
 #include "menu.h"
 #include "world.h"
@@ -87,6 +88,17 @@ void if_load(const void *argument, const struct game *game)
 			}
 		}
 	}
+
+	if (state->loaded)
+	{
+		show_button(S("Start game"), BUTTON_ENTER_X, BUTTON_ENTER_Y);
+		show_button(S("Cancel"), BUTTON_CANCEL_X, BUTTON_CANCEL_Y);
+	}
+	else
+	{
+		show_button(S("Continue"), BUTTON_ENTER_X, BUTTON_ENTER_Y);
+		show_button(S("Exit"), BUTTON_EXIT_X, BUTTON_EXIT_Y);
+	}
 }
 
 void if_save(const void *argument, const struct game *game)
@@ -131,4 +143,8 @@ void if_save(const void *argument, const struct game *game)
 
 	if (state->error_size)
 		draw_string(state->error, state->error_size, MENU_MESSAGE_X, MENU_MESSAGE_Y, &font12, Error);
+
+	show_button(S("Save"), BUTTON_ENTER_X, BUTTON_ENTER_Y);
+	show_button(S("Return to game"), BUTTON_CANCEL_X, BUTTON_CANCEL_Y);
+	show_button(S("Quit game"), BUTTON_EXIT_X, BUTTON_EXIT_Y);
 }

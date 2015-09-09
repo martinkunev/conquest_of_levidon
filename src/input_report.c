@@ -7,11 +7,12 @@
 #include "interface.h"
 #include "input.h"
 #include "input_report.h"
+#include "interface_common.h"
 #include "interface_report.h"
 #include "pathfinding.h"
 #include "battle.h"
 
-static int input_close(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
+static int input_report(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
 {
 	switch (code)
 	{
@@ -31,7 +32,14 @@ int input_report_battle(const struct game *restrict game, const struct battle *r
 			.right = SCREEN_WIDTH - 1,
 			.top = 0,
 			.bottom = SCREEN_HEIGHT - 1,
-			.callback = input_close
+			.callback = input_report,
+		},
+		{
+			.left = BUTTON_EXIT_X,
+			.right = BUTTON_EXIT_X + BUTTON_WIDTH,
+			.top = BUTTON_EXIT_Y,
+			.bottom = BUTTON_EXIT_Y + BUTTON_HEIGHT,
+			.callback = input_finish,
 		},
 	};
 
@@ -50,7 +58,14 @@ int input_report_map(const struct game *restrict game)
 			.right = SCREEN_WIDTH - 1,
 			.top = 0,
 			.bottom = SCREEN_HEIGHT - 1,
-			.callback = input_close
+			.callback = input_report,
+		},
+		{
+			.left = BUTTON_EXIT_X,
+			.right = BUTTON_EXIT_X + BUTTON_WIDTH,
+			.top = BUTTON_EXIT_Y,
+			.bottom = BUTTON_EXIT_Y + BUTTON_HEIGHT,
+			.callback = input_finish,
 		},
 	};
 

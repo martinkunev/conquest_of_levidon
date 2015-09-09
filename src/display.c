@@ -15,6 +15,7 @@
 #include "battle.h"
 #include "movement.h"
 #include "interface.h"
+#include "interface_common.h"
 #include "image.h"
 #include "input.h"
 #include "input_battle.h"
@@ -450,6 +451,8 @@ void if_formation(const void *argument, const struct game *game)
 		}
 	}
 
+	show_button(S("Start battle"), BUTTON_ENTER_X, BUTTON_ENTER_Y);
+
 	// Display hovered field in color.
 	// TODO this is buggy
 	/*if (!point_eq(state->hover, POINT_NONE))
@@ -620,6 +623,8 @@ void if_battle(const void *argument, const struct game *game)
 		}
 	}
 
+	show_button(S("Ready"), BUTTON_ENTER_X, BUTTON_ENTER_Y);
+
 	// TODO finish this test
 	/*{
 		// http://xcb.freedesktop.org/tutorial/mousecursors/
@@ -665,6 +670,20 @@ void if_battle(const void *argument, const struct game *game)
 		xcb_free_pixmap(connection, bitmap);
 		xcb_free_pixmap(connection, mask);
 	}*/
+
+#if defined(DEBUG)
+	for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
+	{
+		for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
+		{
+			char buffer[6], *end = buffer;
+			end = format_uint(end, x, 10);
+			*end++ = ',';
+			end = format_uint(end, y, 10);
+			draw_string(buffer, end - buffer, BATTLE_X + x * object_group[Battlefield].width, BATTLE_Y + y * object_group[Battlefield].height, White);
+		}
+	}
+#endif
 }
 
 void if_set(struct battle *b)

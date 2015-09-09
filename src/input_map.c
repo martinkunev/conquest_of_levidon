@@ -7,6 +7,7 @@
 #include "input.h"
 #include "input_map.h"
 #include "input_menu.h"
+#include "interface_common.h"
 #include "interface_map.h"
 #include "pathfinding.h"
 #include "display.h"
@@ -32,6 +33,11 @@ static int input_turn(int code, unsigned x, unsigned y, uint16_t modifiers, cons
 	case 'n':
 		return INPUT_FINISH;
 	}
+}
+
+static int input_menu(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
+{
+	return input_save(game);
 }
 
 static int input_region(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
@@ -483,6 +489,20 @@ int input_map(const struct game *restrict game, unsigned char player)
 			.top = 0,
 			.bottom = SCREEN_HEIGHT - 1,
 			.callback = input_turn,
+		},
+		{
+			.left = BUTTON_READY_X,
+			.right = BUTTON_READY_X + BUTTON_WIDTH,
+			.top = BUTTON_READY_Y,
+			.bottom = BUTTON_READY_Y + BUTTON_HEIGHT,
+			.callback = input_finish,
+		},
+		{
+			.left = BUTTON_MENU_X,
+			.right = BUTTON_MENU_X + BUTTON_WIDTH,
+			.top = BUTTON_MENU_Y,
+			.bottom = BUTTON_MENU_Y + BUTTON_HEIGHT,
+			.callback = input_menu,
 		},
 		{
 			.left = MAP_X,

@@ -89,6 +89,8 @@ void if_report_battle(const void *argument, const struct game *game_)
 			}
 		}
 	}
+
+	show_button(S("Close"), BUTTON_EXIT_X, BUTTON_EXIT_Y);
 }
 
 void if_report_map(const void *argument, const struct game *game)
@@ -142,4 +144,6 @@ void if_report_map(const void *argument, const struct game *game)
 
 		offset += MARGIN_Y;
 	}
+
+	show_button(S("Close"), BUTTON_EXIT_X, BUTTON_EXIT_Y);
 }
