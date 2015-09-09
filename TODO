@@ -1,6 +1,5 @@
 H	AI for troop movement on the map
 H	levidon map
-H	don't just exit the game after the game is won
 M	battle mechanics fixes
 M	error reporting on invalid map
 M	clean up the code related to the end of the battle
@@ -56,8 +55,6 @@ improve player colors
 player names and flag patterns
 
 images
-	transparent background for arrows
-
 	fortress*.png, fortress_gate*.png
 	assault.png (indicator on the map)
 
@@ -69,20 +66,25 @@ images
 
 menu
 	directory tabs images
-	title and exit button
+	exit button in load game
+	cancel button and exit button in save game
 
 battle
 	when two pawns from different alliances are next to each other, display red line between them (to show that they are fighting)
-	display round number and end round button
 	hide mouse pointer during animation
+	display round number
+	start battle button during formation
+	end round button during battle
 
 report
 	display minimap
+	close button
 
 map
 	village image (will be displayed to the left of troops bar)
 	more tooltips
-	display current month and year and end turn button
+	display current month and year
 	don't show flag for the neutral player
 	right clicking on a garrison on the map should be the same as clicking for assault
 	indicate on the map which region is selected (maybe with a border around it?)
+	game menu and end turn button

@@ -11,7 +11,7 @@
 #include "pathfinding.h"
 #include "battle.h"
 
-static int input_end(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
+static int input_close(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
 {
 	switch (code)
 	{
@@ -23,7 +23,7 @@ static int input_end(int code, unsigned x, unsigned y, uint16_t modifiers, const
 	}
 }
 
-int input_report(const struct game *restrict game, const struct battle *restrict battle)
+int input_report_battle(const struct game *restrict game, const struct battle *restrict battle)
 {
 	struct area areas[] = {
 		{
@@ -31,7 +31,7 @@ int input_report(const struct game *restrict game, const struct battle *restrict
 			.right = SCREEN_WIDTH - 1,
 			.top = 0,
 			.bottom = SCREEN_HEIGHT - 1,
-			.callback = input_end
+			.callback = input_close
 		},
 	};
 
@@ -39,7 +39,7 @@ int input_report(const struct game *restrict game, const struct battle *restrict
 	state.game = game;
 	state.battle = battle;
 
-	return input_local(areas, sizeof(areas) / sizeof(*areas), if_report, 0, &state);
+	return input_local(areas, sizeof(areas) / sizeof(*areas), if_report_battle, 0, &state);
 }
 
 int input_report_map(const struct game *restrict game)
@@ -50,12 +50,9 @@ int input_report_map(const struct game *restrict game)
 			.right = SCREEN_WIDTH - 1,
 			.top = 0,
 			.bottom = SCREEN_HEIGHT - 1,
-			.callback = input_end
+			.callback = input_close
 		},
 	};
 
-	struct state_report state;
-	state.game = game;
-
-	return input_local(areas, sizeof(areas) / sizeof(*areas), if_report_map, 0, &state);
+	return input_local(areas, sizeof(areas) / sizeof(*areas), if_report_map, game, 0);
 }

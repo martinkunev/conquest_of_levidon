@@ -160,6 +160,8 @@ void battle_shoot(struct battle *battle, const struct obstacles *restrict obstac
 {
 	const double targets[3][2] = {{1, 0.5}, {0, 0.078125}, {0, 0.046875}}; // 1/2, 5/64, 3/64
 
+	// There is friendly fire.
+
 	size_t i;
 	for(i = 0; i < battle->pawns_count; ++i)
 	{

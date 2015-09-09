@@ -33,7 +33,7 @@
 
 #define REPORT_MAP_TITLE S("Winners")
 
-void if_report(const void *argument, const struct game *game_)
+void if_report_battle(const void *argument, const struct game *game_)
 {
 	const struct state_report *restrict state = argument;
 	const struct game *restrict game = state->game;
