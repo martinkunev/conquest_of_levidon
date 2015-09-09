@@ -104,14 +104,13 @@ void fill_circle(unsigned x, unsigned y, unsigned radius, enum color color)
 {
 	unsigned steps = radius * 4, step;
 
+	glColor4ubv(display_colors[color]);
 	glBegin(GL_POLYGON);
-
 	for(step = 0; step < steps; ++step)
 	{
 		double angle = step * 2 * M_PI / steps;
-		glVertex2i(x + cos(angle), y + sin(angle));
+		glVertex2i(x + cos(angle) * (radius + 0.5), y + sin(angle) * (radius + 0.5));
 	}
-
 	glEnd();
 }
 
