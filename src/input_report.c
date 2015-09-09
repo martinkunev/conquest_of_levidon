@@ -41,3 +41,21 @@ int input_report(const struct game *restrict game, const struct battle *restrict
 
 	return input_local(areas, sizeof(areas) / sizeof(*areas), if_report, 0, &state);
 }
+
+int input_report_map(const struct game *restrict game)
+{
+	struct area areas[] = {
+		{
+			.left = 0,
+			.right = SCREEN_WIDTH - 1,
+			.top = 0,
+			.bottom = SCREEN_HEIGHT - 1,
+			.callback = input_end
+		},
+	};
+
+	struct state_report state;
+	state.game = game;
+
+	return input_local(areas, sizeof(areas) / sizeof(*areas), if_report_map, 0, &state);
+}

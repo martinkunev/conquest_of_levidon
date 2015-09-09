@@ -25,7 +25,7 @@
 #define ANIMATION_DURATION 3.0
 #define ANIMATION_SHOOT_DURATION 2.0
 
-#define PLAYER_INDICATOR_RADIUS 5
+#define PLAYER_INDICATOR_RADIUS 6
 
 #define PREFIX_IMG PREFIX "share/conquest_of_levidon/img/"
 

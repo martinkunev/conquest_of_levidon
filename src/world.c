@@ -7,7 +7,7 @@
 #include "map.h"
 #include "world.h"
 
-// Player 0 and alliance 0 are hard-coded as neutral.
+// WARNING: Player 0 and alliance 0 are hard-coded as neutral.
 
 #define NAME(string) .name = string, .name_length = sizeof(string) - 1
 
@@ -158,6 +158,8 @@ static int region_init(struct game *restrict game, struct region *restrict regio
 	region->garrison.siege = 0;
 	region->garrison.assault = 0;
 
+	region->troops = 0;
+
 	if (item = value_get(data, "garrison"))
 	{
 		if (json_type(item) != JSON_OBJECT) return -1;
@@ -198,7 +200,6 @@ static int region_init(struct game *restrict game, struct region *restrict regio
 		}
 	}
 
-	region->troops = 0;
 	if (item = value_get(data, "troops"))
 	{
 		if (json_type(item) != JSON_ARRAY) return -1;
@@ -442,6 +443,8 @@ int world_load(const union json *restrict json, struct game *restrict game)
 		if (region_neighbors(game, game->regions + index, &node->object, &item->object) < 0)
 			goto error;
 	}
+
+	// TODO Initialize turn number and month names.
 
 	return 0;
 

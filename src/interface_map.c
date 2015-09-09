@@ -249,13 +249,13 @@ static void tooltip_cost(const char *restrict name, size_t name_length, const st
 	}
 }
 
-static inline void show_flag(unsigned x, unsigned y, unsigned player)
+void show_flag(unsigned x, unsigned y, unsigned player)
 {
 	fill_rectangle(x + 4, y + 4, 24, 12, Player + player);
 	image_draw(&image_flag, x, y);
 }
 
-static inline void show_flag_small(unsigned x, unsigned y, unsigned player)
+void show_flag_small(unsigned x, unsigned y, unsigned player)
 {
 	fill_rectangle(x + 2, y + 2, 12, 6, Player + player);
 	image_draw(&image_flag_small, x, y);

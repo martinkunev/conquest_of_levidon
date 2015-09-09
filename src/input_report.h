@@ -5,3 +5,4 @@ struct state_report
 };
 
 int input_report(const struct game *restrict game, const struct battle *restrict battle);
+int input_report_map(const struct game *restrict game);

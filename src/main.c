@@ -442,7 +442,7 @@ int main(int argc, char *argv[])
 
 	if_display();
 
-	do
+	while (1)
 	{
 		status = input_load(&game);
 		if (status < 0) return -1; // TODO
@@ -452,12 +452,14 @@ int main(int argc, char *argv[])
 		if_display();
 
 		status = play(&game);
+		if (status > 0) input_report_map(&game);
 
 		if_storage_term();
 		world_unload(&game);
 
-		if (status && (status != ERROR_CANCEL)) return status;
-	} while (status);
+		if (status == ERROR_CANCEL) continue;
+		else if (status < 0) return status;
+	}
 
 	if_term();
 
