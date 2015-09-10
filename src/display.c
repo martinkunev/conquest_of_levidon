@@ -26,7 +26,7 @@
 #define ANIMATION_DURATION 3.0
 #define ANIMATION_SHOOT_DURATION 2.0
 
-#define PLAYER_INDICATOR_RADIUS 6
+#define PLAYER_INDICATOR_RADIUS 10
 
 #define PREFIX_IMG PREFIX "share/conquest_of_levidon/img/"
 
@@ -361,7 +361,7 @@ static void if_battlefield(unsigned char player, const struct game *game)
 	fill_rectangle(CTRL_X, CTRL_Y + CTRL_MARGIN, CTRL_WIDTH, CTRL_HEIGHT - CTRL_MARGIN, Gray);
 }
 
-static void if_formation_players(const struct game *restrict game, const struct battle *restrict battle)
+static void if_formation_players(const struct game *restrict game, const struct battle *restrict battle, unsigned char player)
 {
 	size_t i;
 
@@ -370,6 +370,7 @@ static void if_formation_players(const struct game *restrict game, const struct 
 		const struct pawn *restrict pawn;
 		const double *position;
 
+		if (i == player) continue;
 		if (!battle->players[i].pawns_count) continue;
 
 		pawn = battle->players[i].pawns[0];
@@ -424,7 +425,7 @@ void if_formation(const void *argument, const struct game *game)
 		}
 
 	// Indicate where on the battlefield there will be pawns of other players.
-	if_formation_players(game, battle);
+	if_formation_players(game, battle, state->player);
 
 	struct pawn *const *pawns = battle->players[state->player].pawns;
 	size_t pawns_count = battle->players[state->player].pawns_count;
@@ -680,7 +681,7 @@ void if_battle(const void *argument, const struct game *game)
 			end = format_uint(end, x, 10);
 			*end++ = ',';
 			end = format_uint(end, y, 10);
-			draw_string(buffer, end - buffer, BATTLE_X + x * object_group[Battlefield].width, BATTLE_Y + y * object_group[Battlefield].height, White);
+			draw_string(buffer, end - buffer, BATTLE_X + x * object_group[Battlefield].width, BATTLE_Y + y * object_group[Battlefield].height, &font9, White);
 		}
 	}
 #endif

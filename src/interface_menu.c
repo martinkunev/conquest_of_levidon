@@ -96,7 +96,8 @@ void if_load(const void *argument, const struct game *game)
 	}
 	else
 	{
-		show_button(S("Continue"), BUTTON_ENTER_X, BUTTON_ENTER_Y);
+		if (state->name_size) show_button(S("Continue"), BUTTON_ENTER_X, BUTTON_ENTER_Y);
+		else show_button(S(" "), BUTTON_ENTER_X, BUTTON_ENTER_Y);
 		show_button(S("Exit"), BUTTON_EXIT_X, BUTTON_EXIT_Y);
 	}
 }

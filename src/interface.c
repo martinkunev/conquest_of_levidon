@@ -36,7 +36,7 @@ KeySym *keymap;
 int keysyms_per_keycode;
 int keycode_min, keycode_max;
 
-struct font font12, font24;
+struct font font9, font12, font24;
 
 unsigned SCREEN_WIDTH, SCREEN_HEIGHT;
 
@@ -114,14 +114,22 @@ int if_init(void)
 
 	// TODO use DPI-based font size
 	// https://wiki.archlinux.org/index.php/X_Logical_Font_Description
+	if (font_init(&font9, "-misc-dejavu sans-bold-r-normal--9-0-0-0-p-0-ascii-0") < 0)
+	{
+		xcb_destroy_window(connection, window);
+		glXDestroyContext(display, context);
+		goto error;
+	}
 	if (font_init(&font12, "-misc-dejavu sans-bold-r-normal--12-0-0-0-p-0-ascii-0") < 0)
 	{
+		font_term(&font9);
 		xcb_destroy_window(connection, window);
 		glXDestroyContext(display, context);
 		goto error;
 	}
 	if (font_init(&font24, "-misc-dejavu sans-bold-r-normal--24-0-0-0-p-0-ascii-0") < 0)
 	{
+		font_term(&font9);
 		font_term(&font12);
 		xcb_destroy_window(connection, window);
 		glXDestroyContext(display, context);
@@ -139,6 +147,7 @@ int if_init(void)
 	{
 		font_term(&font24);
 		font_term(&font12);
+		font_term(&font9);
 		goto error; // TODO error
 	}
 
@@ -194,6 +203,7 @@ void if_term(void)
 	XFree(keymap);
 	font_term(&font24);
 	font_term(&font12);
+	font_term(&font9);
 
 	glXDestroyWindow(display, drawable);
 	xcb_destroy_window(connection, window);

@@ -1,4 +1,4 @@
-extern struct font font12, font24;
+extern struct font font9, font12, font24;
 extern unsigned SCREEN_WIDTH, SCREEN_HEIGHT;
 
 int if_init(void);
