@@ -333,8 +333,13 @@ static void state_change(const struct game *restrict game, const struct battle *
 	if (neighbors_count)
 	{
 		struct point neighbor = neighbors[random() % neighbors_count];
-		pawn->moves_count = 1;
-		movement_queue(pawn, neighbor, graph, obstacles);
+		const struct pawn *restrict target_pawn = battle->field[neighbor.y][neighbor.x].pawn;
+
+		if (!target_pawn || !combat_order_fight(game, battle, obstacles, pawn, target_pawn))
+		{
+			pawn->moves_count = 1;
+			movement_queue(pawn, neighbor, graph, obstacles);
+		}
 	}
 }
 
@@ -482,7 +487,6 @@ static unsigned pawn_victims_fight(const struct game *restrict game, const struc
 	return victims_count;
 }*/
 
-// TODO path_distance sets the distance to 0 when the evaluated field is the one the pawn is located at
 static double state_rating(const struct game *restrict game, struct battle *restrict battle, unsigned char player, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles)
 {
 	size_t i, j;
@@ -540,6 +544,8 @@ static double state_rating(const struct game *restrict game, struct battle *rest
 				rating += unit_importance(battle, victims[j]->troop->unit) * damage_expected(pawn, (double)pawn->count / victims_count, victims[j]);
 		}
 
+		// TODO take ally pawns into account
+
 		// Estimate benefits and dangers for the following turns (moving, fighting, shooting, assault).
 		for(j = 0; j < battle->pawns_count; ++j) // loop through enemy pawns
 		{
@@ -553,19 +559,20 @@ static double state_rating(const struct game *restrict game, struct battle *rest
 			status = path_distance(pawn->moves[pawn->moves_count - 1].location, other->moves[0].location, graph, obstacles, &distance);
 			if (status < 0) ; // TODO memory error
 			if (distance == INFINITY) continue; // TODO this information is available through reachable
-			//if (distance <= (1.0 + FLOAT_PRECISION)) continue; // ignore neighbors
 
 			// TODO use a better formula here
 			rating -= unit_importance(battle, pawn->troop->unit) * damage_expected(other, other->count, pawn) * other->troop->unit->speed / distance;
 			rating += unit_importance(battle, other->troop->unit) * damage_expected(pawn, pawn->count, other) * pawn->troop->unit->speed / distance;
+
+			// TODO this is supposed to make the computer prefer setting the action; is this the right way?
+			if ((pawn->action == PAWN_FIGHT) && (pawn->target.pawn == other))
+				rating += unit_importance(battle, other->troop->unit) * damage_expected(pawn, pawn->count, other) * pawn->troop->unit->speed / distance;
 
 			// TODO support shoot and assault evaluations
 		}
 
 		// TODO walls close to the current position (if on the two diagonals, large bonus (gate blocking))
 	}
-
-	// TODO take ally pawns into account
 
 	// Estimate how bad will the damage effects from enemies be.
 	for(i = 0; i < battle->pawns_count; ++i) // loop enemy pawns
@@ -638,10 +645,12 @@ int computer_battle(const struct game *restrict game, struct battle *restrict ba
 
 	// Choose suitable commands for the pawns of the player.
 	rating = state_rating(game, battle, player, graph, obstacles);
-	printf(">> rating: %f\n", rating);
+	printf(">>\n", rating);
 	for(step = 0; step < SEARCH_TRIES; ++step) // TODO think about this
 	{
 		struct pawn *restrict pawn;
+
+		printf(">> rating: %f\n", rating);
 
 		i = random() % pawns_count;
 		pawn = battle->players[player].pawns[i];
@@ -662,11 +671,7 @@ int computer_battle(const struct game *restrict game, struct battle *restrict ba
 		// Calculate the rating of the new set of commands.
 		// Revert the new command if it is unacceptably worse than the current one.
 		rating_new = state_rating(game, battle, player, graph, obstacles);
-		if (state_wanted(rating, rating_new, step))
-		{
-			rating = rating_new;
-			printf("rating changed: %f\n", rating_new);
-		}
+		if (state_wanted(rating, rating_new, step)) rating = rating_new;
 		else
 		{
 			pawn->action = backup->action;
@@ -675,15 +680,10 @@ int computer_battle(const struct game *restrict game, struct battle *restrict ba
 			pawn->moves_count = backup->moves_count;
 			memcpy(pawn->moves, backup->moves, backup->moves_count * sizeof(*backup->moves));
 
-			if (isnan(rating_new) || isnan(-rating_new))
-			{
-				int x = 3;
-				x += 1;
-			}
 			printf("skipped: %f\n", rating_new);
 		}
 	}
-	printf("\n");
+	printf("final rating: %f\n", rating);
 
 finally:
 	free(backup);

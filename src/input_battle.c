@@ -79,7 +79,7 @@ static int pawn_command(const struct game *restrict game, const struct battle *r
 			int status = movement_attack(pawn, point, battle->field, reachable, graph, obstacles);
 			if (status < 0) return status;
 
-			combat_order_fight(game, battle, obstacles, pawn, target->pawn); // the check above ensure this will succeed
+			combat_order_fight(game, battle, obstacles, pawn, target->pawn); // the check above ensures this will succeed
 			return 0;
 		}
 	}

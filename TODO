@@ -1,5 +1,5 @@
 H	AI for troop movement on the map
-H	AI improvements: find the pawn even when it is far away; fix the nan problem; set fight target (to avoid escaping pawns)
+H	AI improvements: find the pawn even when it is far away
 H	levidon map
 M	battle mechanics fixes
 M	error reporting on invalid map
