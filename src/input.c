@@ -52,11 +52,13 @@ static void input_display(void (*if_display)(const void *, const struct game *),
 
 int input_finish(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
 {
+	if (code != EVENT_MOUSE_LEFT) return INPUT_NOTME;
 	return INPUT_FINISH;
 }
 
 int input_terminate(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
 {
+	if (code != EVENT_MOUSE_LEFT) return INPUT_NOTME;
 	return INPUT_TERMINATE;
 }
 

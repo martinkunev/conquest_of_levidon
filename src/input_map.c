@@ -37,6 +37,7 @@ static int input_turn(int code, unsigned x, unsigned y, uint16_t modifiers, cons
 
 static int input_menu(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
 {
+	if (code != EVENT_MOUSE_LEFT) return INPUT_NOTME;
 	return input_save(game);
 }
 

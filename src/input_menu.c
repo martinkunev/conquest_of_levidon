@@ -45,6 +45,7 @@ static void world_select(struct state *restrict state, size_t index)
 static int input_continue(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
 {
 	struct state *state = argument;
+	if (code != EVENT_MOUSE_LEFT) return INPUT_NOTME;
 	if (state->name_size) return INPUT_FINISH;
 	else return 0;
 }
@@ -72,7 +73,7 @@ static int input_none(int code, unsigned x, unsigned y, uint16_t modifiers, cons
 		return 0;
 
 	case XK_Return:
-		return input_continue(code, x, y, modifiers, game, argument);
+		return input_continue(EVENT_MOUSE_LEFT, x, y, modifiers, game, argument);
 
 	case 'q':
 	case XK_Escape:
@@ -147,6 +148,8 @@ static int input_write(int code, unsigned x, unsigned y, uint16_t modifiers, con
 	struct state *state = argument;
 	int status;
 
+	if (code != EVENT_MOUSE_LEFT) return INPUT_NOTME;
+
 	status = menu_save(state->directory, state->name, state->name_size, game);
 	if (status == ERROR_MEMORY) return ERROR_MEMORY;
 	if (!status) return INPUT_FINISH;
@@ -168,7 +171,7 @@ static int input_menu(int code, unsigned x, unsigned y, uint16_t modifiers, cons
 	switch (code)
 	{
 	case XK_Return:
-		return input_write(code, x, y, modifiers, game, argument);
+		return input_write(EVENT_MOUSE_LEFT, x, y, modifiers, game, argument);
 	case XK_Escape:
 		return INPUT_FINISH;
 	default:
@@ -463,6 +466,8 @@ int input_save(const struct game *restrict game)
 	if (tab_select(&state, 2) < 0) return -1; // TODO
 
 	state.loaded = 0;
+
+	state.error_size = 0;
 
 	// TODO ? generate some filename
 
