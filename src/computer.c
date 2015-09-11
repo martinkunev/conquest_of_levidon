@@ -333,7 +333,7 @@ static void state_change(const struct game *restrict game, const struct battle *
 	if (neighbors_count)
 	{
 		struct point neighbor = neighbors[random() % neighbors_count];
-		const struct pawn *restrict target_pawn = battle->field[neighbor.y][neighbor.x].pawn;
+		struct pawn *restrict target_pawn = battle->field[neighbor.y][neighbor.x].pawn;
 
 		if (!target_pawn || !combat_order_fight(game, battle, obstacles, pawn, target_pawn))
 		{
@@ -527,9 +527,9 @@ static double state_rating(const struct game *restrict game, struct battle *rest
 		if (pawn->action == PAWN_SHOOT)
 		{
 			// estimate shoot impact
-			// TODO
-
-			// pawn->target.field
+			// TODO this doesn't account for accuracy and damage spreading to nearby targets
+			const struct pawn *victim = pawn->target.pawn;
+			rating += unit_importance(battle, victim->troop->unit) * damage_expected(pawn, pawn->count, victim);
 		}
 		else if ((pawn->action == PAWN_ASSAULT) && battlefield_neighbors(pawn->moves[pawn->moves_count - 1].location, pawn->target.field))
 		{
@@ -550,11 +550,16 @@ static double state_rating(const struct game *restrict game, struct battle *rest
 		for(j = 0; j < battle->pawns_count; ++j) // loop through enemy pawns
 		{
 			const struct pawn *restrict other = battle->pawns + j;
+			const struct unit *restrict attacker = pawn->troop->unit;
 			int status;
 			double distance;
 
 			if (!pawn->count) continue;
 			if (allies(game, other->troop->owner, player)) continue;
+
+			// TODO take into account obstacles on the way and damage splitting to neighboring fields
+			if (attacker->ranged.damage && (round(battlefield_distance(pawn->moves[pawn->moves_count - 1].location, other->moves[0].location)) < attacker->ranged.range))
+				rating += unit_importance(battle, other->troop->unit) * damage_expected_ranged(pawn, pawn->count, other);
 
 			status = path_distance(pawn->moves[pawn->moves_count - 1].location, other->moves[0].location, graph, obstacles, &distance);
 			if (status < 0) ; // TODO memory error
@@ -568,7 +573,7 @@ static double state_rating(const struct game *restrict game, struct battle *rest
 			if ((pawn->action == PAWN_FIGHT) && (pawn->target.pawn == other))
 				rating += unit_importance(battle, other->troop->unit) * damage_expected(pawn, pawn->count, other) * pawn->troop->unit->speed / distance;
 
-			// TODO support shoot and assault evaluations
+			// TODO assault evaluation
 		}
 
 		// TODO walls close to the current position (if on the two diagonals, large bonus (gate blocking))

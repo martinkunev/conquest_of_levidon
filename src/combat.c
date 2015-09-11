@@ -30,6 +30,15 @@ double damage_expected(const struct pawn *restrict fighter, double troops_count,
 	return troops_count * damage * damage_boost[weapon][armor];
 }
 
+// TODO this is not that simple - it should take into account accuracy and damage to neighboring fields
+double damage_expected_ranged(const struct pawn *restrict shooter, double troops_count, const struct pawn *restrict victim)
+{
+	enum weapon weapon = shooter->troop->unit->ranged.weapon;
+	enum armor armor = victim->troop->unit->armor;
+	double damage = shooter->troop->unit->ranged.damage;
+	return troops_count * damage * damage_boost[weapon][armor];
+}
+
 static unsigned deaths(unsigned damage, unsigned troops, unsigned health)
 {
 	unsigned min, max;
