@@ -5,9 +5,9 @@
 #include "interface.h"
 #include "input_menu.h"
 #include "pathfinding.h"
-#include "interface_common.h"
+#include "display_common.h"
 #include "display_battle.h"
-#include "interface_menu.h"
+#include "display_menu.h"
 #include "menu.h"
 #include "world.h"
 

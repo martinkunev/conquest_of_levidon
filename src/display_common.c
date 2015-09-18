@@ -8,7 +8,7 @@
 #include "pathfinding.h"
 #include "image.h"
 #include "interface.h"
-#include "interface_common.h"
+#include "display_common.h"
 
 #define S(s) (s), sizeof(s) - 1
 

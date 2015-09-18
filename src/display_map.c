@@ -9,7 +9,7 @@
 #include "map.h"
 #include "pathfinding.h"
 #include "interface.h"
-#include "interface_common.h"
+#include "display_common.h"
 #include "image.h"
 #include "input_map.h"
 #include "display_battle.h"

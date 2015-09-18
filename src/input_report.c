@@ -8,8 +8,8 @@
 #include "interface.h"
 #include "input.h"
 #include "input_report.h"
-#include "interface_common.h"
-#include "interface_report.h"
+#include "display_common.h"
+#include "display_report.h"
 #include "battle.h"
 
 static int input_report(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)

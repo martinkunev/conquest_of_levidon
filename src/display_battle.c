@@ -13,7 +13,7 @@
 #include "movement.h"
 #include "image.h"
 #include "interface.h"
-#include "interface_common.h"
+#include "display_common.h"
 #include "input.h"
 #include "input_battle.h"
 #include "display_battle.h"

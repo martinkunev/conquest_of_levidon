@@ -11,7 +11,7 @@
 #include "combat.h"
 #include "input.h"
 #include "input_battle.h"
-#include "interface_common.h"
+#include "display_common.h"
 #include "display_battle.h"
 
 extern struct battle *battle;
