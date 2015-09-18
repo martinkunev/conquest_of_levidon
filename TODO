@@ -1,6 +1,7 @@
 H	AI for troop movement on the map
 H	AI improvements: find the pawn even when it is far away
 H	levidon map
+M	better food mechanics; food should not be accumulated indefinately
 M	battle mechanics fixes
 M	error reporting on invalid map
 M	clean up the code related to the end of the battle
@@ -34,6 +35,7 @@ battle mechanics
 	don't allow attacking if the attacker cannot do damage to the defender (due to weapon and armor type)
 
 bugs / issues
+	pawns of the same player deadlock (seen with peasant and light cavalry)
 	computer never trains army and sometimes never builds some buildings
 
 surrender
@@ -58,14 +60,9 @@ images
 	fortress*.png, fortress_gate*.png
 	assault.png (indicator on the map)
 
-	armory.png
-	swordsman.png
-	crossbowman.png
-	heavy_cavalry.png
-	horse_archer.png
-
 menu
 	directory tabs images
+	display minimap
 
 battle
 	when two pawns from different alliances are next to each other, display red line between them (to show that they are fighting)

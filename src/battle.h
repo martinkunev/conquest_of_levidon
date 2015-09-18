@@ -61,7 +61,7 @@ struct battle
 	{
 		size_t pawns_count;
 		struct pawn **pawns;
-		int alive;
+		int alive; // TODO this should be renamed to reflect its real use; it is currently used for aliveness and surrender
 	} players[PLAYERS_LIMIT];
 
 	unsigned round;
