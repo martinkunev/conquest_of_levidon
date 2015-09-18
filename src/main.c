@@ -17,8 +17,9 @@
 #include "input_report.h"
 #include "computer.h"
 #include "interface.h"
-#include "display.h"
+#include "interface_common.h"
 #include "interface_map.h"
+#include "display_battle.h"
 #include "menu.h"
 
 #define S(s) s, sizeof(s) - 1

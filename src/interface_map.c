@@ -12,7 +12,7 @@
 #include "interface_common.h"
 #include "image.h"
 #include "input_map.h"
-#include "display.h"
+#include "display_battle.h"
 
 #define S(s) (s), sizeof(s) - 1
 

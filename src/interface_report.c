@@ -3,13 +3,13 @@
 #include "base.h"
 #include "format.h"
 #include "map.h"
+#include "pathfinding.h"
 #include "interface.h"
 #include "input_report.h"
 #include "interface_common.h"
 #include "interface_report.h"
-#include "pathfinding.h"
 #include "battle.h"
-#include "display.h"
+#include "display_battle.h"
 
 #define FORMAT_BUFFER_INT (1 + sizeof(uintmax_t) * 3) /* buffer size that is sufficient for base-10 representation of any integer */
 
@@ -82,7 +82,7 @@ void if_report_battle(const void *argument, const struct game *game_)
 			display_troop(pawn->troop->unit->index, position_before[owner], offset[owner], Player + owner, White, pawn->troop->count);
 			position_before[owner] += MARGIN_X;
 
-			if (battle->players[player].alive)
+			if (pawn->count)
 			{
 				display_troop(pawn->troop->unit->index, position_after[owner], offset[owner], Player + owner, White, pawn->count);
 				position_after[owner] += MARGIN_X;
