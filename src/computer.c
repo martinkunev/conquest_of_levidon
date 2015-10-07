@@ -45,7 +45,13 @@ struct pawn_command
 	struct move moves[];
 };
 
-struct combat_victims
+struct troop_order
+{
+	struct troop *troop;
+	struct region *move;
+};
+
+/*struct combat_victims
 {
 	const struct pawn *central;
 	const struct pawn *lateral[4];
@@ -53,7 +59,7 @@ struct combat_victims
 	size_t central_count;
 	size_t lateral_count;
 	size_t diagonal_count;
-};
+};*/
 
 //enum {SEARCH_TRIES = 1024};
 enum {SEARCH_TRIES = 64};
@@ -177,8 +183,6 @@ error:
 
 static void computer_map_orders_execute(struct heap_orders *restrict orders, const struct game *restrict game, unsigned char player)
 {
-	size_t i;
-
 	// Perform map orders until all actions are complete or until the priority becomes too low.
 	// Skip orders for which there are not enough resources.
 
@@ -199,18 +203,17 @@ static void computer_map_orders_execute(struct heap_orders *restrict orders, con
 				break;
 			resource_subtract(&game->players[player].treasury, &buildings[order->target.building].cost);
 			order->region->construct = order->target.building;
+			printf("build %.*s in %.*s | %f\n", (int)buildings[order->target.building].name_length, buildings[order->target.building].name, (int)order->region->name_length, order->region->name, order->priority);
 			break;
 
 		case ORDER_TRAIN:
 			if (!resource_enough(&game->players[player].treasury, &UNITS[order->target.unit].cost))
 				break;
-			for(i = 0; i < TRAIN_QUEUE; ++i)
-				if (!order->region->train[i])
-					goto train;
-			break;
-		train:
+			if (order->region->train[0])
+				break;
 			resource_subtract(&game->players[player].treasury, &UNITS[order->target.unit].cost);
-			order->region->train[i] = UNITS + order->target.unit;
+			order->region->train[0] = UNITS + order->target.unit;
+			printf("train %.*s in %.*s | %f\n", (int)UNITS[order->target.unit].name_length, UNITS[order->target.unit].name, (int)order->region->name_length, order->region->name, order->priority);
 			break;
 		}
 	}
@@ -252,64 +255,7 @@ int computer_map(const struct game *restrict game, unsigned char player)
 	free(orders_queue.data);
 	array_orders_term(&orders);
 
-	// Move troops between regions.
-	/*for(i = 0; i < game->regions_count; ++i)
-	{
-		unsigned neighbors_neutral = 0, neighbors_ally = 0, neighbors_enemy = 0, neighbors_sieging = 0, neighbors_sieged = 0;
-		//const struct region *ne
-
-		const struct region *restrict region = game->regions + i;
-
-		if (region->owner != player) continue;
-		if (!region->troops) continue;
-
-		// Determine what is the most important thing to do with region troops.
-		for(j = 0; j < NEIGHBORS_LIMIT; ++j)
-		{
-			const struct region *neighbor = region->neighbors[j];
-
-			if (!neighbor) continue;
-			if (!regions_visible[neighbor->index]) continue;
-
-			if (neighbor->owner == PLAYER_NEUTRAL) // neutral region
-			{
-				neighbors_neutral += 1;
-			}
-			else if (!allies(game, player, neighbor->owner)) // enemy region
-			{
-				if (allies(game, player, neighbor->garrison.owner)) neighbors_sieged += 1;
-				else neighbors_enemy += 1;
-			}
-			else if (allies(game, player, neighbor->garrison.owner)) // self/ally region without siege
-			{
-				neighbors_ally += 1;
-			}
-			else if (player == neighbor->owner) // current player is sieging the region
-			{
-				neighbors_sieging += 1;
-			}
-		}
-
-		if (neighbors_sieged)
-		{
-			for(troop = region->troops; troop; troop = troop->_next)
-			{
-				//
-			}
-		}
-		else if (neighbors_sieging)
-		{
-		}
-		else if (neighbors_enemy)
-		{
-		}
-		else if (neighbors_neutral)
-		{
-		}
-		else if (neighbors_ally)
-		{
-		}
-	}*/
+	// TODO Move troops between regions.
 
 	return 0;
 }
@@ -418,7 +364,7 @@ static unsigned victims_fight_find(const struct game *restrict game, const struc
 	return victims_count;
 }
 
-static void victims_shoot_find(const struct pawn *restrict pawn, const struct pawn *pawns[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH], struct combat_victims *restrict victims)
+/*static void victims_shoot_find(const struct pawn *restrict pawn, const struct pawn *pawns[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH], struct combat_victims *restrict victims)
 {
 	const struct pawn *victim;
 	struct point target, field;
@@ -474,7 +420,7 @@ static void victims_shoot_find(const struct pawn *restrict pawn, const struct pa
 	field = (struct point){target.x + 1, target.y + 1};
 	if ((field.x < BATTLEFIELD_WIDTH) && (field.y < BATTLEFIELD_HEIGHT) && (victim = pawns[field.y][field.x]))
 		victims->diagonal[victims->diagonal_count++] = victim;
-}
+}*/
 
 static double state_rating(const struct game *restrict game, struct battle *restrict battle, unsigned char player, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles)
 {

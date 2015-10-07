@@ -1,4 +1,4 @@
-H	AI for troop movement on the map
+H	AI for troop movement on the map using simulated annealing
 H	AI improvements: find the pawn even when it is far away
 H	levidon map
 M	better food mechanics; food should not be accumulated indefinately
