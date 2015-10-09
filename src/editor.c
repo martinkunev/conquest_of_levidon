@@ -36,8 +36,6 @@ struct vertex
 #define array_type struct vertex
 #include "generic/array.g"
 
-enum {ARRAY_SIZE_DEFAULT = 16};
-
 #define S(s) (s), sizeof(s) - 1
 
 extern Display *display;
@@ -354,8 +352,7 @@ static void load(const unsigned char *restrict buffer, size_t size, struct array
 	struct hashmap_iterator it;
 	struct hashmap_entry *entry;
 
-	if (array_vertex_init(points, ARRAY_SIZE_DEFAULT) < 0)
-		abort();
+	points = (struct array_vertex){};
 
 	json = json_parse(buffer, size);
 	if (!json || (json_type(json) != JSON_OBJECT)) abort();

@@ -29,7 +29,6 @@ struct array_name
 	array_type *data;
 };
 
-STATIC int NAME(_init)(struct array_name *restrict array, size_t count_allocated);
 static inline void NAME(_term)(struct array_name *restrict array)
 {
 	free(array->data);
@@ -48,15 +47,7 @@ INCLUDE1
 # include <stdlib.h>
 #endif
 
-STATIC int NAME(_init)(struct array_name *restrict array, size_t count_allocated)
-{
-	array->count = 0;
-	array->count_allocated = count_allocated;
-	array->data = malloc(count_allocated * sizeof(*array->data));
-	if (!array->data) return -1;
-
-	return 0;
-}
+#define ARRAY_SIZE_BASE 8
 
 STATIC int NAME(_expand)(struct array_name *restrict array, size_t count)
 {
@@ -66,8 +57,9 @@ STATIC int NAME(_expand)(struct array_name *restrict array, size_t count)
 		array_type *buffer;
 
 		// Round count up to the next power of 2.
-		for(count_allocated = array->count_allocated * 2; count_allocated < count; count_allocated *= 2)
-			;
+		count_allocated = (array->count_allocated * 2) | (!array->count_allocated * ARRAY_SIZE_BASE);
+		while (count_allocated < count)
+			count_allocated *= 2;
 
 		buffer = realloc(array->data, count_allocated * sizeof(*array->data));
 		if (!buffer) return -1;
