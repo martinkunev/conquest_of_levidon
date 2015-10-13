@@ -1318,11 +1318,17 @@ union json *json_parse(const unsigned char *data, size_t size)
 	struct JSON_parser_struct *jc;
 	size_t i;
 
+	unsigned line;
+
 	jc = new_JSON_parser(&token_add, &context); // TODO: memory error
 
+	line = 1;
 	for(i = 0; i < size; ++i)
+	{
 		if (!JSON_parser_char(jc, data[i])) // TODO: memory or parse error
 			goto error;
+		if (data[i] == '\n') line += 1;
+	}
 	if (!JSON_parser_done(jc)) goto error; // TODO: parse error
 
 	delete_JSON_parser(jc);
@@ -1609,11 +1615,7 @@ union json *json_array(void)
 {
 	struct json_internal *json = malloc(sizeof(struct json_internal));
 	if (!json) return 0; // memory error
-	if (array_json_init(&json->data.array, ARRAY_SIZE_DEFAULT) < 0)
-	{
-		free(json);
-		return 0; // memory error
-	}
+	json->data.array = (struct array_json){0};
 	json->type = JSON_ARRAY;
 	return &json->data;
 }

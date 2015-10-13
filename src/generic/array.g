@@ -56,7 +56,7 @@ STATIC int NAME(_expand)(struct array_name *restrict array, size_t count)
 		size_t count_allocated;
 		array_type *buffer;
 
-		// Round count up to the next power of 2.
+		// Round count up to the next power of 2 that is >= ARRAY_SIZE_BASE.
 		count_allocated = (array->count_allocated * 2) | (!array->count_allocated * ARRAY_SIZE_BASE);
 		while (count_allocated < count)
 			count_allocated *= 2;
