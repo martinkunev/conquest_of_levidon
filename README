@@ -1,9 +1,26 @@
 Conquest of Levidon is a turn-based strategic game.
 
+Each player controls one or more regions. Each region generates income for its owner in the form of resources (gold, wood, stone, iron, food). Resources are used to construct and support buildings, train new troops and support the existing troops. Players can attack each other in order to conquer more regions. When troops of two enemy players encounter each other, the conflict is resolved with a battle. There are several play worlds with different set of regions and different alliances. To win, a player has to defeat all enemies. The game supports computer players and hotseat multiplayer. Player limit is 16.
+
 -- Install --
 At the moment the game is only tested on Linux but with no or very few changes it should be able to run on any UNIX-like operating system.
 
-Required libraries:
+Required packages (I may have missed some):
+	Gentoo
+		media-libs/libpng
+		media-libs/mesa
+		x11-libs/libX11
+		x11-libs/libxcb
+		x11-libs/libXext
+		media-fonts/dejavu
+	Debian
+		libpng12-dev
+		libgl1-mesa-glx
+		libx11-6
+		libxcb1
+		libx11-xcb-dev
+		libxext6
+		ttf-dejavu-core
 
 Installation steps:
 $ ./configure
@@ -17,11 +34,13 @@ $ make
 
 For each user who has started the game, there is a directory with saved games and custom worlds.
 ~/.conquest_of_levidon
-As expected, "make uninstall" will not delete these directories (in case you need them later). You can manually delete these directories, if necessary.
+As expected, "make uninstall" will not delete such directories (in case you need them later). You can manually delete them, if necessary.
 
 -- Comments --
 
 The game is in early stage of development. For details about future plans, see the TODO document.
-Due to my lack of painting skills, current in-game images are very basic. I'm working on improving them.
+Due to my lack of painting skills, current in-game images are very ugly. I'm working on improving them.
+
+Currently the game is designed for resolution 1024x768. It is written in C. The images used in the game are in PNG format. They are exported from the XFC images with the same name. Maps are stored in JSON format.
 
 Any gameplay ideas or contributions to the graphics are welcome :)
