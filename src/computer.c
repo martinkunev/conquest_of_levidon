@@ -222,6 +222,24 @@ static void computer_map_orders_execute(struct heap_orders *restrict orders, con
 	}
 }
 
+static int state_wanted(double rate, double rate_new, unsigned step)
+{
+	// TODO this should be a comparison between function returning probability and random()
+
+	return (rate_new + (SEARCH_TRIES - step - 1) > rate);
+}
+
+static void map_state_change(const struct game *restrict game, struct region_troop *restrict region_troop, const unsigned char regions_visible[REGIONS_LIMIT])
+{
+	// TODO
+}
+
+static double map_state_rating(const struct game *restrict game, unsigned char player, const unsigned char regions_visible[REGIONS_LIMIT])
+{
+	// TODO
+	return 0.0;
+}
+
 int computer_map(const struct game *restrict game, unsigned char player)
 {
 	// TODO troop movement in/out of garrison and between regions
@@ -258,15 +276,17 @@ int computer_map(const struct game *restrict game, unsigned char player)
 	free(orders_queue.data);
 	array_orders_term(&orders);
 
-	////////////////////////////
 	// Decide the behavior of the comuter using simulated annealing.
 
+	unsigned step;
+	double rating, rating_new;
+
 	struct array_troops troops = {0};
-	struct troop *restrict troop;
 
 	// Find player troops.
 	for(i = 0; i < game->regions_count; ++i)
 	{
+		struct troop *restrict troop;
 		for(troop = game->regions[i].troops; troop; troop = troop->_next)
 			if (troop->owner == player)
 			{
@@ -281,83 +301,41 @@ int computer_map(const struct game *restrict game, unsigned char player)
 			}
 	}
 
-	array_troops_term(&troops);
-
-	// TODO Move troops between regions.
-
-	/*unsigned step;
-	size_t i;
-
-	size_t pawns_count = battle->players[player].pawns_count;
-	struct pawn_command *backup;
-	double (*reachable)[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH];
-
-	int status = 0;
-
-	double rating, rating_new;
-
-	reachable = malloc(pawns_count * sizeof(*reachable));
-	if (!reachable) return ERROR_MEMORY;
-	backup = malloc(offsetof(struct pawn_command, moves) + 32 * sizeof(struct move)); // TODO fix this 32
-	if (!backup)
-	{
-		free(reachable);
-		return ERROR_MEMORY;
-	}
-	*/
-	///////////////////////////////
-
-	// Choose suitable commands for the pawns of the player.
-	/*
-	rating = map_state_rating(game, player);
+	// Choose suitable commands for the troops of the player.
+	rating = map_state_rating(game, player, regions_visible);
 	printf(">>\n");
 	for(step = 0; step < SEARCH_TRIES; ++step) // TODO think about this
 	{
-		struct region *move;
+		struct region_troop *region_troop;
+		struct region *backup;
 
 		printf(">> rating: %f\n", rating);
 
-		i = random() % pawns_count;
-		pawn = battle->players[player].pawns[i];
+		i = random() % troops.count;
+		region_troop = troops.data + i;
 
-		// Remember current pawn command.
-		backup->action = pawn->action;
-		if (pawn->action == PAWN_FIGHT) backup->target = pawn->target.pawn->moves[0].location;
-		else backup->target = pawn->target.field;
-		backup->moves_count = pawn->moves_count;
-		memcpy(backup->moves, pawn->moves, pawn->moves_count * sizeof(*pawn->moves));
+		// Remember current troop command.
+		backup = region_troop->troop->move;
 
 		// TODO sequentially generate neighboring states (instead of generating one state and trying to switch to it)
 
-		state_change(game, battle, pawn, graph, obstacles, reachable[i]);
+		map_state_change(game, region_troop, regions_visible);
 
-		printf("%d,%d -> %d,%d\n", pawn->moves[0].location.x, pawn->moves[0].location.y, pawn->moves[pawn->moves_count - 1].location.x, pawn->moves[pawn->moves_count - 1].location.y);
+		//printf("%d,%d -> %d,%d\n", pawn->moves[0].location.x, pawn->moves[0].location.y, pawn->moves[pawn->moves_count - 1].location.x, pawn->moves[pawn->moves_count - 1].location.y);
 
 		// Calculate the rating of the new set of commands.
 		// Revert the new command if it is unacceptably worse than the current one.
-		rating_new = state_rating(game, battle, player, graph, obstacles);
+		rating_new = map_state_rating(game, player, regions_visible);
 		if (state_wanted(rating, rating_new, step)) rating = rating_new;
 		else
 		{
-			pawn->action = backup->action;
-			if (backup->action == PAWN_FIGHT) pawn->target.pawn = battle->field[backup->target.y][backup->target.x].pawn;
-			else pawn->target.field = backup->target;
-			pawn->moves_count = backup->moves_count;
-			memcpy(pawn->moves, backup->moves, backup->moves_count * sizeof(*backup->moves));
-
+			region_troop->troop->move = backup;
 			printf("skipped: %f\n", rating_new);
 		}
 	}
 	printf("final rating: %f\n", rating);
 
-finally:
-	free(backup);
-	free(reachable);
-
-	return status;
-	*/
-
-	////////////////////////////
+	array_troops_term(&troops);
 
 	return 0;
 }
@@ -379,7 +357,7 @@ static double unit_importance(const struct battle *restrict battle, const struct
 	return unit->health + unit->melee.damage * unit->melee.agility * 2 + unit->ranged.damage * 3;
 }
 
-static void state_change(const struct game *restrict game, const struct battle *restrict battle, struct pawn *restrict pawn, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles, double reachable[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH])
+static void battle_state_change(const struct game *restrict game, const struct battle *restrict battle, struct pawn *restrict pawn, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles, double reachable[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH])
 {
 	unsigned speed = pawn->troop->unit->speed;
 	struct point location = pawn->moves[pawn->moves_count - 1].location, target;
@@ -524,7 +502,7 @@ static unsigned victims_fight_find(const struct game *restrict game, const struc
 		victims->diagonal[victims->diagonal_count++] = victim;
 }*/
 
-static double state_rating(const struct game *restrict game, struct battle *restrict battle, unsigned char player, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles)
+static double battle_state_rating(const struct game *restrict game, struct battle *restrict battle, unsigned char player, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles)
 {
 	size_t i, j;
 
@@ -643,13 +621,6 @@ int computer_formation(const struct game *restrict game, struct battle *restrict
 	return 0;
 }
 
-static int state_wanted(double rate, double rate_new, unsigned step)
-{
-	// TODO this should be a comparison between function returning probability and random()
-
-	return (rate_new + (SEARCH_TRIES - step - 1) > rate);
-}
-
 // Decide the behavior of the comuter using simulated annealing.
 int computer_battle(const struct game *restrict game, struct battle *restrict battle, unsigned char player, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles)
 {
@@ -686,7 +657,7 @@ int computer_battle(const struct game *restrict game, struct battle *restrict ba
 	}
 
 	// Choose suitable commands for the pawns of the player.
-	rating = state_rating(game, battle, player, graph, obstacles);
+	rating = battle_state_rating(game, battle, player, graph, obstacles);
 	printf(">>\n");
 	for(step = 0; step < SEARCH_TRIES; ++step) // TODO think about this
 	{
@@ -706,13 +677,13 @@ int computer_battle(const struct game *restrict game, struct battle *restrict ba
 
 		// TODO sequentially generate neighboring states (instead of generating one state and trying to switch to it)
 
-		state_change(game, battle, pawn, graph, obstacles, reachable[i]);
+		battle_state_change(game, battle, pawn, graph, obstacles, reachable[i]);
 
 		printf("%d,%d -> %d,%d\n", pawn->moves[0].location.x, pawn->moves[0].location.y, pawn->moves[pawn->moves_count - 1].location.x, pawn->moves[pawn->moves_count - 1].location.y);
 
 		// Calculate the rating of the new set of commands.
 		// Revert the new command if it is unacceptably worse than the current one.
-		rating_new = state_rating(game, battle, player, graph, obstacles);
+		rating_new = battle_state_rating(game, battle, player, graph, obstacles);
 		if (state_wanted(rating, rating_new, step)) rating = rating_new;
 		else
 		{
