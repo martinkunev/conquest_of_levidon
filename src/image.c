@@ -73,7 +73,10 @@ int image_load_png(struct image *restrict image, const char *restrict filename, 
 
 	// get info about png
 	int bit_depth, color_type;
-	png_get_IHDR(png_ptr, info_ptr, &image->width, &image->height, &bit_depth, &color_type, 0, 0, 0);
+	png_uint_32 width, height;
+	png_get_IHDR(png_ptr, info_ptr, &width, &height, &bit_depth, &color_type, 0, 0, 0);
+	image->width = width;
+	image->height = height;
 
 	if (bit_depth != 8) return -1; // TODO unsupported
 
