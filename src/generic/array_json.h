@@ -1,7 +1,7 @@
 struct array_json
 {
  size_t count;
- size_t count_allocated;
+ size_t capacity;
  union json * *data;
 };
 static inline void array_json_term(struct array_json *restrict array)

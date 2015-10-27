@@ -25,7 +25,7 @@
 struct array_name
 {
 	size_t count;
-	size_t count_allocated;
+	size_t capacity;
 	array_type *data;
 };
 
@@ -51,20 +51,20 @@ INCLUDE1
 
 STATIC int NAME(_expand)(struct array_name *restrict array, size_t count)
 {
-	if (array->count_allocated < count)
+	if (array->capacity < count)
 	{
-		size_t count_allocated;
+		size_t capacity;
 		array_type *buffer;
 
 		// Round count up to the next power of 2 that is >= ARRAY_SIZE_BASE.
-		count_allocated = (array->count_allocated * 2) | (!array->count_allocated * ARRAY_SIZE_BASE);
-		while (count_allocated < count)
-			count_allocated *= 2;
+		capacity = (array->capacity * 2) | (!array->capacity * ARRAY_SIZE_BASE);
+		while (capacity < count)
+			capacity *= 2;
 
-		buffer = realloc(array->data, count_allocated * sizeof(*array->data));
+		buffer = realloc(array->data, capacity * sizeof(*array->data));
 		if (!buffer) return -1;
 		array->data = buffer;
-		array->count_allocated = count_allocated;
+		array->capacity = capacity;
 	}
 	return 0;
 }
