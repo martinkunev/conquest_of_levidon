@@ -55,6 +55,19 @@ struct pawn_command
 	struct move moves[];
 };
 
+struct region_info
+{
+	double importance;
+	struct
+	{
+		unsigned self, ally, enemy, unknown;
+	} neighbors;
+	struct
+	{
+		unsigned self, ally, enemy;
+	} strength;
+};
+
 /*struct combat_victims
 {
 	const struct pawn *central;
@@ -97,6 +110,24 @@ static const double desire_units[] =
 	[UnitLightCavalry] = 0.7,
 	[UnitBatteringRam] = 0.4,
 };
+
+// TODO remove the first argument (it is not valid outside of battle)
+static double unit_importance(const struct battle *restrict battle, const struct unit *restrict unit)
+{
+	// unit				importance	count
+	// Peasant:			7			25
+	// Militia:			9			25
+	// Pikeman:			10			25
+	// Archer:			8.5			25
+	// Longbow:			13			25
+	// Light cavalry:	14			16
+	// Battering ram:	72.5		1
+
+	// TODO more sophisticated logic here
+	// TODO importance should depend on battle obstacles (e.g. the more they are, the more important is battering ram)
+
+	return unit->health + unit->melee.damage * unit->melee.agility * 2 + unit->ranged.damage * 3;
+}
 
 static int computer_map_orders_list(struct array_orders *restrict orders, const struct game *restrict game, unsigned char player, unsigned char regions_visible[REGIONS_LIMIT])
 {
@@ -230,11 +261,9 @@ static int state_wanted(double rate, double rate_new, double temperature)
 
 	double probability = exp((rate_new - rate) / temperature);
 	return probability > ((double)random() / RAND_MAX);
-
-	//return (rate_new + (SEARCH_TRIES - step - 1) > rate);
 }
 
-static unsigned map_state_change(struct region *restrict region, struct troop *restrict troop, const unsigned char regions_visible[static restrict REGIONS_LIMIT], struct region *restrict neighbors[static 1 + NEIGHBORS_LIMIT])
+static unsigned map_state_neighbors(struct region *restrict region, const struct troop *restrict troop, struct region *restrict neighbors[static 1 + NEIGHBORS_LIMIT])
 {
 	unsigned neighbors_count = 0;
 
@@ -267,9 +296,29 @@ static unsigned map_state_change(struct region *restrict region, struct troop *r
 	return neighbors_count;
 }
 
-static double map_state_rating(const struct game *restrict game, unsigned char player, const unsigned char regions_visible[static restrict REGIONS_LIMIT])
+static void map_state_set(struct troop *restrict troop, struct region *restrict region, double strength, struct region_info regions_info[static restrict REGIONS_LIMIT])
 {
-	// TODO
+	regions_info[troop->move->index].strength.self -= strength;
+	troop->move = region;
+	regions_info[troop->move->index].strength.self += strength;
+}
+
+static double map_state_rating(const struct game *restrict game, unsigned char player, const struct region_info regions_info[static restrict REGIONS_LIMIT])
+{
+	double rating = 1.0;
+
+	size_t i;
+
+	for(i = 0; i < game->regions_count; ++i)
+	{
+		const struct region *restrict region = game->regions + i;
+
+		//
+
+		// TODO decrease rating as much as the region is in danger
+	}
+
+	// TODO finish this
 
 	// extract information about each region: army strength, etc.
 	// loop through the troops and set region information related to their current commands
@@ -307,23 +356,59 @@ static int computer_map_move(const struct game *restrict game, unsigned char pla
 	struct region *region;
 	struct troop *troop;
 
+	double strength;
 	struct region *move_backup;
 
 	struct region *neighbors[1 + NEIGHBORS_LIMIT];
 	unsigned neighbors_count;
 
+	int status;
+
 	size_t i, j;
+
+	// Collect information about each region.
+	struct region_info *regions_info = malloc(game->regions_count * sizeof(struct region_info));
+	if (!regions_info) return ERROR_MEMORY;
+	for(i = 0; i < game->regions_count; ++i)
+	{
+		const struct region *restrict region = game->regions + i;
+
+		regions_info[i].importance = 1.0; // TODO estimate region importance
+
+		// Count the neighbors of the region according to their owner.
+		for(j = 0; j < NEIGHBORS_LIMIT; ++j)
+		{
+			if (!region->neighbors[j]) continue;
+
+			if (!regions_visible[i])
+				regions_info[i].neighbors.unknown += 1;
+			else if (region->owner == player)
+				regions_info[i].neighbors.self += 1;
+			else if (allies(game, region->owner, player))
+				regions_info[i].neighbors.ally += 1;
+			else
+				regions_info[i].neighbors.enemy += 1;
+		}
+
+		// Determine the strength of the troops in the region according to their owner.
+		for(troop = region->troops; troop; troop = troop->_next)
+		{
+			strength = unit_importance(0, troop->unit) * troop->count;
+			if (troop->owner == player)
+				regions_info[i].strength.self += strength;
+			else if (allies(game, troop->owner, player))
+				regions_info[i].strength.ally += strength;
+			else
+				regions_info[i].strength.enemy += strength;
+		}
+	}
 
 	// Find player troops.
 	struct array_troops troops = {0};
-	int status = troops_find(game, &troops, player);
-	if (status < 0)
-	{
-		array_troops_term(&troops);
-		return status;
-	}
+	status = troops_find(game, &troops, player);
+	if (status < 0) goto finally;
 
-	rating = map_state_rating(game, player, regions_visible);
+	rating = map_state_rating(game, player, regions_info);
 	printf(">>\n");
 	for(step = 0; step < ANNEALING_STEPS; ++step)
 	{
@@ -337,20 +422,22 @@ static int computer_map_move(const struct game *restrict game, unsigned char pla
 			region = troops.data[i].region;
 			troop = troops.data[i].troop;
 
-			// Remember current troop movement command and set a new one.
-			move_backup = troop->move;
-			neighbors_count = map_state_change(region, troop, regions_visible, neighbors);
-			troop->move = neighbors[random() % neighbors_count]; // TODO is it okay to just choose one neighbor at random?
+			neighbors_count = map_state_neighbors(region, troop, neighbors);
+			if (!neighbors_count) continue;
 
-			//printf("%d,%d -> %d,%d\n", pawn->moves[0].location.x, pawn->moves[0].location.y, pawn->moves[pawn->moves_count - 1].location.x, pawn->moves[pawn->moves_count - 1].location.y);
+			// Remember current troop movement command and set a new one.
+			// TODO is it okay to just choose one neighbor at random?
+			strength = unit_importance(0, troop->unit) * troop->count;
+			move_backup = troop->move;
+			map_state_set(troop, neighbors[random() % neighbors_count], strength, regions_info);
 
 			// Calculate the rating of the new set of commands.
 			// Revert the new command if it is unacceptably worse than the current one.
-			rating_new = map_state_rating(game, player, regions_visible);
+			rating_new = map_state_rating(game, player, regions_info);
 			if (state_wanted(rating, rating_new, temperature)) rating = rating_new;
 			else
 			{
-				troop->move = move_backup;
+				map_state_set(troop, move_backup, strength, regions_info);
 				printf("skipped: %f\n", rating_new);
 			}
 		}
@@ -365,24 +452,28 @@ static int computer_map_move(const struct game *restrict game, unsigned char pla
 		region = troops.data[i].region;
 		troop = troops.data[i].troop;
 
-		neighbors_count = map_state_change(region, troop, regions_visible, neighbors);
+		neighbors_count = map_state_neighbors(region, troop, neighbors);
+		strength = unit_importance(0, troop->unit) * troop->count;
 		for(j = 0; j < neighbors_count; ++j)
 		{
 			// Remember current troop movement command and set a new one.
 			move_backup = troop->move;
-			troop->move = neighbors[j];
+			map_state_set(troop, neighbors[j], strength, regions_info);
 
 			// Calculate the rating of the new set of commands.
 			// Revert the new command if it is worse than the current one.
-			rating_new = map_state_rating(game, player, regions_visible);
+			rating_new = map_state_rating(game, player, regions_info);
 			if (rating_new > rating) rating = rating_new;
-			else troop->move = move_backup;
+			else map_state_set(troop, move_backup, strength, regions_info);
 		}
 	}
 
-	array_troops_term(&troops);
+	status = 0;
 
-	return 0;
+finally:
+	array_troops_term(&troops);
+	free(regions_info);
+	return status;
 }
 
 int computer_map(const struct game *restrict game, unsigned char player)
@@ -421,23 +512,6 @@ int computer_map(const struct game *restrict game, unsigned char player)
 	// TODO cancel buildings and trainings
 
 	return computer_map_move(game, player, regions_visible);
-}
-
-static double unit_importance(const struct battle *restrict battle, const struct unit *restrict unit)
-{
-	// unit				importance	count
-	// Peasant:			7			25
-	// Militia:			9			25
-	// Pikeman:			10			25
-	// Archer:			8.5			25
-	// Longbow:			13			25
-	// Light cavalry:	14			16
-	// Battering ram:	72.5		1
-
-	// TODO more sophisticated logic here
-	// TODO importance should depend on battle obstacles (e.g. the more they are, the more important is battering ram)
-
-	return unit->health + unit->melee.damage * unit->melee.agility * 2 + unit->ranged.damage * 3;
 }
 
 static void battle_state_change(const struct game *restrict game, const struct battle *restrict battle, struct pawn *restrict pawn, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles, double reachable[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH])
