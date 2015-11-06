@@ -29,6 +29,11 @@
 
 // WARNING: Player 0 and alliance 0 are hard-coded as neutral.
 
+/*
+Invariants at the beginning of a turn:
+- no enemies are located in the same (region, in_garrison)
+*/
+
 enum {ROUNDS_STALE_LIMIT = 10};
 
 // Returns the number of the alliance that won the battle.

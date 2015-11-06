@@ -1,6 +1,9 @@
-H	AI for troop movement on the map using simulated annealing
-H	AI improvements: find the pawn even when it is far away
+H	fix map AI
+H	rewrite battle AI
 H	levidon map
+H	automatic battle resolve
+H	battle mechanics fixes
+H	fix assault mechanics (don't use a flag; look which troops have move set to LOCATION_GARRISON)
 M	better food mechanics; food should not be accumulated indefinately
 M	battle mechanics fixes
 M	error reporting on invalid map
