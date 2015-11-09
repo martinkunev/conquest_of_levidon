@@ -10,7 +10,7 @@
 
 #define MISS_MAX 20 /* 20% */
 
-static const double damage_boost[7][6] =
+const double damage_boost[7][6] =
 {
 // ARMOR:					NONE		LEATHER		CHAINMAIL	PLATE		WOODEN		STONE
 	[WEAPON_NONE] =	{		0.0,		0.0,		0.0,		0.0,		0.0,		0.0},

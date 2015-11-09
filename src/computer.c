@@ -137,6 +137,15 @@ static double unit_importance(const struct battle *restrict battle, const struct
 	return unit->health + unit->melee.damage * unit->melee.agility * 2 + unit->ranged.damage * 3;
 }
 
+static double unit_importance_assault(const struct unit *restrict unit, const struct garrison_info *restrict garrison)
+{
+	// TODO improve this?
+	double importance = unit->health;
+	importance += unit->melee.damage * damage_boost[unit->melee.weapon][garrison->armor_gate] * 2;
+	importance += unit->ranged.damage * damage_boost[unit->ranged.weapon][garrison->armor_gate] * 3;
+	return importance;
+}
+
 static int computer_map_orders_list(struct array_orders *restrict orders, const struct game *restrict game, unsigned char player, unsigned char regions_visible[REGIONS_LIMIT])
 {
 	size_t i, j;
@@ -341,33 +350,57 @@ static double map_state_rating(const struct game *restrict game, unsigned char p
 		rating_max += 1.0;
 		if (allies(game, region->owner, player)) // the player defends a region
 		{
-			// assert(!regions_info[i].strength_enemy);
-
 			// Reduce the rating as much as the region is in danger.
 			if (strength >= danger) rating_region += 1.0;
 			else rating_region += strength / danger;
+
+			if (!allies(game, region->owner, region->garrison.owner))
+			{
+				// The garrison is enemy and is sieged.
+				// Adjust rating for assault.
+				rating_max += 1.0;
+				if (regions_info[i].strength_garrison.self)
+				{
+					const struct troop *restrict troop;
+					const struct garrison_info *restrict garrison = garrison_info(region);
+
+					// Estimate player strength for assault.
+					// TODO take gate strength into account
+					strength = 0;
+					for(troop = region->troops; troop; troop = troop->_next)
+					{
+						if ((troop->owner != player) || (troop->move != LOCATION_GARRISON))
+							continue;
+						strength += unit_importance_assault(troop->unit, garrison) * troop->count;
+					}
+
+					if ((0.5 * strength) >= regions_info[i].strength_enemy) rating_region += 1.0;
+					else rating_region += 0.5 * strength / regions_info[i].strength_enemy;
+				}
+				else rating_region += 0.5;
+			}
 		}
 		else if (regions_info[i].strength.self) // the player attacks a region
 		{
 			if (!regions_visible[i]) continue;
 
-			// Reduce the rating to account for the possible loss.
 			// Attacking is better than not attacking (> 0.5 rating) when the attacker is stronger than the defender.
 			double strength_enemy = 250.0 + regions_info[i].strength_enemy + danger;
+
+			// Set rating, accounting for the possibility of loss.
 			if ((0.5 * strength) >= strength_enemy) rating_region += 1.0;
 			else rating_region += 0.5 * strength / strength_enemy;
-		}
-		else
-		{
-			rating_region += 0.5;
-		}
 
-		if (garrison_info(region))
-		{
-			// regions_info[i].strength_garrison.self
-
-			// TODO adjust for garrison
+			if (!allies(game, region->owner, region->garrison.owner))
+			{
+				// The garrison is ally and is sieged.
+				// Lifting the siege adds rating.
+				rating_max += 1.0;
+				if (strength > strength_enemy)
+					rating_region += rating_region; // TODO multiply by region importance?
+			}
 		}
+		else rating_region += 0.5;
 
 		rating += rating_region * regions_info[i].importance;
 	}
