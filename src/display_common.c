@@ -14,7 +14,8 @@
 
 #define PREFIX_IMG PREFIX "share/conquest_of_levidon/img/"
 
-struct image image_selected, image_assault, image_flag, image_flag_small, image_panel, image_construction, image_movement;
+struct image image_flag, image_flag_small;
+struct image image_selected, image_panel, image_construction, image_movement, image_assault;
 struct image image_pawn_fight, image_pawn_assault, image_pawn_shoot;
 struct image image_shoot_right, image_shoot_up, image_shoot_left, image_shoot_down; // TODO more directions?
 struct image image_terrain[1];
@@ -30,12 +31,12 @@ struct image image_palisade[16], image_palisade_gate[2], image_fortress[16], ima
 void if_load_images(void)
 {
 	image_load_png(&image_selected, PREFIX_IMG "selected.png", 0);
-	image_load_png(&image_assault, PREFIX_IMG "assault.png", 0);
 	image_load_png(&image_flag, PREFIX_IMG "flag.png", 0);
 	image_load_png(&image_flag_small, PREFIX_IMG "flag_small.png", 0);
 	image_load_png(&image_panel, PREFIX_IMG "panel.png", 0);
 	image_load_png(&image_construction, PREFIX_IMG "construction.png", 0);
 	image_load_png(&image_movement, PREFIX_IMG "movement.png", 0);
+	image_load_png(&image_assault, PREFIX_IMG "assault.png", 0);
 
 	image_load_png(&image_pawn_fight, PREFIX_IMG "pawn_fight.png", 0);
 	image_load_png(&image_pawn_assault, PREFIX_IMG "pawn_assault.png", 0);

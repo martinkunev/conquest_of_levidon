@@ -338,34 +338,41 @@ static void if_map_region(const struct region *region, const struct state_map *s
 		for(troop = region->troops; troop; troop = troop->_next)
 		{
 			enum color color_text;
-			int moving = 0;
+			const struct image *restrict image_action = 0;
 
 			if (troop->owner == state->player)
 			{
-				if (troop->move == LOCATION_GARRISON) continue;
+				if (troop->move == LOCATION_GARRISON)
+				{
+					if (troop->owner == region->garrison.owner)
+						continue; // troop is in garrison
+					image_action = &image_assault;
+				}
+				else if (troop->move != region)
+				{
+					image_action = &image_movement;
+
+					// Display troop destination if necessary.
+					if (!state->troop || (troop == state->troop))
+					{
+						struct point p0, p1;
+						if (polygons_border(region->location, troop->move->location, &p0, &p1)) // TODO this is slow; don't do it every time
+						{
+							display_troop_destination(p0, p1);
+						}
+						else
+						{
+							// TODO do something better
+							write(2, S("Neighboring regions have no common border\n")); // world bug
+						}
+					}
+				}
 
 				if (!self_count) fill_rectangle(PANEL_X, object_group[TroopSelf].top - 2, PANEL_WIDTH, 2 + object_group[TroopSelf].height + 12 + 2, Self);
 				x = self_count++;
 				object = TroopSelf;
 				offset = state->self_offset;
 				color_text = Black;
-
-				moving = (troop->move != region);
-
-				// Display troop destination if necessary.
-				if (moving && (!state->troop || (troop == state->troop)))
-				{
-					struct point p0, p1;
-					if (polygons_border(region->location, troop->move->location, &p0, &p1)) // TODO this is slow; don't do it every time
-					{
-						display_troop_destination(p0, p1);
-					}
-					else
-					{
-						// TODO do something better
-						write(2, S("Neighboring regions have no common border\n"));
-					}
-				}
 			}
 			else if (allies(game, troop->owner, state->player))
 			{
@@ -388,12 +395,12 @@ static void if_map_region(const struct region *region, const struct state_map *s
 				color_text = White;
 			}
 
-			// Draw troops that are visible on the screen.
+			// Draw troops which are visible on the screen.
 			if ((x >= offset) && (x < offset + TROOPS_VISIBLE))
 			{
 				struct point position = if_position(object, x - offset);
 				display_troop(troop->unit->index, position.x, position.y, Player + troop->owner, color_text, troop->count);
-				if (moving) image_draw(&image_movement, position.x, position.y);
+				if (image_action) image_draw(image_action, position.x, position.y); // draw action indicator for the troop
 				if (troop == state->troop) draw_rectangle(position.x - 1, position.y - 1, object_group[object].width + 2, object_group[object].height + 2, White);
 			}
 		}
@@ -405,59 +412,55 @@ static void if_map_region(const struct region *region, const struct state_map *s
 		if ((other_count - state->other_offset) > TROOPS_VISIBLE) image_draw(&image_scroll_right, object_group[TroopOther].span_x + object_group[TroopOther].padding, object_group[TroopOther].top);
 
 		// Display garrison and garrison troops.
+		const struct garrison_info *restrict garrison = garrison_info(region);
+		if (garrison)
 		{
-			const struct garrison_info *restrict garrison = garrison_info(region);
-			if (garrison)
+			image_draw(&image_garrison[garrison->index], GARRISON_X, GARRISON_Y);
+			show_flag(GARRISON_X, GARRISON_Y - GARRISON_MARGIN, region->garrison.owner);
+
+			if (allies(game, region->garrison.owner, state->player))
 			{
-				image_draw(&image_garrison[garrison->index], GARRISON_X, GARRISON_Y);
-				show_flag(GARRISON_X, GARRISON_Y - GARRISON_MARGIN, region->garrison.owner);
-
-				if (allies(game, region->garrison.owner, state->player))
+				i = 0;
+				for(troop = region->troops; troop; troop = troop->_next)
 				{
-					i = 0;
-					for(troop = region->troops; troop; troop = troop->_next)
+					if (troop->owner == state->player)
 					{
-						if (troop->owner == state->player)
-						{
-							if (troop->move != LOCATION_GARRISON) continue;
-						}
-						else if (troop->location != LOCATION_GARRISON) continue;
-
-						struct point position = if_position(TroopGarrison, i);
-						display_troop(troop->unit->index, position.x, position.y, Player + troop->owner, Black, troop->count);
-						i += 1;
+						if (troop->move != LOCATION_GARRISON) continue;
 					}
+					else if (troop->location != LOCATION_GARRISON) continue;
+
+					struct point position = if_position(TroopGarrison, i);
+					display_troop(troop->unit->index, position.x, position.y, Player + troop->owner, Black, troop->count);
+					if (troop == state->troop) draw_rectangle(position.x - 1, position.y - 1, object_group[TroopGarrison].width + 2, object_group[TroopGarrison].height + 2, White);
+
+					i += 1;
 				}
-				else
-				{
-					// Display an estimation of the number of troops in the garrison.
+			}
+			else
+			{
+				// Display an estimation of the number of troops in the garrison.
 
-					char buffer[32], *end; // TODO make sure this is enough
+				char buffer[32], *end; // TODO make sure this is enough
 
-					unsigned count = 0;
-					for(troop = region->troops; troop; troop = troop->_next)
-						if (troop->location == LOCATION_GARRISON)
-							count += troop->count;
-					count = ((count + 5) / 10) * 10;
+				unsigned count = 0;
+				for(troop = region->troops; troop; troop = troop->_next)
+					if (troop->location == LOCATION_GARRISON)
+						count += troop->count;
+				count = ((count + 5) / 10) * 10;
 
-					end = format_bytes(buffer, S("about "));
-					end = format_uint(end, count, 10);
-					end = format_bytes(end, S(" troops"));
+				end = format_bytes(buffer, S("about "));
+				end = format_uint(end, count, 10);
+				end = format_bytes(end, S(" troops"));
 
-					draw_string(buffer, end - buffer, object_group[TroopGarrison].left, object_group[TroopGarrison].top, &font12, Black);
-				}
+				draw_string(buffer, end - buffer, object_group[TroopGarrison].left, object_group[TroopGarrison].top, &font12, Black);
+			}
 
-				// If the garrison is under siege, display the remaining provisions.
-				if (siege)
-				{
-					unsigned provisions = garrison->provisions - region->garrison.siege;
-					for(i = 0; i < provisions; ++i)
-						image_draw(&image_food, object_group[TroopGarrison].right + 9, object_group[TroopGarrison].bottom - (i + 1) * image_food.height);
-				}
-
-				// If the current player is doing an assault, display indicator.
-				if (region->garrison.assault && (state->player == region->owner))
-					image_draw(&image_assault, object_group[TroopGarrison].left, object_group[TroopGarrison].top); // TODO choose a better indicator
+			// If the garrison is under siege, display the remaining provisions.
+			if (siege)
+			{
+				unsigned provisions = garrison->provisions - region->garrison.siege;
+				for(i = 0; i < provisions; ++i)
+					image_draw(&image_food, object_group[TroopGarrison].right + 9, object_group[TroopGarrison].bottom - (i + 1) * image_food.height);
 			}
 		}
 	}

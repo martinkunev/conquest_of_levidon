@@ -356,44 +356,56 @@ static int input_troop(int code, unsigned x, unsigned y, uint16_t modifiers, con
 	offset += state->self_offset;
 
 	// Find the clicked troop in the linked list.
-	troop = region->troops;
-	while (1)
+	for(troop = region->troops; troop; troop = troop->_next)
 	{
-		if (!troop) goto reset; // no troop clicked
+		if (troop->owner != state->player)
+			continue; // skip troops owned by other players
+		if ((troop->move == LOCATION_GARRISON) && (troop->owner == region->garrison.owner))
+			continue; // skip garrison troops
 
-		if ((troop->owner == state->player) && (troop->move != LOCATION_GARRISON))
-		{
-			if (offset) offset -= 1;
-			else break;
-		}
-
-		troop = troop->_next;
+		if (offset) offset -= 1;
+		else break;
 	}
 
-	if (code == EVENT_MOUSE_LEFT) state->troop = troop;
+	if (code == EVENT_MOUSE_LEFT)
+	{
+		if (!troop) goto reset; // no troop clicked
+		state->troop = troop;
+	}
 	else if (code == EVENT_MOUSE_RIGHT)
 	{
 		if (!state->troop) return 0; // no troop selected
-		if (troop == state->troop) return 0; // the clicked and the selected troop are the same
-		if (troop->unit != state->troop->unit) return 0; // the clicked and the selected units are different
 
-		// Transfer units from the selected troop to the clicked troop.
-		unsigned transfer_count = (troop->unit->troops_count - troop->count);
-		if (state->troop->count > transfer_count)
+		// If the selected troop is in the garrison, move it out.
+		// Else, transfer units between troops.
+		if ((state->troop->move == LOCATION_GARRISON) && (state->troop->owner == region->garrison.owner))
 		{
-			state->troop->count -= transfer_count;
-			troop->count += transfer_count;
+			state->troop->move = region;
 		}
 		else
 		{
-			troop->count += state->troop->count;
+			if (!troop) goto reset; // no troop clicked
+			if (troop == state->troop) return 0; // the clicked and the selected troop are the same
+			if (troop->unit != state->troop->unit) return 0; // the clicked and the selected units are different
 
-			// Remove the selected troop because all units were transfered to the clicked troop.
-			troop = state->troop;
-			troop_detach(&region->troops, troop);
-			free(troop);
+			// Transfer units from the selected to the clicked troop.
+			unsigned transfer_count = (troop->unit->troops_count - troop->count);
+			if (state->troop->count > transfer_count)
+			{
+				state->troop->count -= transfer_count;
+				troop->count += transfer_count;
+			}
+			else
+			{
+				troop->count += state->troop->count;
 
-			goto reset;
+				// Remove the selected troop because all units were transfered to the clicked troop.
+				troop = state->troop;
+				troop_detach(&region->troops, troop);
+				free(troop);
+
+				goto reset;
+			}
 		}
 	}
 	else return INPUT_IGNORE;
@@ -411,7 +423,7 @@ static int input_garrison(int code, unsigned x, unsigned y, uint16_t modifiers, 
 	struct region *region;
 	struct troop *troop;
 	const struct garrison_info *restrict garrison;
-	ssize_t index;
+	ssize_t offset;
 
 	struct state_map *state = argument;
 
@@ -429,38 +441,34 @@ static int input_garrison(int code, unsigned x, unsigned y, uint16_t modifiers, 
 		if (state->player != region->garrison.owner) return 0; // current player does not control the garrison
 
 		// Find which troop was clicked.
-		index = if_index(TroopGarrison, (struct point){x, y});
-		if (index < 0) return 0; // no troop clicked
+		offset = if_index(TroopGarrison, (struct point){x, y});
+		if (offset < 0) return 0; // no troop clicked
 
 		// Find the clicked troop in the linked list.
-		troop = region->troops;
-		while (1)
+		for(troop = region->troops; 1; troop = troop->_next)
 		{
-			if (!troop) return 0; // no troop clicked
+			if (!troop) goto reset; // no troop clicked
 
-			if ((troop->owner == state->player) && (troop->move == LOCATION_GARRISON))
-			{
-				if (index) index -= 1;
-				else break;
-			}
+			if (troop->owner != state->player)
+				continue; // skip troops owned by other players
+			if ((troop->move != LOCATION_GARRISON) || (troop->owner != region->garrison.owner))
+				continue; // skip non-garrison troops
 
-			troop = troop->_next;
+			if (offset) offset -= 1;
+			else break;
 		}
-
-		// Move the clicked troop out of the garrison.
-		troop->move = region;
 	}
 	else if (code == EVENT_MOUSE_RIGHT)
 	{
 		if (!state->troop) return 0; // no troop selected
+		if (state->troop->move == LOCATION_GARRISON) return 0; // troop already in the garrison
 
 		if (state->player == region->garrison.owner)
 		{
-			unsigned count = 0;
-
 			// Count the troops in the garrison.
+			unsigned count = 0;
 			for(troop = region->troops; troop; troop = troop->_next)
-				if ((troop->owner == state->player) && (troop->move == LOCATION_GARRISON))
+				if ((troop->move == LOCATION_GARRISON) && (troop->owner == state->player))
 					count += 1;
 
 			if (count < garrison->troops) // if there is place for one more troop
@@ -472,12 +480,16 @@ static int input_garrison(int code, unsigned x, unsigned y, uint16_t modifiers, 
 		}
 		else if (!allies(game, state->player, region->garrison.owner))
 		{
-			// TODO support only some troops/players participating in the assault
-			region->garrison.assault = !region->garrison.assault;
+			state->troop->move = LOCATION_GARRISON;
 		}
 	}
 	else return INPUT_IGNORE;
 
+	return 0;
+
+reset:
+	// Make sure no troop is selected.
+	state->troop = 0;
 	return 0;
 }
 
