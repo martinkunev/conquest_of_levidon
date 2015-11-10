@@ -254,12 +254,9 @@ static void battlefield_init_assault(const struct game *restrict game, struct ba
 	size_t i, j;
 
 	// Place the garrison at the top part of the battlefield.
-	// #     #
-	// .     .
-	// #     #
-	// ###.###
-
-	// TODO: towers
+	// . gate
+	// # wall
+	// O tower // TODO implement this
 	// #     #
 	// .     .
 	// O     O
@@ -335,16 +332,18 @@ static void battlefield_init_assault(const struct game *restrict game, struct ba
 
 int battlefield_init(const struct game *restrict game, struct battle *restrict battle, struct region *restrict region, int assault)
 {
+	unsigned troops_speed_count[1 + UNIT_SPEED_LIMIT] = {0};
+	size_t troops_count = 0;
+
 	struct troop *troop;
 
 	struct pawn *pawns;
-	size_t pawns_count;
 	size_t pawn_offset[PLAYERS_LIMIT] = {0};
 
 	size_t i;
-	size_t x, y;
 
 	// Initialize each battle field as empty.
+	size_t x, y;
 	for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
 	{
 		for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
@@ -355,21 +354,25 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 		}
 	}
 
-	// Initialize count for the pawns array and for the player-specific pawns arrays.
-	pawns_count = 0;
+	// Count the troops participating in the battle and only those satisfying certain conditions.
 	for(i = 0; i < PLAYERS_LIMIT; ++i) battle->players[i].pawns_count = 0;
 	for(troop = region->troops; troop; troop = troop->_next)
 	{
-		if (troop->location == LOCATION_GARRISON) continue;
-		if (assault && (troop->move != troop->location)) continue; // troops coming to the region don't participate in the assault
+		if (!assault && (troop->location == LOCATION_GARRISON)) continue; // garrison troops don't participate in open battle
+		if (assault && (troop->move != LOCATION_GARRISON)) continue; // only troops that specified it participate in assault
 
+		troops_count += 1;
+
+		// Count the troops owned by the given player.
 		battle->players[troop->owner].pawns_count += 1;
-		pawns_count += 1;
+
+		// Count the troops with the given speed.
+		troops_speed_count[troop->unit->speed] += 1;
 	}
 
 	// Allocate memory for the pawns array and the player-specific pawns arrays.
-	pawns = malloc(pawns_count * sizeof(*pawns));
-	if (!pawns) return -1;
+	pawns = malloc(troops_count * sizeof(*pawns));
+	if (!pawns) return ERROR_MEMORY;
 	for(i = 0; i < PLAYERS_LIMIT; ++i)
 	{
 		if (!battle->players[i].pawns_count)
@@ -384,27 +387,23 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 		{
 			while (i--) free(battle->players[i].pawns);
 			free(pawns);
-			return -1;
+			return ERROR_MEMORY;
 		}
 		battle->players[i].alive = 1;
 	}
 
-	// Sort the pawns by speed descending using bucket sort.
-	// Count the number of pawns for any given speed in the interval [0, UNIT_SPEED_LIMIT].
-	// Use the counts to initialize offsets in the pawns array.
-	unsigned count[1 + UNIT_SPEED_LIMIT] = {0}, offset[1 + UNIT_SPEED_LIMIT];
-	for(troop = region->troops; troop; troop = troop->_next)
-		if (assault || (troop->location != LOCATION_GARRISON))
-			count[troop->unit->speed] += 1;
+	// Sort the pawns by speed descending, using bucket sort.
+	// Use troop counts to initialize offsets in the pawns array.
+	unsigned offset[1 + UNIT_SPEED_LIMIT];
 	offset[UNIT_SPEED_LIMIT] = 0;
-	i = UNIT_SPEED_LIMIT;
-	while (i--) offset[i] = offset[i + 1] + count[i + 1];
+	for(i = UNIT_SPEED_LIMIT; i--; )
+		offset[i] = offset[i + 1] + troops_speed_count[i + 1];
 
-	// Initialize a pawn for each troop.
+	// Initialize pawn for each troop.
 	for(troop = region->troops; troop; troop = troop->_next)
 	{
 		if (!assault && (troop->location == LOCATION_GARRISON)) continue; // garrison troops don't participate in open battle
-		if (assault && (troop->move != troop->location)) continue; // troops arriving at the region don't participate in assault
+		if (assault && (troop->move != LOCATION_GARRISON)) continue; // only troops that specified it participate in assault
 
 		i = offset[troop->unit->speed]++;
 
@@ -424,7 +423,7 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 	battle->region = region;
 	battle->assault = assault;
 	battle->pawns = pawns;
-	battle->pawns_count = pawns_count;
+	battle->pawns_count = troops_count;
 
 	if (assault) battlefield_init_assault(game, battle);
 	else battlefield_init_open(game, battle);
