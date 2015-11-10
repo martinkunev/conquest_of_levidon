@@ -109,11 +109,8 @@ struct region
 		// enum {East, NorthEast, North, NorthWest, West, SouthWest, South, SouthEast} position;
 
 		unsigned char owner;
-		//struct troop *troops;
 
 		unsigned siege;
-
-		int assault;
 	} garrison;
 
 	uint32_t built;
@@ -162,21 +159,22 @@ extern const size_t UNITS_COUNT;
 extern const struct building buildings[];
 extern const size_t buildings_count;
 
-void region_income(const struct region* restrict region, struct resources *restrict income);
-
 void troop_attach(struct troop **troops, struct troop *troop);
 void troop_detach(struct troop **troops, struct troop *troop);
 void troop_remove(struct troop **troops, struct troop *troop);
 
 int troop_spawn(struct region *restrict region, struct troop **restrict troops, const struct unit *restrict unit, unsigned count, unsigned char owner);
 
-void region_conquer(struct region *restrict region, size_t troops_count);
-void region_siege_continue(struct region *restrict region);
+void region_income(const struct region* restrict region, struct resources *restrict income);
+
+void region_battle_cleanup(const struct game *restrict game, struct region *restrict region, int assault, unsigned winner_alliance);
+
+void region_siege_continue(const struct game *restrict game, struct region *restrict region);
+
+void region_orders_process(struct region *restrict region);
+void region_orders_cancel(struct region *restrict region);
 
 int polygons_border(const struct polygon *restrict a, const struct polygon *restrict b, struct point *restrict first, struct point *restrict second);
-
-void map_train(struct region *region);
-void map_build(struct region *region);
 
 void map_visible(const struct game *restrict game, unsigned char player, unsigned char visible[REGIONS_LIMIT]);
 

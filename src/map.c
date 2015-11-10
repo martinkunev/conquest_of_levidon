@@ -3,18 +3,6 @@
 
 #include "map.h"
 
-void region_income(const struct region* restrict region, struct resources *restrict income)
-{
-	size_t i;
-
-	income->gold += 1;
-	income->food += 1;
-
-	for(i = 0; i < buildings_count; ++i)
-		if (region->built & (1 << i))
-			resource_add(income, &buildings[i].income);
-}
-
 void troop_attach(struct troop **troops, struct troop *troop)
 {
 	troop->_prev = 0;
@@ -54,55 +42,138 @@ int troop_spawn(struct region *restrict region, struct troop **restrict troops, 
 	return 0;
 }
 
-// Sets region owner to the owner of a troop chosen at random.
-void region_conquer(struct region *restrict region, size_t troops_count)
+void region_income(const struct region *restrict region, struct resources *restrict income)
+{
+	size_t i;
+
+	income->gold += 1;
+	income->food += 1;
+
+	for(i = 0; i < buildings_count; ++i)
+		if (region->built & (1 << i))
+			resource_add(income, &buildings[i].income);
+}
+
+// Chooses new region owner from the troops in the given alliance.
+static unsigned region_owner_choose(const struct game *restrict game, struct region *restrict region, size_t troops_count, unsigned alliance)
 {
 	struct troop *troop;
 	unsigned char owner_troop = random() % troops_count;
 
-	for(troop = region->troops; owner_troop; troop = troop->_next)
-		owner_troop -= 1;
-
-	region->owner = troop->owner;
-
-	// If there are no troops in the garrison, it is conquered by the owner of the region.
 	for(troop = region->troops; troop; troop = troop->_next)
-		if (troop->location == LOCATION_GARRISON)
-			return;
-	region->garrison.owner = region->owner;
+	{
+		if (troop->move == LOCATION_GARRISON)
+			continue;
+
+		if (game->players[troop->owner].alliance != alliance)
+			continue;
+
+		if (owner_troop) owner_troop -= 1;
+		else return troop->owner;
+	}
+
+	// assert(0);
 }
 
-void region_siege_continue(struct region *restrict region)
+void region_battle_cleanup(const struct game *restrict game, struct region *restrict region, int assault, unsigned winner_alliance)
+{
+	struct troop *troop, *next;
+	unsigned troops_count = 0;
+
+	for(troop = region->troops; troop; troop = next)
+	{
+		next = troop->_next;
+
+		// Remove dead troops.
+		if (!troop->count)
+		{
+			troop_detach(&region->troops, troop);
+			free(troop);
+			continue;
+		}
+
+		if (assault && (troop->move == LOCATION_GARRISON))
+			troop->move = troop->location;
+
+		troops_count += ((troop->move != LOCATION_GARRISON) && allies(game, troop->owner, winner_alliance));
+	}
+	// assert(troops_count);
+
+	// Update owners if the alliance that won is different from the alliance of the current owner.
+	unsigned owner_alliance = (assault ? game->players[region->garrison.owner].alliance : game->players[region->owner].alliance);
+	if (winner_alliance != owner_alliance)
+	{
+		if (assault) region->garrison.owner = region->owner;
+		else
+		{
+			// If a player from the winning alliance owns the garrison, the region's new owner is that player.
+			// Else, the region's new owner is the owner of a winning troop chosen at random.
+			if (allies(game, winner_alliance, region->garrison.owner))
+				region->owner = region->garrison.owner;
+			else
+				region->owner = region_owner_choose(game, region, troops_count, winner_alliance);
+		}
+	}
+}
+
+void region_siege_continue(const struct game *restrict game, struct region *restrict region)
 {
 	struct troop *troop, *next;
 	const struct garrison_info *restrict garrison = garrison_info(region);
 
-	region->garrison.siege += 1;
-
-	// If there are no more provisions in the garrison, kill the troops in it.
-	if (region->garrison.siege > garrison->provisions) 
+	// Conquer unguarded region or region garrison.
+	if (!allies(game, region->owner, region->garrison.owner))
 	{
-		for(troop = region->troops; troop; troop = next)
+		int region_guarded = 0, region_garrison_guarded = 0;
+
+		for(troop = region->troops; troop; troop = troop->_next)
 		{
-			next = troop->_next;
-			if (troop->location == LOCATION_GARRISON)
+			if (troop->move != LOCATION_GARRISON)
 			{
-				troop_detach(&region->troops, troop);
-				free(troop);
+				if (!allies(game, troop->owner, region->owner)) // ignore retreating troops
+					continue;
+				if (allies(game, troop->owner, region->owner))
+					region_guarded = 1;
+			}
+			else
+			{
+				if (!allies(game, troop->owner, region->garrison.owner)) // ignore retreating troops
+					continue;
+				if (allies(game, troop->owner, region->garrison.owner))
+					region_garrison_guarded = 1;
 			}
 		}
+
+		if (region_guarded && !region_garrison_guarded) region->garrison.owner = region->owner;
+		else if (region_garrison_guarded && !region_guarded) region->owner = region->garrison.owner;
+	}
+
+	if (allies(game, region->owner, region->garrison.owner))
+	{
+		region->garrison.siege = 0;
 	}
 	else
 	{
-		for(troop = region->troops; troop; troop = troop->_next)
-			if (troop->location == LOCATION_GARRISON)
-				return;
-	}
+		region->garrison.siege += 1;
 
-	// There are no more troops in the garrison.
-	// The siege ends. The garrison is conquered by the owner of the region.
-	region->garrison.siege = 0;
-	region->garrison.owner = region->owner;
+		// If there are no more provisions in the garrison, kill the troops in it.
+		if (region->garrison.siege > garrison->provisions) 
+		{
+			for(troop = region->troops; troop; troop = next)
+			{
+				next = troop->_next;
+				if (troop->location == LOCATION_GARRISON)
+				{
+					troop_detach(&region->troops, troop);
+					free(troop);
+				}
+			}
+
+			// The siege ends. The garrison is conquered by the owner of the region.
+			region->garrison.siege = 0;
+			region->garrison.owner = region->owner;
+		}
+	}
 }
 
 // Returns whether the polygons share a border. Stores the border points in first and second (in the order of polygon a).
@@ -132,10 +203,7 @@ int polygons_border(const struct polygon *restrict a, const struct polygon *rest
 	return 0;
 }
 
-// TODO unify map_train and map_build in something like region_turn
-// TODO implement something like region_stop that stops all trainings and constructions
-
-void map_train(struct region *region)
+void region_orders_process(struct region *restrict region)
 {
 	// Update training time and check if there are trained units.
 	if (region->train[0] && (++region->train_progress == region->train[0]->time))
@@ -149,10 +217,7 @@ void map_train(struct region *region)
 			region->train[i - 1] = region->train[i];
 		region->train[TRAIN_QUEUE - 1] = 0;
 	}
-}
 
-void map_build(struct region *region)
-{
 	// Update construction time and check if the building is finished.
 	if ((region->construct >= 0) && (++region->build_progress == buildings[region->construct].time))
 	{
@@ -160,6 +225,15 @@ void map_build(struct region *region)
 		region->construct = -1;
 		region->build_progress = 0;
 	}
+}
+
+void region_orders_cancel(struct region *restrict region)
+{
+	size_t i;
+	region->construct = -1;
+	region->build_progress = 0;
+	for(i = 0; i < TRAIN_QUEUE; ++i) region->train[i] = 0;
+	region->train_progress = 0;
 }
 
 // Determine which regions are visible for the current player.

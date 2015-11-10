@@ -32,6 +32,10 @@
 /*
 Invariants at the beginning of a turn:
 - no enemies are located in the same (region, in_garrison)
+- all troops in a garrison are owned by the player owning the garrison
+- the owner of a garrison is the same as the owner of its region if there is no garrison built
+- troops can only assault garrison in the region where they are located
+- constructions and training are only possible when the region and its garrison have the same owner
 */
 
 enum {ROUNDS_STALE_LIMIT = 10};
@@ -166,6 +170,8 @@ static int play_battle(struct game *restrict game, struct battle *restrict battl
 		battle->round += 1;
 	}
 
+	input_report_battle(game, battle); // TODO this is player-specific
+
 	return winner;
 }
 
@@ -173,29 +179,18 @@ static int play(struct game *restrict game)
 {
 	unsigned char player;
 	struct region *region;
-
-	size_t index;
-	size_t i;
-
 	struct troop *troop, *next;
 
-	unsigned char alliance;
+	size_t index;
+
 	uint16_t alliances; // this limits the alliance numbers to the number of bits
-
-	unsigned troops_count;
-
-	struct resources income;
-	struct resources expenses[PLAYERS_LIMIT];
-	unsigned char alive[PLAYERS_LIMIT];
 
 	int status;
 
-	// TODO display report at the end of the game
-
 	do
 	{
-		memset(expenses, 0, sizeof(expenses));
-		memset(alive, 0, sizeof(alive));
+		struct resources expenses[PLAYERS_LIMIT] = {0};
+		unsigned char alive[PLAYERS_LIMIT] = {0};
 
 		// Ask each player to perform map actions.
 		for(player = 0; player < game->players_count; ++player)
@@ -220,6 +215,7 @@ static int play(struct game *restrict game)
 		{
 			region = game->regions + index;
 
+			// Calculate region expenses.
 			if (region->owner == region->garrison.owner)
 			{
 				// Troops expenses are covered by current region.
@@ -241,17 +237,21 @@ static int play(struct game *restrict game)
 				}
 			}
 
-			map_train(region);
-			map_build(region);
+			region_orders_process(region);
 
-			// Move troops in and out of garrison.
-			// Put troops in their target regions.
+			// Move troops in and out of garrison and put them in their target regions.
+			// New troop location will be set after all battles have concluded.
 			for(troop = region->troops; troop; troop = next)
 			{
 				next = troop->_next;
 				if (troop->move == troop->location) continue;
 
-				if (troop->move == LOCATION_GARRISON) troop->location = LOCATION_GARRISON;
+				if (troop->move == LOCATION_GARRISON)
+				{
+					// Move troop to the garrison unless it prepares for assault.
+					if (troop->owner == region->garrison.owner)
+						troop->location = LOCATION_GARRISON;
+				}
 				else
 				{
 					if (troop->location == LOCATION_GARRISON) troop->location = region;
@@ -266,148 +266,93 @@ static int play(struct game *restrict game)
 			}
 		}
 
-		// TODO troop returning should be done after all battles are complete
-
-		// Perform region-specific actions related to battles.
+		// Settle conflicts by battles.
 		for(index = 0; index < game->regions_count; ++index)
 		{
 			int assault = 0;
+			int winner_alliance;
 
-			signed char winner; // alliance of the new owner of the region (WINNER_BATTLE if it has to be determined by battle)
-			winner = WINNER_NOBODY;
+			unsigned region_owner_old = region->owner;
 
 			region = game->regions + index;
 
-			// If troops of two different alliances occupy the region, start a battle.
+			// Start open battle if troops of two different alliances occupy the region.
+			// If there is no open battle and there are troops preparing for assault, start assault battle.
 			for(troop = region->troops; troop; troop = troop->_next)
 			{
-				if (troop->move == LOCATION_GARRISON) continue;
-
-				alliance = game->players[troop->owner].alliance;
-
-				if (winner == WINNER_NOBODY) winner = alliance;
-				else if (winner != alliance)
+				if (troop->move == LOCATION_GARRISON)
 				{
-					winner = WINNER_BATTLE;
-					break;
+					if (troop->owner != region->garrison.owner) assault = 1;
+				}
+				else if (!allies(game, troop->owner, region->owner))
+				{
+					struct battle battle;
+					if (battlefield_init(game, &battle, region, 0) < 0) abort(); // TODO
+					winner_alliance = play_battle(game, &battle, game->players[battle.region->owner].alliance);
+					battlefield_term(game, &battle);
+					if (winner_alliance < 0) return winner_alliance;
+
+					region_battle_cleanup(game, region, 0, winner_alliance);
+
+					goto after;
 				}
 			}
-			if (winner == WINNER_BATTLE) // open battle
-			{
-				struct battle battle;
-				if (battlefield_init(game, &battle, region, 0) < 0) abort(); // TODO
-				winner = play_battle(game, &battle, game->players[battle.region->owner].alliance);
-				if (winner < 0) ; // TODO
-				input_report_battle(game, &battle); // TODO this is player-specific
-				battlefield_term(game, &battle);
-			}
-			else if (region->garrison.assault) // assault
+			if (assault)
 			{
 				struct battle battle;
 				if (battlefield_init(game, &battle, region, 1) < 0) abort(); // TODO
-				winner = play_battle(game, &battle, game->players[battle.region->garrison.owner].alliance);
-				if (winner < 0) ; // TODO
-				input_report_battle(game, &battle); // TODO this is player-specific
+				winner_alliance = play_battle(game, &battle, game->players[battle.region->garrison.owner].alliance);
 				battlefield_term(game, &battle);
+				if (winner_alliance < 0) return winner_alliance;
 
-				assault = 1;
-			}
-			region->garrison.assault = 0;
-
-			// Only troops of a single alliance are allowed to stay in the region.
-			// If there are troops of more than one alliance, return any troop owned by enemy of the region's owner to its previous location.
-			// If there are troops of just one alliance and the region's owner is not in it, change region's owner to the owner of a random troop.
-
-			if (winner != WINNER_NOBODY) // there has been a battle
-			{
-				for(troop = region->troops; troop; troop = next)
-				{
-					next = troop->_next;
-
-					// Remove dead troops.
-					if (!troop->count)
-					{
-						troop_detach(&region->troops, troop);
-						free(troop);
-						continue;
-					}
-
-					if (troop->location == LOCATION_GARRISON) continue;
-
-					// Move alive troops that lost the battle back to their original location.
-					if ((game->players[troop->owner].alliance != winner) && !assault)
-					{
-						troop_detach(&region->troops, troop);
-						troop_attach(&troop->location->troops, troop);
-						troop->move = troop->location;
-					}
-				}
+				region_battle_cleanup(game, region, 1, winner_alliance);
 			}
 
-			// Set the location of each troop and count the troops in the region.
-			troops_count = 0;
-			for(troop = region->troops; troop; troop = troop->_next)
-			{
-				troop->location = troop->move;
-				troops_count += 1;
-			}
+after:
+			region_siege_continue(game, region); // TODO rename this
 
-			if (winner != WINNER_NOBODY) // there has been a battle
-			{
-				if (assault)
-				{
-					if (winner == game->players[region->garrison.owner].alliance) // assault failed
-					{
-						// If there are no troops to continue the siege, return region to garrison's owner.
-						for(troop = region->troops; troop; troop = troop->_next)
-							if (troop->location == region)
-								goto done;
-						region->garrison.siege = 0;
-						region->owner = region->garrison.owner;
-					}
-					else // assault successful
-					{
-						region->garrison.owner = region->owner;
-						region->garrison.siege = 0;
-					}
-				}
-				else if (winner != game->players[region->owner].alliance) // region conquered
-				{
-					// If a player in the winning alliance owns the garrison, the region's new owner is that player.
-					// Else, the region's new owner is the owner of a winning troop chosen at random.
-					if (winner == game->players[region->garrison.owner].alliance)
-					{
-						region->owner = region->garrison.owner;
-					}
-					else
-					{
-						// assert(troops_count);
-						region_conquer(region, troops_count);
-					}
-
-					region->garrison.siege = 0;
-
-					// Cancel all constructions and trainings.
-					region->construct = -1;
-					region->build_progress = 0;
-					for(i = 0; i < TRAIN_QUEUE; ++i) region->train[i] = 0;
-					region->train_progress = 0;
-				}
-			}
-
-done:
-			// Add region income to the owner's treasury if the garrison is not under siege.
-			if (region->owner == region->garrison.owner)
-			{
-				memset(&income, 0, sizeof(income));
-				region_income(region, &income);
-				resource_add(&game->players[region->owner].treasury, &income);
-			}
-			else region_siege_continue(region); // siege
+			// Cancel all constructions and trainings if region owner changed.
+			if (region->owner != region_owner_old)
+				region_orders_cancel(region);
 
 			// Each player that controls a region or a garrison is alive.
 			alive[region->owner] = 1;
 			alive[region->garrison.owner] = 1;
+		}
+
+		// Adjust troop locations and calculate region-specific income and expenses.
+		for(index = 0; index < game->regions_count; ++index)
+		{
+			region = game->regions + index;
+
+			for(troop = region->troops; troop; troop = next)
+			{
+				next = troop->_next;
+
+				if (troop->location == LOCATION_GARRISON) continue;
+
+				// Update troop location.
+				// Return troops owned by enemy of the owner to their previous location.
+				if (allies(game, troop->owner, region->owner)) troop->location = troop->move;
+				else
+				{
+					troop_detach(&region->troops, troop);
+					if (allies(game, troop->owner, troop->location->owner))
+					{
+						troop_attach(&troop->location->troops, troop);
+						troop->move = troop->location;
+					}
+					else free(troop); // the troop has no region to return to; kill it
+				}
+			}
+
+			// Add region income to the owner's treasury if the garrison is not under siege.
+			if (region->owner == region->garrison.owner)
+			{
+				struct resources income = {0};
+				region_income(region, &income);
+				resource_add(&game->players[region->owner].treasury, &income);
+			}
 		}
 
 		// Perform player-specific actions.
@@ -424,7 +369,7 @@ done:
 			}
 			else game->players[player].type = Neutral;
 
-			// Subtract the player's expenses from the treasury.
+			// Adjust player treasury for the income and expenses.
 			resource_spend(&game->players[player].treasury, expenses + player);
 		}
 
