@@ -168,8 +168,7 @@ int troop_spawn(struct region *restrict region, struct troop **restrict troops, 
 void region_income(const struct region* restrict region, struct resources *restrict income);
 
 void region_battle_cleanup(const struct game *restrict game, struct region *restrict region, int assault, unsigned winner_alliance);
-
-void region_siege_continue(const struct game *restrict game, struct region *restrict region);
+void region_turn_process(const struct game *restrict game, struct region *restrict region);
 
 void region_orders_process(struct region *restrict region);
 void region_orders_cancel(struct region *restrict region);

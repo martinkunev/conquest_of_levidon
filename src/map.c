@@ -116,10 +116,9 @@ void region_battle_cleanup(const struct game *restrict game, struct region *rest
 	}
 }
 
-void region_siege_continue(const struct game *restrict game, struct region *restrict region)
+void region_turn_process(const struct game *restrict game, struct region *restrict region)
 {
 	struct troop *troop, *next;
-	const struct garrison_info *restrict garrison = garrison_info(region);
 
 	// Conquer unguarded region or region garrison.
 	if (!allies(game, region->owner, region->garrison.owner))
@@ -148,6 +147,7 @@ void region_siege_continue(const struct game *restrict game, struct region *rest
 		else if (region_garrison_guarded && !region_guarded) region->owner = region->garrison.owner;
 	}
 
+	// Handle siege events.
 	if (allies(game, region->owner, region->garrison.owner))
 	{
 		region->garrison.siege = 0;
@@ -157,6 +157,8 @@ void region_siege_continue(const struct game *restrict game, struct region *rest
 		region->garrison.siege += 1;
 
 		// If there are no more provisions in the garrison, kill the troops in it.
+		const struct garrison_info *restrict garrison = garrison_info(region);
+		// assert(garrison);
 		if (region->garrison.siege > garrison->provisions) 
 		{
 			for(troop = region->troops; troop; troop = next)

@@ -156,7 +156,6 @@ static int region_init(struct game *restrict game, struct region *restrict regio
 
 	region->garrison.owner = region->owner;
 	region->garrison.siege = 0;
-	region->garrison.assault = 0;
 
 	region->troops = 0;
 
@@ -191,12 +190,6 @@ static int region_init(struct game *restrict game, struct region *restrict regio
 		{
 			if (json_type(field) != JSON_INTEGER) return -1;
 			region->garrison.siege = field->integer;
-		}
-
-		if (field = value_get(&item->object, "assault"))
-		{
-			if (json_type(field) != JSON_BOOLEAN) return -1;
-			region->garrison.assault = field->boolean;
 		}
 	}
 
@@ -556,7 +549,6 @@ union json *world_save(const struct game *restrict game)
 			garrison = json_object_insert(garrison, S("owner"), json_integer(game->regions[i].garrison.owner));
 			garrison = json_object_insert(garrison, S("troops"), world_save_troops(game->regions[i].troops, LOCATION_GARRISON));
 			garrison = json_object_insert(garrison, S("siege"), json_integer(game->regions[i].garrison.siege));
-			garrison = json_object_insert(garrison, S("assault"), json_boolean(game->regions[i].garrison.assault));
 			region = json_object_insert(region, S("garrison"), garrison);
 		}
 

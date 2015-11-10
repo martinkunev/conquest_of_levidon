@@ -309,7 +309,7 @@ static int play(struct game *restrict game)
 			}
 
 after:
-			region_siege_continue(game, region); // TODO rename this
+			region_turn_process(game, region);
 
 			// Cancel all constructions and trainings if region owner changed.
 			if (region->owner != region_owner_old)

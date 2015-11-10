@@ -1,5 +1,4 @@
 H	fix assault.png (small bright (red?) icon in the bottom right corner)
-H	fix assault input/display
 H	automatic battle resolve
 H	battle mechanics fixes
 H	rewrite battle AI
@@ -7,7 +6,6 @@ H	levidon map
 M	better food mechanics; food should not be accumulated indefinately
 M	battle mechanics fixes
 M	error reporting on invalid map
-M	clean up the code related to the end of the battle
 M	map scrolling
 M	keyboard support in various places in the interface; mouse support in various places in the interface
 M	assault garrison destruction and repair
@@ -61,7 +59,7 @@ player names and flag patterns
 
 images
 	fortress*.png, fortress_gate*.png
-	assault.png (indicator on the map)
+	assault indicator on the map
 
 menu
 	directory tabs images
