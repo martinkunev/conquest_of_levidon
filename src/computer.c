@@ -9,8 +9,6 @@
 #include "movement.h"
 #include "computer.h"
 
-#define FLOAT_PRECISION 0.001
-
 #define MAP_COMMAND_PRIORITY_THRESHOLD 0.5 /* TODO maybe this should not be a macro */
 
 #define RATING_DEFAULT 0.5
@@ -85,9 +83,6 @@ struct region_info
 	size_t lateral_count;
 	size_t diagonal_count;
 };*/
-
-//enum {SEARCH_TRIES = 1024};
-enum {SEARCH_TRIES = 64};
 
 enum {ANNEALING_STEPS = 128, ANNEALING_TRIES = 16};
 
@@ -606,12 +601,11 @@ int computer_map(const struct game *restrict game, unsigned char player)
 	return computer_map_move(game, player, regions_visible);
 }
 
-static void battle_state_change(const struct game *restrict game, const struct battle *restrict battle, struct pawn *restrict pawn, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles, double reachable[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH])
+static unsigned battle_state_neighbors(const struct game *restrict game, const struct battle *restrict battle, struct pawn *restrict pawn, double reachable[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH], struct point neighbors[static 4])
 {
 	unsigned speed = pawn->troop->unit->speed;
 	struct point location = pawn->moves[pawn->moves_count - 1].location, target;
 
-	struct point neighbors[4];
 	unsigned neighbors_count = 0;
 
 	target = (struct point){location.x - 1, location.y};
@@ -632,22 +626,23 @@ static void battle_state_change(const struct game *restrict game, const struct b
 
 	// TODO support assault
 
-	if (neighbors_count)
+	return neighbors_count;
+}
+
+static void battle_state_set(struct pawn *restrict pawn, struct point neighbor, const struct game *restrict game, const struct battle *restrict battle, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles)
+{
+	struct pawn *restrict target_pawn = battle->field[neighbor.y][neighbor.x].pawn;
+
+	if (target_pawn)
 	{
-		struct point neighbor = neighbors[random() % neighbors_count];
-		struct pawn *restrict target_pawn = battle->field[neighbor.y][neighbor.x].pawn;
-
-		if (target_pawn)
-		{
-			if (combat_order_shoot(game, battle, obstacles, pawn, neighbor))
-				return;
-			else if (combat_order_fight(game, battle, obstacles, pawn, target_pawn))
-				return;
-		}
-
-		pawn->moves_count = 1;
-		movement_queue(pawn, neighbor, graph, obstacles);
+		if (combat_order_shoot(game, battle, obstacles, pawn, neighbor))
+			return;
+		else if (combat_order_fight(game, battle, obstacles, pawn, target_pawn))
+			return;
 	}
+
+	pawn->moves_count = 1;
+	movement_queue(pawn, neighbor, graph, obstacles);
 }
 
 static unsigned victims_fight_find(const struct game *restrict game, const struct pawn *restrict pawn, unsigned char player, const struct pawn *pawns[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH], const struct pawn *restrict victims[static 4])
@@ -751,13 +746,14 @@ static unsigned victims_fight_find(const struct game *restrict game, const struc
 		victims->diagonal[victims->diagonal_count++] = victim;
 }*/
 
+// TODO rewrite this
 static double battle_state_rating(const struct game *restrict game, struct battle *restrict battle, unsigned char player, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles)
 {
+	double rating = 0.0, rating_max = 0.0;
+
 	size_t i, j;
 
 	const struct pawn *pawns_moved[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH] = {0};
-
-	double rating = 0.0;
 
 	const struct pawn *victims[4];
 	unsigned victims_count;
@@ -788,6 +784,8 @@ static double battle_state_rating(const struct game *restrict game, struct battl
 
 		if (!pawn->count) continue;
 
+		// TODO current round should have more weight than the following rounds
+		rating_max += 350.0 * 50.0;
 		if (pawn->action == PAWN_SHOOT)
 		{
 			// estimate shoot impact
@@ -820,6 +818,8 @@ static double battle_state_rating(const struct game *restrict game, struct battl
 
 			if (!pawn->count) continue;
 			if (allies(game, other->troop->owner, player)) continue;
+
+			rating_max += 3 * 350.0 * 50.0;
 
 			// TODO take into account obstacles on the way and damage splitting to neighboring fields
 			if (attacker->ranged.damage && (round(battlefield_distance(pawn->moves[pawn->moves_count - 1].location, other->moves[0].location)) < attacker->ranged.range))
@@ -861,7 +861,8 @@ static double battle_state_rating(const struct game *restrict game, struct battl
 		}
 	}
 
-	return rating;
+	// assert(rating_max);
+	return rating / rating_max;
 }
 
 int computer_formation(const struct game *restrict game, struct battle *restrict battle, unsigned char player)
@@ -874,19 +875,25 @@ int computer_formation(const struct game *restrict game, struct battle *restrict
 int computer_battle(const struct game *restrict game, struct battle *restrict battle, unsigned char player, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles)
 {
 	unsigned step;
-	size_t i;
+	double rating, rating_new;
+	double temperature = 1.0;
+
+	size_t i, j;
 
 	size_t pawns_count = battle->players[player].pawns_count;
 	struct pawn_command *backup;
-	double (*reachable)[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH];
+
+	struct point neighbors[4];
+	unsigned neighbors_count;
 
 	int status = 0;
 
-	double rating, rating_new;
+	struct pawn *restrict pawn;
 
+	double (*reachable)[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH];
 	reachable = malloc(pawns_count * sizeof(*reachable));
 	if (!reachable) return ERROR_MEMORY;
-	backup = malloc(offsetof(struct pawn_command, moves) + 32 * sizeof(struct move)); // TODO fix this 32
+	backup = malloc(offsetof(struct pawn_command, moves) + 32 * sizeof(struct move)); // TODO change this 32
 	if (!backup)
 	{
 		free(reachable);
@@ -896,7 +903,7 @@ int computer_battle(const struct game *restrict game, struct battle *restrict ba
 	// Cancel pawn actions and determine the reachable fields for each pawn.
 	for(i = 0; i < pawns_count; ++i)
 	{
-		struct pawn *restrict pawn = battle->players[player].pawns[i];
+		pawn = battle->players[player].pawns[i];
 
 		pawn->action = 0;
 		pawn->moves_count = 1;
@@ -908,44 +915,87 @@ int computer_battle(const struct game *restrict game, struct battle *restrict ba
 	// Choose suitable commands for the pawns of the player.
 	rating = battle_state_rating(game, battle, player, graph, obstacles);
 	printf(">>\n");
-	for(step = 0; step < SEARCH_TRIES; ++step) // TODO think about this
+	for(step = 0; step < ANNEALING_STEPS; ++step)
 	{
-		struct pawn *restrict pawn;
+		unsigned try;
 
-		printf(">> rating: %f\n", rating);
+		for(try = 0; try < ANNEALING_TRIES; ++try)
+		{
+			printf(">> rating: %f\n", rating);
 
-		i = random() % pawns_count;
+			i = random() % pawns_count;
+			pawn = battle->players[player].pawns[i];
+
+			neighbors_count = battle_state_neighbors(game, battle, pawn, reachable[i], neighbors);
+			if (!neighbors_count) continue;
+
+			// Remember current pawn command and set a new one.
+			backup->action = pawn->action;
+			if (pawn->action == PAWN_FIGHT) backup->target = pawn->target.pawn->moves[0].location;
+			else backup->target = pawn->target.field;
+			backup->moves_count = pawn->moves_count;
+			memcpy(backup->moves, pawn->moves, pawn->moves_count * sizeof(*pawn->moves));
+			battle_state_set(pawn, neighbors[random() % neighbors_count], game, battle, graph, obstacles);
+
+			printf("%d,%d -> %d,%d\n", pawn->moves[0].location.x, pawn->moves[0].location.y, pawn->moves[pawn->moves_count - 1].location.x, pawn->moves[pawn->moves_count - 1].location.y);
+
+			// Calculate the rating of the new set of commands.
+			// Revert the new command if it is unacceptably worse than the current one.
+			rating_new = battle_state_rating(game, battle, player, graph, obstacles);
+			if (state_wanted(rating, rating_new, temperature)) rating = rating_new;
+			else
+			{
+				pawn->action = backup->action;
+				if (backup->action == PAWN_FIGHT) pawn->target.pawn = battle->field[backup->target.y][backup->target.x].pawn;
+				else pawn->target.field = backup->target;
+				pawn->moves_count = backup->moves_count;
+				memcpy(pawn->moves, backup->moves, backup->moves_count * sizeof(*backup->moves));
+
+				printf("skipped: %f\n", rating_new);
+			}
+		}
+
+		temperature *= 0.95;
+	}
+
+	// Find the local maximum (best action) for each of the pawns.
+	printf("find maximum >>\n");
+	for(i = 0; i < pawns_count; ++i)
+	{
 		pawn = battle->players[player].pawns[i];
 
-		// Remember current pawn command.
-		backup->action = pawn->action;
-		if (pawn->action == PAWN_FIGHT) backup->target = pawn->target.pawn->moves[0].location;
-		else backup->target = pawn->target.field;
-		backup->moves_count = pawn->moves_count;
-		memcpy(backup->moves, pawn->moves, pawn->moves_count * sizeof(*pawn->moves));
-
-		// TODO ? sequentially generate neighboring states (instead of generating one state and trying to switch to it)
-
-		battle_state_change(game, battle, pawn, graph, obstacles, reachable[i]);
-
-		printf("%d,%d -> %d,%d\n", pawn->moves[0].location.x, pawn->moves[0].location.y, pawn->moves[pawn->moves_count - 1].location.x, pawn->moves[pawn->moves_count - 1].location.y);
-
-		// Calculate the rating of the new set of commands.
-		// Revert the new command if it is unacceptably worse than the current one.
-		// TODO fix temperature calculation
-		rating_new = battle_state_rating(game, battle, player, graph, obstacles);
-		if (state_wanted(rating, rating_new, SEARCH_TRIES - step)) rating = rating_new;
-		else
+		neighbors_count = battle_state_neighbors(game, battle, pawn, reachable[i], neighbors);
+		for(j = 0; j < neighbors_count; ++j)
 		{
-			pawn->action = backup->action;
-			if (backup->action == PAWN_FIGHT) pawn->target.pawn = battle->field[backup->target.y][backup->target.x].pawn;
-			else pawn->target.field = backup->target;
-			pawn->moves_count = backup->moves_count;
-			memcpy(pawn->moves, backup->moves, backup->moves_count * sizeof(*backup->moves));
+			printf(">> rating: %f\n", rating);
 
-			printf("skipped: %f\n", rating_new);
+			// Remember current pawn command and set a new one.
+			backup->action = pawn->action;
+			if (pawn->action == PAWN_FIGHT) backup->target = pawn->target.pawn->moves[0].location;
+			else backup->target = pawn->target.field;
+			backup->moves_count = pawn->moves_count;
+			memcpy(backup->moves, pawn->moves, pawn->moves_count * sizeof(*pawn->moves));
+			battle_state_set(pawn, neighbors[j], game, battle, graph, obstacles);
+
+			printf("%d,%d -> %d,%d\n", pawn->moves[0].location.x, pawn->moves[0].location.y, pawn->moves[pawn->moves_count - 1].location.x, pawn->moves[pawn->moves_count - 1].location.y);
+
+			// Calculate the rating of the new set of commands.
+			// Revert the new command if it is worse than the current one.
+			rating_new = battle_state_rating(game, battle, player, graph, obstacles);
+			if (state_wanted(rating, rating_new, temperature)) rating = rating_new;
+			else
+			{
+				pawn->action = backup->action;
+				if (backup->action == PAWN_FIGHT) pawn->target.pawn = battle->field[backup->target.y][backup->target.x].pawn;
+				else pawn->target.field = backup->target;
+				pawn->moves_count = backup->moves_count;
+				memcpy(pawn->moves, backup->moves, backup->moves_count * sizeof(*backup->moves));
+
+				printf("skipped: %f\n", rating_new);
+			}
 		}
 	}
+
 	printf("final rating: %f\n", rating);
 
 finally:
