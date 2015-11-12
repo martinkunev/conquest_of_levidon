@@ -269,7 +269,8 @@ static int play(struct game *restrict game)
 		// Settle conflicts by battles.
 		for(index = 0; index < game->regions_count; ++index)
 		{
-			int assault = 0;
+			enum {BATTLE_OPEN = 0x1, BATTLE_ASSAULT = 0x2} battle = 0;
+			int manual = 0;
 			int winner_alliance;
 
 			unsigned region_owner_old = region->owner;
@@ -282,22 +283,36 @@ static int play(struct game *restrict game)
 			{
 				if (troop->move == LOCATION_GARRISON)
 				{
-					if (troop->owner != region->garrison.owner) assault = 1;
+					if (troop->owner != region->garrison.owner)
+					{
+						battle |= BATTLE_ASSAULT;
+						if (game->players[troop->owner].type == Local) manual = 1;
+					}
 				}
 				else if (!allies(game, troop->owner, region->owner))
 				{
-					struct battle battle;
-					if (battlefield_init(game, &battle, region, 0) < 0) abort(); // TODO
-					winner_alliance = play_battle(game, &battle, game->players[battle.region->owner].alliance);
-					battlefield_term(game, &battle);
-					if (winner_alliance < 0) return winner_alliance;
-
-					region_battle_cleanup(game, region, 0, winner_alliance);
-
-					goto after;
+					battle |= BATTLE_OPEN;
+					if (game->players[troop->owner].type == Local) manual = 1;
 				}
 			}
-			if (assault)
+			if (battle && !manual)
+			{
+				winner_alliance = calculate_battle(game, region);
+				if (winner_alliance < 0) return winner_alliance;
+
+				region_battle_cleanup(game, region, (battle & BATTLE_ASSAULT) != 0, winner_alliance);
+			}
+			else if (battle & BATTLE_OPEN)
+			{
+				struct battle battle;
+				if (battlefield_init(game, &battle, region, 0) < 0) abort(); // TODO
+				winner_alliance = play_battle(game, &battle, game->players[battle.region->owner].alliance);
+				battlefield_term(game, &battle);
+				if (winner_alliance < 0) return winner_alliance;
+
+				region_battle_cleanup(game, region, 0, winner_alliance);
+			}
+			else if (battle & BATTLE_ASSAULT)
 			{
 				struct battle battle;
 				if (battlefield_init(game, &battle, region, 1) < 0) abort(); // TODO
@@ -308,7 +323,6 @@ static int play(struct game *restrict game)
 				region_battle_cleanup(game, region, 1, winner_alliance);
 			}
 
-after:
 			region_turn_process(game, region);
 
 			// Cancel all constructions and trainings if region owner changed.
@@ -376,7 +390,7 @@ after:
 		game->turn += 1;
 	} while (alliances & (alliances - 1)); // while there is more than 1 alliance
 
-	return alliances; // TODO convert this to alliance number
+	return alliances; // TODO ? convert this to alliance number
 }
 
 int main(int argc, char *argv[])

@@ -503,6 +503,8 @@ static int computer_map_move(const struct game *restrict game, unsigned char pla
 	status = troops_find(game, &troops, player);
 	if (status < 0) goto finally;
 
+	if (!troops.count) goto finally; // nothing to do here if the player has no troops
+
 	rating = map_state_rating(game, player, regions_info, regions_visible);
 	for(step = 0; step < ANNEALING_STEPS; ++step)
 	{
@@ -1003,4 +1005,44 @@ finally:
 	free(reachable);
 
 	return status;
+}
+
+unsigned calculate_battle(struct game *restrict game, struct region *restrict region)
+{
+	struct troop *restrict troop;
+
+	size_t i;
+	unsigned winner_alliance = 0;
+
+	// Calculate the strength of each alliance participating in the battle.
+	// TODO take siege and shooters into account
+	double strength[PLAYERS_LIMIT] = {0};
+	for(troop = region->troops; troop; troop = troop->_next)
+		strength[game->players[troop->owner].alliance] += unit_importance(0, troop->unit) * troop->count;
+
+	// Calculate total strength and find the strongest alliance.
+	double strength_total = 0.0;
+	unsigned alliances_count = 0;
+	for(i = 1; i < PLAYERS_LIMIT; ++i)
+	{
+		if (!strength[i]) continue;
+
+		strength_total += strength[i];
+		alliances_count += 1;
+		if (strength[i] > strength[winner_alliance])
+			winner_alliance = i;
+	}
+
+	// Adjust troops count.
+	// TODO use a real formula here (with some randomness)
+	double count_factor = 1 - (strength_total - strength[winner_alliance]) / (alliances_count * strength[winner_alliance]);
+	for(troop = region->troops; troop; troop = troop->_next)
+	{
+		if (game->players[troop->owner].alliance == winner_alliance)
+			troop->count *= count_factor;
+		else
+			troop->count = 0;
+	}
+
+	return winner_alliance;
 }
