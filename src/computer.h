@@ -1,5 +1,9 @@
-int computer_map(const struct game *restrict game, unsigned char player);
-int computer_formation(const struct game *restrict game, struct battle *restrict battle, unsigned char player);
-int computer_battle(const struct game *restrict game, struct battle *restrict battle, unsigned char player, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles);
+enum {ANNEALING_STEPS = 128, ANNEALING_TRIES = 16};
 
-unsigned calculate_battle(struct game *restrict game, struct region *restrict region);
+extern const double desire_buildings[];
+extern const double desire_units[];
+
+double unit_importance(const struct unit *restrict unit);
+double unit_importance_assault(const struct unit *restrict unit, const struct garrison_info *restrict garrison);
+
+int state_wanted(double rate, double rate_new, double temperature);

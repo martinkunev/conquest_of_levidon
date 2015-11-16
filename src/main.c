@@ -15,7 +15,8 @@
 #include "input_map.h"
 #include "input_battle.h"
 #include "input_report.h"
-#include "computer.h"
+#include "computer_map.h"
+#include "computer_battle.h"
 #include "interface.h"
 #include "display_common.h"
 #include "display_map.h"
@@ -273,9 +274,9 @@ static int play(struct game *restrict game)
 			int manual = 0;
 			int winner_alliance;
 
-			unsigned region_owner_old = region->owner;
-
 			region = game->regions + index;
+
+			unsigned region_owner_old = region->owner;
 
 			// Start open battle if troops of two different alliances occupy the region.
 			// If there is no open battle and there are troops preparing for assault, start assault battle.

@@ -265,6 +265,7 @@ static void if_map_troops(unsigned x, unsigned y, unsigned count_self, unsigned 
 		// TODO indicate this overflow somehow
 		if (count > image_map_village.height) count = image_map_village.height;
 
+		// TODO the individual lines may be too long
 		if (count_self)
 			fill_rectangle(x, y - count_self, TROOPS_BAR_WIDTH, count_self, Self);
 		if (count_allies)
