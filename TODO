@@ -37,8 +37,8 @@ battle mechanics
 bugs / issues
 	troop count indicator overflows the box from below (should just indicate overflow on the top side)
 	computer doesn't attack
-	bizantium computer never builds army and doesn't build anything after a certain moment
-	red computer builds too much army (should consider food limitations)
+	X bizantium computer never builds army and doesn't build anything after a certain moment
+	X red computer builds too much army (should consider food limitations)
 	pawns of the same player deadlock (seen with peasant and light cavalry)
 	computer never trains army and sometimes never builds some buildings
 

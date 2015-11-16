@@ -62,35 +62,68 @@ struct region_info
 	} strength_garrison;
 };
 
-static int computer_map_orders_list(struct array_orders *restrict orders, const struct game *restrict game, unsigned char player, unsigned char regions_visible[static REGIONS_LIMIT])
+static void income_calculate(const struct game *restrict game, struct resources *restrict result)
+{
+	size_t index;
+	for(index = 0; index < game->regions_count; ++index)
+	{
+		const struct region *restrict region = game->regions + index;
+		const struct troop *restrict troop;
+
+		// Calculate region expenses.
+		if (region->owner == region->garrison.owner)
+		{
+			// Troops expenses are covered by current region.
+			for(troop = region->troops; troop; troop = troop->_next)
+			{
+				if (troop->move == LOCATION_GARRISON) continue;
+				resource_add(result, &troop->unit->expense);
+			}
+		}
+		else
+		{
+			// Troops expenses are covered by another region. Double expenses.
+			for(troop = region->troops; troop; troop = troop->_next)
+			{
+				struct resources expense;
+				if (troop->move == LOCATION_GARRISON) continue;
+				resource_multiply(&expense, &troop->unit->expense, 2);
+				resource_add(result, &expense);
+			}
+		}
+
+		// Add region result if the garrison is not under siege.
+		if (region->owner == region->garrison.owner)
+		{
+			struct resources income_region = {0};
+			region_income(region, &income_region);
+			resource_add(result, &income_region);
+		}
+	}
+}
+
+static int computer_map_orders_list(struct array_orders *restrict orders, const struct game *restrict game, unsigned char player, unsigned char regions_visible[static REGIONS_LIMIT], const struct region_info *restrict regions_info)
 {
 	size_t i, j;
 
+	// TODO make sure the rating is between 0 and 1
+
 	*orders = (struct array_orders){0};
+
+	struct resources income;
+	income_calculate(game, &income);
 
 	// Make a list of the orders available for the player.
 	for(i = 0; i < game->regions_count; ++i)
 	{
 		struct region *restrict region = game->regions + i;
 
-		unsigned neighbors_unknown = 0, neighbors_enemy = 0;
-
 		if ((region->owner != player) || (region->garrison.owner != player)) continue;
 
-		// Count the number of neighboring enemy regions.
-		for(j = 0; j < NEIGHBORS_LIMIT; ++j)
-		{
-			const struct region *restrict neighbor = region->neighbors[j];
+		unsigned neighbors_dangerous = regions_info[i].neighbors_unknown + regions_info[i].neighbors_enemy;
 
-			if (!neighbor) continue;
-
-			if (!regions_visible[neighbor->index])
-				neighbors_unknown += 1;
-			else if ((neighbor->owner != PLAYER_NEUTRAL) && !allies(game, player, neighbor->owner))
-				neighbors_enemy += 1;
-			else if ((neighbor->garrison.owner != PLAYER_NEUTRAL) && !allies(game, player, neighbor->garrison.owner))
-				neighbors_enemy += 1;
-		}
+		// Don't check if there are enough resources as the first performed order will invalidate the check.
+		// The check will be done before and if the order is executed.
 
 		if (region->construct < 0) // no construction in progress
 		{
@@ -99,21 +132,39 @@ static int computer_map_orders_list(struct array_orders *restrict orders, const 
 				if (region_built(region, j)) continue;
 				if (!region_building_available(region, buildings[j])) continue;
 
-				// Don't check if there are enough resources as the first performed order will invalidate the check.
-
-				// TODO if neighbors_unknown, increase the priority of watch tower
-
 				if (array_orders_expand(orders, orders->count + 1) < 0)
 					goto error;
 
+				// TODO check what resources are lacking, etc.
 				switch (j)
 				{
 				case BuildingWatchTower:
-					orders->data[orders->count].priority = desire_buildings[j] * neighbors_unknown; // TODO this should be more complicated
+					orders->data[orders->count].priority = (regions_info[i].neighbors_unknown ? 1.0 : desire_buildings[j]);
+					break;
+
+				case BuildingFarm:
+				case BuildingIrrigation:
+				case BuildingSawmill:
+				case BuildingMine:
+				case BuildingBlastFurnace:
+					orders->data[orders->count].priority = (neighbors_dangerous ? 0.5 * desire_buildings[j] : desire_buildings[j]);
+					break;
+
+				case BuildingBarracks:
+				case BuildingArcheryRange:
+				case BuildingStables:
+				case BuildingWorkshop:
+				case BuildingForge:
+					orders->data[orders->count].priority = (neighbors_dangerous ? desire_buildings[j] : 0.5 * desire_buildings[j]);
+					break;
+
+				case BuildingPalisade:
+				case BuildingFortress:
+					orders->data[orders->count].priority = (neighbors_dangerous ? desire_buildings[j] : 0.5 * desire_buildings[j]);
 					break;
 
 				default:
-					orders->data[orders->count].priority = desire_buildings[j] / (neighbors_enemy + 1); // TODO this should be more complicated
+					orders->data[orders->count].priority = desire_buildings[j] / (regions_info[i].neighbors_enemy + 1); // TODO this should be more complicated
 					break;
 				}
 				orders->data[orders->count].region = region;
@@ -129,12 +180,14 @@ static int computer_map_orders_list(struct array_orders *restrict orders, const 
 			{
 				if (!region_unit_available(region, UNITS[j])) continue;
 
-				// Don't check if there are enough resources as the first performed order will invalidate the check.
-
 				if (array_orders_expand(orders, orders->count + 1) < 0)
 					goto error;
 
-				orders->data[orders->count].priority = desire_units[j] * (neighbors_enemy + neighbors_unknown / 2); // TODO this should be more complicated
+				// TODO improve this
+				double unit_value = unit_importance(UNITS + j) / (10.0 * unit_cost(UNITS + j)); // TODO this may be > 1
+				if (!resource_enough(&income, &UNITS[j].expense)) unit_value /= 2;
+
+				orders->data[orders->count].priority = (neighbors_dangerous ? unit_value : 0.5 * unit_value);
 				orders->data[orders->count].region = region;
 				orders->data[orders->count].type = ORDER_TRAIN;
 				orders->data[orders->count].target.unit = j;
@@ -240,6 +293,8 @@ static double map_state_rating(const struct game *restrict game, unsigned char p
 	double rating = 0.0, rating_max = 0.0;
 
 	// TODO better handling for allies
+
+	// TODO increase rating for troops in the garrison (due to reduced expenses)
 
 	// Sum the ratings for each region.
 	size_t i;
@@ -431,6 +486,22 @@ static struct region_info *regions_info_collect(const struct game *restrict game
 	struct region_info *regions_info = malloc(game->regions_count * sizeof(struct region_info));
 	if (!regions_info) return 0;
 
+	// TODO is this useful? what to do if the garrison is controlled by a different player
+	// Count the number of neighboring enemy regions.
+	/*for(j = 0; j < NEIGHBORS_LIMIT; ++j)
+	{
+		const struct region *restrict neighbor = region->neighbors[j];
+
+		if (!neighbor) continue;
+
+		if (!regions_visible[neighbor->index])
+			neighbors_unknown += 1;
+		else if ((neighbor->owner != PLAYER_NEUTRAL) && !allies(game, player, neighbor->owner))
+			neighbors_enemy += 1;
+		else if ((neighbor->garrison.owner != PLAYER_NEUTRAL) && !allies(game, player, neighbor->garrison.owner))
+			neighbors_enemy += 1;
+	}*/
+
 	for(i = 0; i < game->regions_count; ++i)
 	{
 		regions_info[i] = (struct region_info){.importance = 1.0}; // TODO estimate region importance
@@ -504,7 +575,7 @@ int computer_map(const struct game *restrict game, unsigned char player)
 	struct region_info *restrict regions_info = regions_info_collect(game, player, regions_visible);
 	if (!regions_info) return ERROR_MEMORY;
 
-	if (computer_map_orders_list(&orders, game, player, regions_visible) < 0)
+	if (computer_map_orders_list(&orders, game, player, regions_visible, regions_info) < 0)
 		goto error_memory;
 	if (!orders.count)
 	{

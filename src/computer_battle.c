@@ -10,8 +10,6 @@
 #include "computer.h"
 #include "computer_battle.h"
 
-#define MAP_COMMAND_PRIORITY_THRESHOLD 0.5 /* TODO maybe this should not be a macro */
-
 #define RATING_DEFAULT 0.5
 
 #define UNIT_IMPORTANCE_DEFAULT 10

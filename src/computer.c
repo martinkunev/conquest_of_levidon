@@ -7,21 +7,22 @@
 
 const double desire_buildings[] =
 {
-	[BuildingFarm] = 1.0,
+	[BuildingFarm] = 0.9,
 	[BuildingIrrigation] = 0.5,
-	[BuildingSawmill] = 1.1,
+	[BuildingSawmill] = 1.0,
 	[BuildingMine] = 0.7,
 	[BuildingBlastFurnace] = 0.5,
 	[BuildingBarracks] = 0.8,
 	[BuildingArcheryRange] = 0.8,
 	[BuildingStables] = 0.4,
-	[BuildingWatchTower] = 1.0,
+	[BuildingWatchTower] = 0.5,
 	[BuildingPalisade] = 0.6,
 	[BuildingFortress] = 0.4,
 	[BuildingWorkshop] = 0.3,
 	[BuildingForge] = 0.5,
 };
 
+// TODO this should not be hard-coded
 const double desire_units[] =
 {
 	[UnitPeasant] = 0.3,
@@ -33,21 +34,26 @@ const double desire_units[] =
 	[UnitBatteringRam] = 0.4,
 };
 
+// unit				importance	count	cost
+// Peasant:			7			25
+// Militia:			9			25
+// Pikeman:			10			25		8
+// Archer:			8.5			25
+// Longbow:			13			25
+// Light cavalry:	14			16		7
+// Battering ram:	72.5		1		9
+
 double unit_importance(const struct unit *restrict unit)
 {
-	// unit				importance	count
-	// Peasant:			7			25
-	// Militia:			9			25
-	// Pikeman:			10			25
-	// Archer:			8.5			25
-	// Longbow:			13			25
-	// Light cavalry:	14			16
-	// Battering ram:	72.5		1
-
 	// TODO more sophisticated logic here
 	// TODO importance should depend on battle obstacles (e.g. the more they are, the more important is battering ram)
 
 	return unit->health + unit->melee.damage * unit->melee.agility * 2 + unit->ranged.damage * 3;
+}
+
+double unit_cost(const struct unit *restrict unit)
+{
+	return unit->cost.food + unit->cost.wood + unit->cost.stone + unit->cost.gold * 2 + unit->cost.iron * 3;
 }
 
 double unit_importance_assault(const struct unit *restrict unit, const struct garrison_info *restrict garrison)
