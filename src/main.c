@@ -42,23 +42,32 @@ Invariants at the beginning of a turn:
 enum {ROUNDS_STALE_LIMIT = 10};
 
 // Returns the number of the alliance that won the battle.
-static int play_battle(struct game *restrict game, struct battle *restrict battle, unsigned char defender)
+static int play_battle(struct game *restrict game, struct region *restrict region, int assault)
 {
 	unsigned player, alliance;
 
 	int status;
-	int winner;
+	int winner = -1;
 
 	size_t i;
 
 	unsigned round_activity_last;
 
-	battle->round = 0;
+	struct battle battle;
+	unsigned char defender;
+
+	if (battlefield_init(game, &battle, region, assault) < 0) return -1;
+
+	// TODO put this into struct battle
+	if (assault) defender = game->players[region->garrison.owner].alliance;
+	else defender = game->players[region->owner].alliance;
+
+	battle.round = 0;
 
 	// Ask each player to position their pawns.
 	for(player = 0; player < game->players_count; ++player)
 	{
-		if (!battle->players[player].alive) continue;
+		if (!battle.players[player].alive) continue;
 
 		switch (game->players[player].type)
 		{
@@ -66,40 +75,40 @@ static int play_battle(struct game *restrict game, struct battle *restrict battl
 			continue;
 
 		case Computer:
-			if (computer_formation(game, battle, player) < 0)
-				return -1;
+			if (computer_formation(game, &battle, player) < 0)
+				goto finally;
 			break;
 
 		case Local:
-			if (input_formation(game, battle, player) < 0)
-				return -1;
+			if (input_formation(game, &battle, player) < 0)
+				goto finally;
 			break;
 		}
 	}
 
-	battle->round = 1;
+	battle.round = 1;
 	round_activity_last = 1;
 
-	while ((winner = battle_end(game, battle, defender)) < 0)
+	while ((winner = battle_end(game, &battle, defender)) < 0)
 	{
 		struct adjacency_list *graph[PLAYERS_LIMIT] = {0};
 		struct obstacles *obstacles[PLAYERS_LIMIT] = {0};
 
-		obstacles[PLAYER_NEUTRAL] = path_obstacles(game, battle, PLAYER_NEUTRAL);
+		obstacles[PLAYER_NEUTRAL] = path_obstacles(game, &battle, PLAYER_NEUTRAL);
 		if (!obstacles[PLAYER_NEUTRAL]) abort();
 
 		// Ask each player to give commands to their pawns.
 		for(player = 0; player < game->players_count; ++player)
 		{
-			if (!battle->players[player].alive) continue;
+			if (!battle.players[player].alive) continue;
 
 			alliance = game->players[player].alliance;
 
 			if (!obstacles[alliance])
 			{
-				obstacles[alliance] = path_obstacles(game, battle, player);
+				obstacles[alliance] = path_obstacles(game, &battle, player);
 				if (!obstacles[alliance]) abort();
-				graph[alliance] = visibility_graph_build(battle, obstacles[alliance]);
+				graph[alliance] = visibility_graph_build(&battle, obstacles[alliance]);
 				if (!graph[alliance]) abort();
 			}
 
@@ -109,54 +118,54 @@ static int play_battle(struct game *restrict game, struct battle *restrict battl
 				continue;
 
 			case Computer:
-				if (computer_battle(game, battle, player, graph[alliance], obstacles[alliance]) < 0)
-					return -1;
+				if (computer_battle(game, &battle, player, graph[alliance], obstacles[alliance]) < 0)
+					goto finally;
 				break;
 
 			case Local:
-				if (input_battle(game, battle, player, graph[alliance], obstacles[alliance]) < 0)
-					return -1;
+				if (input_battle(game, &battle, player, graph[alliance], obstacles[alliance]) < 0)
+					goto finally;
 				break;
 			}
 		}
 
 		// TODO ?Deal damage to each pawn escaping from enemy pawns.
 
-		input_animation_shoot(game, battle); // TODO this should be part of player-specific input
-		battle_shoot(battle, obstacles[PLAYER_NEUTRAL]); // treat all gates as closed for shooting
-		if (battlefield_clean(battle)) round_activity_last = battle->round;
+		input_animation_shoot(game, &battle); // TODO this should be part of player-specific input
+		battle_shoot(&battle, obstacles[PLAYER_NEUTRAL]); // treat all gates as closed for shooting
+		if (battlefield_clean(&battle)) round_activity_last = battle.round;
 
-		for(i = 0; i < battle->pawns_count; ++i)
+		for(i = 0; i < battle.pawns_count; ++i)
 		{
-			if (!battle->pawns[i].count) continue;
-			alliance = game->players[battle->pawns[i].troop->owner].alliance;
-			status = movement_attack_plan(battle->pawns + i, graph[alliance], obstacles[alliance]);
+			if (!battle.pawns[i].count) continue;
+			alliance = game->players[battle.pawns[i].troop->owner].alliance;
+			status = movement_attack_plan(battle.pawns + i, graph[alliance], obstacles[alliance]);
 			if (status < 0) abort(); // TODO
 		}
 
-		battlefield_movement_plan(game->players, game->players_count, battle->field, battle->pawns, battle->pawns_count);
+		battlefield_movement_plan(game->players, game->players_count, battle.field, battle.pawns, battle.pawns_count);
 
-		input_animation(game, battle); // TODO this should be part of player-specific input
+		input_animation(game, &battle); // TODO this should be part of player-specific input
 
 		// TODO ugly; there should be a way to unify these
-		for(i = 0; i < battle->pawns_count; ++i)
+		for(i = 0; i < battle.pawns_count; ++i)
 		{
-			if (!battle->pawns[i].count) continue;
-			alliance = game->players[battle->pawns[i].troop->owner].alliance;
-			status = battlefield_movement_perform(battle, battle->pawns + i, graph[alliance], obstacles[alliance]);
+			if (!battle.pawns[i].count) continue;
+			alliance = game->players[battle.pawns[i].troop->owner].alliance;
+			status = battlefield_movement_perform(&battle, battle.pawns + i, graph[alliance], obstacles[alliance]);
 			if (status < 0) abort(); // TODO
 		}
-		for(i = 0; i < battle->pawns_count; ++i)
+		for(i = 0; i < battle.pawns_count; ++i)
 		{
-			if (!battle->pawns[i].count) continue;
-			alliance = game->players[battle->pawns[i].troop->owner].alliance;
-			status = battlefield_movement_attack(battle, battle->pawns + i, graph[alliance], obstacles[alliance]);
+			if (!battle.pawns[i].count) continue;
+			alliance = game->players[battle.pawns[i].troop->owner].alliance;
+			status = battlefield_movement_attack(&battle, battle.pawns + i, graph[alliance], obstacles[alliance]);
 			if (status < 0) abort(); // TODO
 		}
 
 		// TODO fight animation // TODO this should be part of player-specific input
-		battle_fight(game, battle);
-		if (battlefield_clean(battle)) round_activity_last = battle->round;
+		battle_fight(game, &battle);
+		if (battlefield_clean(&battle)) round_activity_last = battle.round;
 
 		for(i = 0; i < PLAYERS_LIMIT; ++i)
 		{
@@ -165,14 +174,19 @@ static int play_battle(struct game *restrict game, struct battle *restrict battl
 		}
 
 		// Cancel the battle if nothing is killed/destroyed for a certain number of rounds.
-		if ((battle->round - round_activity_last) >= ROUNDS_STALE_LIMIT)
-			return defender;
+		if ((battle.round - round_activity_last) >= ROUNDS_STALE_LIMIT)
+		{
+			winner = defender;
+			break;
+		}
 
-		battle->round += 1;
+		battle.round += 1;
 	}
 
-	input_report_battle(game, battle); // TODO this is player-specific
+	input_report_battle(game, &battle); // TODO this is player-specific
 
+finally:
+	battlefield_term(game, &battle);
 	return winner;
 }
 
@@ -270,13 +284,14 @@ static int play(struct game *restrict game)
 		// Settle conflicts by battles.
 		for(index = 0; index < game->regions_count; ++index)
 		{
-			enum {BATTLE_OPEN = 0x1, BATTLE_ASSAULT = 0x2} battle = 0;
-			int manual = 0;
 			int winner_alliance;
 
 			region = game->regions + index;
 
 			unsigned region_owner_old = region->owner;
+
+			unsigned alliances_assault = 0, alliances_open = 0;
+			int manual_assault = 0, manual_open = 0;
 
 			// Start open battle if troops of two different alliances occupy the region.
 			// If there is no open battle and there are troops preparing for assault, start assault battle.
@@ -284,43 +299,29 @@ static int play(struct game *restrict game)
 			{
 				if (troop->move == LOCATION_GARRISON)
 				{
-					if (troop->owner != region->garrison.owner)
-					{
-						battle |= BATTLE_ASSAULT;
-						if (game->players[troop->owner].type == Local) manual = 1;
-					}
+					alliances_assault |= (1 << game->players[troop->owner].alliance);
+					if (game->players[troop->owner].type == Local) manual_assault = 1;
 				}
-				else if (!allies(game, troop->owner, region->owner))
+				else
 				{
-					battle |= BATTLE_OPEN;
-					if (game->players[troop->owner].type == Local) manual = 1;
+					alliances_open |= (1 << game->players[troop->owner].alliance);
+					if (game->players[troop->owner].type == Local) manual_open = 1;
 				}
 			}
-			if (battle && !manual)
+			if (alliances_open & (alliances_open - 1))
 			{
-				winner_alliance = calculate_battle(game, region);
-				if (winner_alliance < 0) return winner_alliance;
+				if (manual_open) winner_alliance = play_battle(game, region, 0);
+				else winner_alliance = calculate_battle(game, region);
 
-				region_battle_cleanup(game, region, (battle & BATTLE_ASSAULT) != 0, winner_alliance);
-			}
-			else if (battle & BATTLE_OPEN)
-			{
-				struct battle battle;
-				if (battlefield_init(game, &battle, region, 0) < 0) abort(); // TODO
-				winner_alliance = play_battle(game, &battle, game->players[battle.region->owner].alliance);
-				battlefield_term(game, &battle);
 				if (winner_alliance < 0) return winner_alliance;
-
 				region_battle_cleanup(game, region, 0, winner_alliance);
 			}
-			else if (battle & BATTLE_ASSAULT)
+			else if (alliances_assault & (alliances_assault - 1))
 			{
-				struct battle battle;
-				if (battlefield_init(game, &battle, region, 1) < 0) abort(); // TODO
-				winner_alliance = play_battle(game, &battle, game->players[battle.region->garrison.owner].alliance);
-				battlefield_term(game, &battle);
-				if (winner_alliance < 0) return winner_alliance;
+				if (manual_assault) winner_alliance = play_battle(game, region, 1);
+				else winner_alliance = calculate_battle(game, region);
 
+				if (winner_alliance < 0) return winner_alliance;
 				region_battle_cleanup(game, region, 1, winner_alliance);
 			}
 

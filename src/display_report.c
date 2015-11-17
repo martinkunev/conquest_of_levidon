@@ -50,6 +50,7 @@ void if_report_battle(const void *argument, const struct game *game_)
 	// TODO indicate whether the attacker or the defender wins and which players win/lose/surrender
 	// TODO somehow indicate which players are allies
 	// TODO for assault display the damage to the garrison
+	// TODO indicate if the battle ended due to timeout
 
 	// Display report title.
 	char title[TITLE_SIZE_LIMIT], *end = title;

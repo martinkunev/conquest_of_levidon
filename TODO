@@ -1,4 +1,3 @@
-H	fix assault.png (small bright (red?) icon in the bottom right corner)
 H	battle mechanics fixes
 H	rewrite battle AI
 H	levidon map
@@ -36,9 +35,9 @@ battle mechanics
 
 bugs / issues
 	troop count indicator overflows the box from below (should just indicate overflow on the top side)
+	computer stops orders when priority gets below 0.5 (which happens not when expected)
 	computer doesn't attack
-	X bizantium computer never builds army and doesn't build anything after a certain moment
-	X red computer builds too much army (should consider food limitations)
+	enemy on the gate not displayed during shooting in battle animation
 	pawns of the same player deadlock (seen with peasant and light cavalry)
 	computer never trains army and sometimes never builds some buildings
 

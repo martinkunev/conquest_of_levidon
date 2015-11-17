@@ -525,6 +525,14 @@ static void if_map_region(const struct region *region, const struct state_map *s
 	}
 }
 
+static inline int in_garrison(const struct troop *restrict troop, const struct region *restrict region, unsigned player)
+{
+	if (troop->owner == player)
+		return ((troop->move == LOCATION_GARRISON) && (troop->owner == region->garrison.owner));
+	else
+		return (troop->location == LOCATION_GARRISON);
+}
+
 void if_map(const void *argument, const struct game *game)
 {
 	const struct state_map *state = argument;
@@ -615,19 +623,13 @@ void if_map(const void *argument, const struct game *game)
 				count_self = 0;
 				count_allies = 0;
 				count_enemies = 0;
-
 				for(troop = region->troops; troop; troop = troop->_next)
 				{
-					if (troop->owner == state->player)
-					{
-						if (troop->move == LOCATION_GARRISON)
-							count_self += troop->count;
-					}
-					else if (troop->location == LOCATION_GARRISON)
-					{
-						if (allies(game, troop->owner, state->player)) count_allies += troop->count;
-						else count_enemies += troop->count;
-					}
+					if (!in_garrison(troop, region, state->player)) continue;
+
+					if (troop->owner == state->player) count_self += troop->count;
+					else if (allies(game, troop->owner, state->player)) count_allies += troop->count;
+					else count_enemies += troop->count;
 				}
 
 				if_map_troops(location_x + image->width + TROOPS_BAR_MARGIN, location_y + image->height, count_self, count_allies, count_enemies);
@@ -649,16 +651,11 @@ void if_map(const void *argument, const struct game *game)
 		count_enemies = 0;
 		for(troop = region->troops; troop; troop = troop->_next)
 		{
-			if (troop->owner == state->player)
-			{
-				if (troop->move != LOCATION_GARRISON)
-					count_self += troop->count;
-			}
-			else if (troop->location != LOCATION_GARRISON)
-			{
-				if (allies(game, troop->owner, state->player)) count_allies += troop->count;
-				else count_enemies += troop->count;
-			}
+			if (in_garrison(troop, region, state->player)) continue;
+
+			if (troop->owner == state->player) count_self += troop->count;
+			else if (allies(game, troop->owner, state->player)) count_allies += troop->count;
+			else count_enemies += troop->count;
 		}
 		if_map_troops(MAP_X + region->center.x, MAP_Y + region->center.y, count_self, count_allies, count_enemies);
 	}

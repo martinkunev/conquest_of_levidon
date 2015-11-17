@@ -381,6 +381,7 @@ static int input_troop(int code, unsigned x, unsigned y, uint16_t modifiers, con
 		if ((state->troop->move == LOCATION_GARRISON) && (state->troop->owner == region->garrison.owner))
 		{
 			state->troop->move = region;
+			state->troop = 0;
 		}
 		else
 		{
@@ -457,6 +458,8 @@ static int input_garrison(int code, unsigned x, unsigned y, uint16_t modifiers, 
 			if (offset) offset -= 1;
 			else break;
 		}
+
+		state->troop = troop;
 	}
 	else if (code == EVENT_MOUSE_RIGHT)
 	{
