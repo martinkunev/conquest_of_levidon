@@ -52,7 +52,7 @@
 		"Thessaly": {
 			"owner": 1,
 			"garrison": {"troops": [["Peasant", 20, 1]]},
-			"built": ["Barracks", "Palisade", "Fortress"],
+			"built": ["Farm", "Irrigation", "Sawmill", "Mine", "Bloomery", "Barracks", "Archery range", "Stables", "Watch tower", "Fortress", "Workshop", "Forge"],
 			"neighbors": [null, "Thrace", "Macedonia", null, "Epirus", null, "Attica", null],
 			"location": [
 				[392, 463],
@@ -76,7 +76,7 @@
 		},
 		"Epirus": {
 			"owner": 2,
-			"troops": [["Militia", 20, 2], ["Battering Ram", 1, 2]],
+			"troops": [["Militia", 25, 2], ["Archer", 20, 2]],
 			"built": ["Watch tower"],
 			"neighbors": ["Thessaly", "Macedonia", "Dyrrachium", null, null, null, null, "Attica"],
 			"location": [
@@ -249,6 +249,7 @@
 		"Doclea": {
 			"owner": 2,
 			"built": [],
+			"troops": [["Battering Ram", 1, 2]],
 			"neighbors": ["Dardania", "Rascia", null, "Dalmatia", null, null, null, "Dyrrachium"],
 			"location": [
 				[185, 360],

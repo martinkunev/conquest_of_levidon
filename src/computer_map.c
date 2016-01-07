@@ -1,3 +1,4 @@
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -45,6 +46,8 @@ struct region_order
 #define heap_above(a, b) ((a)->priority >= (b)->priority)
 #include "generic/heap.g"
 
+enum unit_class {TROOP_INFANTRY, TROOP_ARCHER, TROOP_CAVALRY, TROOP_SIEGE, /* dummy */ TROOP_CLASS_SIZE};
+
 struct region_info
 {
 	double importance;
@@ -60,6 +63,8 @@ struct region_info
 	{
 		double self, ally;
 	} strength_garrison;
+
+	unsigned troops[TROOP_CLASS_SIZE];
 };
 
 static void income_calculate(const struct game *restrict game, struct resources *restrict result)
@@ -100,6 +105,23 @@ static void income_calculate(const struct game *restrict game, struct resources 
 			resource_add(result, &income_region);
 		}
 	}
+}
+
+static enum unit_class unit_class(const struct unit *restrict unit)
+{
+	if (unit->ranged.range)
+	{
+		if (unit->ranged.range >= 9)
+			return TROOP_SIEGE;
+		else
+			return TROOP_ARCHER;
+	}
+	else if (unit->melee.weapon == WEAPON_BLUNT)
+		return TROOP_SIEGE;
+	else if (unit->speed >= 6)
+		return TROOP_CAVALRY;
+	else
+		return TROOP_INFANTRY;
 }
 
 static int computer_map_orders_list(struct array_orders *restrict orders, const struct game *restrict game, unsigned char player, unsigned char regions_visible[static REGIONS_LIMIT], const struct region_info *restrict regions_info)
@@ -146,7 +168,7 @@ static int computer_map_orders_list(struct array_orders *restrict orders, const 
 				case BuildingIrrigation:
 				case BuildingSawmill:
 				case BuildingMine:
-				case BuildingBlastFurnace:
+				case BuildingBloomery:
 					orders->data[orders->count].priority = (neighbors_dangerous ? 0.5 * desire_buildings[j] : desire_buildings[j]);
 					break;
 
@@ -183,11 +205,29 @@ static int computer_map_orders_list(struct array_orders *restrict orders, const 
 				if (array_orders_expand(orders, orders->count + 1) < 0)
 					goto error;
 
+				// Calculate the value of training the troop.
 				// TODO improve this
-				double unit_value = unit_importance(UNITS + j) / (10.0 * unit_cost(UNITS + j)); // TODO this may be > 1
-				if (!resource_enough(&income, &UNITS[j].expense)) unit_value /= 2;
+				double troop_value = (unit_importance(UNITS + j) * UNITS[j].troops_count) / sqrt(unit_cost(UNITS + j)); // TODO this can be > 1
+				if (!resource_enough(&income, &UNITS[j].expense)) troop_value /= 2.0;
+				if (!neighbors_dangerous) troop_value /= 2.0;
+				switch (unit_class(UNITS + j))
+				{
+				case TROOP_INFANTRY:
+					break;
 
-				orders->data[orders->count].priority = (neighbors_dangerous ? unit_value : 0.5 * unit_value);
+				case TROOP_ARCHER:
+				case TROOP_CAVALRY:
+					if ((regions_info[i].troops[TROOP_CAVALRY] + regions_info[i].troops[TROOP_ARCHER]) >= regions_info[i].troops[TROOP_INFANTRY])
+						troop_value /= 2.0;
+					break;
+
+				case TROOP_SIEGE:
+					if (!regions_info[i].troops[TROOP_SIEGE])
+						troop_value *= 2.0;
+					break;
+				}
+
+				orders->data[orders->count].priority = troop_value;
 				orders->data[orders->count].region = region;
 				orders->data[orders->count].type = ORDER_TRAIN;
 				orders->data[orders->count].target.unit = j;
@@ -486,22 +526,6 @@ static struct region_info *regions_info_collect(const struct game *restrict game
 	struct region_info *regions_info = malloc(game->regions_count * sizeof(struct region_info));
 	if (!regions_info) return 0;
 
-	// TODO is this useful? what to do if the garrison is controlled by a different player
-	// Count the number of neighboring enemy regions.
-	/*for(j = 0; j < NEIGHBORS_LIMIT; ++j)
-	{
-		const struct region *restrict neighbor = region->neighbors[j];
-
-		if (!neighbor) continue;
-
-		if (!regions_visible[neighbor->index])
-			neighbors_unknown += 1;
-		else if ((neighbor->owner != PLAYER_NEUTRAL) && !allies(game, player, neighbor->owner))
-			neighbors_enemy += 1;
-		else if ((neighbor->garrison.owner != PLAYER_NEUTRAL) && !allies(game, player, neighbor->garrison.owner))
-			neighbors_enemy += 1;
-	}*/
-
 	for(i = 0; i < game->regions_count; ++i)
 	{
 		regions_info[i] = (struct region_info){.importance = 1.0}; // TODO estimate region importance
@@ -514,6 +538,7 @@ static struct region_info *regions_info_collect(const struct game *restrict game
 		// Count neighboring regions that may pose danger.
 		for(j = 0; j < NEIGHBORS_LIMIT; ++j)
 		{
+			// TODO what if the garrison is controlled by a different player
 			if (!region->neighbors[j]) continue;
 			if (!regions_visible[region->neighbors[j]->index])
 				regions_info[i].neighbors_unknown += 1;
@@ -532,6 +557,8 @@ static struct region_info *regions_info_collect(const struct game *restrict game
 					regions_info[i].strength.self += strength;
 				else
 					regions_info[i].strength_garrison.self += strength;
+
+				regions_info[i].troops[unit_class(troop->unit)] += 1;
 			}
 			else if (allies(game, troop->owner, player))
 			{

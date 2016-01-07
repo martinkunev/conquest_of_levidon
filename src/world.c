@@ -18,7 +18,7 @@ const struct unit UNITS[] =
 	[UnitPeasant] = {
 		.index = UnitPeasant, NAME("Peasant"), .speed = 4, .health = 5, .armor = ARMOR_NONE,
 		.cost = {.gold = 1}, .expense = {.food = 1}, .time = 1, .troops_count = 25,
-		.melee = {.weapon = WEAPON_CLUB, .damage = 1.0, .agility = 1.0},
+		.melee = {.weapon = WEAPON_CLUB, .damage = 1.0, .agility = 0.75},
 	},
 	[UnitMilitia] = {
 		.index = UnitMilitia, NAME("Militia"), .speed = 5, .health = 6, .armor = ARMOR_LEATHER,
@@ -27,7 +27,7 @@ const struct unit UNITS[] =
 	},
 	[UnitPikeman] = {
 		.index = UnitPikeman, NAME("Pikeman"), .speed = 5, .health = 6, .armor = ARMOR_CHAINMAIL,
-		.cost = {.gold = 2, .wood = 1, .iron = 1}, .expense = {.food = 1}, .time = 1, .troops_count = 25, .requires = (1 << BuildingForge),
+		.cost = {.gold = 1, .iron = 1}, .expense = {.food = 1}, .time = 1, .troops_count = 25, .requires = (1 << BuildingForge),
 		.melee = {.weapon = WEAPON_POLEARM, .damage = 2.0, .agility = 1.0},
 	},
 	[UnitArcher] = {
@@ -38,13 +38,13 @@ const struct unit UNITS[] =
 	},
 	[UnitLongbow] = {
 		.index = UnitLongbow, NAME("Longbow"), .speed = 4, .health = 5, .armor = ARMOR_LEATHER,
-		.cost = {.gold = 2, .wood = 2}, .expense = {.food = 1}, .time = 1, .troops_count = 25, .requires = (1 << BuildingBarracks) | (1 << BuildingArcheryRange),
+		.cost = {.gold = 1, .wood = 2}, .expense = {.food = 1}, .time = 1, .troops_count = 25, .requires = (1 << BuildingBarracks) | (1 << BuildingArcheryRange),
 		.melee = {.weapon = WEAPON_CLEAVING, .damage = 1.0, .agility = 1.0},
 		.ranged = {.weapon = WEAPON_ARROW, .damage = 2.0, .range = 6},
 	},
 	[UnitLightCavalry] = {
 		.index = UnitLightCavalry, NAME("Light Cavalry"), .speed = 9, .health = 10, .armor = ARMOR_LEATHER,
-		.cost = {.gold = 2, .iron = 1}, .expense = {.food = 2}, .time = 2, .troops_count = 16, .requires = (1 << BuildingBarracks) | (1 << BuildingStables),
+		.cost = {.gold = 2, .wood = 1}, .expense = {.food = 2}, .time = 2, .troops_count = 16, .requires = (1 << BuildingBarracks) | (1 << BuildingStables),
 		.melee = {.weapon = WEAPON_CLEAVING, .damage = 2.0, .agility = 1.0},
 	},
 	[UnitBatteringRam] = {
@@ -61,7 +61,7 @@ const struct building buildings[] =
 	[BuildingIrrigation] = {NAME("Irrigation"), .cost = {.gold = 5}, .income = {.food = 2}, .time = 4, .requires = (1 << BuildingFarm)},
 	[BuildingSawmill] = {NAME("Sawmill"), .cost = {.gold = 4}, .income = {.wood = 3}, .time = 3},
 	[BuildingMine] = {NAME("Mine"), .cost = {.gold = 4, .wood = 6}, .income = {.stone = 3}, .time = 4},
-	[BuildingBlastFurnace] = {NAME("Blast furnace"), .cost = {.gold = 8, .stone = 10}, .income = {.iron = 1, .stone = -1}, .time = 5, .requires = (1 << BuildingMine)},
+	[BuildingBloomery] = {NAME("Bloomery"), .cost = {.gold = 8, .stone = 10}, .income = {.iron = 1, .stone = -1}, .time = 5, .requires = (1 << BuildingMine)},
 	[BuildingBarracks] = {NAME("Barracks"), .cost = {.gold = 5, .wood = 5, .stone = 5}, .time = 4},
 	[BuildingArcheryRange] = {NAME("Archery range"), .cost = {.gold = 3, .wood = 4}, .time = 2},
 	[BuildingStables] = {NAME("Stables"), .cost = {.gold = 6, .food = 10, .wood = 15}, .income = {.food = -3}, .time = 6, .requires = (1 << BuildingFarm)},

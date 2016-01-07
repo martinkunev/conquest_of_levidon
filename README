@@ -32,7 +32,7 @@ $ make
 
 # make uninstall
 
-For each user who has started the game, there is a directory with saved games and custom worlds.
+For each user who has run the game, there is a directory with saved games and custom worlds.
 ~/.conquest_of_levidon
 As expected, "make uninstall" will not delete such directories (in case you need them later). You can manually delete them, if necessary.
 

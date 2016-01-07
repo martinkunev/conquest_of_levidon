@@ -1,7 +1,6 @@
 enum {ANNEALING_STEPS = 128, ANNEALING_TRIES = 16};
 
 extern const double desire_buildings[];
-extern const double desire_units[];
 
 double unit_importance(const struct unit *restrict unit);
 double unit_cost(const struct unit *restrict unit);

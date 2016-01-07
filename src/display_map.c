@@ -25,7 +25,7 @@
 //#define HEALTH_BAR 64
 #define TROOPS_BAR_MARGIN 2
 
-#define TROOPS_BAR_WIDTH 5
+#define TROOPS_BAR_WIDTH 4
 #define TROOPS_BAR_HEIGHT 48
 
 // TODO compatibility with OpenGL 2.1 (necessary in MacOS X)
@@ -250,29 +250,49 @@ static void tooltip_cost(const char *restrict name, size_t name_length, const st
 	}
 }
 
-static void if_map_troops(unsigned x, unsigned y, unsigned count_self, unsigned count_allies, unsigned count_enemies)
+static void if_map_troops(unsigned x, unsigned y, unsigned count_self, unsigned count_ally, unsigned count_enemy)
 {
-	unsigned count;
+	// Calculate the height of each bar and draw it.
 
-	// Calculate the height of the troops bar.
-	count_self = (count_self + 5) / 10;
-	count_allies = (count_allies + 5) / 10;
-	count_enemies = (count_enemies + 5) / 10;
-	count = count_self + count_allies + count_enemies;
+	// assert(TROOPS_BAR_HEIGHT == image_map_village.height);
 
-	if (count)
+	if (count_self = (count_self + 5) / 10)
 	{
-		// TODO indicate this overflow somehow
-		if (count > image_map_village.height) count = image_map_village.height;
+		if (count_self > TROOPS_BAR_HEIGHT)
+		{
+			fill_rectangle(x - 1, y - TROOPS_BAR_HEIGHT - 2, TROOPS_BAR_WIDTH + 2, 1, Self);
+			count_self = TROOPS_BAR_HEIGHT;
+		}
+		fill_rectangle(x, y - count_self, TROOPS_BAR_WIDTH, count_self, Self);
+		draw_rectangle(x - 1, y - count_self - 1, TROOPS_BAR_WIDTH + 2, count_self + 2, Black);
 
-		// TODO the individual lines may be too long
-		if (count_self)
-			fill_rectangle(x, y - count_self, TROOPS_BAR_WIDTH, count_self, Self);
-		if (count_allies)
-			fill_rectangle(x, y - count_self - count_allies, TROOPS_BAR_WIDTH, count_allies, Ally);
-		if (count_enemies)
-			fill_rectangle(x, y - count, TROOPS_BAR_WIDTH, count_enemies, Enemy);
-		draw_rectangle(x - 1, y - count - 1, TROOPS_BAR_WIDTH + 2, count + 2, Black);
+		x += TROOPS_BAR_WIDTH + 1;
+	}
+
+	if (count_ally = (count_ally + 5) / 10)
+	{
+		if (count_ally > TROOPS_BAR_HEIGHT)
+		{
+			fill_rectangle(x - 1, y - TROOPS_BAR_HEIGHT - 2, TROOPS_BAR_WIDTH + 2, 1, Ally);
+			count_ally = TROOPS_BAR_HEIGHT;
+		}
+		fill_rectangle(x, y - count_ally, TROOPS_BAR_WIDTH, count_ally, Ally);
+		draw_rectangle(x - 1, y - count_ally - 1, TROOPS_BAR_WIDTH + 2, count_ally + 2, Black);
+
+		x += TROOPS_BAR_WIDTH + 1;
+	}
+
+	if (count_enemy = (count_enemy + 5) / 10)
+	{
+		if (count_enemy > TROOPS_BAR_HEIGHT)
+		{
+			fill_rectangle(x - 1, y - TROOPS_BAR_HEIGHT - 2, TROOPS_BAR_WIDTH + 2, 1, Enemy);
+			count_enemy = TROOPS_BAR_HEIGHT;
+		}
+		fill_rectangle(x, y - count_enemy, TROOPS_BAR_WIDTH, count_enemy, Enemy);
+		draw_rectangle(x - 1, y - count_enemy - 1, TROOPS_BAR_WIDTH + 2, count_enemy + 2, Black);
+
+		x += TROOPS_BAR_WIDTH + 1;
 	}
 }
 
@@ -304,7 +324,7 @@ static void if_map_region(const struct region *region, const struct state_map *s
 	const struct troop *troop;
 	size_t i;
 
-	show_flag(PANEL_X, PANEL_Y, region->owner);
+	if (game->players[region->owner].type != Neutral) show_flag(PANEL_X, PANEL_Y, region->owner);
 
 	if (allies(game, region->owner, state->player) || allies(game, region->garrison.owner, state->player))
 	{
@@ -417,7 +437,7 @@ static void if_map_region(const struct region *region, const struct state_map *s
 		if (garrison)
 		{
 			image_draw(&image_garrison[garrison->index], GARRISON_X, GARRISON_Y);
-			show_flag(GARRISON_X, GARRISON_Y - GARRISON_MARGIN, region->garrison.owner);
+			if (game->players[region->garrison.owner].type != Neutral) show_flag(GARRISON_X, GARRISON_Y - GARRISON_MARGIN, region->garrison.owner);
 
 			if (allies(game, region->garrison.owner, state->player))
 			{
@@ -616,7 +636,7 @@ void if_map(const void *argument, const struct game *game)
 			unsigned location_x = MAP_X + region->location_garrison.x - image->width / 2;
 			unsigned location_y = MAP_Y + region->location_garrison.y - image->height / 2;
 			display_image(image, location_x, location_y, image->width, image->height);
-			show_flag_small(MAP_X + region->location_garrison.x, location_y - image_flag_small.height + 10, region->garrison.owner);
+			if (game->players[region->garrison.owner].type != Neutral) show_flag_small(MAP_X + region->location_garrison.x, location_y - image_flag_small.height + 10, region->garrison.owner);
 
 			if (allies(game, region->owner, state->player) || allies(game, region->garrison.owner, state->player))
 			{

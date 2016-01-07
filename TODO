@@ -30,16 +30,15 @@ battle mechanics
 	pawn_stop is not intuitive; if two pawns fight, one tries to escape and the other moves in a collision direction with it, the first doesn't escape
 	pawn following another pawn stops at a diagonal field
 	pawns don't understand how to sidestep other pawns to reach their destination
+	pawns of the same player deadlock (seen with peasant and light cavalry)
 	don't allow pawns to attack their own walls (currently only gates are not attacked)
 	don't allow attacking if the attacker cannot do damage to the defender (due to weapon and armor type)
 
 bugs / issues
-	troop count indicator overflows the box from below (should just indicate overflow on the top side)
 	computer stops orders when priority gets below 0.5 (which happens not when expected)
 	computer doesn't attack
-	enemy on the gate not displayed during shooting in battle animation
-	pawns of the same player deadlock (seen with peasant and light cavalry)
 	computer never trains army and sometimes never builds some buildings
+	enemy on the gate not displayed during shooting in battle animation
 
 surrender
 	? rename surrender
@@ -79,6 +78,5 @@ map
 	village image (will be displayed to the left of troops bar)
 	more tooltips
 	display current month and year
-	don't show flag for the neutral player
 	right clicking on a garrison on the map should be the same as clicking for assault
 	indicate on the map which region is selected (maybe with a border around it?)

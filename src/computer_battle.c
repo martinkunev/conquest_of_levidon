@@ -224,7 +224,7 @@ static double battle_state_rating(const struct game *restrict game, struct battl
 		{
 			// estimate shoot impact
 			// TODO this doesn't account for accuracy and damage spreading to nearby targets
-			const struct pawn *victim = pawn->target.pawn;
+			const struct pawn *victim = battle->field[pawn->target.field.y][pawn->target.field.x].pawn;
 			rating += unit_importance(victim->troop->unit) * damage_expected(pawn, pawn->count, victim);
 		}
 		else if ((pawn->action == PAWN_ASSAULT) && battlefield_neighbors(pawn->moves[pawn->moves_count - 1].location, pawn->target.field))
