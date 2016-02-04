@@ -74,7 +74,7 @@ static int input_none(int code, unsigned x, unsigned y, uint16_t modifiers, cons
 	case XK_Return:
 		return input_continue(EVENT_MOUSE_LEFT, x, y, modifiers, game, argument);
 
-	case 'q':
+	case 'q': // TODO isn't this buggy
 	case XK_Escape:
 		return INPUT_TERMINATE;
 

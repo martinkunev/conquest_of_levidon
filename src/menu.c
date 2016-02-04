@@ -1,11 +1,9 @@
 #include <dirent.h>
 #include <errno.h>
-#include <fcntl.h>
 #include <stdlib.h>
 #if !defined(_DIRENT_HAVE_D_NAMLEN)
 # include <string.h>
 #endif
-#include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -190,11 +188,7 @@ void menu_free(struct files *list)
 
 int menu_load(size_t index, const unsigned char *restrict filename, size_t filename_size, struct game *restrict game)
 {
-	int file;
-	struct stat info;
-	unsigned char *buffer;
-	int success;
-	union json *json;
+	int status;
 
 	const unsigned char *restrict location = directories[index]->data;
 	size_t location_size = directories[index]->size;
@@ -202,85 +196,24 @@ int menu_load(size_t index, const unsigned char *restrict filename, size_t filen
 	struct bytes *filepath = path_cat(location, location_size, filename, filename_size);
 	if (!filepath) return ERROR_MEMORY;
 
-	file = open(filepath->data, O_RDONLY);
+	status = world_load(filepath->data, game);
 	free(filepath);
-	if (file < 0) return ERROR_MISSING; // TODO this could be ERROR_ACCESS or something else
-	if (fstat(file, &info) < 0)
-	{
-		close(file);
-		return ERROR_MISSING; // TODO this could be ERROR_ACCESS or something else
-	}
-	buffer = mmap(0, info.st_size, PROT_READ, MAP_SHARED, file, 0);
-	close(file);
-	if (buffer == MAP_FAILED) return ERROR_MEMORY;
 
-	json = json_parse(buffer, info.st_size);
-	munmap(buffer, info.st_size);
-
-	if (!json) return ERROR_INPUT;
-	success = !world_load(json, game);
-	json_free(json);
-	if (!success) return ERROR_INPUT;
-
-	return 0;
+	return status;
 }
 
 int menu_save(size_t index, const unsigned char *restrict filename, size_t filename_size, const struct game *restrict game)
 {
-	int file;
-	union json *json;
-	unsigned char *buffer;
-	size_t size, progress;
-	ssize_t written;
+	int status;
 
 	const unsigned char *restrict location = directories[index]->data;
 	size_t location_size = directories[index]->size;
 
-	json = world_save(game);
-	if (!json) return ERROR_MEMORY;
-
-	size = json_size(json);
-	buffer = malloc(size);
-	if (!buffer)
-	{
-		json_free(json);
-		return ERROR_MEMORY;
-	}
-
-	json_dump(buffer, json);
-	json_free(json);
-
 	struct bytes *filepath = path_cat(location, location_size, filename, filename_size);
-	if (!filepath)
-	{
-		free(buffer);
-		return ERROR_MEMORY;
-	}
+	if (!filepath) return ERROR_MEMORY;
 
-	file = creat(filepath->data, 0644);
-	if (file < 0)
-	{
-		free(filepath);
-		free(buffer);
-		return ERROR_ACCESS; // TODO this could be several different errors
-	}
-
-	// Write the serialized world into the file.
-	for(progress = 0; progress < size; progress += written)
-	{
-		written = write(file, buffer + progress, size - progress);
-		if (written < 0)
-		{
-			unlink(filepath->data);
-			close(file);
-			free(filepath);
-			free(buffer);
-			return ERROR_WRITE;
-		}
-	}
-
-	close(file);
+	status = world_save(game, filepath->data);
 	free(filepath);
-	free(buffer);
-	return 0;
+
+	return status;
 }

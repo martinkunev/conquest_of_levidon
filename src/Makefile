@@ -5,7 +5,10 @@ all: conquest_of_levidon
 conquest_of_levidon: $(O)
 	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $@
 
-editor: image.o draw.o interface.o input.o json.o generic/array_json.o format.o editor.o
+editor: editor.o world.o map.o resources.o interface.o display_common.o input.o draw.o image.o format.o json.o generic/array_json.o
+	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $@
+
+units: units.o world.o map.o combat.o battle.o movement.o pathfinding.o resources.o computer.o format.o json.o generic/array_json.o
 	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $@
 
 clean:

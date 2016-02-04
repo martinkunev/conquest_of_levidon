@@ -1,3 +1,6 @@
+extern Display *display;
+extern GLXDrawable drawable;
+
 extern struct font font9, font12, font24;
 extern unsigned SCREEN_WIDTH, SCREEN_HEIGHT;
 

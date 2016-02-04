@@ -1,6 +1,9 @@
+#include <fcntl.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 #include "json.h"
@@ -338,7 +341,7 @@ static int region_neighbors(struct game *restrict game, struct region *restrict 
 	return 0;
 }
 
-int world_load(const union json *restrict json, struct game *restrict game)
+static int world_populate(const union json *restrict json, struct game *restrict game)
 {
 	const union json *item, *node, *field;
 	size_t index;
@@ -444,7 +447,39 @@ int world_load(const union json *restrict json, struct game *restrict game)
 error:
 	// TODO segmentation fault on partial initialization? (because of non-zeroed pointers)
 	world_unload(game);
-	return -1;
+	return ERROR_INPUT;
+}
+
+int world_load(const unsigned char *restrict filepath, struct game *restrict game)
+{
+	int file;
+	struct stat info;
+	unsigned char *buffer;
+	int status;
+	union json *json;
+
+	// Read file content.
+	file = open(filepath, O_RDONLY);
+	if (file < 0) return ERROR_MISSING; // TODO this could be ERROR_ACCESS or something else
+	if (fstat(file, &info) < 0)
+	{
+		close(file);
+		return ERROR_MISSING; // TODO this could be ERROR_ACCESS or something else
+	}
+	buffer = mmap(0, info.st_size, PROT_READ, MAP_SHARED, file, 0);
+	close(file);
+	if (buffer == MAP_FAILED) return ERROR_MEMORY;
+
+	// Parse file content.
+	json = json_parse(buffer, info.st_size);
+	munmap(buffer, info.st_size);
+	if (!json) return ERROR_INPUT;
+
+	// Populate game data.
+	status = world_populate(json, game);
+	json_free(json);
+
+	return status;
 }
 
 static union json *world_save_point(struct point p)
@@ -473,7 +508,7 @@ static union json *world_save_troops(const struct troop *troop, const struct reg
 	return troops;
 }
 
-union json *world_save(const struct game *restrict game)
+static union json *world_store(const struct game *restrict game)
 {
 	union json *json = json_object();
 
@@ -559,6 +594,53 @@ union json *world_save(const struct game *restrict game)
 	// game->turn // TODO write this to the world file
 
 	return json;
+}
+
+int world_save(const struct game *restrict game, const unsigned char *restrict filepath)
+{
+	union json *json;
+	size_t size;
+	unsigned char *buffer;
+	int file;
+	size_t progress, written;
+
+	json = world_store(game);
+	if (!json) return ERROR_MEMORY;
+
+	size = json_size(json);
+	buffer = malloc(size);
+	if (!buffer)
+	{
+		json_free(json);
+		return ERROR_MEMORY;
+	}
+
+	json_dump(buffer, json);
+	json_free(json);
+
+	file = creat(filepath, 0644);
+	if (file < 0)
+	{
+		free(buffer);
+		return ERROR_ACCESS; // TODO this could be several different errors
+	}
+
+	// Write the serialized world into the file.
+	for(progress = 0; progress < size; progress += written)
+	{
+		written = write(file, buffer + progress, size - progress);
+		if (written < 0)
+		{
+			unlink(filepath);
+			close(file);
+			free(buffer);
+			return ERROR_WRITE;
+		}
+	}
+
+	close(file);
+	free(buffer);
+	return 0;
 }
 
 void world_unload(struct game *restrict game)

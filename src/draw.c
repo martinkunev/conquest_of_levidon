@@ -140,8 +140,20 @@ void draw_rectangle(unsigned x, unsigned y, unsigned width, unsigned height, enu
 	glEnd();
 }
 
+void draw_polygon(const struct polygon *restrict polygon, int offset_x, int offset_y, const unsigned char color[4])
+{
+	size_t i;
+
+	glColor4ubv(color);
+
+	glBegin(GL_LINE_STRIP);
+	for(i = 0; i < polygon->vertices_count; ++i)
+		glVertex2f(offset_x + polygon->points[i].x, offset_y + polygon->points[i].y);
+	glEnd();
+}
+
 // Display a region as a polygon, using ear clipping.
-void fill_polygon(const struct polygon *restrict polygon, int offset_x, int offset_y)
+void fill_polygon(const struct polygon *restrict polygon, int offset_x, int offset_y, const unsigned char color[4])
 {
 	// assert(polygon->vertices_count > 2);
 
@@ -168,6 +180,8 @@ void fill_polygon(const struct polygon *restrict polygon, int offset_x, int offs
 		vertex->class = is_ear(vertex->prev, vertex, vertex->next);
 		vertex = vertex->next;
 	} while (vertex != draw);
+
+	glColor4ubv(color);
 
 	while (vertices_left > 3)
 	{

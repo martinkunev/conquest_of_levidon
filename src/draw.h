@@ -42,7 +42,8 @@ void fill_circle(unsigned x, unsigned y, unsigned radius, enum color color);
 void draw_rectangle(unsigned x, unsigned y, unsigned width, unsigned height, enum color color);
 void fill_rectangle(unsigned x, unsigned y, unsigned width, unsigned height, enum color color);
 
-void fill_polygon(const struct polygon *restrict polygon, int offset_x, int offset_y);
+void draw_polygon(const struct polygon *restrict polygon, int offset_x, int offset_y, const unsigned char color[4]);
+void fill_polygon(const struct polygon *restrict polygon, int offset_x, int offset_y, const unsigned char color[4]);
 
 void display_arrow(struct point from, struct point to, int offset_x, int offset_y, enum color color);
 

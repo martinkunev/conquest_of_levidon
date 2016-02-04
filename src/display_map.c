@@ -79,8 +79,8 @@ void if_storage_init(const struct game *game, int width, int height)
 
 	for(i = 0; i < regions_count; ++i)
 	{
-		glColor3ub(255, i / 256, i % 256);
-		fill_polygon(game->regions[i].location, 0, 0);
+		unsigned char color[4] = {255, i / 256, i % 256, 255};
+		fill_polygon(game->regions[i].location, 0, 0, color);
 	}
 
 	glFlush();
@@ -557,7 +557,7 @@ void if_map(const void *argument, const struct game *game)
 {
 	const struct state_map *state = argument;
 
-	size_t i, j;
+	size_t i;
 
 	// Display current player's color.
 	// TODO use darker color in the center
@@ -589,9 +589,8 @@ void if_map(const void *argument, const struct game *game)
 		const struct region *restrict region = game->regions + i;
 
 		// Fill each region with the color of its owner (or the color indicating unexplored).
-		if (state->regions_visible[i]) glColor4ubv(display_colors[Player + region->owner]);
-		else glColor4ubv(display_colors[Unexplored]);
-		fill_polygon(region->location, MAP_X, MAP_Y);
+		enum color color = (state->regions_visible[i] ? (Player + region->owner) : Unexplored);
+		fill_polygon(region->location, MAP_X, MAP_Y, display_colors[color]);
 
 		// Remember income and expenses.
 		if (region->owner == state->player) region_income(region, &income);
@@ -612,13 +611,7 @@ void if_map(const void *argument, const struct game *game)
 
 	// Draw region borders.
 	for(i = 0; i < game->regions_count; ++i)
-	{
-		glColor4ubv(display_colors[Black]);
-		glBegin(GL_LINE_STRIP);
-		for(j = 0; j < game->regions[i].location->vertices_count; ++j)
-			glVertex2f(MAP_X + game->regions[i].location->points[j].x, MAP_Y + game->regions[i].location->points[j].y);
-		glEnd();
-	}
+		draw_polygon(game->regions[i].location, MAP_X, MAP_Y, display_colors[Black]);
 
 	for(i = 0; i < game->regions_count; ++i)
 	{
