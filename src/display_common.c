@@ -10,9 +10,9 @@
 #include "interface.h"
 #include "display_common.h"
 
-#define S(s) (s), sizeof(s) - 1
-
 #define PREFIX_IMG PREFIX "share/conquest_of_levidon/img/"
+
+#define S(s) (s), sizeof(s) - 1
 
 struct image image_flag, image_flag_small;
 struct image image_selected, image_panel, image_construction, image_movement, image_assault;
@@ -76,7 +76,7 @@ void if_load_images(void)
 	image_load_png(&image_buildings[1], PREFIX_IMG "irrigation.png", 0);
 	image_load_png(&image_buildings[2], PREFIX_IMG "sawmill.png", 0);
 	image_load_png(&image_buildings[3], PREFIX_IMG "mine.png", 0);
-	image_load_png(&image_buildings[4], PREFIX_IMG "blast_furnace.png", 0);
+	image_load_png(&image_buildings[4], PREFIX_IMG "bloomery.png", 0);
 	image_load_png(&image_buildings[5], PREFIX_IMG "barracks.png", 0);
 	image_load_png(&image_buildings[6], PREFIX_IMG "archery_range.png", 0);
 	image_load_png(&image_buildings[7], PREFIX_IMG "stables.png", 0);
@@ -90,7 +90,7 @@ void if_load_images(void)
 	image_load_png(&image_buildings_gray[1], PREFIX_IMG "irrigation.png", 1);
 	image_load_png(&image_buildings_gray[2], PREFIX_IMG "sawmill.png", 1);
 	image_load_png(&image_buildings_gray[3], PREFIX_IMG "mine.png", 1);
-	image_load_png(&image_buildings_gray[4], PREFIX_IMG "blast_furnace.png", 1);
+	image_load_png(&image_buildings_gray[4], PREFIX_IMG "bloomery.png", 1);
 	image_load_png(&image_buildings_gray[5], PREFIX_IMG "barracks.png", 1);
 	image_load_png(&image_buildings_gray[6], PREFIX_IMG "archery_range.png", 1);
 	image_load_png(&image_buildings_gray[7], PREFIX_IMG "stables.png", 1);
