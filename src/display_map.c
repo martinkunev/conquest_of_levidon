@@ -436,7 +436,7 @@ static void if_map_region(const struct region *region, const struct state_map *s
 		const struct garrison_info *restrict garrison = garrison_info(region);
 		if (garrison)
 		{
-			image_draw(&image_garrison[garrison->index], GARRISON_X, GARRISON_Y);
+			image_draw(&image_garrisons[garrison->index], GARRISON_X, GARRISON_Y);
 			if (game->players[region->garrison.owner].type != Neutral) show_flag(GARRISON_X, GARRISON_Y - GARRISON_MARGIN, region->garrison.owner);
 
 			if (allies(game, region->garrison.owner, state->player))

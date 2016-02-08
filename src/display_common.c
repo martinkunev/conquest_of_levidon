@@ -19,7 +19,7 @@ struct image image_selected, image_panel, image_construction, image_movement, im
 struct image image_pawn_fight, image_pawn_assault, image_pawn_shoot;
 struct image image_shoot_right, image_shoot_up, image_shoot_left, image_shoot_down; // TODO more directions?
 struct image image_terrain[1];
-struct image image_garrison[2]; // TODO this must be big enough for all garrison types
+struct image image_garrisons[2]; // TODO this must be big enough for all garrison types
 struct image image_map_village, image_map_garrison[2]; // TODO this must be big enough for all garrison types
 struct image image_gold, image_food, image_wood, image_stone, image_iron, image_time;
 struct image image_scroll_left, image_scroll_right;
@@ -47,8 +47,8 @@ void if_load_images(void)
 	image_load_png(&image_shoot_left, PREFIX_IMG "shoot_left.png", 0);
 	image_load_png(&image_shoot_down, PREFIX_IMG "shoot_down.png", 0);
 
-	image_load_png(&image_garrison[PALISADE], PREFIX_IMG "garrison_palisade.png", 0);
-	image_load_png(&image_garrison[FORTRESS], PREFIX_IMG "garrison_fortress.png", 0);
+	image_load_png(&image_garrisons[PALISADE], PREFIX_IMG "garrison_palisade.png", 0);
+	image_load_png(&image_garrisons[FORTRESS], PREFIX_IMG "garrison_fortress.png", 0);
 
 	image_load_png(&image_map_village, PREFIX_IMG "map_village.png", 0);
 	image_load_png(&image_map_garrison[PALISADE], PREFIX_IMG "map_palisade.png", 0);

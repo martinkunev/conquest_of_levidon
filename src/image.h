@@ -16,7 +16,7 @@ extern struct image image_selected, image_panel, image_construction, image_movem
 extern struct image image_pawn_fight, image_pawn_assault, image_pawn_shoot;
 extern struct image image_shoot_right, image_shoot_up, image_shoot_left, image_shoot_down;
 extern struct image image_terrain[1];
-extern struct image image_garrison[2];
+extern struct image image_garrisons[2];
 extern struct image image_map_village, image_map_garrison[2];
 extern struct image image_gold, image_food, image_wood, image_stone, image_iron, image_time;
 extern struct image image_scroll_left, image_scroll_right;
