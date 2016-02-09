@@ -25,19 +25,19 @@
 #define EDITOR_X 0
 #define EDITOR_Y 0
 
-#define BUTTON_REGIONS_X 800
+#define BUTTON_REGIONS_X 780
 #define BUTTON_REGIONS_Y 16
 
-#define BUTTON_POINTS_X 800
+#define BUTTON_POINTS_X 780
 #define BUTTON_POINTS_Y 36
 
-#define REGIONNAME_X 800
+#define REGIONNAME_X 780
 #define REGIONNAME_Y 128
 
 #define CENTER_WIDTH 8
 #define CENTER_HEIGHT 8
 
-#define OBJECT_X 900
+#define OBJECT_X 920
 #define OBJECT_Y 16
 
 #define WORLD_TEMP "/tmp/conquest_of_levidon_world"
@@ -432,7 +432,11 @@ static int input_region(int code, unsigned x, unsigned y, uint16_t modifiers, co
 
 	case EVENT_MOUSE_LEFT:
 		{
-			int index = if_storage_get(x, y);
+			int index;
+
+			if ((x >= MAP_WIDTH) || (y >= MAP_HEIGHT)) return INPUT_IGNORE;
+
+			index = if_storage_get(x, y);
 			if (index == state->region_index) return INPUT_IGNORE;
 			if (index < 0)
 			{
@@ -450,6 +454,8 @@ static int input_region(int code, unsigned x, unsigned y, uint16_t modifiers, co
 	case EVENT_MOUSE_RIGHT:
 		{
 			struct region *restrict region;
+
+			if ((x >= MAP_WIDTH) || (y >= MAP_HEIGHT)) return INPUT_IGNORE;
 
 			if (state->region_index < 0) return INPUT_IGNORE;
 			region = game->regions + state->region_index;
@@ -585,9 +591,26 @@ static int input_point(int code, unsigned x, unsigned y, uint16_t modifiers, con
 		tool_regions_init((struct game *)game, state); // TODO fix cast
 		return INPUT_FINISH;
 
+	case XK_Delete:
+		{
+			struct vertex v;
+
+			if (state->points.count <= state->index_start)
+				return INPUT_IGNORE;
+
+			v = state->points.data[state->points.count - 1];
+			if_storage_point(v.point.x, v.point.y, v.previous);
+			state->points.count -= 1;
+		}
+		return 0;
+
 	case EVENT_MOUSE_LEFT:
 		{
-			int index = if_storage_get(x, y);
+			int index;
+
+			if ((x >= MAP_WIDTH) || (y >= MAP_HEIGHT)) return INPUT_IGNORE;
+
+			index = if_storage_get(x, y);
 			if (index > (int)state->index_start) // this point is already added to the current region
 				return INPUT_IGNORE;
 
@@ -615,22 +638,14 @@ static int input_point(int code, unsigned x, unsigned y, uint16_t modifiers, con
 		}
 		return 0;
 
-	case XK_BackSpace:
-		{
-			if (state->points.count <= state->index_start)
-				return INPUT_IGNORE;
-
-			struct vertex v = state->points.data[state->points.count - 1];
-			if_storage_point(v.point.x, v.point.y, v.previous);
-			state->points.count -= 1;
-		}
-		return 0;
-
 	case EVENT_MOUSE_RIGHT:
 		{
 			size_t i;
+			int index;
 
-			int index = if_storage_get(x, y);
+			if ((x >= MAP_WIDTH) || (y >= MAP_HEIGHT)) return INPUT_IGNORE;
+
+			index = if_storage_get(x, y);
 			if (index < 0) return INPUT_IGNORE;
 			if (index < (int)state->index_start) return INPUT_IGNORE;
 
@@ -665,15 +680,17 @@ static int input_tool_regions(int code, unsigned x, unsigned y, uint16_t modifie
 static int input_object_garrison(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
 {
 	struct state *restrict state = argument;
-	if (code == EVENT_MOUSE_LEFT) state->object = OBJECT_GARRISON;
-	return INPUT_IGNORE;
+	if (code != EVENT_MOUSE_LEFT) return INPUT_IGNORE;
+	state->object = OBJECT_GARRISON;
+	return 0;
 }
 
 static int input_object_center(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
 {
 	struct state *restrict state = argument;
-	if (code == EVENT_MOUSE_LEFT) state->object = OBJECT_CENTER;
-	return INPUT_IGNORE;
+	if (code != EVENT_MOUSE_LEFT) return INPUT_IGNORE;
+	state->object = OBJECT_CENTER;
+	return 0;
 }
 
 static void if_regions(const void *restrict argument, const struct game *restrict game)
@@ -706,6 +723,8 @@ static void if_regions(const void *restrict argument, const struct game *restric
 
 	if (state->region_index >= 0)
 	{
+		fill_rectangle(REGIONNAME_X - 2, REGIONNAME_Y - 2, 244, 24, Black);
+
 		if (state->name_size)
 			draw_string(state->name, state->name_size, REGIONNAME_X, REGIONNAME_Y + MARGIN, &font12, White);
 		draw_cursor(state->name, state->name_position, REGIONNAME_X, REGIONNAME_Y + MARGIN, &font12, White);
@@ -806,8 +825,8 @@ static int input_regions(const struct game *restrict game, struct state *restric
 		{
 			.left = BUTTON_POINTS_X,
 			.right = BUTTON_POINTS_X + BUTTON_WIDTH - 1,
-			.top = BUTTON_REGIONS_Y,
-			.bottom = BUTTON_REGIONS_Y + BUTTON_HEIGHT - 1,
+			.top = BUTTON_POINTS_Y,
+			.bottom = BUTTON_POINTS_Y + BUTTON_HEIGHT - 1,
 			.callback = input_tool_points
 		},
 		{
