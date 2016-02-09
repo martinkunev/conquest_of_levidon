@@ -445,7 +445,7 @@ static int world_populate(const union json *restrict json, struct game *restrict
 	return 0;
 
 error:
-	// TODO segmentation fault on partial initialization? (because of non-zeroed pointers)
+	// TODO segmentation fault on partial initialization (because of non-zeroed pointers)
 	world_unload(game);
 	return ERROR_INPUT;
 }
@@ -551,6 +551,7 @@ static union json *world_store(const struct game *restrict game)
 		region = json_object_insert(region, S("location"), location);
 
 		region = json_object_insert(region, S("location_garrison"), world_save_point(game->regions[i].location_garrison));
+		region = json_object_insert(region, S("center"), world_save_point(game->regions[i].center));
 
 		region = json_object_insert(region, S("owner"), json_integer(game->regions[i].owner));
 
