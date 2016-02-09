@@ -126,6 +126,8 @@ void if_report_map(const void *argument, const struct game *game)
 		if (player == PLAYER_NEUTRAL) continue;
 		if (!regions_owned[player]) continue;
 
+		offset += MARGIN_Y;
+
 		show_flag(REPORT_PLAYER_X, LABEL_Y + offset, player);
 
 		end = format_uint(buffer, regions_owned[player], 10);
@@ -142,8 +144,6 @@ void if_report_map(const void *argument, const struct game *game)
 		draw_string(buffer, end - buffer, REPORT_IRON_X, LABEL_Y + offset, &font12, White);
 		end = format_uint(buffer, game->players[player].treasury.stone, 10);
 		draw_string(buffer, end - buffer, REPORT_STONE_X, LABEL_Y + offset, &font12, White);
-
-		offset += MARGIN_Y;
 	}
 
 	show_button(S("Close"), BUTTON_EXIT_X, BUTTON_EXIT_Y);

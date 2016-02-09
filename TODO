@@ -35,9 +35,10 @@ battle mechanics
 	don't allow attacking if the attacker cannot do damage to the defender (due to weapon and armor type)
 
 bugs / issues
-	computer stops orders when priority gets below 0.5 (which happens not when expected)
+	computer trains unlimited number of peasants
 	computer doesn't attack
-	computer never trains army and sometimes never builds some buildings
+	computer stops orders when priority gets below 0.5 (which happens not when expected)
+	computer sometimes never builds some buildings
 	enemy on the gate not displayed during shooting in battle animation
 
 surrender
@@ -47,7 +48,7 @@ surrender
 
 TODO ? change direction of everything to counterclockwise; currently the y axis is in the opposite direction (and the cross product is negated)
 TODO ? rename field to tile
-TODO ? redesign input functions
+TODO ? redesign input functions (handling mouse movement is tedious; handling writing should be unified)
 TODO ? make it simpler to check if two players are allies
 TODO ? dynamic battlefield size
 TODO ? separate constants for BLOCKAGE_WALL and BLOCKAGE_GATE
@@ -57,6 +58,8 @@ TODO ? separate constants for BLOCKAGE_WALL and BLOCKAGE_GATE
 custom mouse pointer
 improve player colors
 player names and flag patterns
+
+button input bottom and right coordinates should be exclusive (... - 1)
 
 images
 	fortress*.png, fortress_gate*.png
