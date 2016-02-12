@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -65,9 +66,6 @@ static unsigned region_owner_choose(const struct game *restrict game, struct reg
 		if (troop->move == LOCATION_GARRISON)
 			continue;
 
-		if (game->players[troop->owner].alliance != alliance)
-			continue;
-
 		if (owner_troop) owner_troop -= 1;
 		else return troop->owner;
 	}
@@ -78,7 +76,6 @@ static unsigned region_owner_choose(const struct game *restrict game, struct reg
 void region_battle_cleanup(const struct game *restrict game, struct region *restrict region, int assault, unsigned winner_alliance)
 {
 	struct troop *troop, *next;
-	unsigned troops_count = 0;
 
 	for(troop = region->troops; troop; troop = next)
 	{
@@ -92,27 +89,9 @@ void region_battle_cleanup(const struct game *restrict game, struct region *rest
 			continue;
 		}
 
+		// Set move destination of troops performing assault.
 		if (assault && (troop->move == LOCATION_GARRISON))
 			troop->move = troop->location;
-
-		troops_count += ((troop->move != LOCATION_GARRISON) && allies(game, troop->owner, winner_alliance));
-	}
-	// assert(troops_count);
-
-	// Update owners if the alliance that won is different from the alliance of the current owner.
-	unsigned owner_alliance = (assault ? game->players[region->garrison.owner].alliance : game->players[region->owner].alliance);
-	if (winner_alliance != owner_alliance)
-	{
-		if (assault) region->garrison.owner = region->owner;
-		else
-		{
-			// If a player from the winning alliance owns the garrison, the region's new owner is that player.
-			// Else, the region's new owner is the owner of a winning troop chosen at random.
-			if (allies(game, winner_alliance, region->garrison.owner))
-				region->owner = region->garrison.owner;
-			else
-				region->owner = region_owner_choose(game, region, troops_count, winner_alliance);
-		}
 	}
 }
 
@@ -120,32 +99,31 @@ void region_turn_process(const struct game *restrict game, struct region *restri
 {
 	struct troop *troop, *next;
 
-	// Conquer unguarded region or region garrison.
-	if (!allies(game, region->owner, region->garrison.owner))
-	{
-		int region_guarded = 0, region_garrison_guarded = 0;
+	bool garrison_guarded = false;
+	unsigned invaders_count = 0;
+	unsigned char invaders_alliance;
 
-		for(troop = region->troops; troop; troop = troop->_next)
+	// Collect information about the region.
+	for(troop = region->troops; troop; troop = troop->_next)
+	{
+		if (troop->move == LOCATION_GARRISON) garrison_guarded = true;
+		else if (troop->move == region) // make sure the troop is not retreating
 		{
-			if (troop->move != LOCATION_GARRISON)
+			if (!allies(game, troop->owner, region->owner))
 			{
-				if (!allies(game, troop->owner, region->owner)) // ignore retreating troops
-					continue;
-				if (allies(game, troop->owner, region->owner))
-					region_guarded = 1;
-			}
-			else
-			{
-				if (!allies(game, troop->owner, region->garrison.owner)) // ignore retreating troops
-					continue;
-				if (allies(game, troop->owner, region->garrison.owner))
-					region_garrison_guarded = 1;
+				invaders_count += 1;
+				invaders_alliance = game->players[troop->owner].alliance;
 			}
 		}
-
-		if (region_guarded && !region_garrison_guarded) region->garrison.owner = region->owner;
-		else if (region_garrison_guarded && !region_guarded) region->owner = region->garrison.owner;
 	}
+
+	// Invaded regions are conquered by a random invading troop.
+	if (invaders_count)
+		region->owner = region_owner_choose(game, region, invaders_count, invaders_alliance);
+
+	// Unguarded garrisons are conquered by the owner of the region.
+	if (!garrison_guarded)
+		region->garrison.owner = region->owner;
 
 	// Handle siege events.
 	if (allies(game, region->owner, region->garrison.owner))

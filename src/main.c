@@ -176,6 +176,18 @@ static int play_battle(struct game *restrict game, struct region *restrict regio
 		// Cancel the battle if nothing is killed/destroyed for a certain number of rounds.
 		if ((battle.round - round_activity_last) >= ROUNDS_STALE_LIMIT)
 		{
+			// Attacking troops retreat to the region they came from.
+			for(i = 0; i < battle.pawns_count; ++i)
+			{
+				struct troop *restrict troop;
+
+				if (!battle.pawns[i].count) continue;
+
+				troop = battle.pawns[i].troop;
+				if (game->players[troop->owner].alliance != defender)
+					troop->move = troop->location;
+			}
+
 			winner = defender;
 			break;
 		}
@@ -255,7 +267,7 @@ static int play(struct game *restrict game)
 			region_orders_process(region);
 
 			// Move troops in and out of garrison and put them in their target regions.
-			// New troop location will be set after all battles have concluded.
+			// New troop locations will be set after all battles have concluded.
 			for(troop = region->troops; troop; troop = next)
 			{
 				next = troop->_next;
@@ -286,12 +298,12 @@ static int play(struct game *restrict game)
 		{
 			int winner_alliance;
 
-			region = game->regions + index;
-
-			unsigned region_owner_old = region->owner;
+			unsigned region_owner_old = game->regions[index].owner;
 
 			unsigned alliances_assault = 0, alliances_open = 0;
 			int manual_assault = 0, manual_open = 0;
+
+			region = game->regions + index;
 
 			// Start open battle if troops of two different alliances occupy the region.
 			// If there is no open battle and there are troops preparing for assault, start assault battle.
@@ -312,7 +324,6 @@ static int play(struct game *restrict game)
 			{
 				if (manual_open) winner_alliance = play_battle(game, region, 0);
 				else winner_alliance = calculate_battle(game, region);
-
 				if (winner_alliance < 0) return winner_alliance;
 				region_battle_cleanup(game, region, 0, winner_alliance);
 			}
@@ -320,7 +331,6 @@ static int play(struct game *restrict game)
 			{
 				if (manual_assault) winner_alliance = play_battle(game, region, 1);
 				else winner_alliance = calculate_battle(game, region);
-
 				if (winner_alliance < 0) return winner_alliance;
 				region_battle_cleanup(game, region, 1, winner_alliance);
 			}
@@ -331,7 +341,7 @@ static int play(struct game *restrict game)
 			if (region->owner != region_owner_old)
 				region_orders_cancel(region);
 
-			// Each player that controls a region or a garrison is alive.
+			// Each player controlling a region or a garrison is alive.
 			alive[region->owner] = 1;
 			alive[region->garrison.owner] = 1;
 		}
@@ -348,17 +358,15 @@ static int play(struct game *restrict game)
 				if (troop->location == LOCATION_GARRISON) continue;
 
 				// Update troop location.
-				// Return troops owned by enemy of the owner to their previous location.
-				if (allies(game, troop->owner, region->owner)) troop->location = troop->move;
+				// Return retreating troops to their previous location.
+				if (troop->move == region) troop->location = region;
 				else
 				{
 					troop_detach(&region->troops, troop);
 					if (allies(game, troop->owner, troop->location->owner))
-					{
 						troop_attach(&troop->location->troops, troop);
-						troop->move = troop->location;
-					}
-					else free(troop); // the troop has no region to return to; kill it
+					else
+						free(troop); // the troop has no region to return to; kill it
 				}
 			}
 
