@@ -8,8 +8,9 @@ enum
 	LOG_CRITICAL,
 };
 
-#define YELLOW(s) "\x1b[33m" s "\x1b[0m"
-#define RED(s) "\x1b[31m" s "\x1b[0m"
+#define LOG_YELLOW "\x1b[33m"
+#define LOG_RED "\x1b[31m"
+#define LOG_RESET "\x1b[0m" /* TODO rename this */
 //#define GREEN(s) "\x1b[32m" s "\x1b[0m"
 //#define BLUE(s) "\x1b[34m" s "\x1b[0m"
 
@@ -19,42 +20,35 @@ enum
 #define LOG_STRING(token) LOG_STRING_EXPAND(token)
 
 // WARNING: format must be string literal
-#if (LOG_LEVEL == LOG_DEBUG)
-# define LOG_(level, format, ...) do \
-	{ \
-		if ((level) < LOG_LEVEL) break; \
-		switch (level) \
-		{ \
-		case LOG_DEBUG: \
-			fprintf(stderr, __FILE__ ":" LOG_STRING(__LINE__) " " format "\n", __VA_ARGS__); \
-			break; \
-		case LOG_WARNING: \
-			fprintf(stderr, __FILE__ ":" LOG_STRING(__LINE__) " " YELLOW(format) "\n", __VA_ARGS__); \
-			break; \
-		case LOG_ERROR: \
-		case LOG_CRITICAL: \
-			fprintf(stderr, __FILE__ ":" LOG_STRING(__LINE__) " " RED(format) "\n", __VA_ARGS__); \
-			break; \
-		} \
-	} while (0)
-#else
-# define LOG_(level, format, ...) do \
-	{ \
-		if ((level) < LOG_LEVEL) break; \
-		switch (level) \
-		{ \
-		case LOG_DEBUG: \
-			fprintf(stderr, format "\n", __VA_ARGS__); \
-			break; \
-		case LOG_WARNING: \
-			fprintf(stderr, YELLOW(format) "\n", __VA_ARGS__); \
-			break; \
-		case LOG_ERROR: \
-		case LOG_CRITICAL: \
-			fprintf(stderr, RED(format) "\n", __VA_ARGS__); \
-			break; \
-		} \
-	} while (0)
-#endif
+#define LOG(prefix, suffix, format, ...) fprintf(stderr, prefix format suffix, __VA_ARGS__);
 
-#define LOG(level, ...) LOG_((level), __VA_ARGS__, 0)
+#if (LOG_DEBUG >= LOG_LEVEL)
+
+# define LOG_DEBUG(...) LOG(__FILE__ ":" LOG_STRING(__LINE__) " ", "\n", __VA_ARGS__, 0)
+# define LOG_WARNING(...) LOG(__FILE__ ":" LOG_STRING(__LINE__) " " LOG_YELLOW, LOG_RESET "\n", __VA_ARGS__, 0)
+# define LOG_ERROR(...) LOG(__FILE__ ":" LOG_STRING(__LINE__) " " LOG_RED, LOG_RESET "\n", __VA_ARGS__, 0)
+# define LOG_CRITICAL(...) LOG(__FILE__ ":" LOG_STRING(__LINE__) " " LOG_RED, LOG_RESET "\n", __VA_ARGS__, 0)
+
+#else
+
+# define LOG_DEBUG(...) void
+
+# if (LOG_WARNING >= LOG_LEVEL)
+#  define LOG_WARNING(...) LOG(LOG_YELLOW, LOG_RESET "\n", __VA_ARGS__, 0)
+# else
+#  define LOG_WARNING(...) void
+# endif
+
+# if (LOG_ERROR >= LOG_LEVEL)
+#  define LOG_ERROR(...) LOG(LOG_RED, LOG_RESET "\n", __VA_ARGS__, 0)
+# else
+#  define LOG_ERROR(...) void
+# endif
+
+# if (LOG_CRITICAL >= LOG_LEVEL)
+#  define LOG_CRITICAL(...) LOG(LOG_RED, LOG_RESET "\n", __VA_ARGS__, 0)
+# else
+#  define LOG_CRITICAL(...) void
+# endif
+
+#endif

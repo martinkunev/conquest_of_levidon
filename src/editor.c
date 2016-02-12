@@ -369,7 +369,7 @@ static void add_neighbor(struct region *restrict region, struct region *restrict
 			return;
 		}
 
-	LOG(LOG_ERROR, "Region %u has more than %u neighbors.", (unsigned)region->index, (unsigned)NEIGHBORS_LIMIT);
+	LOG_ERROR("Region %u has more than %u neighbors.", (unsigned)region->index, (unsigned)NEIGHBORS_LIMIT);
 }
 
 static void neighbors_generate(struct game *restrict game)
@@ -945,7 +945,7 @@ int main(int argc, char *argv[])
 				status = world_save(&game, WORLD_TEMP);
 				if (status < 0)
 				{
-					LOG(LOG_ERROR, "Error saving world!");
+					LOG_ERROR("Error saving world!");
 					continue;
 				}
 			}
