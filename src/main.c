@@ -1,16 +1,32 @@
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
-#include <unistd.h>
+/*
+ * Conquest of Levidon
+ * Copyright (C) 2016  Martin Kunev <martinkunev@gmail.com>
+ *
+ * This file is part of Conquest of Levidon.
+ *
+ * Conquest of Levidon is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation version 3 of the License.
+ *
+ * Conquest of Levidon is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with Conquest of Levidon.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
-#include "base.h"
+#include <stdlib.h>
+#include <time.h>
+
+#include "errors.h"
 #include "map.h"
 #include "world.h"
 #include "pathfinding.h"
 #include "battle.h"
 #include "movement.h"
 #include "combat.h"
-#include "input.h"
 #include "input_menu.h"
 #include "input_map.h"
 #include "input_battle.h"

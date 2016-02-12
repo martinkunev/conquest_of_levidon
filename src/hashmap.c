@@ -1,8 +1,26 @@
-// TODO how to make a header
+/*
+ * Conquest of Levidon
+ * Copyright (C) 2016  Martin Kunev <martinkunev@gmail.com>
+ *
+ * This file is part of Conquest of Levidon.
+ *
+ * Conquest of Levidon is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation version 3 of the License.
+ *
+ * Conquest of Levidon is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with Conquest of Levidon.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 // TODO hash function and key comparison can be made faster for custom cases
 // TODO double indirection in the iterator is probably bad
-// TODO use #if HASHMAP_HASHSET(hashmap_type)
 // TODO try to reduce the number of casts (currently there are 4)
+// TODO use #if HASHMAP_HASHSET(hashmap_type)
 
 // Define the macro HASHMAP_HASHSET that will be used to check if hashmap_type is void.
 // TODO this won't work for double pointers

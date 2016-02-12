@@ -1,18 +1,22 @@
-H	battle mechanics fixes
-H	rewrite battle AI
 H	levidon map
-M	better food mechanics; food should not be accumulated indefinately
+H	make battle AI a little more reasonable
 M	battle mechanics fixes
-M	error reporting on invalid map
-M	map scrolling
-M	keyboard support in various places in the interface; mouse support in various places in the interface
-M	assault garrison destruction and repair
-M	assault towers
+M	rewrite battle AI
+M	better food mechanics; food should not be accumulated indefinately
 M	do something when there is not enough food for all units (?kill some units)
+M	balance buildings and units
+M	assault towers
 M	region population; income should be calculated as a function of the population; army recruitment should reduce population
 M	region-specific features (income, population, units, buildings, battlefield)
-M	limited number of arrows
-M	select only specific troops for an assault (display icon like movement.png for such pawns)
+M	in battle report display troops for surrendered players and show white flag to indicate the surrender
+M	error reporting on invalid map
+M	map scrolling
+M	handle different screen resolutions better
+M	keyboard support in various places in the interface; mouse support in various places in the interface
+M	don't allow pawns to attack their own walls (currently only gates are not attacked)
+M	don't allow attacking if the attacker cannot do damage to the defender (due to weapon and armor type)
+L	limited number of shots
+L	assault garrison destruction and repair
 L	armory, swordsman, crossbowman, heavy cavalry, horse archer
 L	assault moat
 L	network game
@@ -22,29 +26,22 @@ L	roads
 L	religions, ethnicities, languages
 L	dynamic alliances
 L	seasons
-L	buildings should not generate income on the day they are built
-L	? implement exit game while in battle
 L	auto combat
+L	? buildings should not generate income on the day they are built
+L	? implement exit game while in battle
 
 battle mechanics
+	Q: What I want to fix about battle mechanics?
+	A: Players have relatively little control on their pawns (only before each turn) so they have to be quite smart on their own; they shouldn't get stuck or deadlock.
+
 	pawn_stop is not intuitive; if two pawns fight, one tries to escape and the other moves in a collision direction with it, the first doesn't escape
 	pawn following another pawn stops at a diagonal field
 	pawns don't understand how to sidestep other pawns to reach their destination
 	pawns of the same player deadlock (seen with peasant and light cavalry)
-	don't allow pawns to attack their own walls (currently only gates are not attacked)
-	don't allow attacking if the attacker cannot do damage to the defender (due to weapon and armor type)
 
 bugs / issues
-	computer trains unlimited number of peasants
 	computer doesn't attack
-	computer stops orders when priority gets below 0.5 (which happens not when expected)
-	computer sometimes never builds some buildings
-	enemy on the gate not displayed during shooting in battle animation
-
-surrender
-	? rename surrender
 	surrender can be abused for scouting
-	report does not handle surrender properly (no troops displayed for surrendered players)
 
 TODO ? change direction of everything to counterclockwise; currently the y axis is in the opposite direction (and the cross product is negated)
 TODO ? rename field to tile
@@ -52,6 +49,7 @@ TODO ? redesign input functions (handling mouse movement is tedious; handling wr
 TODO ? make it simpler to check if two players are allies
 TODO ? dynamic battlefield size
 TODO ? separate constants for BLOCKAGE_WALL and BLOCKAGE_GATE
+TODO ? rename surrender
 
 -- interface --
 
@@ -73,6 +71,7 @@ battle
 	when two pawns from different alliances are next to each other, display red line between them (to show that they are fighting)
 	hide mouse pointer during animation
 	display round number
+	enemy on the gate not displayed during shooting in battle animation
 
 report
 	display minimap

@@ -1,20 +1,20 @@
 /*
- * Filement Index
- * Copyright (C) 2015  Martin Kunev <martinkunev@gmail.com>
+ * Conquest of Levidon
+ * Copyright (C) 2016  Martin Kunev <martinkunev@gmail.com>
  *
- * This file is part of Filement Index.
+ * This file is part of Conquest of Levidon.
  *
- * Filement Index is free software: you can redistribute it and/or modify
+ * Conquest of Levidon is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation version 3 of the License.
  *
- * Filement Index is distributed in the hope that it will be useful,
+ * Conquest of Levidon is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with Filement Index.  If not, see <http://www.gnu.org/licenses/>.
+ * along with Conquest of Levidon.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 // System resources are not sufficient to handle the request.

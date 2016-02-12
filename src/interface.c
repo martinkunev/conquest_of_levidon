@@ -1,3 +1,22 @@
+/*
+ * Conquest of Levidon
+ * Copyright (C) 2016  Martin Kunev <martinkunev@gmail.com>
+ *
+ * This file is part of Conquest of Levidon.
+ *
+ * Conquest of Levidon is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation version 3 of the License.
+ *
+ * Conquest of Levidon is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with Conquest of Levidon.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #define GL_GLEXT_PROTOTYPES
 #include <GL/glx.h>
 #include <GL/glext.h>
@@ -170,18 +189,6 @@ error:
 // TODO ? call this after resize
 void if_display(void)
 {
-	SCREEN_WIDTH = screen->width_in_pixels;
-	SCREEN_HEIGHT = screen->height_in_pixels;
-
-	glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	glOrtho(0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 0, 1);
-
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity();
-
 	// Make the window fullscreen.
 	{
 		XEvent event = {0};
@@ -196,6 +203,18 @@ void if_display(void)
 		XSendEvent(display, DefaultRootWindow(display), 0, SubstructureRedirectMask | SubstructureNotifyMask, &event);
 		XFlush(display);
 	}
+
+	SCREEN_WIDTH = screen->width_in_pixels;
+	SCREEN_HEIGHT = screen->height_in_pixels;
+
+	glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	glOrtho(0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 0, 1);
+
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
 }
 
 void input_display(void (*if_display)(const void *, const struct game *), const struct game *restrict game, void *state)
