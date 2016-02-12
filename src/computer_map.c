@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "errors.h"
+#include "log.h"
 #include "map.h"
 #include "computer.h"
 #include "computer_map.h"
@@ -12,8 +13,6 @@
 #define RATING_DEFAULT 0.5
 
 #define UNIT_IMPORTANCE_DEFAULT 10
-
-#include <stdio.h>
 
 struct region_troop
 {
@@ -67,7 +66,7 @@ struct region_info
 	unsigned troops[TROOP_CLASS_SIZE];
 };
 
-static void income_calculate(const struct game *restrict game, struct resources *restrict result)
+static void income_calculate(const struct game *restrict game, struct resources *restrict result, unsigned char player)
 {
 	size_t index;
 	for(index = 0; index < game->regions_count; ++index)
@@ -82,7 +81,8 @@ static void income_calculate(const struct game *restrict game, struct resources 
 			for(troop = region->troops; troop; troop = troop->_next)
 			{
 				if (troop->move == LOCATION_GARRISON) continue;
-				resource_add(result, &troop->unit->expense);
+				if (troop->owner == player)
+					resource_subtract(result, &troop->unit->expense);
 			}
 		}
 		else
@@ -92,13 +92,16 @@ static void income_calculate(const struct game *restrict game, struct resources 
 			{
 				struct resources expense;
 				if (troop->move == LOCATION_GARRISON) continue;
-				resource_multiply(&expense, &troop->unit->expense, 2);
-				resource_add(result, &expense);
+				if (troop->owner == player)
+				{
+					resource_multiply(&expense, &troop->unit->expense, 2);
+					resource_subtract(result, &expense);
+				}
 			}
 		}
 
 		// Add region result if the garrison is not under siege.
-		if (region->owner == region->garrison.owner)
+		if ((region->owner == player) && (region->owner == region->garrison.owner))
 		{
 			struct resources income_region = {0};
 			region_income(region, &income_region);
@@ -132,8 +135,8 @@ static int computer_map_orders_list(struct array_orders *restrict orders, const 
 
 	*orders = (struct array_orders){0};
 
-	struct resources income;
-	income_calculate(game, &income);
+	struct resources income = {0};
+	income_calculate(game, &income, player);
 
 	// Make a list of the orders available for the player.
 	for(i = 0; i < game->regions_count; ++i)
@@ -151,6 +154,8 @@ static int computer_map_orders_list(struct array_orders *restrict orders, const 
 		{
 			for(j = 0; j < buildings_count; ++j)
 			{
+				double building_value;
+
 				if (region_built(region, j)) continue;
 				if (!region_building_available(region, buildings[j])) continue;
 
@@ -161,7 +166,7 @@ static int computer_map_orders_list(struct array_orders *restrict orders, const 
 				switch (j)
 				{
 				case BuildingWatchTower:
-					orders->data[orders->count].priority = (regions_info[i].neighbors_unknown ? 1.0 : desire_buildings[j]);
+					building_value = (regions_info[i].neighbors_unknown ? 1.0 : desire_buildings[j]);
 					break;
 
 				case BuildingFarm:
@@ -169,7 +174,7 @@ static int computer_map_orders_list(struct array_orders *restrict orders, const 
 				case BuildingSawmill:
 				case BuildingMine:
 				case BuildingBloomery:
-					orders->data[orders->count].priority = (neighbors_dangerous ? 0.5 * desire_buildings[j] : desire_buildings[j]);
+					building_value = (neighbors_dangerous ? 0.5 * desire_buildings[j] : desire_buildings[j]);
 					break;
 
 				case BuildingBarracks:
@@ -177,18 +182,21 @@ static int computer_map_orders_list(struct array_orders *restrict orders, const 
 				case BuildingStables:
 				case BuildingWorkshop:
 				case BuildingForge:
-					orders->data[orders->count].priority = (neighbors_dangerous ? desire_buildings[j] : 0.5 * desire_buildings[j]);
+					building_value = (neighbors_dangerous ? desire_buildings[j] : 0.5 * desire_buildings[j]);
 					break;
 
 				case BuildingPalisade:
 				case BuildingFortress:
-					orders->data[orders->count].priority = (neighbors_dangerous ? desire_buildings[j] : 0.5 * desire_buildings[j]);
+					building_value = (neighbors_dangerous ? desire_buildings[j] : 0.5 * desire_buildings[j]);
 					break;
 
 				default:
-					orders->data[orders->count].priority = desire_buildings[j] / (regions_info[i].neighbors_enemy + 1); // TODO this should be more complicated
+					building_value = desire_buildings[j] / (regions_info[i].neighbors_enemy + 1); // TODO this should be more complicated
 					break;
 				}
+				LOG_DEBUG("%.*s | %f", (int)buildings[j].name_length, buildings[j].name, building_value);
+
+				orders->data[orders->count].priority = building_value;
 				orders->data[orders->count].region = region;
 				orders->data[orders->count].type = ORDER_BUILD;
 				orders->data[orders->count].target.building = j;
@@ -206,8 +214,8 @@ static int computer_map_orders_list(struct array_orders *restrict orders, const 
 					goto error;
 
 				// Calculate the value of training the troop.
-				// TODO improve this
-				double troop_value = (unit_importance(UNITS + j) * UNITS[j].troops_count) / sqrt(unit_cost(UNITS + j)); // TODO this can be > 1
+				// TODO improve these coefficients and the whole logic
+				double troop_value = (unit_importance(UNITS + j) * (UNITS[j].troops_count / 25.0)) / sqrt(unit_cost(UNITS + j)); // TODO this can be > 1
 				if (!resource_enough(&income, &UNITS[j].expense)) troop_value /= 2.0;
 				if (!neighbors_dangerous) troop_value /= 2.0;
 				switch (unit_class(UNITS + j))
@@ -216,6 +224,8 @@ static int computer_map_orders_list(struct array_orders *restrict orders, const 
 					break;
 
 				case TROOP_ARCHER:
+					if (regions_info[i].troops[TROOP_ARCHER] < regions_info[i].troops[TROOP_INFANTRY] / 2.0)
+						troop_value *= 1.2;
 				case TROOP_CAVALRY:
 					if ((regions_info[i].troops[TROOP_CAVALRY] + regions_info[i].troops[TROOP_ARCHER]) >= regions_info[i].troops[TROOP_INFANTRY])
 						troop_value /= 2.0;
@@ -226,6 +236,7 @@ static int computer_map_orders_list(struct array_orders *restrict orders, const 
 						troop_value *= 2.0;
 					break;
 				}
+				LOG_DEBUG("%.*s | %f", (int)UNITS[j].name_length, UNITS[j].name, troop_value);
 
 				orders->data[orders->count].priority = troop_value;
 				orders->data[orders->count].region = region;
@@ -265,7 +276,7 @@ static void computer_map_orders_execute(struct heap_orders *restrict orders, con
 				break;
 			resource_subtract(&game->players[player].treasury, &buildings[order->target.building].cost);
 			order->region->construct = order->target.building;
-			printf("build %.*s in %.*s | %f\n", (int)buildings[order->target.building].name_length, buildings[order->target.building].name, (int)order->region->name_length, order->region->name, order->priority);
+			LOG_DEBUG("BUILD %.*s in %.*s | %f", (int)buildings[order->target.building].name_length, buildings[order->target.building].name, (int)order->region->name_length, order->region->name, order->priority);
 			break;
 
 		case ORDER_TRAIN:
@@ -275,7 +286,7 @@ static void computer_map_orders_execute(struct heap_orders *restrict orders, con
 				break;
 			resource_subtract(&game->players[player].treasury, &UNITS[order->target.unit].cost);
 			order->region->train[0] = UNITS + order->target.unit;
-			printf("train %.*s in %.*s | %f\n", (int)UNITS[order->target.unit].name_length, UNITS[order->target.unit].name, (int)order->region->name_length, order->region->name, order->priority);
+			LOG_DEBUG("TRAIN %.*s in %.*s | %f", (int)UNITS[order->target.unit].name_length, UNITS[order->target.unit].name, (int)order->region->name_length, order->region->name, order->priority);
 			break;
 		}
 	}
@@ -542,7 +553,7 @@ static struct region_info *regions_info_collect(const struct game *restrict game
 			if (!region->neighbors[j]) continue;
 			if (!regions_visible[region->neighbors[j]->index])
 				regions_info[i].neighbors_unknown += 1;
-			else if (!allies(game, region->owner, player))
+			else if (!allies(game, region->neighbors[j]->owner, player))
 				regions_info[i].neighbors_enemy += 1;
 		}
 
