@@ -510,9 +510,9 @@ static int input_region(int code, unsigned x, unsigned y, uint16_t modifiers, co
 			if (state->region_index < 0) return INPUT_IGNORE;
 
 			// Remove selected region.
+			game_mutable->regions_count -= 1;
 			if (state->region_index != game_mutable->regions_count)
 				memcpy(game_mutable->regions + state->region_index, game_mutable->regions + game_mutable->regions_count, sizeof(*game_mutable->regions));
-			game_mutable->regions_count -= 1;
 
 			neighbors_generate(game_mutable);
 		}
