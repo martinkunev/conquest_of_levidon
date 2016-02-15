@@ -1,3 +1,27 @@
+/*
+ * Conquest of Levidon
+ * Copyright (C) 2016  Martin Kunev <martinkunev@gmail.com>
+ *
+ * This file is part of Conquest of Levidon.
+ *
+ * Conquest of Levidon is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation version 3 of the License.
+ *
+ * Conquest of Levidon is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with Conquest of Levidon.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <stdarg.h>
+#include <stddef.h>
+#include <setjmp.h>
+#include <cmocka.h>
+
 #include <format.h>
 
 #define SIZE 128
@@ -77,6 +101,7 @@ static void test_format_uint(void **state)
 	end = format_uint(buffer + OFFSET, 371, 10);
 	check_buffer_format(end, buffer, "371", 3, canary);
 
+	// TODO this is not guaranteed to work
 	memcpy(buffer, canary, SIZE);
 	end = format_uint(buffer + OFFSET, 18446744073709551615ULL, 10);
 	check_buffer_format(end, buffer, "18446744073709551615", 20, canary);
@@ -85,6 +110,7 @@ static void test_format_uint(void **state)
 	end = format_uint(buffer + OFFSET, 0xa5, 2);
 	check_buffer_format(end, buffer, "10100101", 8, canary);
 
+	// TODO this is not guaranteed to work
 	memcpy(buffer, canary, SIZE);
 	end = format_uint(buffer + OFFSET, 18446744073709551615ULL, 2);
 	check_buffer_format(end, buffer, "11111111" "11111111" "11111111" "11111111" "11111111" "11111111" "11111111" "11111111", 64, canary);
@@ -131,6 +157,7 @@ static void test_format_int(void **state)
 	end = format_int(buffer + OFFSET, 371, 10);
 	check_buffer_format(end, buffer, "371", 3, canary);
 
+	// TODO this is not guaranteed to work
 	memcpy(buffer, canary, SIZE);
 	end = format_int(buffer + OFFSET, 9223372036854775807LL, 10);
 	check_buffer_format(end, buffer, "9223372036854775807", 19, canary);
@@ -139,6 +166,7 @@ static void test_format_int(void **state)
 	end = format_int(buffer + OFFSET, -1, 10);
 	check_buffer_format(end, buffer, "-1", 2, canary);
 
+	// TODO this is not guaranteed to work
 	memcpy(buffer, canary, SIZE);
 #if (INT64_MIN == -9223372036854775807LL - 1) /* 2's complement */
 	end = format_int(buffer + OFFSET, -9223372036854775807LL - 1, 10);
@@ -152,6 +180,7 @@ static void test_format_int(void **state)
 	end = format_int(buffer + OFFSET, 0xa5, 2);
 	check_buffer_format(end, buffer, "10100101", 8, canary);
 
+	// TODO this is not guaranteed to work
 	memcpy(buffer, canary, SIZE);
 #if (INT64_MIN == -9223372036854775807LL - 1) /* 2's complement */
 	end = format_int(buffer + OFFSET, -9223372036854775807LL - 1, 2);
@@ -208,3 +237,16 @@ static void test_format_base64(void **state)
 
 #undef OFFSET
 #undef SIZE
+
+int main(void)
+{
+	const struct CMUnitTest tests[] =
+	{
+		cmocka_unit_test(test_format_bytes),
+		cmocka_unit_test(test_format_byte),
+		cmocka_unit_test(test_format_uint),
+		cmocka_unit_test(test_format_int),
+		cmocka_unit_test(test_format_base64),
+	};
+	return cmocka_run_group_tests(tests, 0, 0);
+}

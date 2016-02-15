@@ -127,6 +127,8 @@ struct region
 	{
 		// enum {East, NorthEast, North, NorthWest, West, SouthWest, South, SouthEast} position;
 
+		// TODO implement this: const struct garrison_info *restrict info;
+
 		unsigned char owner;
 
 		unsigned siege;

@@ -11,10 +11,20 @@ LDFLAGS:=$(LDFLAGS) -lcmocka
 #export CFLAGS=-std=c99 -fPIC -pthread -DRUN_MODE=1 -O2 -g -DDEBUG $(DEF) $(INC) $(WARNINGS) -Wno-unused-value
 #export LDFLAGS=-pthread $(LIB) -lz -lcheck
 
-check: check.o ../src/format.o ../src/json.o
+format: format.o ../src/format.o
 	$(CC) $^ $(LDFLAGS) -o $@
-	./check
+
+json: json.o ../src/json.o ../src/generic/array_json.o ../src/format.o
+	$(CC) $^ $(LDFLAGS) -o $@
+
+map: map.o ../src/map.o ../src/world.o ../src/resources.o ../src/json.o ../src/generic/array_json.o ../src/format.o
+	$(CC) $^ $(LDFLAGS) -Wl,--wrap=free -o $@
+
+check: format json map
+	./format
+	./json
+	./map
 
 clean:
 	rm -f *.o
-	rm -f check
+	rm -f format json map

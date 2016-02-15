@@ -110,7 +110,7 @@ struct bytes
 	unsigned char data[];
 };
 
-/*#define bytes_t(n) struct \
+#define bytes_t(n) struct \
 	{ \
 		size_t size; \
 		char data[n]; \
@@ -121,7 +121,7 @@ struct bytes
 #define bytes_define(variable, value) bytes_t(sizeof(value) - 1) variable = bytes(value)
 
 // TODO ? make static assert for offsetof(..., data) as this ensures the struct is compatible with bytes_t
-#define bytes_p(s) (bytes_t *)&( \
+/*#define bytes_p(s) (bytes_t *)&( \
 		struct \
 		{ \
 			size_t size; \

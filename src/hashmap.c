@@ -32,6 +32,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "errors.h"
+
 struct hashmap_entry_mutable
 {
 	struct hashmap_entry *next;

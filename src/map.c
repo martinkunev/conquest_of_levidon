@@ -136,9 +136,15 @@ void region_turn_process(const struct game *restrict game, struct region *restri
 		}
 	}
 
-	// Invaded regions are conquered by a random invading troop.
 	if (invaders_count)
-		region->owner = region_owner_choose(game, region, invaders_count, invaders_alliance);
+	{
+		// Liberated regions are re-conquered by the owner of the garrison.
+		// Invaded regions are conquered by a random invading troop.
+		if (invaders_alliance == game->players[region->garrison.owner].alliance)
+			region->owner = region->garrison.owner;
+		else
+			region->owner = region_owner_choose(game, region, invaders_count, invaders_alliance);
+	}
 
 	// Unguarded garrisons are conquered by the owner of the region.
 	if (!garrison_guarded)

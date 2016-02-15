@@ -25,6 +25,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "errors.h"
 #include "json.h"
 #include "map.h"
 #include "world.h"
