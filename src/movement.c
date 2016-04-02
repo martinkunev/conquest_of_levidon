@@ -685,4 +685,6 @@ int battlefield_movement_attack(struct battle *restrict battle, struct pawn *res
 			return status;
 		}
 	}
+
+	return 0;
 }

@@ -603,7 +603,8 @@ int world_save(const struct game *restrict game, const unsigned char *restrict f
 	size_t size;
 	unsigned char *buffer;
 	int file;
-	size_t progress, written;
+	size_t progress;
+	ssize_t written;
 
 	json = world_store(game);
 	if (!json) return ERROR_MEMORY;
