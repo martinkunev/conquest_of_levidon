@@ -1,9 +1,11 @@
 Conquest of Levidon is a turn-based strategic game.
 
-Each player controls one or more regions. Each region generates income for its owner in the form of resources (gold, wood, stone, iron, food). Resources are used to construct and support buildings, train new troops and support the existing troops. Players can attack each other in order to conquer more regions. When troops of two enemy players encounter each other, the conflict is resolved with a battle. There are several play worlds with different set of regions and different alliances. To win, a player has to defeat all enemies. The game supports computer players and hotseat multiplayer. Player limit is 16.
+Each player controls one or more regions. Regions generates income for their owner in the form of resources (gold, wood, stone, iron, food). Resources are used to construct and support buildings, train new troops and support the existing troops. Players can attack each other in order to conquer more regions. When troops of two enemies encounter each other, the conflict is resolved in a battle. Some regions have garrisons which must be conquered by siege or assault.
+
+There are several play worlds with different set of regions and different alliances. To win, a player has to defeat all enemies. The game supports computer players and hotseat multiplayer. Player limit is 16.
 
 -- Install --
-At the moment the game is only tested on Linux but with no or very few changes it should be able to run on any UNIX-like operating system.
+At the moment the game is only tested on Linux but without or very few changes it should be able to run on any UNIX-like operating system with X window system.
 
 Required packages (I may have missed some):
 	Gentoo
@@ -39,7 +41,10 @@ As expected, "make uninstall" will not delete such directories (in case you need
 -- Comments --
 
 The game is in early stage of development. For details about future plans, see the TODO document.
-Due to my lack of painting skills, current in-game images are very ugly. I'm working on improving them.
+Due to my lack of painting skills, current in-game images are very ugly. I'll be happy if you want to help with that.
+The AI implementation is still only rudimentary.
+
+There is an editor that can be used for creating worlds. It is just a helper utility and not a fully functioning editor (you still have to set players and region owners by editing the JSON). Some world elements like buildings and troops can only be added via JSON.
 
 Currently the game is designed for resolution 1024x768. It is written in C. The images used in the game are in PNG format. They are exported from the XFC images with the same name. Maps are stored in JSON format.
 

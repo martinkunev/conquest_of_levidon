@@ -27,7 +27,7 @@
 #include "computer.h"
 #include "computer_map.h"
 
-#define MAP_COMMAND_PRIORITY_THRESHOLD 0.5 /* TODO maybe this should not be a macro */
+#define MAP_COMMAND_PRIORITY_THRESHOLD 0.5 /* TODO maybe this should be a function */
 
 #define RATING_DEFAULT 0.5
 
@@ -432,6 +432,8 @@ static double map_state_rating(const struct game *restrict game, unsigned char p
 				if (strength > strength_enemy)
 					rating_region += rating_region; // TODO multiply by region importance?
 			}
+
+			LOG_DEBUG("%.*s: attack rating %f (rating max = %f)", (int)region->name_length, region->name, rating_region, rating_max);
 		}
 		else rating_region += 0.5;
 

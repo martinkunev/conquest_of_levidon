@@ -1,4 +1,5 @@
 H	levidon map
+H	computer doesn't attack regions
 H	make battle AI a little more reasonable
 M	battle mechanics fixes
 M	rewrite battle AI
@@ -15,6 +16,7 @@ M	handle different screen resolutions better
 M	keyboard support in various places in the interface; mouse support in various places in the interface
 M	don't allow pawns to attack their own walls (currently only gates are not attacked)
 M	don't allow attacking if the attacker cannot do damage to the defender (due to weapon and armor type)
+M	use a separate thread to calculate computer turns while the local player is choosing what to play
 L	limited number of shots
 L	assault garrison destruction and repair
 L	armory, swordsman, crossbowman, heavy cavalry, horse archer
@@ -40,7 +42,6 @@ battle mechanics
 	pawns of the same player deadlock (seen with peasant and light cavalry)
 
 bugs / issues
-	computer doesn't attack
 	surrender can be abused for scouting
 
 TODO ? change direction of everything to counterclockwise; currently the y axis is in the opposite direction (and the cross product is negated)
