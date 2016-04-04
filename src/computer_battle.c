@@ -279,7 +279,7 @@ static double battle_state_rating(const struct game *restrict game, struct battl
 				rating += unit_importance(other->troop->unit) * damage_expected_ranged(pawn, pawn->count, other);
 
 			status = path_distance(pawn->moves[pawn->moves_count - 1].location, other->moves[0].location, graph, obstacles, &distance);
-			if (status < 0) ; // TODO memory error
+			if (status < 0) return NAN; // TODO
 			if (distance == INFINITY) continue; // TODO this information is available through reachable
 
 			// TODO use a better formula here
