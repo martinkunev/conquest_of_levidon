@@ -17,14 +17,18 @@ format: format.o ../src/format.o
 json: json.o ../src/json.o ../src/generic/array_json.o ../src/format.o
 	$(CC) $^ $(LDFLAGS) -o $@
 
+pathfinding: pathfinding.o ../src/p.o
+	$(CC) $^ $(LDFLAGS) -lm -o $@
+
 map: map.o ../src/map.o ../src/world.o ../src/resources.o ../src/json.o ../src/generic/array_json.o ../src/format.o
 	$(CC) $^ $(LDFLAGS) -Wl,--wrap=free -o $@
 
-check: format json map
+check: format json pathfinding map
 	./format
 	./json
+	./pathfinding
 	./map
 
 clean:
 	rm -f *.o
-	rm -f format json map
+	rm -f format json pathfinding map
