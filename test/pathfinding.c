@@ -22,16 +22,16 @@
 #include <setjmp.h>
 #include <cmocka.h>
 
-#include <p.h>
+#include <pathfinding.c>
 
-static void test_wall_blocks(void **state)
+static void test_obstacle_blocks(void **state)
 {
-	float left = 3, right = 7, top = 5, bottom = 4;
+	struct obstacle obstacle = {3, 7, 5, 4};
 
-	assert_false(wall_blocks((struct position){4, 1}, (struct position){4, 3}, left, right, top, bottom));
-	assert_false(wall_blocks((struct position){4, 7}, (struct position){4, 5}, left, right, top, bottom));
-	assert_true(wall_blocks((struct position){4, 7}, (struct position){4, 4}, left, right, top, bottom));
-	assert_true(wall_blocks((struct position){4, 1}, (struct position){4, 5}, left, right, top, bottom));
+	assert_false(path_blocked_obstacle((struct position){4, 1}, (struct position){4, 3}, &obstacle));
+	assert_false(path_blocked_obstacle((struct position){4, 7}, (struct position){4, 5}, &obstacle));
+	assert_true(path_blocked_obstacle((struct position){4, 7}, (struct position){4, 4}, &obstacle));
+	assert_true(path_blocked_obstacle((struct position){4, 1}, (struct position){4, 5}, &obstacle));
 }
 
 static void test_pawn_blocks(void **state)
@@ -41,15 +41,15 @@ static void test_pawn_blocks(void **state)
 	struct position pawn0 = {3, 6};
 	struct position pawn1 = {2, 4};
 
-	assert_false(pawn_blocks(start, end, pawn0));
-	assert_true(pawn_blocks(start, end, pawn1));
+	assert_false(path_blocked_pawn(start, end, pawn0));
+	assert_true(path_blocked_pawn(start, end, pawn1));
 }
 
 int main(void)
 {
 	const struct CMUnitTest tests[] =
 	{
-		cmocka_unit_test(test_wall_blocks),
+		cmocka_unit_test(test_obstacle_blocks),
 		cmocka_unit_test(test_pawn_blocks),
 	};
 	return cmocka_run_group_tests(tests, 0, 0);

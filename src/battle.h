@@ -17,6 +17,9 @@
  * along with Conquest of Levidon.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#define BATTLEFIELD_WIDTH 25
+#define BATTLEFIELD_HEIGHT 25
+
 #define PAWNS_LIMIT 12
 
 #define REACHABLE_LIMIT 625 /* TODO fix this */
@@ -28,41 +31,49 @@
 #define NEIGHBOR_SELF NEIGHBORS_LIMIT
 #define NEIGHBOR_GARRISON NEIGHBORS_LIMIT
 
+struct point
+{
+	int x, y;
+};
+
+struct battlefield;
+struct array_moves;
+
 struct pawn
 {
 	struct troop *troop;
 	unsigned count;
-	unsigned dead;
+	unsigned dead; // TODO is this necessary?
 	unsigned hurt;
 
-	struct move *moves; // TODO allocate this
-	size_t moves_size; // TODO rename this
-	size_t moves_count, moves_manual;
+	struct position position;
+	struct position position_next;
 
-	enum pawn_action {PAWN_FIGHT = 1, PAWN_SHOOT, PAWN_ASSAULT} action;
+	struct array_moves path; // user-specified path
+	struct array_moves moves; // pathfinding-generated movement to the next path position
+
+	enum {ACTION_DEFAULT, ACTION_FIGHT, ACTION_SHOOT, ACTION_ASSAULT} action;
 	union
 	{
-		struct pawn *pawn;
-		struct point field;
+		struct pawn *pawn; // for ACTION_FIGHT
+		struct battlefield *field; // for ACTION_SHOOT and ACTION_ASSAULT
 	} target;
 
-	// used for movement computation
-	struct point failback, step;
-
-	unsigned startup;
+	unsigned startup; // index of startup location on the battlefield
 };
 
 enum {POSITION_RIGHT = 0x1, POSITION_TOP = 0x2, POSITION_LEFT = 0x4, POSITION_BOTTOM = 0x8};
 struct battlefield
 {
 	struct point location;
-	enum {BLOCKAGE_NONE, BLOCKAGE_TERRAIN, BLOCKAGE_OBSTACLE, BLOCKAGE_TOWER} blockage;
-	unsigned char position;
+	//enum {BLOCKAGE_NONE, BLOCKAGE_TERRAIN, BLOCKAGE_OBSTACLE, BLOCKAGE_TOWER} blockage;
+	enum {BLOCKAGE_NONE, BLOCKAGE_TERRAIN, BLOCKAGE_OBSTACLE} blockage;
+	unsigned char position; // blockage position
 
-	signed char owner; // used for BLOCKAGE_OBSTACLE and BLOCKAGE_TOWER
-	unsigned strength; // used for BLOCKAGE_OBSTACLE and BLOCKAGE_TOWER
-	struct pawn *pawn; // used for BLOCKAGE_NONE and BLOCKAGE_TOWER
-	enum armor armor; // used for BLOCKAGE_OBSTACLE and BLOCKAGE_TOWER
+	signed char owner; // for BLOCKAGE_OBSTACLE and BLOCKAGE_TOWER
+	unsigned strength; // for BLOCKAGE_OBSTACLE and BLOCKAGE_TOWER
+	struct pawn *pawn; // for BLOCKAGE_NONE and BLOCKAGE_TOWER
+	enum armor armor; // for BLOCKAGE_OBSTACLE and BLOCKAGE_TOWER
 
 	// TODO for BLOCKAGE_TOWER there should be specified a field for descending
 };
@@ -71,6 +82,7 @@ struct battle
 {
 	const struct region *region;
 	int assault;
+	unsigned char defender;
 
 	struct battlefield field[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH];
 	size_t pawns_count;
@@ -95,9 +107,11 @@ size_t formation_reachable_open(const struct game *restrict game, const struct b
 size_t formation_reachable_assault(const struct game *restrict game, const struct battle *restrict battle, const struct pawn *restrict pawn, struct point reachable[REACHABLE_LIMIT]);
 
 int battlefield_neighbors(struct point a, struct point b);
+
+// Returns whether a pawn owned by the given player can pass through the field.
 int battlefield_passable(const struct game *restrict game, const struct battlefield *restrict field, unsigned player);
 
 int battlefield_init(const struct game *restrict game, struct battle *restrict battle, struct region *restrict region, int assault);
 void battlefield_term(const struct game *restrict game, struct battle *restrict battle);
 
-int battle_end(const struct game *restrict game, struct battle *restrict battle, unsigned char defender);
+int battle_end(const struct game *restrict game, struct battle *restrict battle);

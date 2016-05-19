@@ -1,40 +1,13 @@
-/*
- * Conquest of Levidon
- * Copyright (C) 2016  Martin Kunev <martinkunev@gmail.com>
- *
- * This file is part of Conquest of Levidon.
- *
- * Conquest of Levidon is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation version 3 of the License.
- *
- * Conquest of Levidon is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Conquest of Levidon.  If not, see <http://www.gnu.org/licenses/>.
- */
-
-#include <math.h>
-
-#define BATTLEFIELD_WIDTH 25
-#define BATTLEFIELD_HEIGHT 25
+struct game;
+struct battle;
 
 struct obstacles
 {
 	size_t count;
 	struct obstacle
 	{
-		struct point p[2];
+		unsigned left, right, top, bottom;
 	} obstacle[];
-};
-
-struct move
-{
-	struct point location;
-	double time;
 };
 
 struct adjacency_list
@@ -42,7 +15,7 @@ struct adjacency_list
 	size_t count;
 	struct adjacency
 	{
-		struct point location;
+		struct position position;
 		struct neighbor
 		{
 			size_t index;
@@ -52,23 +25,38 @@ struct adjacency_list
 	} list[];
 };
 
-struct battle;
-struct pawn;
-
 // Calculates the euclidean distance between a and b.
-static inline double battlefield_distance(struct point a, struct point b)
+static inline double battlefield_distance(struct position a, struct position b)
 {
 	int dx = b.x - a.x, dy = b.y - a.y;
 	return sqrt(dx * dx + dy * dy);
 }
 
-struct obstacles *path_obstacles(const struct game *restrict game, const struct battle *restrict battle, unsigned char player);
+struct obstacles *path_obstacles_alloc(const struct game *restrict game, const struct battle *restrict battle, unsigned char player);
+
+int path_visible(struct position origin, struct position target, const struct obstacles *restrict obstacles);
 
 struct adjacency_list *visibility_graph_build(const struct battle *restrict battle, const struct obstacles *restrict obstacles);
 void visibility_graph_free(struct adjacency_list *graph);
 
-int target_visible(struct point origin, struct point target, const struct obstacles *restrict obstacles);
 
-int path_distances(const struct pawn *restrict pawn, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles, double reachable[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH]);
+
+
+
+
+
+
+
+
+///////////////////////////////
+// TODO fix the functions below
+
+
+// TODO think how to implement this
+//int path_distances(const struct pawn *restrict pawn, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles, double reachable[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH]);
+
+// Calculates the distance between origin and target and stores it in distance. On error, returns negative error code.
 int path_distance(struct point origin, struct point target, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles, double *restrict distance);
+
+// Finds path from the pawn's current final location to a target field. Appends the path to the pawn's movement queue.
 int path_queue(struct pawn *restrict pawn, struct point target, struct adjacency_list *restrict nodes, const struct obstacles *restrict obstacles);
