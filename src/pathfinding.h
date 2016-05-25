@@ -1,5 +1,6 @@
 struct game;
 struct battle;
+struct pawn;
 
 struct obstacles
 {
@@ -8,6 +9,11 @@ struct obstacles
 	{
 		unsigned left, right, top, bottom;
 	} obstacle[];
+};
+
+struct position
+{
+	float x, y;
 };
 
 struct adjacency_list
@@ -36,27 +42,14 @@ struct obstacles *path_obstacles_alloc(const struct game *restrict game, const s
 
 int path_visible(struct position origin, struct position target, const struct obstacles *restrict obstacles);
 
-struct adjacency_list *visibility_graph_build(const struct battle *restrict battle, const struct obstacles *restrict obstacles);
+struct adjacency_list *visibility_graph_build(const struct battle *restrict battle, const struct obstacles *restrict obstacles, unsigned vertices_reserved);
 void visibility_graph_free(struct adjacency_list *graph);
-
-
-
-
-
-
-
-
-
-
-///////////////////////////////
-// TODO fix the functions below
-
 
 // TODO think how to implement this
 //int path_distances(const struct pawn *restrict pawn, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles, double reachable[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH]);
 
 // Calculates the distance between origin and target and stores it in distance. On error, returns negative error code.
-int path_distance(struct point origin, struct point target, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles, double *restrict distance);
+int path_distance(struct position origin, struct position target, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles, double *restrict distance);
 
 // Finds path from the pawn's current final location to a target field. Appends the path to the pawn's movement queue.
-int path_queue(struct pawn *restrict pawn, struct point target, struct adjacency_list *restrict nodes, const struct obstacles *restrict obstacles);
+int path_find(struct pawn *restrict pawn, struct position target, struct adjacency_list *restrict nodes, const struct obstacles *restrict obstacles);

@@ -211,7 +211,7 @@ void battle_shoot(struct battle *battle, const struct obstacles *restrict obstac
 		// TODO what if there is a tower on one of the fields
 
 		range = shooter->troop->unit->ranged.range;
-		if (!target_visible(shooter->moves[0].location, shooter->target.field, obstacles))
+		if (!path_visible(shooter->moves[0].location, shooter->target.field, obstacles)) // TODO convert to position
 		{
 			damage_total *= ACCURACY;
 			range -= 1;
@@ -375,7 +375,7 @@ int combat_order_shoot(const struct game *restrict game, const struct battle *re
 
 		// If there is an obstacle between the pawn and its target, decrease shooting range by 1.
 		// TODO what if there is a tower on one of the fields
-		if (!target_visible(shooter_field, target, obstacles))
+		if (!path_visible((struct position){shooter_field.x, shooter_field.y}, (struct position){target.x, target.y}, obstacles))
 			range -= 1;
 
 		unsigned distance = round(battlefield_distance(shooter_field, target));

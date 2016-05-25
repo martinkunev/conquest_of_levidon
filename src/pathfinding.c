@@ -20,15 +20,29 @@
 #include <math.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "errors.h"
 #include "game.h"
-#include "battle.h"
 #include "pathfinding.h"
+#include "movement.h"
+#include "battle.h"
 
 #define PAWN_RADIUS 0.5
 #define WALL_THICKNESS 0.5
 #define WALL_OFFSET ((1 - WALL_THICKNESS) / 2)
+
+struct path_node
+{
+	double distance;
+	struct path_node *path_link;
+	size_t heap_index;
+};
+
+#define heap_type struct path_node *
+#define heap_above(a, b) ((a)->distance <= (b)->distance)
+#define heap_update(heap, position) ((heap)->data[position]->heap_index = (position))
+#include "generic/heap.g"
 
 static inline int sign(int number)
 {
@@ -45,8 +59,9 @@ static int point_side(struct position p, struct position v0, struct position v1)
 	else return 0;
 }
 
-// The obstacle doesn't block paths right next to it ("touching" the obstacle is allowed).
-static int path_blocked_obstacle(struct position start, struct position end, const struct obstacle *restrict obstacle)
+// Determines whether a move is blocked by an obstacle.
+// The obstacle doesn't block moves right next to it ("touching" the obstacle is allowed).
+static int move_blocked_obstacle(struct position start, struct position end, const struct obstacle *restrict obstacle)
 {
 	// http://stackoverflow.com/a/293052/515212
 
@@ -82,8 +97,8 @@ static int path_blocked_obstacle(struct position start, struct position end, con
 	return 0;
 }
 
-// WARNING: The path must be a non-zero vector (end != start).
-static int path_blocked_pawn(struct position start, struct position end, struct position pawn)
+// WARNING: The move must be a non-zero vector (end != start).
+static int move_blocked_pawn(struct position start, struct position end, struct position pawn)
 {
 	// http://stackoverflow.com/a/1084899/515212
 
@@ -276,7 +291,7 @@ int path_visible(struct position origin, struct position target, const struct ob
 
 	// Check if there is an obstacle that blocks the path from origin to target.
 	for(i = 0; i < obstacles->count; ++i)
-		if (path_blocked_obstacle(origin, target, obstacles->obstacle + i))
+		if (move_blocked_obstacle(origin, target, obstacles->obstacle + i))
 			return 0;
 
 	return 1;
@@ -317,7 +332,7 @@ static int graph_vertex_attach(struct adjacency_list *restrict graph, size_t ind
 	return 0;
 }
 
-static void graph_vertex_insert(struct adjacency_list *graph, float x, float y, unsigned char occupied[static BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH])
+static void graph_vertex_add(struct adjacency_list *restrict graph, float x, float y, unsigned char occupied[static BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH])
 {
 	struct adjacency *node;
 
@@ -336,7 +351,7 @@ static void graph_vertex_insert(struct adjacency_list *graph, float x, float y, 
 }
 
 // Returns the visibility graph as adjacency list.
-struct adjacency_list *visibility_graph_build(const struct battle *restrict battle, const struct obstacles *restrict obstacles)
+struct adjacency_list *visibility_graph_build(const struct battle *restrict battle, const struct obstacles *restrict obstacles, unsigned vertices_reserved)
 {
 	size_t i, j;
 
@@ -349,23 +364,23 @@ struct adjacency_list *visibility_graph_build(const struct battle *restrict batt
 				occupied[i][j] = 1;
 
 	// Allocate enough memory for the maximum size of the adjacency graph.
-	// 4 vertices for the corners around each obstacle and 2 vertices for origin and target
-	graph = malloc(offsetof(struct adjacency_list, list) + sizeof(*graph->list) * (obstacles->count * 4 + 2));
+	// 4 vertices for the corners around each obstacle
+	graph = malloc(offsetof(struct adjacency_list, list) + sizeof(*graph->list) * (obstacles->count * 4 + vertices_reserved));
 	if (!graph) return 0;
 	graph->count = 0;
 
 	for(i = 0; i < obstacles->count; ++i)
 	{
 		const struct obstacle *restrict obstacle = obstacles->obstacle + i;
-		graph_vertex_insert(graph, obstacle->left - PAWN_RADIUS, obstacle->bottom - PAWN_RADIUS, occupied);
-		graph_vertex_insert(graph, obstacle->right + PAWN_RADIUS, obstacle->bottom - PAWN_RADIUS, occupied);
-		graph_vertex_insert(graph, obstacle->right + PAWN_RADIUS, obstacle->top + PAWN_RADIUS, occupied);
-		graph_vertex_insert(graph, obstacle->left - PAWN_RADIUS, obstacle->top + PAWN_RADIUS, occupied);
+		graph_vertex_add(graph, obstacle->left - PAWN_RADIUS, obstacle->bottom - PAWN_RADIUS, occupied);
+		graph_vertex_add(graph, obstacle->right + PAWN_RADIUS, obstacle->bottom - PAWN_RADIUS, occupied);
+		graph_vertex_add(graph, obstacle->right + PAWN_RADIUS, obstacle->top + PAWN_RADIUS, occupied);
+		graph_vertex_add(graph, obstacle->left - PAWN_RADIUS, obstacle->top + PAWN_RADIUS, occupied);
 	}
 
 	// Free the unused part of the adjacency graph buffer.
 	// Leave space for origin and target vertices.
-	graph_resized = realloc(graph, sizeof(*graph) + sizeof(*graph->list) * (graph->count + 2));
+	graph_resized = realloc(graph, offsetof(struct adjacency_list, list) + sizeof(*graph->list) * (graph->count + vertices_reserved));
 	if (!graph_resized) graph_resized = graph;
 
 	// Fill the adjacency list of the visibility graph.
@@ -399,4 +414,257 @@ void visibility_graph_free(struct adjacency_list *graph)
 		}
 	}
 	free(graph);
+}
+
+// WARNING: The space for the new vertex must have been reserved by visibility_graph_build().
+static ssize_t graph_insert(struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles, struct position position)
+{
+	int status;
+
+	size_t index = graph->count++;
+	struct adjacency *node = &graph->list[index];
+
+	node->neighbors = 0;
+	node->position = position;
+
+	status = graph_vertex_attach(graph, index, obstacles);
+	if (status < 0) return status;
+
+	return index;
+}
+
+// Removes the vertex at position index from the graph.
+static void graph_remove(struct adjacency_list *restrict graph, size_t index)
+{
+	size_t i;
+	struct neighbor *neighbor, *prev;
+
+	// Remove node from neighbors lists.
+	for(i = 0; i < index; ++i)
+	{
+		neighbor = graph->list[i].neighbors;
+		prev = 0;
+		while (neighbor)
+		{
+			if (neighbor->index == index)
+			{
+				if (prev)
+				{
+					prev->next = neighbor->next;
+					free(neighbor);
+					neighbor = prev->next;
+				}
+				else
+				{
+					graph->list[i].neighbors = neighbor->next;
+					free(neighbor);
+					neighbor = graph->list[i].neighbors;
+				}
+			}
+			else
+			{
+				prev = neighbor;
+				neighbor = prev->next;
+			}
+		}
+	}
+
+	// Remove the neighbors of the node.
+	neighbor = graph->list[index].neighbors;
+	while (neighbor)
+	{
+		prev = neighbor;
+		neighbor = neighbor->next;
+		free(prev);
+	}
+
+	graph->count -= 1;
+}
+
+static ssize_t find_closest(struct heap *restrict closest, struct path_node *restrict traverse_info, struct neighbor *restrict neighbor, size_t last)
+{
+	size_t next;
+
+	// Update path from last to its neighbors.
+	while (neighbor)
+	{
+		double distance = traverse_info[last].distance + neighbor->distance;
+		if (distance < traverse_info[neighbor->index].distance)
+		{
+			traverse_info[neighbor->index].distance = distance;
+			traverse_info[neighbor->index].path_link = traverse_info + last;
+			heap_emerge(closest, traverse_info[neighbor->index].heap_index);
+		}
+		neighbor = neighbor->next;
+	}
+
+	next = closest->data[0] - traverse_info;
+	if (traverse_info[next].distance == INFINITY) return ERROR_MISSING; // no more reachable vertices
+	heap_pop(closest);
+
+	return next;
+}
+
+// Traverses the graph using Dijkstra's algorithm.
+// Stops when it finds path to vertex_target or all vertices reachable from origin are traversed (and no such path is found).
+// Returns information about the paths found or NULL on memory error.
+// WARNING: The last vertex in the graph must be the origin.
+static struct path_node *path_traverse(struct adjacency_list *restrict graph, size_t vertex_target)
+{
+	struct path_node *traverse_info;
+	struct heap closest;
+	size_t i;
+	ssize_t vertex;
+
+	// assert(graph->count > 1);
+
+	size_t vertex_origin = graph->count - 1;
+
+	// Initialize traversal information.
+	traverse_info = malloc(graph->count * sizeof(*traverse_info));
+	if (!traverse_info) goto finally; // memory error
+	for(i = 0; i < vertex_origin; ++i)
+	{
+		traverse_info[i].distance = INFINITY;
+		traverse_info[i].path_link = 0;
+	}
+	traverse_info[vertex_origin].distance = 0;
+	traverse_info[vertex_origin].path_link = 0;
+
+	// Find the shortest path to target using Dijkstra's algorithm.
+	closest.count = vertex_origin;
+	closest.data = malloc(closest.count * sizeof(traverse_info));
+	if (!closest.data)
+	{
+		free(traverse_info);
+		traverse_info = 0;
+		goto finally; // memory error
+	}
+	for(i = 0; i < vertex_origin; ++i)
+	{
+		closest.data[i] = traverse_info + i;
+		traverse_info[i].heap_index = i;
+	}
+	vertex = vertex_origin;
+	while (1)
+	{
+		vertex = find_closest(&closest, traverse_info, graph->list[vertex].neighbors, vertex);
+		if (vertex == vertex_target) break; // found
+		if (vertex < 0) break; // no more reachable vertices
+	}
+	free(closest.data);
+
+finally:
+	return traverse_info;
+}
+
+// Calculates the distance between origin and target and stores it in distance. On error, returns negative error code.
+int path_distance(struct position origin, struct position target, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles, double *restrict distance)
+{
+	ssize_t vertex_target, vertex_origin;
+	struct path_node *traverse_info;
+	int status;
+
+	vertex_target = graph_insert(graph, obstacles, target);
+	if (vertex_target < 0) return vertex_target;
+
+	vertex_origin = graph_insert(graph, obstacles, origin);
+	if (vertex_origin < 0)
+	{
+		graph_remove(graph, vertex_target);
+		return vertex_origin;
+	}
+
+	// Look for a path from the pawn's final location to the target vertex.
+	traverse_info = path_traverse(graph, vertex_target);
+	if (!traverse_info)
+	{
+		status = ERROR_MEMORY;
+		goto finally;
+	}
+	*distance = traverse_info[vertex_target].distance;
+
+	free(traverse_info);
+	status = 0;
+
+finally:
+	graph_remove(graph, vertex_origin);
+	graph_remove(graph, vertex_target);
+	return status;
+}
+
+// Finds path from the pawn's current position to the first target in pawn->path and stores it in pawn->moves.
+// On error, returns error code and pawn movement queue remains unchanged.
+int path_find(struct pawn *restrict pawn, struct position target, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles)
+{
+	ssize_t vertex_target, vertex_origin;
+	struct path_node *traverse_info;
+	int status;
+
+	struct path_node *node, *prev, *next;
+
+	size_t moves_count;
+
+	vertex_target = graph_insert(graph, obstacles, target);
+	if (vertex_target < 0) return vertex_target;
+
+	vertex_origin = graph_insert(graph, obstacles, pawn->path.data[0]);
+	if (vertex_origin < 0)
+	{
+		graph_remove(graph, vertex_target);
+		return vertex_origin;
+	}
+
+	// Look for a path from the pawn's final location to the target vector.
+	traverse_info = path_traverse(graph, vertex_target);
+	if (!traverse_info)
+	{
+		status = ERROR_MEMORY;
+		goto finally;
+	}
+	if (traverse_info[vertex_target].distance == INFINITY)
+	{
+		status = ERROR_MISSING;
+		goto finally;
+	}
+
+	// Construct the path to target by starting from target and reversing the path_link pointers.
+	node = traverse_info + vertex_target;
+	next = 0;
+	moves_count = 0;
+	while (1)
+	{
+		prev = node->path_link;
+		node->path_link = next;
+		next = node;
+
+		if (!prev) break; // there is no previous node, so node is the origin
+		node = prev;
+
+		moves_count += 1;
+	}
+
+	// Store the selected path points to the movement queue.
+	pawn->moves.count = 0;
+	array_moves_expand(&pawn->moves, moves_count);
+	while (node = node->path_link)
+	{
+		//double distance;
+		pawn->moves.data[pawn->moves.count] = graph->list[node - traverse_info].position;
+		pawn->moves.count += 1;
+		/*distance = battlefield_distance(pawn->moves[pawn->moves_count - 1].location, pawn->moves[pawn->moves_count].location);
+		pawn->moves[pawn->moves_count].time = pawn->moves[pawn->moves_count - 1].time + distance / pawn->troop->unit->speed;*/
+	}
+
+	// Remove the path just found from the queue of paths.
+	memmove(pawn->path.data, pawn->path.data + 1, pawn->path.count);
+	pawn->path.count -= 1;
+
+	status = 0;
+
+finally:
+	free(traverse_info);
+	graph_remove(graph, vertex_origin);
+	graph_remove(graph, vertex_target);
+	return status;
 }

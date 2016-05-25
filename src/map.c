@@ -18,9 +18,13 @@
  */
 
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "draw.h"
+#include "game.h"
+#include "resources.h"
 #include "map.h"
 
 void troop_attach(struct troop **troops, struct troop *troop)

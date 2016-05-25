@@ -17,15 +17,19 @@
  * along with Conquest of Levidon.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <math.h>
 #include <stdarg.h>
+#include <stddef.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "errors.h"
-#include "map.h"
+#include "game.h"
 #include "pathfinding.h"
-#include "battle.h"
 #include "movement.h"
+#include "battle.h"
+#include "map.h"
 
 #define FORMATION_RADIUS_ATTACK 3
 #define FORMATION_RADIUS_DEFEND 4
@@ -40,25 +44,6 @@ static inline double distance(const double *restrict origin, const double *restr
 {
 	double dx = target[0] - origin[0], dy = target[1] - origin[1];
 	return sqrt(dx * dx + dy * dy);
-}
-
-static struct polygon *region_create(size_t count, ...)
-{
-	size_t index;
-	va_list vertices;
-
-	// Allocate memory for the region and its vertices.
-	struct polygon *polygon = malloc(offsetof(struct polygon, points) + count * sizeof(struct point));
-	if (!polygon) return 0;
-	polygon->vertices_count = count;
-
-	// Initialize region vertices.
-	va_start(vertices, count);
-	for(index = 0; index < count; ++index)
-		polygon->points[index] = va_arg(vertices, struct point);
-	va_end(vertices);
-
-	return polygon;
 }
 
 // Returns whether the troop can be placed at the given field.
@@ -151,8 +136,11 @@ int battlefield_neighbors(struct point a, struct point b)
 
 int battlefield_passable(const struct game *restrict game, const struct battlefield *restrict field, unsigned player)
 {
-	if (!field->blockage) return 1;
-	if ((field->blockage == BLOCKAGE_OBSTACLE) && allies(game, player, field->owner)) return 1;
+	if (!field->blockage)
+		return 1;
+	if (field->blockage == BLOCKAGE_OBSTACLE)
+		if (allies(game, player, field->owner) || field->pawn)
+			return 1;
 	return 0;
 }
 
@@ -251,8 +239,7 @@ static void battlefield_init_open(const struct game *restrict game, struct battl
 			struct battlefield *field = &battle->field[reachable[j].y][reachable[j].x];
 			if (!field->pawn)
 			{
-				battle->pawns[i].moves = malloc(32 * sizeof(*battle->pawns[i].moves)); // TODO fix this
-				pawn_place(battle->pawns + i, reachable[j]);
+				pawn_place(battle->pawns + i, reachable[j].x, reachable[j].y);
 				field->pawn = battle->pawns + i;
 
 				break;
@@ -261,6 +248,8 @@ static void battlefield_init_open(const struct game *restrict game, struct battl
 
 		// TODO handle the case when all the place in the location is already taken
 	}
+
+	battle->defender = game->players[battle->region->owner].alliance;
 }
 
 static void battlefield_init_assault(const struct game *restrict game, struct battle *restrict battle)
@@ -337,8 +326,7 @@ static void battlefield_init_assault(const struct game *restrict game, struct ba
 			struct battlefield *field = &battle->field[reachable[j].y][reachable[j].x];
 			if (!field->pawn)
 			{
-				pawn->moves = malloc(32 * sizeof(*pawn->moves)); // TODO fix this
-				pawn_place(pawn, reachable[j]);
+				pawn_place(pawn, reachable[j].x, reachable[j].y);
 				field->pawn = pawn;
 
 				break;
@@ -347,6 +335,8 @@ static void battlefield_init_assault(const struct game *restrict game, struct ba
 
 		// TODO handle the case when all the place in the location is already taken
 	}
+
+	battle->defender = game->players[battle->region->garrison.owner].alliance;
 }
 
 int battlefield_init(const struct game *restrict game, struct battle *restrict battle, struct region *restrict region, int assault)
@@ -451,7 +441,7 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 }
 
 // Returns winner alliance number if the battle ended and -1 otherwise.
-int battle_end(const struct game *restrict game, struct battle *restrict battle, unsigned char defender)
+int battle_end(const struct game *restrict game, struct battle *restrict battle)
 {
 	int end = 1;
 
@@ -481,7 +471,7 @@ int battle_end(const struct game *restrict game, struct battle *restrict battle,
 		}
 	}
 
-	if (end) return ((winner >= 0) ? winner : defender);
+	if (end) return ((winner >= 0) ? winner : battle->defender);
 	else return -1;
 }
 
@@ -489,7 +479,11 @@ void battlefield_term(const struct game *restrict game, struct battle *restrict 
 {
 	size_t i;
 	for(i = 0; i < battle->pawns_count; ++i)
+	{
 		battle->pawns[i].troop->count = battle->pawns[i].count;
+		array_moves_term(&battle->pawns[i].path);
+		array_moves_term(&battle->pawns[i].moves);
+	}
 	for(i = 0; i < game->players_count; ++i)
 		free(battle->players[i].pawns);
 	free(battle->pawns);

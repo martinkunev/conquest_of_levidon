@@ -17,21 +17,15 @@
  * along with Conquest of Levidon.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define NEIGHBORS_LIMIT 8
-#define TRAIN_QUEUE 4
-
-#define PLAYERS_LIMIT 16
-
-#define NAME_LIMIT 32
-
 #define REGIONS_LIMIT 256
 
 #define UNIT_SPEED_LIMIT 16
 
 #define PLAYER_NEUTRAL 0 /* player 0 is hard-coded as neutral */
 
-#include "resources.h"
-#include "draw.h"
+//#include "game.h"
+//#include "resources.h"
+//#include "draw.h"
 
 // TODO don't use struct point here
 
@@ -39,47 +33,6 @@
 #define region_building_available(region, building) (!((building).requires & ~(region)->built))
 
 #define region_built(region, building) ((int)((region)->built & (1 << (building))))
-
-struct player
-{
-	//enum {Neutral, Local, Computer, Remote} type;
-	enum {Neutral, Local, Computer} type;
-	struct resources treasury;
-	unsigned char alliance;
-};
-
-enum weapon {WEAPON_NONE, WEAPON_CLUB, WEAPON_ARROW, WEAPON_CLEAVING, WEAPON_POLEARM, WEAPON_BLADE, WEAPON_BLUNT};
-enum armor {ARMOR_NONE, ARMOR_LEATHER, ARMOR_CHAINMAIL, ARMOR_PLATE, ARMOR_WOODEN, ARMOR_STONE};
-
-struct unit
-{
-	char name[NAME_LIMIT];
-	size_t name_length;
-
-	size_t index;
-
-	uint32_t requires;
-	unsigned troops_count;
-	struct resources cost, expense;
-	unsigned char time;
-
-	unsigned char speed;
-	unsigned char health;
-	enum armor armor;
-
-	struct
-	{
-		enum weapon weapon;
-		double damage;
-		double agility;
-	} melee;
-	struct
-	{
-		enum weapon weapon;
-		double damage;
-		unsigned char range;
-	} ranged;
-};
 
 enum {UnitPeasant, UnitMilitia, UnitPikeman, UnitArcher, UnitLongbow, UnitLightCavalry, UnitBatteringRam};
 enum {BuildingFarm, BuildingIrrigation, BuildingSawmill, BuildingMine, BuildingBloomery, BuildingBarracks, BuildingArcheryRange, BuildingStables, BuildingWatchTower, BuildingPalisade, BuildingFortress, BuildingWorkshop, BuildingForge};
@@ -139,17 +92,6 @@ struct region
 	unsigned char build_progress;
 };
 
-struct game
-{
-	struct player *players;
-	size_t players_count;
-
-	struct region *regions;
-	size_t regions_count;
-
-	unsigned turn; // TODO implement this
-};
-
 enum {PALISADE, FORTRESS};
 struct garrison_info
 {
@@ -197,8 +139,3 @@ void region_orders_cancel(struct region *restrict region);
 int polygons_border(const struct polygon *restrict a, const struct polygon *restrict b, struct point *restrict first, struct point *restrict second);
 
 void map_visible(const struct game *restrict game, unsigned char player, unsigned char visible[REGIONS_LIMIT]);
-
-static inline int allies(const struct game *game, unsigned player0, unsigned player1)
-{
-	return (game->players[player0].alliance == game->players[player1].alliance);
-}

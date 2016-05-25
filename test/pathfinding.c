@@ -28,10 +28,10 @@ static void test_obstacle_blocks(void **state)
 {
 	struct obstacle obstacle = {3, 7, 5, 4};
 
-	assert_false(path_blocked_obstacle((struct position){4, 1}, (struct position){4, 3}, &obstacle));
-	assert_false(path_blocked_obstacle((struct position){4, 7}, (struct position){4, 5}, &obstacle));
-	assert_true(path_blocked_obstacle((struct position){4, 7}, (struct position){4, 4}, &obstacle));
-	assert_true(path_blocked_obstacle((struct position){4, 1}, (struct position){4, 5}, &obstacle));
+	assert_false(move_blocked_obstacle((struct position){4, 1}, (struct position){4, 3}, &obstacle));
+	assert_false(move_blocked_obstacle((struct position){4, 7}, (struct position){4, 5}, &obstacle));
+	assert_true(move_blocked_obstacle((struct position){4, 7}, (struct position){4, 4}, &obstacle));
+	assert_true(move_blocked_obstacle((struct position){4, 1}, (struct position){4, 5}, &obstacle));
 }
 
 static void test_pawn_blocks(void **state)
@@ -41,8 +41,8 @@ static void test_pawn_blocks(void **state)
 	struct position pawn0 = {3, 6};
 	struct position pawn1 = {2, 4};
 
-	assert_false(path_blocked_pawn(start, end, pawn0));
-	assert_true(path_blocked_pawn(start, end, pawn1));
+	assert_false(move_blocked_pawn(start, end, pawn0));
+	assert_true(move_blocked_pawn(start, end, pawn1));
 }
 
 int main(void)

@@ -17,19 +17,43 @@
  * along with Conquest of Levidon.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <math.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "errors.h"
-#include "map.h"
+#include "game.h"
 #include "pathfinding.h"
-#include "battle.h"
 #include "movement.h"
+#include "battle.h"
+#include "map.h"
 
 #define MOVEMENT_STEPS (UNIT_SPEED_LIMIT * 2)
 
 // Due to pawn dimensions, at most 4 pawns can try to move to a given square at the same time.
 #define OVERLAP_LIMIT 4
+
+int array_moves_expand(struct array_moves *restrict array, size_t count)
+{
+	if (array->capacity < count)
+	{
+		size_t capacity;
+		struct position *buffer;
+
+		// Round count up to the next power of 2 that is >= ARRAY_SIZE_BASE.
+		capacity = (array->capacity * 2) | (!array->capacity * 8);
+		while (capacity < count)
+			capacity *= 2;
+
+		buffer = realloc(array->data, capacity * sizeof(*array->data));
+		if (!buffer)
+			return -1;
+		array->data = buffer;
+		array->capacity = capacity;
+	}
+	return 0;
+}
 
 /*
 Each field in the battlefield is divided into four squares. Each pawn occupies four squares.
@@ -41,6 +65,7 @@ When enemy pawns try to occupy the same square, they are redirected to their fai
 When allied pawns try to occupy the same squre, one of them stays where it is and the other are detoured to their failback locations to wait.
 */
 
+/*
 // Returns the index of the first not yet reached move location or pawn->moves_count if there is no unreached location. Sets current location in real_x and real_y.
 size_t movement_location(const struct pawn *restrict pawn, double time_now, double *restrict real_x, double *restrict real_y)
 {
@@ -117,14 +142,16 @@ finally:
 
 	return fields_count;
 }
+*/
 
-void pawn_place(struct pawn *restrict pawn, struct point location)
+void pawn_place(struct pawn *restrict pawn, float x, float y)
 {
-	pawn->moves[0].location = location;
-	pawn->moves[0].time = 0.0;
-	pawn->moves_count = 1;
+	pawn->position = (struct position){x, y};
+	pawn->path.count = 0;
+	pawn->moves.count = 0;
 }
 
+/*
 void movement_stay(struct pawn *restrict pawn)
 {
 	pawn->moves_count = 1;
@@ -132,7 +159,7 @@ void movement_stay(struct pawn *restrict pawn)
 
 int movement_queue(struct pawn *restrict pawn, struct point target, struct adjacency_list *restrict nodes, const struct obstacles *restrict obstacles)
 {
-	int error = path_queue(pawn, target, nodes, obstacles);
+	int error = path_queue(pawn, target, nodes, obstacles); // TODO this is renamed to path_find and changed
 	if (!error) pawn->action = 0;
 	return error;
 }
@@ -707,3 +734,4 @@ int battlefield_movement_attack(struct battle *restrict battle, struct pawn *res
 
 	return 0;
 }
+*/
