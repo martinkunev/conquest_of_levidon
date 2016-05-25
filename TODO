@@ -1,7 +1,8 @@
 H	levidon map
 H	computer doesn't attack regions
 H	make battle AI a little more reasonable
-M	battle mechanics fixes
+H	battle mechanics fixes
+M	editor: position region neighbors properly
 M	rewrite battle AI
 M	better food mechanics; food should not be accumulated indefinately
 M	do something when there is not enough food for all units (?kill some units)
@@ -21,7 +22,7 @@ L	limited number of shots
 L	assault garrison destruction and repair
 L	armory, swordsman, crossbowman, heavy cavalry, horse archer
 L	assault moat
-L	network game
+L	network game (using SCTP?)
 L	sound
 L	water; naval battles
 L	roads
@@ -46,6 +47,7 @@ bugs / issues
 
 TODO ? change direction of everything to counterclockwise; currently the y axis is in the opposite direction (and the cross product is negated)
 TODO ? rename field to tile
+TODO ? rename image to sprite
 TODO ? redesign input functions (handling mouse movement is tedious; handling writing should be unified)
 TODO ? make it simpler to check if two players are allies
 TODO ? dynamic battlefield size

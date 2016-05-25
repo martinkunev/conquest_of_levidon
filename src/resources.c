@@ -17,6 +17,10 @@
  * along with Conquest of Levidon.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <stdint.h>
+#include <stdlib.h>
+
+#include "game.h"
 #include "resources.h"
 
 // Check whether there are enough resources available for a given requirement.

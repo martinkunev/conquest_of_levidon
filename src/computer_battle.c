@@ -61,6 +61,8 @@ static unsigned battle_state_neighbors(const struct game *restrict game, const s
 
 	unsigned neighbors_count = 0;
 
+	// TODO fix this
+
 	target = (struct point){location.x - 1, location.y};
 	if ((target.x >= 0) && (speed >= reachable[target.y][target.x]) && battlefield_passable(game, &battle->field[target.y][target.x], pawn->troop->owner))
 		neighbors[neighbors_count++] = target;
