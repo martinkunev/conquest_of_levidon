@@ -157,28 +157,28 @@ struct obstacles *path_obstacles_alloc(const struct game *restrict game, const s
 			{
 				if (horizontal >= 0)
 				{
-					if (field->position != (field->position | POSITION_LEFT | POSITION_RIGHT))
+					if (field->location != (field->location | POSITION_LEFT | POSITION_RIGHT))
 						obstacles_count += 1;
-					if (!(field->position & POSITION_RIGHT)) horizontal = -1;
+					if (!(field->location & POSITION_RIGHT)) horizontal = -1;
 				}
 				else
 				{
-					if (field->position & POSITION_RIGHT)
+					if (field->location & POSITION_RIGHT)
 						horizontal = x;
-					else if (field->position & POSITION_LEFT)
+					else if (field->location & POSITION_LEFT)
 						obstacles_count += 1;
 				}
 				if (vertical[x] >= 0)
 				{
-					if (field->position != (field->position | POSITION_TOP | POSITION_BOTTOM))
+					if (field->location != (field->location | POSITION_TOP | POSITION_BOTTOM))
 						obstacles_count += 1;
-					if (!(field->position & POSITION_TOP)) vertical[x] = -1;
+					if (!(field->location & POSITION_TOP)) vertical[x] = -1;
 				}
 				else
 				{
-					if (field->position & POSITION_TOP)
+					if (field->location & POSITION_TOP)
 						vertical[x] = y;
-					else if (field->position & POSITION_BOTTOM)
+					else if (field->location & POSITION_BOTTOM)
 						obstacles_count += 1;
 				}
 			}
@@ -226,28 +226,28 @@ struct obstacles *path_obstacles_alloc(const struct game *restrict game, const s
 			{
 				if (horizontal >= 0)
 				{
-					if (field->position != (field->position | POSITION_LEFT | POSITION_RIGHT))
-						obstacle_insert(obstacles, horizontal, y + WALL_OFFSET, x + (1 - WALL_OFFSET) * ((field->position & POSITION_LEFT) != 0), y + (1 - WALL_OFFSET));
-					if (!(field->position & POSITION_RIGHT)) horizontal = -1;
+					if (field->location != (field->location | POSITION_LEFT | POSITION_RIGHT))
+						obstacle_insert(obstacles, horizontal, y + WALL_OFFSET, x + (1 - WALL_OFFSET) * ((field->location & POSITION_LEFT) != 0), y + (1 - WALL_OFFSET));
+					if (!(field->location & POSITION_RIGHT)) horizontal = -1;
 				}
 				else
 				{
-					if (field->position & POSITION_RIGHT)
-						horizontal = x + WALL_OFFSET * !(field->position & POSITION_LEFT);
-					else if (field->position & POSITION_LEFT)
+					if (field->location & POSITION_RIGHT)
+						horizontal = x + WALL_OFFSET * !(field->location & POSITION_LEFT);
+					else if (field->location & POSITION_LEFT)
 						obstacle_insert(obstacles, x, y + WALL_OFFSET, x + (1 - WALL_OFFSET), y + (1 - WALL_OFFSET));
 				}
 				if (vertical[x] >= 0)
 				{
-					if (field->position != (field->position | POSITION_TOP | POSITION_BOTTOM))
-						obstacle_insert(obstacles, x + WALL_OFFSET, vertical[x], x + (1 - WALL_OFFSET), y + (1 - WALL_OFFSET) * ((field->position & POSITION_BOTTOM) != 0));
-					if (!(field->position & POSITION_TOP)) vertical[x] = -1;
+					if (field->location != (field->location | POSITION_TOP | POSITION_BOTTOM))
+						obstacle_insert(obstacles, x + WALL_OFFSET, vertical[x], x + (1 - WALL_OFFSET), y + (1 - WALL_OFFSET) * ((field->location & POSITION_BOTTOM) != 0));
+					if (!(field->location & POSITION_TOP)) vertical[x] = -1;
 				}
 				else
 				{
-					if (field->position & POSITION_TOP)
-						vertical[x] = y + WALL_OFFSET * !(field->position & POSITION_BOTTOM);
-					else if (field->position & POSITION_BOTTOM)
+					if (field->location & POSITION_TOP)
+						vertical[x] = y + WALL_OFFSET * !(field->location & POSITION_BOTTOM);
+					else if (field->location & POSITION_BOTTOM)
 						obstacle_insert(obstacles, x + WALL_OFFSET, y, x + (1 - WALL_OFFSET), y + (1 - WALL_OFFSET));
 				}
 			}
@@ -602,7 +602,6 @@ int path_find(struct pawn *restrict pawn, struct position target, struct adjacen
 	int status;
 
 	struct path_node *node, *prev, *next;
-
 	size_t moves_count;
 
 	vertex_target = graph_insert(graph, obstacles, target);
@@ -649,11 +648,8 @@ int path_find(struct pawn *restrict pawn, struct position target, struct adjacen
 	array_moves_expand(&pawn->moves, moves_count);
 	while (node = node->path_link)
 	{
-		//double distance;
 		pawn->moves.data[pawn->moves.count] = graph->list[node - traverse_info].position;
 		pawn->moves.count += 1;
-		/*distance = battlefield_distance(pawn->moves[pawn->moves_count - 1].location, pawn->moves[pawn->moves_count].location);
-		pawn->moves[pawn->moves_count].time = pawn->moves[pawn->moves_count - 1].time + distance / pawn->troop->unit->speed;*/
 	}
 
 	// Remove the path just found from the queue of paths.

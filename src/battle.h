@@ -65,14 +65,14 @@ struct pawn
 enum {POSITION_RIGHT = 0x1, POSITION_TOP = 0x2, POSITION_LEFT = 0x4, POSITION_BOTTOM = 0x8};
 struct battlefield
 {
-	struct point location;
+	struct position position;
 	//enum {BLOCKAGE_NONE, BLOCKAGE_TERRAIN, BLOCKAGE_OBSTACLE, BLOCKAGE_TOWER} blockage;
 	enum {BLOCKAGE_NONE, BLOCKAGE_TERRAIN, BLOCKAGE_OBSTACLE} blockage;
-	unsigned char position; // blockage position
+	unsigned char location; // blockage location
 
 	signed char owner; // for BLOCKAGE_OBSTACLE and BLOCKAGE_TOWER
 	unsigned strength; // for BLOCKAGE_OBSTACLE and BLOCKAGE_TOWER
-	struct pawn *pawn; // for BLOCKAGE_NONE and BLOCKAGE_TOWER
+	struct pawn *pawns[4]; // for BLOCKAGE_NONE and BLOCKAGE_TOWER
 	enum armor armor; // for BLOCKAGE_OBSTACLE and BLOCKAGE_TOWER
 
 	// TODO for BLOCKAGE_TOWER there should be specified a field for descending

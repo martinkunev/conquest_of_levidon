@@ -25,6 +25,7 @@
 #include <string.h>
 
 #include "errors.h"
+#include "log.h"
 #include "game.h"
 #include "pathfinding.h"
 #include "movement.h"
@@ -139,7 +140,7 @@ int battlefield_passable(const struct game *restrict game, const struct battlefi
 	if (!field->blockage)
 		return 1;
 	if (field->blockage == BLOCKAGE_OBSTACLE)
-		if (allies(game, player, field->owner) || field->pawn)
+		if (allies(game, player, field->owner) || field->pawns[0] || field->pawns[1] || field->pawns[2] || field->pawns[3])
 			return 1;
 	return 0;
 }
@@ -205,7 +206,10 @@ static void battlefield_init_open(const struct game *restrict game, struct battl
 		size_t locations_index = 0;
 
 		if (players_count > NEIGHBORS_LIMIT + 1)
-			; // TODO handle pawns when no place is available
+		{
+			// TODO handle pawns when no place is available
+			LOG_ERROR("no place for all players on the battlefield");
+		}
 
 		// Make sure no two startup locations are designated to the same player.
 		for(i = 0; i < NEIGHBORS_LIMIT; ++i)
@@ -237,10 +241,10 @@ static void battlefield_init_open(const struct game *restrict game, struct battl
 		for(j = 0; j < reachable_count; ++j)
 		{
 			struct battlefield *field = &battle->field[reachable[j].y][reachable[j].x];
-			if (!field->pawn)
+			if (!field->pawns[0])
 			{
 				pawn_place(battle->pawns + i, reachable[j].x, reachable[j].y);
-				field->pawn = battle->pawns + i;
+				field->pawns[0] = battle->pawns + i;
 
 				break;
 			}
@@ -274,7 +278,7 @@ static void battlefield_init_assault(const struct game *restrict game, struct ba
 	{ \
 		struct battlefield *restrict field = &battle->field[y][x]; \
 		field->blockage = BLOCKAGE_OBSTACLE; \
-		field->position = (p); \
+		field->location = (p); \
 		field->owner = (o); \
 		field->strength = (s); \
 		field->armor = (a); \
@@ -324,10 +328,10 @@ static void battlefield_init_assault(const struct game *restrict game, struct ba
 		for(j = 0; j < reachable_count; ++j)
 		{
 			struct battlefield *field = &battle->field[reachable[j].y][reachable[j].x];
-			if (!field->pawn)
+			if (!field->pawns[0])
 			{
 				pawn_place(pawn, reachable[j].x, reachable[j].y);
-				field->pawn = pawn;
+				field->pawns[0] = pawn;
 
 				break;
 			}
@@ -357,9 +361,10 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 	{
 		for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
 		{
-			battle->field[y][x].location = (struct point){x, y};
-			battle->field[y][x].blockage = BLOCKAGE_NONE;
-			battle->field[y][x].pawn = 0;
+			struct battlefield *field = &battle->field[y][x];
+			field->position = (struct position){x, y};
+			field->blockage = BLOCKAGE_NONE;
+			memset(field->pawns, 0, sizeof(field->pawns));
 		}
 	}
 
