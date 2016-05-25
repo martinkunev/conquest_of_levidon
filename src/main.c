@@ -65,18 +65,11 @@ static int play_battle(struct game *restrict game, struct region *restrict regio
 	int status;
 	int winner = -1;
 
-	size_t i;
-
 	unsigned round_activity_last;
 
 	struct battle battle;
-	unsigned char defender;
 
 	if (battlefield_init(game, &battle, region, assault) < 0) return -1;
-
-	// TODO put this into struct battle
-	if (assault) defender = game->players[region->garrison.owner].alliance;
-	else defender = game->players[region->owner].alliance;
 
 	battle.round = 0;
 
@@ -105,10 +98,12 @@ static int play_battle(struct game *restrict game, struct region *restrict regio
 	battle.round = 1;
 	round_activity_last = 1;
 
-	while ((winner = battle_end(game, &battle, defender)) < 0)
+	while ((winner = battle_end(game, &battle)) < 0)
 	{
 		struct adjacency_list *graph[PLAYERS_LIMIT] = {0};
 		struct obstacles *obstacles[PLAYERS_LIMIT] = {0};
+
+		size_t i;
 
 		obstacles[PLAYER_NEUTRAL] = path_obstacles(game, &battle, PLAYER_NEUTRAL);
 		if (!obstacles[PLAYER_NEUTRAL]) abort();
@@ -124,7 +119,7 @@ static int play_battle(struct game *restrict game, struct region *restrict regio
 			{
 				obstacles[alliance] = path_obstacles(game, &battle, player);
 				if (!obstacles[alliance]) abort();
-				graph[alliance] = visibility_graph_build(&battle, obstacles[alliance]);
+				graph[alliance] = visibility_graph_build(&battle, obstacles[alliance], 2); // 2 vertices for origin and target
 				if (!graph[alliance]) abort();
 			}
 
@@ -150,6 +145,10 @@ static int play_battle(struct game *restrict game, struct region *restrict regio
 		input_animation_shoot(game, &battle); // TODO this should be part of player-specific input
 		battle_shoot(&battle, obstacles[PLAYER_NEUTRAL]); // treat all gates as closed for shooting
 		if (battlefield_clean(&battle)) round_activity_last = battle.round;
+
+		///////////////
+
+
 
 		for(i = 0; i < battle.pawns_count; ++i)
 		{
@@ -179,6 +178,11 @@ static int play_battle(struct game *restrict game, struct region *restrict regio
 			if (status < 0) abort(); // TODO
 		}
 
+
+
+
+		///////////////
+
 		// TODO fight animation // TODO this should be part of player-specific input
 		battle_fight(game, &battle);
 		if (battlefield_clean(&battle)) round_activity_last = battle.round;
@@ -200,11 +204,11 @@ static int play_battle(struct game *restrict game, struct region *restrict regio
 				if (!battle.pawns[i].count) continue;
 
 				troop = battle.pawns[i].troop;
-				if (game->players[troop->owner].alliance != defender)
+				if (game->players[troop->owner].alliance != battle->defender)
 					troop->move = troop->location;
 			}
 
-			winner = defender;
+			winner = battle->defender;
 			break;
 		}
 
