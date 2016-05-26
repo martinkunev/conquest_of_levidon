@@ -30,7 +30,7 @@
 
 #define PAWN_RADIUS 0.5
 #define WALL_THICKNESS 0.5
-#define WALL_OFFSET ((1 - WALL_THICKNESS) / 2)
+#define WALL_OFFSET ((1 - WALL_THICKNESS) / 2) /* walls are placed in the middle of the field */
 
 struct path_node
 {
@@ -595,7 +595,7 @@ finally:
 
 // Finds path from the pawn's current position to the first target in pawn->path and stores it in pawn->moves.
 // On error, returns error code and pawn movement queue remains unchanged.
-int path_find(struct pawn *restrict pawn, struct position target, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles)
+int path_find(struct pawn *restrict pawn, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles)
 {
 	ssize_t vertex_target, vertex_origin;
 	struct path_node *traverse_info;
@@ -604,10 +604,10 @@ int path_find(struct pawn *restrict pawn, struct position target, struct adjacen
 	struct path_node *node, *prev, *next;
 	size_t moves_count;
 
-	vertex_target = graph_insert(graph, obstacles, target);
+	vertex_target = graph_insert(graph, obstacles, pawn->path.data[0]);
 	if (vertex_target < 0) return vertex_target;
 
-	vertex_origin = graph_insert(graph, obstacles, pawn->path.data[0]);
+	vertex_origin = graph_insert(graph, obstacles, pawn->position);
 	if (vertex_origin < 0)
 	{
 		graph_remove(graph, vertex_target);
@@ -653,8 +653,9 @@ int path_find(struct pawn *restrict pawn, struct position target, struct adjacen
 	}
 
 	// Remove the path just found from the queue of paths.
-	memmove(pawn->path.data, pawn->path.data + 1, pawn->path.count);
 	pawn->path.count -= 1;
+	if (pawn->path.count)
+		memmove(pawn->path.data, pawn->path.data + 1, pawn->path.count);
 
 	status = 0;
 

@@ -25,11 +25,10 @@
 #include "errors.h"
 #include "game.h"
 #include "pathfinding.h"
+#include "combat.h"
 #include "movement.h"
 #include "battle.h"
 #include "map.h"
-
-#define MOVEMENT_STEPS (UNIT_SPEED_LIMIT * 2)
 
 // Due to pawn dimensions, at most 4 pawns can try to move to a given square at the same time.
 #define OVERLAP_LIMIT 4
@@ -54,6 +53,136 @@ int array_moves_expand(struct array_moves *restrict array, size_t count)
 	}
 	return 0;
 }
+
+void pawn_place(struct pawn *restrict pawn, float x, float y)
+{
+	pawn->position = (struct position){x, y};
+	pawn->path.count = 0;
+	pawn->moves.count = 0;
+}
+
+/*
+Precondition: At the beginning all pawns have targets set (the target could be a field or a pawn).
+A path is generated for each pawn. The movement is done in steps.
+Invariant: After each step there are no overlapping pawns.
+
+* path modification of pawns should take into account unit speed
+* ensure that overlapping enemies are always close enough at the previous step as to be able to fight
+
+* with the current logic, each colliding pawn needs to have a separate list of obstacles to which positions and paths of other pawns are added
+* in step planning, pawns transition from having uncertain next move to having certain next move; once their movement is certain, other pawns colliding with them must change path; because of this colliding pawns must be regenerated when more pawns' positions become certain
+
+step:
+	use the path and the target to calculate next position for each pawn
+
+	// A pawn can forsee what will happen in one step the way it is currently moving. If there will be a collision, the pawn will either decide to stay at its current position or choose an alternative path and determine whether it can take that path for the next step without colliding. If the alternative path cannot be taken, the pawn will also decide to stay.
+
+	while there are pawns colliding that are enemies or one of them is non-moving:
+		each pawn that would overlap with an enemy should stay at its current position and fight
+		each pawn that would overlap with a non-moving ally should change its movement path (or become non-moving)
+
+		// the other pawns should be checked recursively for the effects of this non-movement
+
+	// at this point all overlapping pawns are allies and are moving to a new position
+
+	while there are pawns colliding:
+		while there are pawns, each one of which overlaps only with slower pawns:
+			keep the path of those pawns that don't collide with pawns whose positions are already certain; make the rest stay at their current position and make them certain
+			modify the paths of the slower pawns while considering the faster pawns as obstacles
+
+		take each pawn that collides with a pawn with the same speed and no pawns with higher speed
+			choose a path for the pawn
+		for all pawn just taken that still collide with a pawn with the same speed
+			make it stay at its current position
+
+	for each pawn:
+		set pawn position
+		if the target is a pawn and it moved, update future path
+*/
+
+// Calculates the next position for each pawn.
+int movement_plan(struct battle *battle, struct adjacency_list *restrict graph[static PLAYERS_LIMIT], const struct obstacles *restrict obstacles[static PLAYERS_LIMIT])
+{
+	size_t i;
+	for(i = 0; i < battle->pawns_count; ++i)
+	{
+		struct pawn *pawn = battle->pawns + i;
+		struct position position_start = pawn->position;
+		double distance, distance_traveled;
+		double progress;
+
+		distance_traveled = (double)pawn->troop->unit->speed / MOVEMENT_STEPS;
+
+		if (!pawn->moves.count)
+		{
+path_find:
+			if (pawn->path.count)
+			{
+				int status = path_find(pawn, graph[pawn->troop->owner], obstacles[pawn->troop->owner]);
+				switch (status)
+				{
+				case ERROR_MEMORY:
+					return status;
+
+				case ERROR_MISSING:
+					pawn->path.count = 0;
+					break;
+				}
+			}
+		}
+
+		if (!pawn->moves.count)
+		{
+			pawn->position_next = position_start;
+			continue;
+		}
+
+		// Determine the move currently in progress and how much of the distance is already traveled.
+		distance = battlefield_distance(position_start, pawn->moves.data[0]);
+		while (distance_traveled >= distance)
+		{
+			position_start = pawn->moves.data[0];
+
+			// Remove the move just finished from the queue of moves.
+			pawn->moves.count -= 1;
+			if (pawn->moves.count)
+				memmove(pawn->moves.data, pawn->moves.data + 1, pawn->moves.count);
+			else
+				goto path_find;
+
+			distance_traveled -= distance;
+		}
+
+		// Calculate the next position of the pawn.
+		progress = distance_traveled / distance;
+		pawn->position_next.x = position_start.x * (1 - progress) + pawn->moves.data[0].x * progress;
+		pawn->position_next.y = position_start.y * (1 - progress) + pawn->moves.data[0].y * progress;
+	}
+
+	return 0;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /*
 Each field in the battlefield is divided into four squares. Each pawn occupies four squares.
@@ -143,13 +272,6 @@ finally:
 	return fields_count;
 }
 */
-
-void pawn_place(struct pawn *restrict pawn, float x, float y)
-{
-	pawn->position = (struct position){x, y};
-	pawn->path.count = 0;
-	pawn->moves.count = 0;
-}
 
 /*
 void movement_stay(struct pawn *restrict pawn)

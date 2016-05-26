@@ -146,6 +146,32 @@ static int play_battle(struct game *restrict game, struct region *restrict regio
 		battle_shoot(&battle, obstacles[PLAYER_NEUTRAL]); // treat all gates as closed for shooting
 		if (battlefield_clean(&battle)) round_activity_last = battle.round;
 
+/*
+Precondition: At the beginning all pawns have targets set (the target could be a field or a pawn).
+A path is generated for each pawn.
+The movement is done in steps.
+Invariant: After each step there are no overlapping pawns.
+
+* path modification of pawns should take into account unit speed
+* ensure that overlapping enemies are always close enough at the previous step as to be able to fight
+
+* with the current logic, each colliding pawn needs to have a separate list of obstacles to which positions and paths of other pawns are added
+* in step planning, pawns transition from having uncertain next move to having certain next move; once their movement is certain, other pawns colliding with them must change path; because of this colliding pawns must be regenerated when more pawns' positions become certain
+*/
+
+		unsigned step;
+		for(step = 0; step < MOVEMENT_STEPS; ++step)
+		{
+			if (movement_plan(battle, graph, obstacles) < 0)
+				abort(); // TODO
+
+			// TODO
+		}
+
+
+
+
+
 		///////////////
 
 

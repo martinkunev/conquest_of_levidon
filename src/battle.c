@@ -140,7 +140,7 @@ int battlefield_passable(const struct game *restrict game, const struct battlefi
 	if (!field->blockage)
 		return 1;
 	if (field->blockage == BLOCKAGE_OBSTACLE)
-		if (allies(game, player, field->owner) || field->pawns[0] || field->pawns[1] || field->pawns[2] || field->pawns[3])
+		if (allies(game, player, field->owner) || field->pawns[0])
 			return 1;
 	return 0;
 }
@@ -268,7 +268,7 @@ static void battlefield_init_assault(const struct game *restrict game, struct ba
 	// Place the garrison at the top part of the battlefield.
 	// . gate
 	// # wall
-	// O tower // TODO implement this
+	// O tower // TODO implement tower
 	// #     #
 	// .     .
 	// O     O
@@ -426,7 +426,12 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 		pawns[i].dead = 0;
 		pawns[i].hurt = 0;
 
-		pawns[i].action = 0;
+		// pawns[i].position will be initialized during formation
+
+		pawns[i].path = (struct array_moves){0};
+		pawns[i].moves = (struct array_moves){0};
+
+		pawns[i].action = ACTION_DEFAULT;
 
 		if (troop->location == LOCATION_GARRISON) pawns[i].startup = NEIGHBOR_GARRISON;
 		else pawns[i].startup = 0; // this will be initialized later

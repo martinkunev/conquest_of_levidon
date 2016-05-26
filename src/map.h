@@ -19,8 +19,6 @@
 
 #define REGIONS_LIMIT 256
 
-#define UNIT_SPEED_LIMIT 16
-
 #define PLAYER_NEUTRAL 0 /* player 0 is hard-coded as neutral */
 
 //#include "game.h"

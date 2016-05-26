@@ -26,7 +26,7 @@ for (@ARGV)
 $prefix .= '/';
 $prefix =~ s|/|\\/|g;
 
-my $cflags = ($debug ? '-O0 -gstabs -DDEBUG' : '-O2 -fstrict-aliasing');
+my $cflags = ($debug ? '-O0 -g -gstabs -DDEBUG' : '-O2 -fstrict-aliasing');
 my $strip = ($debug ? '' : '-s');
 
 unlink 'Makefile';

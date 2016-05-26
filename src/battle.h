@@ -50,7 +50,6 @@ struct pawn
 
 	struct array_moves path; // user-specified path
 	struct array_moves moves; // pathfinding-generated movement to the next path position
-	double moves_progress; // time already spent on the current move
 
 	enum {ACTION_DEFAULT, ACTION_FIGHT, ACTION_SHOOT, ACTION_ASSAULT} action;
 	union

@@ -17,6 +17,10 @@
  * along with Conquest of Levidon.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#define MOVEMENT_STEPS (2 * UNIT_SPEED_LIMIT / FIGHT_DISTANCE)
+
+struct pawn;
+
 struct array_moves
 {
 	size_t count;
@@ -31,11 +35,17 @@ static inline void array_moves_term(struct array_moves *restrict array)
 
 int array_moves_expand(struct array_moves *restrict array, size_t count);
 
-struct pawn;
+void pawn_place(struct pawn *restrict pawn, float x, float y);
+
+int movement_plan(struct battle *battle, struct adjacency_list *restrict graph[static PLAYERS_LIMIT], const struct obstacles *restrict obstacles[static PLAYERS_LIMIT]);
+
+
+
+
+
+
 
 size_t movement_location(const struct pawn *restrict pawn, double time_now, double *restrict real_x, double *restrict real_y);
-
-void pawn_place(struct pawn *restrict pawn, float x, float y);
 
 struct adjacency_list;
 void movement_stay(struct pawn *restrict pawn);
