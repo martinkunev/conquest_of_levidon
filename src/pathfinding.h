@@ -51,5 +51,4 @@ void visibility_graph_free(struct adjacency_list *graph);
 // Calculates the distance between origin and target and stores it in distance. On error, returns negative error code.
 int path_distance(struct position origin, struct position target, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles, double *restrict distance);
 
-// Finds path from the pawn's current final location to a target field. Appends the path to the pawn's movement queue.
-int path_find(struct pawn *restrict pawn, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles);
+int path_find(struct pawn *restrict pawn, struct position destination, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles);

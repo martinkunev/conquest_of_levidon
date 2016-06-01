@@ -593,9 +593,9 @@ finally:
 	return status;
 }
 
-// Finds path from the pawn's current position to the first target in pawn->path and stores it in pawn->moves.
+// Finds path from the pawn's current position to destination and stores it in pawn->moves.
 // On error, returns error code and pawn movement queue remains unchanged.
-int path_find(struct pawn *restrict pawn, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles)
+int path_find(struct pawn *restrict pawn, struct position destination, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles)
 {
 	ssize_t vertex_target, vertex_origin;
 	struct path_node *traverse_info;
@@ -604,7 +604,7 @@ int path_find(struct pawn *restrict pawn, struct adjacency_list *restrict graph,
 	struct path_node *node, *prev, *next;
 	size_t moves_count;
 
-	vertex_target = graph_insert(graph, obstacles, pawn->path.data[0]);
+	vertex_target = graph_insert(graph, obstacles, destination);
 	if (vertex_target < 0) return vertex_target;
 
 	vertex_origin = graph_insert(graph, obstacles, pawn->position);
@@ -651,11 +651,6 @@ int path_find(struct pawn *restrict pawn, struct adjacency_list *restrict graph,
 		pawn->moves.data[pawn->moves.count] = graph->list[node - traverse_info].position;
 		pawn->moves.count += 1;
 	}
-
-	// Remove the path just found from the queue of paths.
-	pawn->path.count -= 1;
-	if (pawn->path.count)
-		memmove(pawn->path.data, pawn->path.data + 1, pawn->path.count);
 
 	status = 0;
 

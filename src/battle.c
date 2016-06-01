@@ -243,9 +243,7 @@ static void battlefield_init_open(const struct game *restrict game, struct battl
 			struct battlefield *field = &battle->field[reachable[j].y][reachable[j].x];
 			if (!field->pawns[0])
 			{
-				pawn_place(battle->pawns + i, reachable[j].x, reachable[j].y);
-				field->pawns[0] = battle->pawns + i;
-
+				pawn_place(battle, battle->pawns + i, reachable[j].x, reachable[j].y);
 				break;
 			}
 		}
@@ -330,9 +328,7 @@ static void battlefield_init_assault(const struct game *restrict game, struct ba
 			struct battlefield *field = &battle->field[reachable[j].y][reachable[j].x];
 			if (!field->pawns[0])
 			{
-				pawn_place(pawn, reachable[j].x, reachable[j].y);
-				field->pawns[0] = pawn;
-
+				pawn_place(battle, pawn, reachable[j].x, reachable[j].y);
 				break;
 			}
 		}

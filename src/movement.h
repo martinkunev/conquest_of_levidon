@@ -35,10 +35,11 @@ static inline void array_moves_term(struct array_moves *restrict array)
 
 int array_moves_expand(struct array_moves *restrict array, size_t count);
 
-void pawn_place(struct pawn *restrict pawn, float x, float y);
+void pawn_place(struct battle *restrict battle, struct pawn *restrict pawn, float x, float y);
 
-int movement_plan(struct battle *battle, struct adjacency_list *restrict graph[static PLAYERS_LIMIT], const struct obstacles *restrict obstacles[static PLAYERS_LIMIT]);
+int movement_plan(struct battle *restrict battle, struct adjacency_list *restrict graph[static PLAYERS_LIMIT], const struct obstacles *restrict obstacles[static PLAYERS_LIMIT]);
 
+void movement_collisions_resolve(struct battle *restrict battle, struct adjacency_list *restrict graph[static PLAYERS_LIMIT], const struct obstacles *restrict obstacles[static PLAYERS_LIMIT]);
 
 
 

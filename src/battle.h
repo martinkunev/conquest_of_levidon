@@ -48,7 +48,7 @@ struct pawn
 	struct position position;
 	struct position position_next;
 
-	struct array_moves path; // user-specified path
+	struct array_moves path; // user-specified path of not yet reached positions
 	struct array_moves moves; // pathfinding-generated movement to the next path position
 
 	enum {ACTION_DEFAULT, ACTION_FIGHT, ACTION_SHOOT, ACTION_ASSAULT} action;
@@ -83,7 +83,7 @@ struct battle
 	int assault;
 	unsigned char defender;
 
-	struct battlefield field[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH];
+	struct battlefield field[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH]; // information about positions with the respective coordinates when truncated
 	size_t pawns_count;
 	struct pawn *pawns;
 

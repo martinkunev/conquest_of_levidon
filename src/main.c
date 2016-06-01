@@ -153,10 +153,37 @@ The movement is done in steps.
 Invariant: After each step there are no overlapping pawns.
 
 * path modification of pawns should take into account unit speed
-* ensure that overlapping enemies are always close enough at the previous step as to be able to fight
+* DONE ensure that overlapping enemies are always close enough at the previous step as to be able to fight
 
 * with the current logic, each colliding pawn needs to have a separate list of obstacles to which positions and paths of other pawns are added
 * in step planning, pawns transition from having uncertain next move to having certain next move; once their movement is certain, other pawns colliding with them must change path; because of this colliding pawns must be regenerated when more pawns' positions become certain
+
+step:
+	use the path and the target to calculate next position for each pawn
+
+	// A pawn can forsee what will happen in one step the way it is currently moving. If there will be a collision, the pawn will either decide to stay at its current position or choose an alternative path and determine whether it can take that path for the next step without colliding. If the alternative path cannot be taken, the pawn will also decide to stay.
+
+	while there are pawns colliding that are enemies or one of them is non-moving:
+		each pawn that would overlap with an enemy should stay at its current position and fight
+		each pawn that would overlap with a non-moving ally should change its movement path (or become non-moving)
+
+		// the other pawns should be checked recursively for the effects of this non-movement
+
+	// at this point all overlapping pawns are allies and are moving to a new position
+
+	while there are pawns colliding:
+		while there are pawns, each one of which overlaps only with slower pawns:
+			keep the path of those pawns that don't collide with pawns whose positions are already certain; make the rest stay at their current position and make them certain
+			modify the paths of the slower pawns while considering the faster pawns as obstacles
+
+		take each pawn that collides with a pawn with the same speed and no pawns with higher speed
+			choose a path for the pawn
+		for all pawn just taken that still collide with a pawn with the same speed
+			make it stay at its current position
+
+	for each pawn:
+		set pawn position
+		if the target is a pawn and it moved, update future path
 */
 
 		unsigned step;
@@ -164,6 +191,8 @@ Invariant: After each step there are no overlapping pawns.
 		{
 			if (movement_plan(battle, graph, obstacles) < 0)
 				abort(); // TODO
+
+			movement_collisions_resolve(battle, graph, obstacles);
 
 			// TODO
 		}

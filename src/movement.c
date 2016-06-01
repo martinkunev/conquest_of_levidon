@@ -54,12 +54,147 @@ int array_moves_expand(struct array_moves *restrict array, size_t count)
 	return 0;
 }
 
-void pawn_place(struct pawn *restrict pawn, float x, float y)
+static inline struct battlefield *battle_field(struct battle *restrict battle, struct position position)
 {
+	size_t x = position.x + 0.5, y = position.y + 0.5;
+	return &battle->field[y][x];
+}
+
+void pawn_place(struct battle *restrict battle, struct pawn *restrict pawn, float x, float y)
+{
+	size_t i;
+	struct battlefield *field;
+
 	pawn->position = (struct position){x, y};
 	pawn->path.count = 0;
 	pawn->moves.count = 0;
+
+	field = battle_field(battle, pawn->position);
+	for(i = 0; field->pawns[i]; ++i)
+		;
+	field->pawns[i] = pawn; // TODO what if i > 3
 }
+
+static void battlefield_pawn_move(struct battle *restrict battle, struct pawn *pawn)
+{
+	size_t i;
+	const size_t pawns_limit = sizeof(battle->field[0][0].pawns) / sizeof(battle->field[0][0].pawns);
+
+	struct battlefield *field_old = battle_field(battle, pawn->position);
+	struct battlefield *field_new = battle_field(battle, pawn->position_next);
+
+	// TODO due to collisions more than 4 pawns may try to go to a given field (the array is not large enough to remember them)
+
+	if (field_new == field_old)
+		return;
+
+	// Remove the pawn from the old battle field.
+	for(i = 0; (i < pawns_limit) && field_old->pawns[i]; ++i)
+	{
+		if (field_old->pawns[i] == pawn)
+		{
+			if (++i < pawns_limit)
+				memmove(field_old->pawns + i - 1, field_old->pawns + i, pawns_limit - i);
+			field_old->pawns[pawns_limit - 1] = 0;
+		}
+	}
+
+	// Add the pawn to the new battle field.
+	for(i = 0; field_new->pawns[i]; ++i)
+		;
+	field_new->pawns[i] = pawn;
+}
+
+static inline int position_diff(struct position a, struct position b)
+{
+	return ((a.x != b.x) || (a.y != b.y));
+}
+
+// Calculates the next position for each pawn.
+int movement_plan(struct battle *restrict battle, struct adjacency_list *restrict graph[static PLAYERS_LIMIT], const struct obstacles *restrict obstacles[static PLAYERS_LIMIT])
+{
+	size_t i;
+
+	for(i = 0; i < battle->pawns_count; ++i)
+	{
+		struct pawn *pawn = battle->pawns + i;
+		struct position position = pawn->position;
+		double distance, distance_covered;
+		double progress;
+
+		// assert(pawn->position == pawn->position_next);
+
+		distance_covered = (double)pawn->troop->unit->speed / MOVEMENT_STEPS;
+
+		// Delete moves if they represent fighting target (the target may have moved).
+		// TODO optimization: only do this if the target moved
+		if (!pawn->path.count && (pawn->action == ACTION_FIGHT))
+			pawn->moves.count = 0;
+
+		// Make sure there are precalculated moves for the pawn.
+		if (!pawn->moves.count)
+		{
+			struct position destination;
+
+path_find_next:
+			// Determine the next destination.
+			if (pawn->path.count)
+				destination = pawn->path.data[0];
+			else if ((pawn->action == ACTION_FIGHT) && position_diff(position, pawn->target.pawn->position))
+				destination = pawn->target.pawn->position;
+			else
+			{
+				pawn->position_next = position;
+				battlefield_pawn_move(battle, pawn);
+				continue; // nothing to do for this pawn
+			}
+
+			switch (path_find(pawn, destination, graph[pawn->troop->owner], obstacles[pawn->troop->owner]))
+			{
+			case ERROR_MEMORY:
+				return ERROR_MEMORY;
+
+			case ERROR_MISSING:
+				pawn->position_next = position;
+				battlefield_pawn_move(battle, pawn);
+				continue; // cannot reach destination at this time
+			}
+		}
+
+		// Determine which is the move in progress and how much of the distance is covered.
+		while (1)
+		{
+			distance = battlefield_distance(position, pawn->moves.data[0]);
+			if (distance_covered < distance)
+				break;
+
+			distance_covered -= distance;
+			position = pawn->moves.data[0];
+
+			// Remove the position just reached from the queue of moves.
+			pawn->moves.count -= 1;
+			if (pawn->moves.count) memmove(pawn->moves.data, pawn->moves.data + 1, pawn->moves.count);
+			else
+			{
+				// Remove the position just reached from the queue of paths.
+				pawn->path.count -= 1;
+				if (pawn->path.count) memmove(pawn->path.data, pawn->path.data + 1, pawn->path.count);
+
+				goto path_find_next;
+			}
+		}
+
+		// Calculate the next position of the pawn.
+		progress = distance_covered / distance;
+		pawn->position_next.x = position.x * (1 - progress) + pawn->moves.data[0].x * progress;
+		pawn->position_next.y = position.y * (1 - progress) + pawn->moves.data[0].y * progress;
+		battlefield_pawn_move(battle, pawn);
+	}
+
+	return 0;
+}
+
+// TODO set position_next to position when the pawn's position is certain; check whether a pawn's position is certain with pawn->position == pawn->position_next
 
 /*
 Precondition: At the beginning all pawns have targets set (the target could be a field or a pawn).
@@ -100,69 +235,10 @@ step:
 		if the target is a pawn and it moved, update future path
 */
 
-// Calculates the next position for each pawn.
-int movement_plan(struct battle *battle, struct adjacency_list *restrict graph[static PLAYERS_LIMIT], const struct obstacles *restrict obstacles[static PLAYERS_LIMIT])
+void movement_collisions_resolve(struct battle *restrict battle, struct adjacency_list *restrict graph[static PLAYERS_LIMIT], const struct obstacles *restrict obstacles[static PLAYERS_LIMIT])
 {
-	size_t i;
-	for(i = 0; i < battle->pawns_count; ++i)
-	{
-		struct pawn *pawn = battle->pawns + i;
-		struct position position_start = pawn->position;
-		double distance, distance_traveled;
-		double progress;
-
-		distance_traveled = (double)pawn->troop->unit->speed / MOVEMENT_STEPS;
-
-		if (!pawn->moves.count)
-		{
-path_find:
-			if (pawn->path.count)
-			{
-				int status = path_find(pawn, graph[pawn->troop->owner], obstacles[pawn->troop->owner]);
-				switch (status)
-				{
-				case ERROR_MEMORY:
-					return status;
-
-				case ERROR_MISSING:
-					pawn->path.count = 0;
-					break;
-				}
-			}
-		}
-
-		if (!pawn->moves.count)
-		{
-			pawn->position_next = position_start;
-			continue;
-		}
-
-		// Determine the move currently in progress and how much of the distance is already traveled.
-		distance = battlefield_distance(position_start, pawn->moves.data[0]);
-		while (distance_traveled >= distance)
-		{
-			position_start = pawn->moves.data[0];
-
-			// Remove the move just finished from the queue of moves.
-			pawn->moves.count -= 1;
-			if (pawn->moves.count)
-				memmove(pawn->moves.data, pawn->moves.data + 1, pawn->moves.count);
-			else
-				goto path_find;
-
-			distance_traveled -= distance;
-		}
-
-		// Calculate the next position of the pawn.
-		progress = distance_traveled / distance;
-		pawn->position_next.x = position_start.x * (1 - progress) + pawn->moves.data[0].x * progress;
-		pawn->position_next.y = position_start.y * (1 - progress) + pawn->moves.data[0].y * progress;
-	}
-
-	return 0;
+	// TODO find all collisions
 }
-
-
 
 
 
