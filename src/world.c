@@ -27,6 +27,8 @@
 
 #include "errors.h"
 #include "json.h"
+#include "draw.h"
+#include "game.h"
 #include "map.h"
 #include "world.h"
 

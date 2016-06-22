@@ -137,6 +137,8 @@ int battlefield_neighbors(struct point a, struct point b)
 
 int battlefield_passable(const struct game *restrict game, const struct battlefield *restrict field, unsigned player)
 {
+	// TODO review this function; field->pawns[0] no longer exists
+
 	if (!field->blockage)
 		return 1;
 	if (field->blockage == BLOCKAGE_OBSTACLE)

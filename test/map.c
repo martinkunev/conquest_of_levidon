@@ -19,9 +19,17 @@
 
 #include <stdarg.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <setjmp.h>
 #include <cmocka.h>
 
+// TODO remove this
+struct point
+{
+	int x, y;
+};
+
+#include <game.h>
 #include <map.h>
 
 void __wrap_free(void *ptr)

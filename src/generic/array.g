@@ -81,7 +81,8 @@ STATIC int NAME(_expand)(struct array_name *restrict array, size_t count)
 			capacity *= 2;
 
 		buffer = realloc(array->data, capacity * sizeof(*array->data));
-		if (!buffer) return -1;
+		if (!buffer)
+			return -1;
 		array->data = buffer;
 		array->capacity = capacity;
 	}

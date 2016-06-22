@@ -11,6 +11,37 @@ editor: editor.o world.o map.o resources.o interface.o display_common.o input.o 
 units: units.o world.o map.o combat.o battle.o movement.o pathfinding.o resources.o computer.o format.o json.o generic/array_json.o
 	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $@
 
+
+
+
+DEPDIR:=.d
+#DEPFLAGS=-MT $@ -MMD -MP -MF $(DEPDIR)/$*.Td
+DEPFLAGS=-MMD -MP -MF $(DEPDIR)/$*.Td
+
+$(shell mkdir -p $(DEPDIR) > /dev/null)
+
+%.o : %.c $(DEPDIR)/%.d
+	$(CC) $(DEPFLAGS) $(CFLAGS) -c $(OUTPUT_OPTION) $<
+	mv -f $(DEPDIR)/$*.Td $(DEPDIR)/$*.d
+
+$(DEPDIR)/%.d: ;
+.PRECIOUS: $(DEPDIR)/%.d
+
+
+
+
+
+
+
+
+
 clean:
 	rm -f *.o
 	rm -f conquest_of_levidon editor
+
+
+
+
+
+
+-include $(patsubst %,$(DEPDIR)/%.d,$(basename $(SRCS)))

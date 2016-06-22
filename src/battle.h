@@ -71,7 +71,8 @@ struct battlefield
 
 	signed char owner; // for BLOCKAGE_OBSTACLE and BLOCKAGE_TOWER
 	unsigned strength; // for BLOCKAGE_OBSTACLE and BLOCKAGE_TOWER
-	struct pawn *pawns[4]; // for BLOCKAGE_NONE and BLOCKAGE_TOWER
+//	struct pawn *pawns[4]; // for BLOCKAGE_NONE and BLOCKAGE_TOWER
+	struct pawn *pawn; // for BLOCKAGE_TOWER
 	enum armor armor; // for BLOCKAGE_OBSTACLE and BLOCKAGE_TOWER
 
 	// TODO for BLOCKAGE_TOWER there should be specified a field for descending

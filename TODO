@@ -2,6 +2,7 @@ H	levidon map
 H	computer doesn't attack regions
 H	make battle AI a little more reasonable
 H	battle mechanics fixes
+H	bug: after battle surrender the surrendering units don't return to their original region
 M	editor: position region neighbors properly
 M	rewrite battle AI
 M	better food mechanics; food should not be accumulated indefinately
