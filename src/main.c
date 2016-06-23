@@ -17,15 +17,19 @@
  * along with Conquest of Levidon.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <stdint.h>
 #include <stdlib.h>
 #include <time.h>
 
 #include "errors.h"
+#include "game.h"
+#include "draw.h"
+#include "resources.h"
 #include "map.h"
 #include "world.h"
 #include "pathfinding.h"
-#include "battle.h"
 #include "movement.h"
+#include "battle.h"
 #include "combat.h"
 #include "input_menu.h"
 #include "input_map.h"
@@ -62,10 +66,8 @@ static int play_battle(struct game *restrict game, struct region *restrict regio
 {
 	unsigned player, alliance;
 
-	int status;
-	int winner = -1;
-
 	unsigned round_activity_last;
+	int winner = -1;
 
 	struct battle battle;
 
@@ -103,9 +105,10 @@ static int play_battle(struct game *restrict game, struct region *restrict regio
 		struct adjacency_list *graph[PLAYERS_LIMIT] = {0};
 		struct obstacles *obstacles[PLAYERS_LIMIT] = {0};
 
+		unsigned step;
 		size_t i;
 
-		obstacles[PLAYER_NEUTRAL] = path_obstacles(game, &battle, PLAYER_NEUTRAL);
+		obstacles[PLAYER_NEUTRAL] = path_obstacles_alloc(game, &battle, PLAYER_NEUTRAL);
 		if (!obstacles[PLAYER_NEUTRAL]) abort();
 
 		// Ask each player to give commands to their pawns.
@@ -117,7 +120,7 @@ static int play_battle(struct game *restrict game, struct region *restrict regio
 
 			if (!obstacles[alliance])
 			{
-				obstacles[alliance] = path_obstacles(game, &battle, player);
+				obstacles[alliance] = path_obstacles_alloc(game, &battle, player);
 				if (!obstacles[alliance]) abort();
 				graph[alliance] = visibility_graph_build(&battle, obstacles[alliance], 2); // 2 vertices for origin and target
 				if (!graph[alliance]) abort();
@@ -142,101 +145,29 @@ static int play_battle(struct game *restrict game, struct region *restrict regio
 
 		// TODO ?Deal damage to each pawn escaping from enemy pawns.
 
+		// Deal damage from shooters.
 		input_animation_shoot(game, &battle); // TODO this should be part of player-specific input
 		battle_shoot(&battle, obstacles[PLAYER_NEUTRAL]); // treat all gates as closed for shooting
 		if (battlefield_clean(&battle)) round_activity_last = battle.round;
 
-/*
-Precondition: At the beginning all pawns have targets set (the target could be a field or a pawn).
-A path is generated for each pawn.
-The movement is done in steps.
-Invariant: After each step there are no overlapping pawns.
-
-* path modification of pawns should take into account unit speed
-* DONE ensure that overlapping enemies are always close enough at the previous step as to be able to fight
-
-* with the current logic, each colliding pawn needs to have a separate list of obstacles to which positions and paths of other pawns are added
-* in step planning, pawns transition from having uncertain next move to having certain next move; once their movement is certain, other pawns colliding with them must change path; because of this colliding pawns must be regenerated when more pawns' positions become certain
-
-step:
-	use the path and the target to calculate next position for each pawn
-
-	// A pawn can forsee what will happen in one step the way it is currently moving. If there will be a collision, the pawn will either decide to stay at its current position or choose an alternative path and determine whether it can take that path for the next step without colliding. If the alternative path cannot be taken, the pawn will also decide to stay.
-
-	while there are pawns colliding that are enemies or one of them is non-moving:
-		each pawn that would overlap with an enemy should stay at its current position and fight
-		each pawn that would overlap with a non-moving ally should change its movement path (or become non-moving)
-
-		// the other pawns should be checked recursively for the effects of this non-movement
-
-	// at this point all overlapping pawns are allies and are moving to a new position
-
-	while there are pawns colliding:
-		while there are pawns, each one of which overlaps only with slower pawns:
-			keep the path of those pawns that don't collide with pawns whose positions are already certain; make the rest stay at their current position and make them certain
-			modify the paths of the slower pawns while considering the faster pawns as obstacles
-
-		take each pawn that collides with a pawn with the same speed and no pawns with higher speed
-			choose a path for the pawn
-		for all pawn just taken that still collide with a pawn with the same speed
-			make it stay at its current position
-
-	for each pawn:
-		set pawn position
-		if the target is a pawn and it moved, update future path
-*/
-
-		unsigned step;
+		// Perform pawn movement in steps.
+		// Invariant: Before and after each step there are no overlapping pawns.
 		for(step = 0; step < MOVEMENT_STEPS; ++step)
 		{
-			if (movement_plan(battle, graph, obstacles) < 0)
+			// Plan the movement of each pawn.
+			if (movement_plan(&battle, graph, obstacles) < 0)
 				abort(); // TODO
 
-			movement_collisions_resolve(battle, graph, obstacles);
+			// Detect collisions caused by moving pawns and resolve them by modifying pawn movement.
+			// Set final position of each pawn.
+			if (movement_collisions_resolve(game, &battle, graph, obstacles) < 0)
+				abort(); // TODO
 
-			// TODO
+			// TODO how to implement movement animation?
+			// input_animation(game, &battle); // TODO this should be part of player-specific input
 		}
 
-
-
-
-
-		///////////////
-
-
-
-		for(i = 0; i < battle.pawns_count; ++i)
-		{
-			if (!battle.pawns[i].count) continue;
-			alliance = game->players[battle.pawns[i].troop->owner].alliance;
-			status = movement_attack_plan(battle.pawns + i, graph[alliance], obstacles[alliance]);
-			if (status < 0) abort(); // TODO
-		}
-
-		battlefield_movement_plan(game->players, game->players_count, battle.field, battle.pawns, battle.pawns_count);
-
-		input_animation(game, &battle); // TODO this should be part of player-specific input
-
-		// TODO ugly; there should be a way to unify these
-		for(i = 0; i < battle.pawns_count; ++i)
-		{
-			if (!battle.pawns[i].count) continue;
-			alliance = game->players[battle.pawns[i].troop->owner].alliance;
-			status = battlefield_movement_perform(&battle, battle.pawns + i, graph[alliance], obstacles[alliance]);
-			if (status < 0) abort(); // TODO
-		}
-		for(i = 0; i < battle.pawns_count; ++i)
-		{
-			if (!battle.pawns[i].count) continue;
-			alliance = game->players[battle.pawns[i].troop->owner].alliance;
-			status = battlefield_movement_attack(&battle, battle.pawns + i, graph[alliance], obstacles[alliance]);
-			if (status < 0) abort(); // TODO
-		}
-
-
-
-
-		///////////////
+		// TODO update pawn action and target if something changed
 
 		// TODO fight animation // TODO this should be part of player-specific input
 		battle_fight(game, &battle);
@@ -251,6 +182,8 @@ step:
 		// Cancel the battle if nothing is killed/destroyed for a certain number of rounds.
 		if ((battle.round - round_activity_last) >= ROUNDS_STALE_LIMIT)
 		{
+			// TODO revise this; I remember that there was a bug here
+
 			// Attacking troops retreat to the region they came from.
 			for(i = 0; i < battle.pawns_count; ++i)
 			{
@@ -259,11 +192,11 @@ step:
 				if (!battle.pawns[i].count) continue;
 
 				troop = battle.pawns[i].troop;
-				if (game->players[troop->owner].alliance != battle->defender)
+				if (game->players[troop->owner].alliance != battle.defender)
 					troop->move = troop->location;
 			}
 
-			winner = battle->defender;
+			winner = battle.defender;
 			break;
 		}
 

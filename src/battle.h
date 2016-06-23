@@ -31,11 +31,6 @@
 #define NEIGHBOR_SELF NEIGHBORS_LIMIT
 #define NEIGHBOR_GARRISON NEIGHBORS_LIMIT
 
-struct point
-{
-	int x, y;
-};
-
 struct battlefield;
 
 struct pawn
@@ -45,8 +40,8 @@ struct pawn
 	unsigned dead; // TODO is this necessary?
 	unsigned hurt;
 
-	struct position position;
-	struct position position_next;
+	struct position position; // current pawn position
+	struct position position_next; // expected pawn position at the next step
 
 	struct array_moves path; // user-specified path of not yet reached positions
 	struct array_moves moves; // pathfinding-generated movement to the next path position

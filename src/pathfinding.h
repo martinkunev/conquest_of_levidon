@@ -1,3 +1,5 @@
+#include <math.h>
+
 #define PAWN_RADIUS 0.5
 
 struct game;
@@ -40,9 +42,9 @@ static inline double battlefield_distance(struct position a, struct position b)
 	return sqrt(dx * dx + dy * dy);
 }
 
-static inline int pawns_collide(const struct pawn *restrict a, const struct pawn *restrict b)
+static inline int pawns_collide(struct position a, struct position b)
 {
-	return battlefield_distance(a->position, b->position) < (PAWN_RADIUS * 2);
+	return battlefield_distance(a, b) < (PAWN_RADIUS * 2);
 }
 
 struct obstacles *path_obstacles_alloc(const struct game *restrict game, const struct battle *restrict battle, unsigned char player);

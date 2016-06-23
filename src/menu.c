@@ -29,8 +29,7 @@
 #include "errors.h"
 #include "base.h"
 #include "format.h"
-#include "json.h"
-#include "map.h"
+#include "game.h"
 #include "world.h"
 #include "menu.h"
 
