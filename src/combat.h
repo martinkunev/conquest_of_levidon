@@ -17,7 +17,8 @@
  * along with Conquest of Levidon.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define FIGHT_DISTANCE 0.25
+#define DISTANCE_MELEE 0.25
+#define DISTANCE_RANGE (PAWN_RADIUS * 2)
 
 double damage_expected(const struct pawn *restrict fighter, double troops_count, const struct pawn *restrict victim);
 double damage_expected_ranged(const struct pawn *restrict shooter, double troops_count, const struct pawn *restrict victim);

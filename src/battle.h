@@ -50,7 +50,8 @@ struct pawn
 	union
 	{
 		struct pawn *pawn; // for ACTION_FIGHT
-		struct battlefield *field; // for ACTION_SHOOT and ACTION_ASSAULT
+		struct position position; // for ACTION_SHOOT
+		struct battlefield *field; // for ACTION_ASSAULT
 	} target;
 
 	unsigned startup; // index of startup location on the battlefield
@@ -66,9 +67,8 @@ struct battlefield
 
 	signed char owner; // for BLOCKAGE_OBSTACLE and BLOCKAGE_TOWER
 	unsigned strength; // for BLOCKAGE_OBSTACLE and BLOCKAGE_TOWER
-//	struct pawn *pawns[4]; // for BLOCKAGE_NONE and BLOCKAGE_TOWER
-	struct pawn *pawn; // for BLOCKAGE_TOWER
 	enum armor armor; // for BLOCKAGE_OBSTACLE and BLOCKAGE_TOWER
+	struct pawn *pawn; // during formation and for BLOCKAGE_TOWER
 
 	// TODO for BLOCKAGE_TOWER there should be specified a field for descending
 };
@@ -98,10 +98,16 @@ extern const double formation_position_attack[NEIGHBORS_LIMIT][2];
 extern const double formation_position_garrison[2];
 extern const double formation_position_assault[ASSAULT_LIMIT][2];
 
-size_t formation_reachable_open(const struct game *restrict game, const struct battle *restrict battle, const struct pawn *restrict pawn, struct point reachable[REACHABLE_LIMIT]);
-size_t formation_reachable_assault(const struct game *restrict game, const struct battle *restrict battle, const struct pawn *restrict pawn, struct point reachable[REACHABLE_LIMIT]);
+static inline struct battlefield *battle_field(struct battle *restrict battle, struct position position)
+{
+	size_t x = position.x + 0.5, y = position.y + 0.5;
+	return &battle->field[y][x];
+}
 
-int battlefield_neighbors(struct point a, struct point b);
+size_t formation_reachable_open(const struct game *restrict game, const struct battle *restrict battle, const struct pawn *restrict pawn, struct position reachable[REACHABLE_LIMIT]);
+size_t formation_reachable_assault(const struct game *restrict game, const struct battle *restrict battle, const struct pawn *restrict pawn, struct position reachable[REACHABLE_LIMIT]);
+
+//int battlefield_neighbors(struct point a, struct point b);
 
 // Returns whether a pawn owned by the given player can pass through the field.
 int battlefield_passable(const struct game *restrict game, const struct battlefield *restrict field, unsigned player);

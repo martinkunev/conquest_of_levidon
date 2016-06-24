@@ -28,6 +28,7 @@
 #include "combat.h"
 #include "movement.h"
 #include "battle.h"
+#include "draw.h"
 #include "map.h"
 
 #define array_name array_pawns
@@ -67,30 +68,25 @@ int array_moves_expand(struct array_moves *restrict array, size_t count)
 	return 0;
 }
 
-static inline struct battlefield *battle_field(struct battle *restrict battle, struct position position)
+void pawn_place(struct battle *restrict battle, struct pawn *restrict pawn, struct position position)
 {
-	size_t x = position.x + 0.5, y = position.y + 0.5;
-	return &battle->field[y][x];
-}
-
-void pawn_place(struct battle *restrict battle, struct pawn *restrict pawn, float x, float y)
-{
-	size_t i;
+	//size_t i;
 	struct battlefield *field;
 
-	pawn->position = (struct position){x, y};
+	pawn->position = position;
 	pawn->path.count = 0;
 	pawn->moves.count = 0;
 
 	field = battle_field(battle, pawn->position);
-	for(i = 0; field->pawns[i]; ++i)
+	field->pawn = pawn;
+	/*for(i = 0; field->pawns[i]; ++i)
 		;
-	field->pawns[i] = pawn; // TODO what if i > 3
+	field->pawns[i] = pawn; // TODO what if i > 3 // TODO this member no longer exists*/
 }
 
 static void battlefield_pawn_move(struct battle *restrict battle, struct pawn *pawn)
 {
-	size_t i;
+	/*size_t i;
 	const size_t pawns_limit = sizeof(battle->field[0][0].pawns) / sizeof(battle->field[0][0].pawns);
 
 	struct battlefield *field_old = battle_field(battle, pawn->position);
@@ -115,7 +111,7 @@ static void battlefield_pawn_move(struct battle *restrict battle, struct pawn *p
 	// Add the pawn to the new battle field.
 	for(i = 0; field_new->pawns[i]; ++i)
 		;
-	field_new->pawns[i] = pawn;
+	field_new->pawns[i] = pawn;*/
 }
 
 static inline int position_diff(struct position a, struct position b)
@@ -124,7 +120,7 @@ static inline int position_diff(struct position a, struct position b)
 }
 
 // Calculates the expected position of each pawn at the next step.
-int movement_plan(struct battle *restrict battle, struct adjacency_list *restrict graph[static PLAYERS_LIMIT], const struct obstacles *restrict obstacles[static PLAYERS_LIMIT])
+int movement_plan(struct battle *restrict battle, struct adjacency_list *restrict graph[static PLAYERS_LIMIT], struct obstacles *restrict obstacles[static PLAYERS_LIMIT])
 {
 	size_t i;
 
@@ -231,11 +227,11 @@ static int collisions_detect(const struct game *restrict game, const struct batt
 			{
 				if (array_pawns_expand(&collisions[i].pawns, collisions[i].pawns.count + 1) < 0)
 					return ERROR_MEMORY;
-				collisions[i].pawns.data[collisions[i].count] = battle->pawns + j;
+				collisions[i].pawns.data[collisions[i].pawns.count] = battle->pawns + j;
 				collisions[i].pawns.count += 1;
 
 				// Mark for stopping a pawn that collides with an enemy.
-				if (!allies(game, battle->pawns[i].troop.owner, battle->pawns[j].troop.owner))
+				if (!allies(game, battle->pawns[i].troop->owner, battle->pawns[j].troop->owner))
 				{
 					enemies_colliding = 1;
 					collisions[i].movement_stop = 1;
@@ -247,33 +243,38 @@ static int collisions_detect(const struct game *restrict game, const struct batt
 	return enemies_colliding;
 }
 
+static inline int position_eq(struct position a, struct position b)
+{
+	return ((a.x == b.x) && (a.y == b.y));
+}
+
 // Find the moving colliding pawns that are faster than the moving pawns they are colliding with.
 static int collisions_fastest(struct battle *restrict battle, const struct collision *restrict collisions, struct array_pawns *restrict fastest)
 {
 	size_t i, j;
 
-	fastest = (struct array_pawns){0};
+	*fastest = (struct array_pawns){0};
 
 	for(i = 0; i < battle->pawns_count; ++i)
 	{
-		unsigned speed = battle->pawns[i].troop->unit.speed;
+		unsigned speed = battle->pawns[i].troop->unit->speed;
 
-		if ((battle->pawns[i].position == battle->pawns[i].position_next) || !collisions[i].pawns.count)
+		if (position_eq(battle->pawns[i].position, battle->pawns[i].position_next) || !collisions[i].pawns.count)
 			continue;
 
 		for(j = 0; j < collisions[i].pawns.count; ++j)
 		{
 			const struct pawn *pawn_colliding = collisions[i].pawns.data[j];
 
-			if (pawn_colliding->position == pawn_colliding->position_next) // the pawn collides with a stationary pawn
+			if (position_eq(pawn_colliding->position, pawn_colliding->position_next)) // the pawn collides with a stationary pawn
 				goto skip; // TODO add stationary pawn as an obstacle; add graph vertices
-			if (pawn_colliding->troop->unit.speed >= speed) // the pawn collides with a faster pawn
+			if (pawn_colliding->troop->unit->speed >= speed) // the pawn collides with a faster pawn
 				goto skip;
 		}
-		if (array_pawns_expand(&fastest, fastest.count + 1) < 0)
+		if (array_pawns_expand(fastest, fastest->count + 1) < 0)
 			return ERROR_MEMORY;
-		fastest.data[fastest.count] = battle->pawns + i;
-		fastest.count += 1;
+		fastest->data[fastest->count] = battle->pawns + i;
+		fastest->count += 1;
 		continue;
 skip:
 		// For the moment make the colliding pawns stay at their current location. TODO remove this line and handle this in the calling function
@@ -283,7 +284,7 @@ skip:
 	return 0;
 }
 
-int movement_collisions_resolve(const struct game *restrict game, struct battle *restrict battle, struct adjacency_list *restrict graph[static PLAYERS_LIMIT], const struct obstacles *restrict obstacles[static PLAYERS_LIMIT])
+int movement_collisions_resolve(const struct game *restrict game, struct battle *restrict battle, struct adjacency_list *restrict graph[static PLAYERS_LIMIT], struct obstacles *restrict obstacles[static PLAYERS_LIMIT])
 {
 	struct collision *restrict collisions;
 	struct array_pawns fastest;
@@ -336,7 +337,7 @@ int movement_collisions_resolve(const struct game *restrict game, struct battle 
 	// Each pawn that would collide with a non-moving ally should change its movement path to avoid the collision.
 	if (status = collisions_fastest(battle, collisions, &fastest))
 	{
-		array_pawns_free(&fastest);
+		array_pawns_term(&fastest);
 		free(collisions);
 		return status;
 	}
@@ -354,7 +355,7 @@ int movement_collisions_resolve(const struct game *restrict game, struct battle 
 			make it stay at its current position
 	*/
 
-	array_pawns_free(&fastest);
+	array_pawns_term(&fastest);
 
 	free(collisions);
 

@@ -18,7 +18,7 @@
  */
 
 // MOVEMENT_STEPS is chosen as to ensure that enemies are close enough to fight on the step before they collide.
-#define MOVEMENT_STEPS (2 * UNIT_SPEED_LIMIT / FIGHT_DISTANCE)
+#define MOVEMENT_STEPS (2 * UNIT_SPEED_LIMIT / DISTANCE_MELEE)
 
 struct pawn;
 // struct adjacency_list;
@@ -37,7 +37,7 @@ static inline void array_moves_term(struct array_moves *restrict array)
 
 int array_moves_expand(struct array_moves *restrict array, size_t count);
 
-void pawn_place(struct battle *restrict battle, struct pawn *restrict pawn, float x, float y);
+void pawn_place(struct battle *restrict battle, struct pawn *restrict pawn, struct position position);
 
 int movement_plan(struct battle *restrict battle, struct adjacency_list *restrict graph[static PLAYERS_LIMIT], struct obstacles *restrict obstacles[static PLAYERS_LIMIT]);
 int movement_collisions_resolve(const struct game *restrict game, struct battle *restrict battle, struct adjacency_list *restrict graph[static PLAYERS_LIMIT], struct obstacles *restrict obstacles[static PLAYERS_LIMIT]);
