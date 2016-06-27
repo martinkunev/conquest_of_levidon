@@ -291,6 +291,19 @@ reachable:
 	return INPUT_IGNORE;
 }
 
+static int input_ignore(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
+{
+	struct state_animation *state = argument;
+
+	// TODO finish animation when there is nothing left to show
+
+	// TODO there should be no input required to finish the animation
+	if (animation_progress(state->start, ANIMATION_DURATION) >= 1)
+		return INPUT_FINISH;
+
+	return INPUT_IGNORE;
+}
+
 int input_formation(const struct game *restrict game, struct battle *restrict battle, unsigned char player)
 {
 	if_set(battle); // TODO remove this
@@ -370,4 +383,36 @@ int input_battle(const struct game *restrict game, struct battle *restrict battl
 	state.graph = graph;
 
 	return input_local(areas, sizeof(areas) / sizeof(*areas), if_battle, game, &state);
+}
+
+int input_animation(const struct game *restrict game, const struct battle *restrict battle, struct position (*movements)[MOVEMENT_STEPS + 1])
+{
+	struct area areas[] = {
+		{
+			.left = 0,
+			.right = SCREEN_WIDTH - 1,
+			.top = 0,
+			.bottom = SCREEN_HEIGHT - 1,
+			.callback = input_ignore
+		},
+	};
+
+	struct state_animation state = {0};
+
+	// Mark each field that is traversed by a pawn (used to display gates as open).
+	size_t i, j;
+	for(i = 0; i < battle->pawns_count; ++i)
+	{
+		for(j = 0; j <= MOVEMENT_STEPS; ++j)
+		{
+			struct position p = movements[i][j];
+			state.traversed[(size_t)(p.x + 0.5)][(size_t)(p.y + 0.5)] = 1;
+		}
+	}
+
+	state.battle = battle;
+
+	gettimeofday(&state.start, 0);
+
+	return input_local(areas, sizeof(areas) / sizeof(*areas), if_animation, game, &state);
 }

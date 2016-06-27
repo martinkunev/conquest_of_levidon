@@ -71,7 +71,16 @@ static int play_battle(struct game *restrict game, struct region *restrict regio
 
 	struct battle battle;
 
+	struct position (*movements)[MOVEMENT_STEPS + 1];
+
 	if (battlefield_init(game, &battle, region, assault) < 0) return -1;
+
+	movements = malloc(battle.pawns_count * sizeof(*movements));
+	if (!movements)
+	{
+		battlefield_term(game, &battle);
+		return ERROR_MEMORY;
+	}
 
 	battle.round = 0;
 
@@ -154,6 +163,10 @@ static int play_battle(struct game *restrict game, struct region *restrict regio
 		// Invariant: Before and after each step there are no overlapping pawns.
 		for(step = 0; step < MOVEMENT_STEPS; ++step)
 		{
+			// Remember the position of each pawn because it is necessary for the movement animation.
+			for(i = 0; i < battle.pawns_count; ++i)
+				movements[i][step] = battle.pawns[i].position;
+
 			// Plan the movement of each pawn.
 			if (movement_plan(&battle, graph, obstacles) < 0)
 				abort(); // TODO
@@ -162,12 +175,13 @@ static int play_battle(struct game *restrict game, struct region *restrict regio
 			// Set final position of each pawn.
 			if (movement_collisions_resolve(game, &battle, graph, obstacles) < 0)
 				abort(); // TODO
-
-			// TODO how to implement movement animation?
-			// input_animation(game, &battle); // TODO this should be part of player-specific input
 		}
 
-		// TODO update pawn action and target if something changed
+		// Remember the final position of each pawn because it is necessary for the movement animation.
+		for(i = 0; i < battle.pawns_count; ++i)
+			movements[i][step] = battle.pawns[i].position;
+
+		input_animation(game, &battle, movements); // TODO this should be part of player-specific input
 
 		// TODO fight animation // TODO this should be part of player-specific input
 		battle_fight(game, &battle);
@@ -206,6 +220,7 @@ static int play_battle(struct game *restrict game, struct region *restrict regio
 	input_report_battle(game, &battle); // TODO this is player-specific
 
 finally:
+	free(movements);
 	battlefield_term(game, &battle);
 	return winner;
 }

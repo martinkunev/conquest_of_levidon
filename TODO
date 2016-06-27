@@ -21,6 +21,7 @@ M	keyboard support in various places in the interface; mouse support in various 
 M	don't allow pawns to attack their own walls (currently only gates are not attacked)
 M	don't allow attacking if the attacker cannot do damage to the defender (due to weapon and armor type)
 M	use a separate thread to calculate computer turns while the local player is choosing what to play
+M	better support for hotseat (show animations to each player, warn before changing current player and showing their map, etc.)
 L	limited number of shots
 L	assault garrison destruction and repair
 L	armory, swordsman, crossbowman, heavy cavalry, horse archer

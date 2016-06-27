@@ -18,7 +18,7 @@
  */
 
 // MOVEMENT_STEPS is chosen as to ensure that enemies are close enough to fight on the step before they collide.
-#define MOVEMENT_STEPS (2 * UNIT_SPEED_LIMIT / DISTANCE_MELEE)
+#define MOVEMENT_STEPS (unsigned)(2 * UNIT_SPEED_LIMIT / DISTANCE_MELEE)
 
 struct pawn;
 // struct adjacency_list;

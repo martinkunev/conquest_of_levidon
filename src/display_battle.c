@@ -39,8 +39,8 @@
 
 #define S(s) (s), sizeof(s) - 1
 
-#define ANIMATION_DURATION 3.0
-#define ANIMATION_SHOOT_DURATION 2.0
+#define ANIMATION_DURATION 3.0 /* 3s */
+#define ANIMATION_SHOOT_DURATION 2.0 /* 2s */
 
 #define PLAYER_INDICATOR_RADIUS 10
 
@@ -50,18 +50,28 @@ extern GLXDrawable drawable;
 // TODO Create a struct that stores all the information about the battle (battlefield, players, etc.)
 struct battle *battle;
 
-static inline unsigned long timediff(const struct timeval *restrict end, const struct timeval *restrict start)
+double animation_progress(const struct timeval *restrict start, double animation_duration)
 {
-	return (end->tv_sec * 1000000 + end->tv_usec - start->tv_sec * 1000000 - start->tv_usec);
+	struct timeval now;
+	unsigned long time_difference;
+	gettimeofday(&now, 0);
+	time_difference = (now.tv_sec * 1000000 + now.tv_usec - start->tv_sec * 1000000 - start->tv_usec);
+	return time_difference / (animation_duration * 1000000.0);
 }
 
-// TODO write this better
-static int if_animation(const struct player *restrict players, const struct battle *restrict battle, double progress, unsigned char traversed[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH])
+void if_animation(const void *argument, const struct game *game)
 {
-	int finished = 1;
+	struct state_animation *state = argument;
 
 	size_t x, y;
 	size_t p;
+
+	size_t step;
+	double progress = animation_progress(state->start, ANIMATION_DURATION);
+
+	if (progress > 1) progress = 1;
+	step = (unsigned)(progress * MOVEMENT_STEPS);
+	progress = progress * MOVEMENT_STEPS - step;
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -73,7 +83,7 @@ static int if_animation(const struct player *restrict players, const struct batt
 		for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
 		{
 			const struct battlefield *field = &battle->field[y][x];
-			if (field->blockage && !traversed[y][x]) // TODO change this when there is an image for open gate
+			if (field->blockage && !state->traversed[y][x]) // TODO change this when there is an image for open gate
 			{
 				// TODO decide whether to use palisade or fortress
 
@@ -96,47 +106,18 @@ static int if_animation(const struct player *restrict players, const struct batt
 	for(p = 0; p < battle->pawns_count; ++p)
 	{
 		struct pawn *pawn = battle->pawns + p;
-		double x, y, x_final, y_final;
+		double x, y;
 
 		if (!pawn->count) continue;
 
-		// If the pawn will move more this round, the animation must continue.
-		movement_location(pawn, progress, &x, &y);
-		movement_location(pawn, 1.0, &x_final, &y_final);
-		if ((x != x_final) || (y != y_final)) finished = 0;
+		x = state->movements[p][step].x * (1 - progress) + state->movements[p][step + 1].x * progress;
+		y = state->movements[p][step].y * (1 - progress) + state->movements[p][step + 1].y * progress;
 
 		display_troop(pawn->troop->unit->index, BATTLE_X + x * object_group[Battlefield].width, BATTLE_Y + y * object_group[Battlefield].height, Player + pawn->troop->owner, 0, 0);
 	}
 
 	glFlush();
 	glXSwapBuffers(display, drawable);
-
-	return finished;
-}
-void input_animation(const struct game *restrict game, const struct battle *restrict battle)
-{
-	struct timeval start, now;
-	double progress;
-
-	// Mark each field that is traversed by a pawn (used to display gates as open).
-	unsigned char traversed[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH] = {0};
-	size_t i, j;
-	for(i = 0; i < battle->pawns_count; ++i)
-	{
-		struct point visited[UNIT_SPEED_LIMIT];
-		unsigned visited_count = movement_visited(battle->pawns + i, visited);
-		for(j = 0; j < visited_count; ++j)
-			traversed[visited[j].y][visited[j].x] = 1;
-	}
-
-	gettimeofday(&start, 0);
-	do
-	{
-		gettimeofday(&now, 0);
-		progress = timediff(&now, &start) / (ANIMATION_DURATION * 1000000.0);
-		if (if_animation(game->players, battle, progress, traversed))
-			break;
-	} while (progress < 1.0);
 }
 
 // TODO write this better
