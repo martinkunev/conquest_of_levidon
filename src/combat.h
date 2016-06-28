@@ -17,8 +17,12 @@
  * along with Conquest of Levidon.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define DISTANCE_MELEE 0.25
-#define DISTANCE_RANGE (PAWN_RADIUS * 2)
+// Instead of defining DISTANCE_MELEE directly, define its reciprocal to work-around C language limitation.
+// http://stackoverflow.com/questions/38054023/c-fixed-size-array-treated-as-variable-size
+// TODO try to fix this without the work-around
+#define STEPS_FIELD 4
+#define DISTANCE_MELEE (1.0 / STEPS_FIELD) /* 0.25 */
+#define DISTANCE_RANGED (PAWN_RADIUS * 2)
 
 double damage_expected(const struct pawn *restrict fighter, double troops_count, const struct pawn *restrict victim);
 double damage_expected_ranged(const struct pawn *restrict shooter, double troops_count, const struct pawn *restrict victim);

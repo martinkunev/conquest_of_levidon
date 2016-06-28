@@ -22,7 +22,7 @@
 
 #define PAWNS_LIMIT 12
 
-#define REACHABLE_LIMIT 625 /* TODO fix this */
+#define REACHABLE_LIMIT (BATTLEFIELD_WIDTH * BATTLEFIELD_HEIGHT)
 
 #define OWNER_NONE 0 /* sentinel alliance value used for walls */ /* TODO fix this: neutral players should not own walls */
 
@@ -71,6 +71,8 @@ struct battlefield
 	struct pawn *pawn; // during formation and for BLOCKAGE_TOWER
 
 	// TODO for BLOCKAGE_TOWER there should be specified a field for descending
+
+	struct pawn *pawns[5];
 };
 
 struct battle

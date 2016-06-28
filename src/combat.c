@@ -130,12 +130,25 @@ static void fight(const struct pawn *restrict fighter, struct pawn *restrict vic
 	}
 }
 
-static void shoot(const struct pawn *shooter, struct pawn *victim, double damage)
+static void shoot(const struct pawn *shooter, struct pawn *victim, double damage, double miss, double distance_victim)
 {
-	if (!victim) return;
+	// The larger the distance to the target, the more the damage is spread around it.
+
+	// Shoot accuracy at the center and at the periphery of the target area for minimum and maximum distance.
+	static const double target_accuracy[2][2] = {{1, 0.5}, {0, 0.078125}}; // {{1, 1/2}, {0, 5/64}}
+
+	enum armor armor = victim->troop->unit->armor;
+	enum weapon weapon = shooter->troop->unit->ranged.weapon;
+
+	double on_target_center = target_accuracy[0][0] * (1 - miss) + target_accuracy[0][1] * miss;
+	double on_target_periphery = target_accuracy[1][0] * (1 - miss) + target_accuracy[1][1] * miss;
+
+	double miss_victim = distance_victim / DISTANCE_RANGED;
+	damage *= on_target_center * (1 - miss_victim) + on_target_periphery * miss_victim;
+	damage *= damage_boost[weapon][armor];
 
 	// Assume all troops can shoot this victim.
-	damage_deal(damage * damage_boost[shooter->troop->unit->ranged.weapon][victim->troop->unit->armor], shooter->count, victim);
+	damage_deal(damage, shooter->count, victim);
 }
 
 static inline int reachable(struct position origin, struct position target, double distance_max)
@@ -187,10 +200,9 @@ void battle_fight(const struct game *restrict game, struct battle *restrict batt
 	}
 }
 
-void battle_shoot(struct battle *battle, const struct obstacles *restrict obstacles)
+void battle_shoot(struct battle *restrict battle, const struct obstacles *restrict obstacles)
 {
-	//const double targets[3][2] = {{1, 0.5}, {0, 0.078125}, {0, 0.046875}}; // 1/2, 5/64, 3/64
-
+	// Shooters deal damage in an area around the target.
 	// There is friendly fire.
 
 	size_t i, j;
@@ -201,11 +213,9 @@ void battle_shoot(struct battle *battle, const struct obstacles *restrict obstac
 		if (!shooter->count) continue;
 		if (shooter->action != ACTION_SHOOT) continue;
 
-		unsigned range;
-		double distance; //, miss;
-
 		double damage_total = shooter->troop->unit->ranged.damage;
-		//unsigned damage;
+		unsigned range;
+		double distance, miss;
 
 		// TODO what if there is a tower on one of the fields
 		// TODO add option for the shooters to spread their arrows
@@ -217,56 +227,17 @@ void battle_shoot(struct battle *battle, const struct obstacles *restrict obstac
 			range -= 1;
 		}
 		distance = battlefield_distance(shooter->position, shooter->target.position);
-		//miss = distance / range;
-
 		if (range < distance) continue; // no shooting if the target is too far // TODO is this necessary?
+
+		miss = distance / shooter->troop->unit->ranged.range;
 
 		for(j = 0; j < battle->pawns_count; ++j)
 		{
 			struct pawn *victim = battle->pawns + j;
-			if (reachable(shooter->target.position, victim->position, DISTANCE_RANGE))
-			{
-				// TODO determine damage
-				// shoot(shooter, victim, damage);
-			}
+			double distance_victim = battlefield_distance(shooter->target.position, victim->position);
+			if (distance_victim <= DISTANCE_RANGED)
+				shoot(shooter, victim, damage_total, miss, distance_victim);
 		}
-
-		/*
-		unsigned target_index;
-
-		float x = shooter->target.position.x;
-		float y = shooter->target.position.y;
-
-		// Shooters have some chance to hit a field adjacent to the target, depending on the distance.
-		// Damage is dealt to the target field and to its neighbors.
-
-		target_index = 0;
-		on_target = targets[target_index][0] * (1 - miss) + targets[target_index][1] * miss;
-		damage = (unsigned)(damage_total * on_target + 0.5);
-		damage_shoot(shooter, battle->field[y][x].pawn, damage);
-
-		target_index = 1;
-		on_target = targets[target_index][0] * (1 - miss) + targets[target_index][1] * miss;
-		damage = (unsigned)(damage_total * on_target + 0.5);
-		if (x > 0) damage_shoot(shooter, battle->field[y][x - 1].pawn, damage);
-		if (x < (BATTLEFIELD_WIDTH - 1)) damage_shoot(shooter, battle->field[y][x + 1].pawn, damage);
-		if (y > 0) damage_shoot(shooter, battle->field[y - 1][x].pawn, damage);
-		if (y < (BATTLEFIELD_HEIGHT - 1)) damage_shoot(shooter, battle->field[y + 1][x].pawn, damage);
-
-		target_index = 2;
-		on_target = targets[target_index][0] * (1 - miss) + targets[target_index][1] * miss;
-		damage = (unsigned)(damage_total * on_target + 0.5);
-		if (x > 0)
-		{
-			if (y > 0) damage_shoot(shooter, battle->field[y - 1][x - 1].pawn, damage);
-			if (y < (BATTLEFIELD_HEIGHT - 1)) damage_shoot(shooter, battle->field[y + 1][x - 1].pawn, damage);
-		}
-		if (x < (BATTLEFIELD_WIDTH - 1))
-		{
-			if (y > 0) damage_shoot(shooter, battle->field[y - 1][x + 1].pawn, damage);
-			if (y < (BATTLEFIELD_HEIGHT - 1)) damage_shoot(shooter, battle->field[y + 1][x + 1].pawn, damage);
-		}
-		*/
 	}
 }
 

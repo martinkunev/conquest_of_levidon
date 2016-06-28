@@ -22,6 +22,7 @@ M	don't allow pawns to attack their own walls (currently only gates are not atta
 M	don't allow attacking if the attacker cannot do damage to the defender (due to weapon and armor type)
 M	use a separate thread to calculate computer turns while the local player is choosing what to play
 M	better support for hotseat (show animations to each player, warn before changing current player and showing their map, etc.)
+M	?deal damage to each pawn escaping from enemy pawns
 L	limited number of shots
 L	assault garrison destruction and repair
 L	armory, swordsman, crossbowman, heavy cavalry, horse archer
@@ -52,7 +53,7 @@ bugs / issues
 TODO ? change direction of everything to counterclockwise; currently the y axis is in the opposite direction (and the cross product is negated)
 TODO ? rename field to tile
 TODO ? rename image to sprite
-TODO ? redesign input functions (handling mouse movement is tedious; handling writing should be unified)
+TODO ? redesign input functions (handling mouse movement is tedious; handling writing should be unified; there should be a way to terminate input with timer)
 TODO ? make it simpler to check if two players are allies
 TODO ? dynamic battlefield size
 TODO ? separate constants for BLOCKAGE_WALL and BLOCKAGE_GATE
