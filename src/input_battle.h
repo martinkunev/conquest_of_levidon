@@ -21,12 +21,13 @@ struct state_battle
 {
 	unsigned char player; // current player
 
-	struct point hover; // position of the hovered field
+	// TODO support this
+	//struct point hover; // position of the hovered field
 
 	const struct obstacles *obstacles; // obstacles on the battlefield
 	struct adjacency_list *graph; // graph used for pathfinding
 
-	struct point field; // selected field
+	struct battlefield *field; // selected field
 	struct pawn *pawn; // selected pawn
 
 	double reachable[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH];
@@ -36,23 +37,27 @@ struct state_formation
 {
 	unsigned char player; // current player
 
-	struct point hover; // position of the hovered field
+	// TODO support this
+	//struct point hover; // position of the hovered field
 
 	struct pawn *pawn; // selected pawn
 
-	struct point reachable[REACHABLE_LIMIT];
+	struct position reachable[REACHABLE_LIMIT];
 	size_t reachable_count;
 };
 
 struct state_animation
 {
-	struct battle *battle;
+	const struct battle *battle;
 
 	struct timeval start; // start time of the animation
+	double animation_duration; // duration of the animation in seconds
 
+	struct position (*movements)[MOVEMENT_STEPS + 1];
 	unsigned char traversed[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH];
 };
 
 int input_formation(const struct game *restrict game, struct battle *restrict battle, unsigned char player);
 int input_battle(const struct game *restrict game, struct battle *restrict battle, unsigned char player, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles);
 int input_animation(const struct game *restrict game, const struct battle *restrict battle, struct position (*movements)[MOVEMENT_STEPS + 1]);
+int input_animation_shoot(const struct game *restrict game, const struct battle *restrict battle);

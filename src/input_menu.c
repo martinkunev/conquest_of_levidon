@@ -22,6 +22,8 @@
 #include "errors.h"
 #include "base.h"
 #include "format.h"
+#include "game.h"
+#include "draw.h"
 #include "map.h"
 #include "input.h"
 #include "input_menu.h"

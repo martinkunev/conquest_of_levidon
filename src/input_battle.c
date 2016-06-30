@@ -17,21 +17,28 @@
  * along with Conquest of Levidon.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <X11/keysym.h>
-
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/time.h>
+
+#include <X11/keysym.h>
 
 #include "errors.h"
+#include "game.h"
+#include "draw.h"
 #include "map.h"
 #include "pathfinding.h"
-#include "battle.h"
 #include "movement.h"
+#include "battle.h"
 #include "combat.h"
 #include "input.h"
 #include "input_battle.h"
 #include "display_common.h"
 #include "display_battle.h"
+
+#define ANIMATION_DURATION 3.0 /* 3s */
+#define ANIMATION_SHOOT_DURATION 2.0 /* 2s */
 
 extern struct battle *battle;
 
@@ -45,12 +52,6 @@ static int input_round(int code, unsigned x, unsigned y, uint16_t modifiers, con
 
 	switch (code)
 	{
-	case EVENT_MOTION:
-		if (!point_eq(state->hover, POINT_NONE))
-		{
-			state->hover = POINT_NONE;
-			return 0;
-		}
 	default:
 		return INPUT_IGNORE;
 
@@ -59,12 +60,13 @@ static int input_round(int code, unsigned x, unsigned y, uint16_t modifiers, con
 			struct pawn *pawn = state->pawn;
 			if (!pawn || (pawn->troop->owner != state->player)) return INPUT_IGNORE;
 
-			// Cancel the actions of the current pawn.
-
-			if ((pawn->moves_count == 1) && !pawn->action) return INPUT_IGNORE;
-			pawn->moves_count = 1;
+			// Cancel the commands given to the current pawn.
 			pawn->action = 0;
-			return path_distances(pawn, state->graph, state->obstacles, state->reachable);
+			movement_stay(pawn);
+
+			// TODO init distances for reachable locations for the current pawn
+
+			return 0;
 		}
 		return 0;
 
@@ -75,45 +77,53 @@ static int input_round(int code, unsigned x, unsigned y, uint16_t modifiers, con
 	}
 }
 
-// On success, returns 0. On error no changes are made and error code (< 0) is returned.
-static int pawn_command(const struct game *restrict game, const struct battle *restrict battle, struct pawn *restrict pawn, struct point point, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles, double reachable[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH])
+static struct battlefield *target_find_field(struct battle *restrict battle, struct position position)
 {
-	const struct battlefield *restrict target = &battle->field[point.y][point.x];
+	unsigned field_x = position.x / FIELD_SIZE, field_y = position.y / FIELD_SIZE;
+	return &battle->field[field_y][field_x];
+}
+
+static struct pawn *target_find_pawn(struct battlefield *restrict field, struct position position)
+{
+	size_t i;
+	struct pawn **pawns = field->pawns;
+	for(i = 0; i < BATTLEFIELD_PAWNS_LIMIT; i += 1)
+		if (battlefield_distance(pawns[i]->position, position) < PAWN_RADIUS)
+		{
+			return pawns[i];
+			// TODO init distances for reachable locations for the current pawn
+		}
+	return 0;
+}
+
+// On success, returns 0. On error no changes are made and error code (< 0) is returned.
+static int pawn_command(const struct game *restrict game, struct battle *restrict battle, struct pawn *restrict pawn, struct position target, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles, double reachable[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH])
+{
+	struct battlefield *target_field = target_find_field(battle, target);
+	struct pawn *target_pawn = target_find_pawn(target_field, target);
 
 	// TODO tower support
+	// TODO make sure the target position is reachable
 
-	if (target->pawn)
+	// If there is a pawn at the target position, use the pawn as a target.
+	if (target_pawn)
 	{
-		if (allies(game, pawn->troop->owner, target->pawn->troop->owner))
-		{
-			return movement_queue(pawn, point, graph, obstacles);
-		}
-		else if ((pawn->moves_count == 1) && combat_order_shoot(game, battle, obstacles, pawn, point))
-		{
+		if (allies(game, pawn->troop->owner, target_pawn->troop->owner))
+			return movement_queue(pawn, target, graph, obstacles);
+		else if (!pawn->path.count && combat_order_shoot(game, battle, obstacles, pawn, target))
 			return 0;
-		}
+		else if (combat_order_fight(game, battle, obstacles, pawn, target_pawn))
+			return 0;
 		else
-		{
-			// If the pawn is not next to its target, move before attacking it.
-			int status = movement_attack(pawn, point, battle->field, reachable, graph, obstacles);
-			if (status < 0) return status;
-
-			combat_order_fight(game, battle, obstacles, pawn, target->pawn); // the check above ensures this will succeed
-			return 0;
-		}
+			return ERROR_MISSING; // none of the commands can be executed
 	}
-	else if ((target->blockage == BLOCKAGE_OBSTACLE) && !allies(game, target->owner, pawn->troop->owner))
+	else if (combat_order_assault(game, pawn, target_field))
 	{
-		// If the pawn is not next to its target, move before attacking it.
-		int status = movement_attack(pawn, point, battle->field, reachable, graph, obstacles);
-		if (status < 0) return status;
-
-		combat_order_assault(game, battle, obstacles, pawn, point); // the check above ensure this will succeed
 		return 0;
 	}
 	else
 	{
-		return movement_queue(pawn, point, graph, obstacles);
+		return movement_queue(pawn, target, graph, obstacles);
 	}
 }
 
@@ -123,36 +133,19 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 
 	struct state_battle *state = argument;
 
-	int status;
+	struct position position;
 
 	if (code >= 0) return INPUT_NOTME;
 
-	x /= FIELD_SIZE;
-	y /= FIELD_SIZE;
-
-	struct point point = {x, y};
+	position = (struct position){x, y};
 
 	if (code == EVENT_MOUSE_LEFT)
 	{
-		if (point_eq(point, state->field))
-			return INPUT_IGNORE;
+		struct battlefield *field = target_find_field(battle, position);
 
-		if (!battle->field[y][x].pawn && !battle->field[y][x].blockage)
-		{
-			state->field = POINT_NONE;
-			state->pawn = 0;
-			return 0;
-		}
-
-		// Set current field.
-		state->field = point;
-		state->pawn = battle->field[y][x].pawn;
-
-		if (state->pawn)
-		{
-			status = path_distances(state->pawn, state->graph, state->obstacles, state->reachable);
-			if (status < 0) return status;
-		}
+		state->field = (field->blockage ? field : 0);
+		state->pawn = target_find_pawn(field, position);
+		// TODO init distances for reachable locations for the current pawn // if (state->pawn) ...
 
 		return 0;
 	}
@@ -161,56 +154,27 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 		struct pawn *pawn = state->pawn;
 		if (!pawn || (pawn->troop->owner != state->player)) return INPUT_IGNORE;
 
-		// Cancel actions if the clicked field is the one on which the pawn stands.
-		if (point_eq(point, pawn->moves[0].location))
-		{
-			if ((pawn->moves_count == 1) && !pawn->action) return INPUT_IGNORE;
-			pawn->moves_count = 1;
-			pawn->action = 0;
-			return path_distances(pawn, state->graph, state->obstacles, state->reachable);
-		}
-
 		// if CONTROL is pressed, shoot
 		// if SHIFT is pressed, don't overwrite the current command
 		if (modifiers & XCB_MOD_MASK_CONTROL)
 		{
-			if (combat_order_shoot(game, battle, state->obstacles, pawn, point)) return 0;
-			else return INPUT_IGNORE;
-		}
-		else if (modifiers & XCB_MOD_MASK_SHIFT)
-		{
-			status = pawn_command(game, battle, pawn, point, state->graph, state->obstacles, state->reachable);
-			switch (status)
-			{
-			case 0:
-				break;
-
-			case ERROR_MISSING:
-				return INPUT_IGNORE;
-
-			default:
-				return status;
-			}
+			if (combat_order_shoot(game, battle, state->obstacles, pawn, position))
+				return 0;
+			return INPUT_IGNORE;
 		}
 		else
 		{
-			double reachable[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH];
+			int status;
 
-			// Erase moves but remember their count so that we can restore them if necessary.
-			// Initialize reachable distances for stationary pawn.
-			size_t moves_count = pawn->moves_count;
-			pawn->moves_count = 1;
-			status = path_distances(pawn, state->graph, state->obstacles, reachable);
-			if (status < 0) return status;
+			if (!(modifiers & XCB_MOD_MASK_SHIFT))
+				movement_stay(pawn);
 
-			status = pawn_command(game, battle, pawn, point, state->graph, state->obstacles, reachable);
-			switch (status)
+			switch (status = pawn_command(game, battle, pawn, position, state->graph, state->obstacles, state->reachable))
 			{
 			case 0:
 				break;
 
 			case ERROR_MISSING:
-				pawn->moves_count = moves_count; // command failed; restore moves
 				return INPUT_IGNORE;
 
 			default:
@@ -218,15 +182,8 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 			}
 		}
 
-		return path_distances(pawn, state->graph, state->obstacles, state->reachable);
-	}
-	else if (code == EVENT_MOTION)
-	{
-		if (!point_eq(state->hover, point))
-		{
-			state->hover = point;
-			return 0;
-		}
+		// TODO init distances for reachable locations for the current pawn
+		return 0;
 	}
 
 	return INPUT_IGNORE;
@@ -243,9 +200,9 @@ static int input_place(int code, unsigned x, unsigned y, uint16_t modifiers, con
 	x /= FIELD_SIZE;
 	y /= FIELD_SIZE;
 
-	struct point point = {x, y};
+	struct position point = {x, y};
 
-	if (code == -1)
+	if (code == EVENT_MOUSE_LEFT)
 	{
 		struct pawn *selected = state->pawn;
 		struct pawn *new = battle->field[y][x].pawn;
@@ -257,13 +214,12 @@ static int input_place(int code, unsigned x, unsigned y, uint16_t modifiers, con
 		{
 			size_t i = 0;
 			for(i = 0; i < state->reachable_count; ++i)
-				if (point_eq(state->reachable[i], point))
+				if (position_eq(state->reachable[i], point))
 					goto reachable;
 			return INPUT_IGNORE;
 
 reachable:
-			selected->moves[0].location = point;
-			selected->moves[0].time = 0.0;
+			selected->position = point;
 		}
 
 		battle->field[y][x].pawn = selected;
@@ -279,14 +235,6 @@ reachable:
 
 		return 0;
 	}
-	else if (code == EVENT_MOTION)
-	{
-		if (!point_eq(state->hover, point))
-		{
-			state->hover = point;
-			return 0;
-		}
-	}
 
 	return INPUT_IGNORE;
 }
@@ -298,7 +246,7 @@ static int input_ignore(int code, unsigned x, unsigned y, uint16_t modifiers, co
 	// TODO finish animation when there is nothing left to show
 
 	// TODO there should be no input required to finish the animation
-	if (animation_progress(state->start, ANIMATION_DURATION) >= 1)
+	if (animation_progress(&state->start, ANIMATION_DURATION) >= 1)
 		return INPUT_FINISH;
 
 	return INPUT_IGNORE;
@@ -337,7 +285,7 @@ int input_formation(const struct game *restrict game, struct battle *restrict ba
 	state.player = player;
 
 	state.pawn = 0;
-	state.hover = POINT_NONE;
+	//state.hover = POINT_NONE;
 
 	return input_local(areas, sizeof(areas) / sizeof(*areas), if_formation, game, &state);
 }
@@ -375,9 +323,9 @@ int input_battle(const struct game *restrict game, struct battle *restrict battl
 	state.player = player;
 
 	// No selected field or pawn.
-	state.field = POINT_NONE;
+	state.field = 0;
 	state.pawn = 0;
-	state.hover = POINT_NONE;
+	//state.hover = POINT_NONE;
 
 	state.obstacles = obstacles;
 	state.graph = graph;
@@ -398,6 +346,11 @@ int input_animation(const struct game *restrict game, const struct battle *restr
 	};
 
 	struct state_animation state = {0};
+	state.battle = battle;
+	state.movements = movements;
+	state.animation_duration = ANIMATION_DURATION;
+
+	gettimeofday(&state.start, 0);
 
 	// Mark each field that is traversed by a pawn (used to display gates as open).
 	size_t i, j;
@@ -410,9 +363,26 @@ int input_animation(const struct game *restrict game, const struct battle *restr
 		}
 	}
 
+	return input_local(areas, sizeof(areas) / sizeof(*areas), if_animation, game, &state);
+}
+
+int input_animation_shoot(const struct game *restrict game, const struct battle *restrict battle)
+{
+	struct area areas[] = {
+		{
+			.left = 0,
+			.right = SCREEN_WIDTH - 1,
+			.top = 0,
+			.bottom = SCREEN_HEIGHT - 1,
+			.callback = input_ignore
+		},
+	};
+
+	struct state_animation state = {0};
 	state.battle = battle;
+	state.animation_duration = ANIMATION_SHOOT_DURATION;
 
 	gettimeofday(&state.start, 0);
 
-	return input_local(areas, sizeof(areas) / sizeof(*areas), if_animation, game, &state);
+	return input_local(areas, sizeof(areas) / sizeof(*areas), if_animation_shoot, game, &state);
 }

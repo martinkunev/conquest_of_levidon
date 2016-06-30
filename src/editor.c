@@ -33,6 +33,8 @@
 #include "log.h"
 #include "format.h"
 #include "json.h"
+#include "game.h"
+#include "draw.h"
 #include "map.h"
 #include "interface.h"
 #include "input.h"

@@ -23,6 +23,8 @@
 #include <GL/glx.h>
 
 #include "format.h"
+#include "game.h"
+#include "draw.h"
 #include "map.h"
 #include "pathfinding.h"
 #include "image.h"

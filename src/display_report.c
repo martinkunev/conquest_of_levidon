@@ -19,13 +19,18 @@
 
 #include <GL/glx.h>
 
+#include <stdlib.h>
+
 #include "format.h"
+#include "game.h"
+#include "draw.h"
 #include "map.h"
-#include "pathfinding.h"
 #include "interface.h"
 #include "input_report.h"
 #include "display_common.h"
 #include "display_report.h"
+#include "pathfinding.h"
+#include "movement.h"
 #include "battle.h"
 #include "display_battle.h"
 

@@ -19,11 +19,12 @@
 
 #include <stdlib.h>
 
+#include <X11/Xlib.h>
 #include <X11/keysym.h>
 #include <xcb/xcb.h>
 
 #include "errors.h"
-#include "map.h"
+#include "game.h"
 #include "input.h"
 #include "interface.h"
 

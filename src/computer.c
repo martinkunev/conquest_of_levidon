@@ -17,10 +17,14 @@
  * along with Conquest of Levidon.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <stdint.h>
 #include <stdlib.h>
 
+#include "game.h"
+#include "draw.h"
 #include "map.h"
 #include "pathfinding.h"
+#include "movement.h"
 #include "battle.h"
 #include "combat.h"
 

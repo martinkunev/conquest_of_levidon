@@ -26,10 +26,13 @@
 #include <GL/glx.h>
 
 #include "format.h"
+#include "game.h"
+#include "draw.h"
 #include "map.h"
 #include "pathfinding.h"
-#include "battle.h"
 #include "movement.h"
+#include "battle.h"
+#include "combat.h"
 #include "image.h"
 #include "interface.h"
 #include "display_common.h"
@@ -39,16 +42,61 @@
 
 #define S(s) (s), sizeof(s) - 1
 
-#define ANIMATION_DURATION 3.0 /* 3s */
-#define ANIMATION_SHOOT_DURATION 2.0 /* 2s */
-
 #define PLAYER_INDICATOR_RADIUS 10
+
+#define BATTLEFIELD_X(x) (BATTLE_X + x * FIELD_SIZE + 0.5)
+#define BATTLEFIELD_Y(y) (BATTLE_Y + y * FIELD_SIZE + 0.5)
 
 extern Display *display;
 extern GLXDrawable drawable;
 
 // TODO Create a struct that stores all the information about the battle (battlefield, players, etc.)
 struct battle *battle;
+
+void if_set(struct battle *b)
+{
+	battle = b;
+}
+
+static void if_battlefield(unsigned char player, const struct game *game, const struct battle *restrict battle, const unsigned char open[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH])
+{
+	size_t x, y;
+
+	// Display battlefield background.
+	display_image(&image_terrain[0], BATTLE_X - 8, BATTLE_Y - 8, BATTLEFIELD_WIDTH * FIELD_SIZE + 16, BATTLEFIELD_HEIGHT * FIELD_SIZE + 16);
+
+	// Draw rectangle with current player's color.
+	fill_rectangle(CTRL_X, CTRL_Y, 256, 16, Player + player);
+
+	// Draw the control section in gray.
+	fill_rectangle(CTRL_X, CTRL_Y + CTRL_MARGIN, CTRL_WIDTH, CTRL_HEIGHT - CTRL_MARGIN, Gray);
+
+	// Display battlefield obstacles.
+	for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
+		for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
+		{
+			const struct battlefield *field = &battle->field[y][x];
+
+			if (field->blockage && !open[y][x]) // TODO change this when there is an image for open gate
+			{
+				const struct image *image;
+
+				// TODO use separate images for palisade and fortress
+				if (field->owner == OWNER_NONE) image = &image_palisade[field->location];
+				else
+				{
+					if (field->location == (POSITION_LEFT | POSITION_RIGHT))
+						image = &image_palisade_gate[0];
+					else // field->location == (POSITION_TOP | POSITION_BOTTOM)
+						image = &image_palisade_gate[1];
+				}
+
+				image_draw(image, BATTLE_X + x * object_group[Battlefield].width, BATTLE_Y + y * object_group[Battlefield].height);
+			}
+		}
+
+	// TODO towers
+}
 
 double animation_progress(const struct timeval *restrict start, double animation_duration)
 {
@@ -61,13 +109,12 @@ double animation_progress(const struct timeval *restrict start, double animation
 
 void if_animation(const void *argument, const struct game *game)
 {
-	struct state_animation *state = argument;
+	const struct state_animation *state = argument;
 
-	size_t x, y;
 	size_t p;
 
 	size_t step;
-	double progress = animation_progress(state->start, ANIMATION_DURATION);
+	double progress = animation_progress(&state->start, state->animation_duration);
 
 	if (progress > 1) progress = 1;
 	step = (unsigned)(progress * MOVEMENT_STEPS);
@@ -75,32 +122,7 @@ void if_animation(const void *argument, const struct game *game)
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	// Display panel background pattern.
-	display_image(&image_terrain[0], BATTLE_X - 8, BATTLE_Y - 8, BATTLEFIELD_WIDTH * FIELD_SIZE + 16, BATTLEFIELD_HEIGHT * FIELD_SIZE + 16);
-
-	// battlefield
-	for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
-		for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
-		{
-			const struct battlefield *field = &battle->field[y][x];
-			if (field->blockage && !state->traversed[y][x]) // TODO change this when there is an image for open gate
-			{
-				// TODO decide whether to use palisade or fortress
-
-				const struct image *image;
-
-				if (field->owner == OWNER_NONE) image = &image_palisade[field->position];
-				else
-				{
-					if (field->position == (POSITION_LEFT | POSITION_RIGHT))
-						image = &image_palisade_gate[0];
-					else // field->position == (POSITION_TOP | POSITION_BOTTOM)
-						image = &image_palisade_gate[1];
-				}
-
-				image_draw(image, BATTLE_X + x * object_group[Battlefield].width, BATTLE_Y + y * object_group[Battlefield].height);
-			}
-		}
+	if_battlefield(PLAYER_NEUTRAL, game, battle, state->traversed); // TODO change first argument
 
 	// pawns
 	for(p = 0; p < battle->pawns_count; ++p)
@@ -120,65 +142,43 @@ void if_animation(const void *argument, const struct game *game)
 	glXSwapBuffers(display, drawable);
 }
 
-// TODO write this better
-static void if_animation_shoot(const struct player *restrict players, const struct battle *restrict battle, double progress)
+void if_animation_shoot(const void *argument, const struct game *game)
 {
-	size_t x, y;
+	const struct state_animation *state = argument;
+
 	size_t p;
+
+	double progress = animation_progress(&state->start, state->animation_duration);
+	if (progress > 1) progress = 1;
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	// Display panel background pattern.
-	display_image(&image_terrain[0], BATTLE_X - 8, BATTLE_Y - 8, BATTLEFIELD_WIDTH * FIELD_SIZE + 16, BATTLEFIELD_HEIGHT * FIELD_SIZE + 16);
+	if_battlefield(PLAYER_NEUTRAL, game, battle, state->traversed); // TODO change first argument
 
-	// battlefield and pawns
-	for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
-		for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
-		{
-			// TODO tower support
-
-			const struct battlefield *field = &battle->field[y][x];
-			if (field->blockage)
-			{
-				// TODO decide whether to use palisade or fortress
-
-				const struct image *image;
-
-				if (field->owner == OWNER_NONE) image = &image_palisade[field->position];
-				else
-				{
-					if (field->position == (POSITION_LEFT | POSITION_RIGHT))
-						image = &image_palisade_gate[0];
-					else // field->position == (POSITION_TOP | POSITION_BOTTOM)
-						image = &image_palisade_gate[1];
-				}
-
-				image_draw(image, BATTLE_X + x * object_group[Battlefield].width, BATTLE_Y + y * object_group[Battlefield].height);
-			}
-			else if (field->pawn && field->pawn->count)
-			{
-				struct point position = field->pawn->moves[0].location;
-				struct troop *restrict troop = field->pawn->troop;
-				display_troop(troop->unit->index, BATTLE_X + position.x * object_group[Battlefield].width, BATTLE_Y + position.y * object_group[Battlefield].height, Player + troop->owner, 0, 0);
-			}
-		}
+	// pawns
+	for(p = 0; p < battle->pawns_count; ++p)
+	{
+		struct pawn *pawn = battle->pawns + p;
+		if (!pawn->count) continue;
+		display_troop(pawn->troop->unit->index, BATTLE_X + pawn->position.x * object_group[Battlefield].width, BATTLE_Y + pawn->position.y * object_group[Battlefield].height, Player + pawn->troop->owner, 0, 0);
+	}
 
 	// arrows
 	for(p = 0; p < battle->pawns_count; ++p)
 	{
 		struct pawn *pawn = battle->pawns + p;
-		struct point origin, target;
-		unsigned dx, dy;
+		struct position origin, target;
+		double dx, dy;
 		struct image *image;
 		double x, y;
 
-		if (!pawn->count || (pawn->action != PAWN_SHOOT)) continue;
+		if (!pawn->count || (pawn->action != ACTION_SHOOT)) continue;
 
 		// Determine arrows direction.
-		origin = pawn->moves[0].location;
-		target = pawn->target.field;
-		dx = abs(target.x - origin.x);
-		dy = abs(target.y - origin.y);
+		origin = pawn->position;
+		target = pawn->target.position;
+		dx = fabs(target.x - origin.x);
+		dy = fabs(target.y - origin.y);
 		if (dx >= dy)
 		{
 			if (target.x > origin.x) image = &image_shoot_right;
@@ -191,45 +191,13 @@ static void if_animation_shoot(const struct player *restrict players, const stru
 		}
 
 		// Determine arrows position and draw image.
-		x = target.x * progress + origin.x * (1.0 - progress);
-		y = target.y * progress + origin.y * (1.0 - progress);
+		x = origin.x * (1.0 - progress) + target.x * progress;
+		y = origin.y * (1.0 - progress) + target.y * progress;
 		image_draw(image, BATTLE_X + x * object_group[Battlefield].width, BATTLE_Y + y * object_group[Battlefield].height);
 	}
 
 	glFlush();
 	glXSwapBuffers(display, drawable);
-}
-void input_animation_shoot(const struct game *restrict game, const struct battle *restrict battle)
-{
-	struct timeval start, now;
-	double progress;
-	size_t p;
-
-	// Skip animation if there are no pawns shooting.
-	for(p = 0; p < battle->pawns_count; ++p)
-		if (battle->pawns[p].count && (battle->pawns[p].action == PAWN_SHOOT)) goto shoot;
-	return;
-
-shoot:
-	gettimeofday(&start, 0);
-	do
-	{
-		gettimeofday(&now, 0);
-		progress = timediff(&now, &start) / (ANIMATION_SHOOT_DURATION * 1000000.0);
-		if_animation_shoot(game->players, battle, progress);
-	} while (progress < 1.0);
-}
-
-static void if_battlefield(unsigned char player, const struct game *game)
-{
-	// Display battleifled background.
-	display_image(&image_terrain[0], BATTLE_X - 8, BATTLE_Y - 8, BATTLEFIELD_WIDTH * FIELD_SIZE + 16, BATTLEFIELD_HEIGHT * FIELD_SIZE + 16);
-
-	// Draw rectangle with current player's color.
-	fill_rectangle(CTRL_X, CTRL_Y, 256, 16, Player + player);
-
-	// Draw the control section in gray.
-	fill_rectangle(CTRL_X, CTRL_Y + CTRL_MARGIN, CTRL_WIDTH, CTRL_HEIGHT - CTRL_MARGIN, Gray);
 }
 
 static void if_formation_players(const struct game *restrict game, const struct battle *restrict battle, unsigned char player)
@@ -241,18 +209,32 @@ static void if_formation_players(const struct game *restrict game, const struct 
 		const struct pawn *restrict pawn;
 		const double *position;
 
+		struct position reachable[REACHABLE_LIMIT];
+		size_t reachable_count;
+
 		if (i == player) continue;
 		if (!battle->players[i].pawns_count) continue;
 
 		pawn = battle->players[i].pawns[0];
 
+		/////////////////////////////
+
+		// TODO get pawn startup
+
+
+
+
 		if (battle->assault)
 		{
+			reachable_count = formation_reachable_assault(game, battle, pawn, reachable);
+
 			if (pawn->startup == NEIGHBOR_GARRISON) position = formation_position_garrison;
 			else position = formation_position_assault[pawn->startup];
 		}
 		else
 		{
+			reachable_count = formation_reachable_open(game, battle, pawn, reachable);
+
 			if (pawn->startup == NEIGHBOR_SELF) position = formation_position_defend;
 			else position = formation_position_attack[pawn->startup];
 		}
@@ -266,34 +248,11 @@ void if_formation(const void *argument, const struct game *game)
 	// TODO battle must be passed as argument
 
 	const struct state_formation *state = argument;
+	const unsigned char open[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH] = {0};
 
-	size_t x, y;
 	size_t i, j;
 
-	if_battlefield(state->player, game);
-
-	for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
-		for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
-		{
-			const struct battlefield *field = &battle->field[y][x];
-			if (field->blockage)
-			{
-				// TODO decide whether to use palisade or fortress
-
-				const struct image *image;
-
-				if (field->owner == OWNER_NONE) image = &image_palisade[field->position];
-				else
-				{
-					if (field->position == (POSITION_LEFT | POSITION_RIGHT))
-						image = &image_palisade_gate[0];
-					else // field->position == (POSITION_TOP | POSITION_BOTTOM)
-						image = &image_palisade_gate[1];
-				}
-
-				image_draw(image, BATTLE_X + x * object_group[Battlefield].width, BATTLE_Y + y * object_group[Battlefield].height);
-			}
-		}
+	if_battlefield(state->player, game, battle, open);
 
 	// Indicate where on the battlefield there will be pawns of other players.
 	if_formation_players(game, battle, state->player);
@@ -308,7 +267,7 @@ void if_formation(const void *argument, const struct game *game)
 		{
 			// Display at which fields the pawn can be placed.
 			for(j = 0; j < state->reachable_count; ++j)
-				if (!battle->field[state->reachable[j].y][state->reachable[j].x].pawn)
+				if (!battle_field(battle, state->reachable[j])->pawn)
 					fill_rectangle(BATTLE_X + state->reachable[j].x * object_group[Battlefield].width, BATTLE_Y + state->reachable[j].y * object_group[Battlefield].height, object_group[Battlefield].width, object_group[Battlefield].height, FieldReachable);
 
 			// Display the selected pawn in the control section.
@@ -318,8 +277,7 @@ void if_formation(const void *argument, const struct game *game)
 		else
 		{
 			// Display the pawn at its present location.
-			struct point location = pawns[i]->moves[0].location;
-			display_troop(troop->unit->index, BATTLE_X + location.x * object_group[Battlefield].width, BATTLE_Y + location.y * object_group[Battlefield].height, Player + state->player, 0, 0);
+			display_troop(troop->unit->index, BATTLE_X + pawns[i]->position.x * object_group[Battlefield].width, BATTLE_Y + pawns[i]->position.y * object_group[Battlefield].height, Player + state->player, 0, 0);
 		}
 	}
 
@@ -363,11 +321,9 @@ static void show_strength(const struct battlefield *field, unsigned x, unsigned 
 
 static void if_battle_pawn(const struct game *game, const struct state_battle *restrict state, const struct pawn *restrict pawn)
 {
-	enum color color;
-	size_t i;
-
+	// TODO fix this
 	// Show pawn movement target.
-	for(i = 1; i < pawn->moves_count; ++i)
+	/*for(i = 1; i < pawn->moves_count; ++i)
 	{
 		struct point from = pawn->moves[i - 1].location;
 		from.x = from.x * FIELD_SIZE + FIELD_SIZE / 2;
@@ -380,21 +336,25 @@ static void if_battle_pawn(const struct game *game, const struct state_battle *r
 		if (pawn->moves[i].time <= 1.0) color = PathReachable;
 		else color = PathUnreachable;
 		display_arrow(from, to, BATTLE_X, BATTLE_Y, color);
-	}
+	}*/
 
-	if (pawn->action == PAWN_SHOOT)
+	switch (pawn->action)
 	{
-		image_draw(&image_pawn_shoot, BATTLE_X + pawn->target.field.x * FIELD_SIZE, BATTLE_Y + pawn->target.field.y * FIELD_SIZE);
-	}
-	else if (pawn->action == PAWN_FIGHT)
-	{
-		struct point target = pawn->target.pawn->moves[0].location;
-		image_draw(&image_pawn_fight, BATTLE_X + target.x * FIELD_SIZE, BATTLE_Y + target.y * FIELD_SIZE);
-	}
-	else if (pawn->action == PAWN_ASSAULT)
-	{
-		struct point target = pawn->target.field;
-		image_draw(&image_pawn_assault, BATTLE_X + target.x * FIELD_SIZE, BATTLE_Y + target.y * FIELD_SIZE);
+		struct position target;
+	case ACTION_SHOOT:
+		target = pawn->target.position;
+		image_draw(&image_pawn_shoot, BATTLEFIELD_X(target.x), BATTLEFIELD_Y(target.y));
+		break;
+
+	case ACTION_FIGHT:
+		target = pawn->target.pawn->position;
+		image_draw(&image_pawn_fight, BATTLEFIELD_X(target.x), BATTLEFIELD_Y(target.y));
+		break;
+
+	case ACTION_ASSAULT:
+		target = pawn->target.field->position;
+		image_draw(&image_pawn_assault, BATTLEFIELD_X(target.x), BATTLEFIELD_Y(target.y));
+		break;
 	}
 }
 
@@ -403,59 +363,34 @@ void if_battle(const void *argument, const struct game *game)
 	// TODO battle must be passed as argument
 
 	const struct state_battle *state = argument;
+	const unsigned char open[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH] = {0};
 
-	size_t x, y;
+	size_t i;
+
 	const struct pawn *pawn;
+	enum color color;
 
-	if_battlefield(state->player, game);
+	if_battlefield(state->player, game, battle, open);
 
-	// Display pawns and obstacles.
-	for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
-		for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
-		{
-			const struct battlefield *field = &battle->field[y][x];
-			if (pawn = field->pawn)
-			{
-				enum color color;
-				if (pawn->troop->owner == state->player) color = Self;
-				else if (game->players[pawn->troop->owner].alliance == game->players[state->player].alliance) color = Ally;
-				else color = Enemy;
+	// Display pawns.
+	for(i = 0; i < battle->pawns_count; ++i)
+	{
+		pawn = battle->pawns + i;
 
-				display_troop(pawn->troop->unit->index, BATTLE_X + x * object_group[Battlefield].width, BATTLE_Y + y * object_group[Battlefield].height, color, 0, 0);
+		if (pawn->troop->owner == state->player) color = Self;
+		else if (game->players[pawn->troop->owner].alliance == game->players[state->player].alliance) color = Ally;
+		else color = Enemy;
 
-				// TODO towers
-			}
-			else if (field->blockage)
-			{
-				// TODO decide whether to use palisade or fortress
+		display_troop(pawn->troop->unit->index, BATTLEFIELD_X(pawn->position.x), BATTLEFIELD_Y(pawn->position.y), color, 0, 0);
+	}
 
-				const struct image *image;
-
-				if (field->owner == OWNER_NONE) image = &image_palisade[field->position];
-				else
-				{
-					if (field->position == (POSITION_LEFT | POSITION_RIGHT))
-						image = &image_palisade_gate[0];
-					else // field->position == (POSITION_TOP | POSITION_BOTTOM)
-						image = &image_palisade_gate[1];
-				}
-
-				image_draw(image, BATTLE_X + x * object_group[Battlefield].width, BATTLE_Y + y * object_group[Battlefield].height);
-			}
-		}
-
-	// Display hovered field in color.
-	// TODO this is buggy
-	/*if (!point_eq(state->hover, POINT_NONE))
-		fill_rectangle(BATTLE_X + state->hover.x * object_group[Battlefield].width, BATTLE_Y + state->hover.y * object_group[Battlefield].height, object_group[Battlefield].width, object_group[Battlefield].height, Hover);*/
+	// TODO indicate which object is hovered?
 
 	// Display information about the selected pawn or field (or all pawns if nothing is selected).
 	if (pawn = state->pawn)
 	{
-		enum color color;
-
 		// Indicate that the pawn is selected.
-		image_draw(&image_selected, BATTLE_X + state->field.x * FIELD_SIZE - 1, BATTLE_Y + state->field.y * FIELD_SIZE - 1);
+		image_draw(&image_selected, BATTLEFIELD_X(pawn->position.x) - 1, BATTLEFIELD_Y(pawn->position.y) - 1);
 
 		// Display pawn information in the control section.
 		if (pawn->troop->owner == state->player) color = Self;
@@ -470,29 +405,26 @@ void if_battle(const void *argument, const struct game *game)
 		{
 			if_battle_pawn(game, state, pawn);
 
-			if (!pawn->action)
+			// TODO fix this
+			/*if (!pawn->action)
 			{
 				// Show which fields are reachable by the pawn.
 				for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
 					for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
 						if ((state->reachable[y][x] <= pawn->troop->unit->speed) && !battle->field[y][x].pawn)
 							fill_rectangle(BATTLE_X + x * object_group[Battlefield].width, BATTLE_Y + y * object_group[Battlefield].height, object_group[Battlefield].width, object_group[Battlefield].height, FieldReachable);
-			}
+			}*/
 		}
 	}
-	else if (!point_eq(state->field, POINT_NONE))
+	else if (state->field)
 	{
-		const struct battlefield *restrict field = &battle->field[state->field.y][state->field.x];
-		if (field->blockage == BLOCKAGE_OBSTACLE) show_strength(field, CTRL_X, CTRL_Y + CTRL_MARGIN);
+		if (state->field->blockage == BLOCKAGE_OBSTACLE)
+			show_strength(state->field, CTRL_X, CTRL_Y + CTRL_MARGIN);
 	}
-	else
+	else for(i = 0; i < battle->players[state->player].pawns_count; ++i)
 	{
-		size_t i;
-		for(i = 0; i < battle->players[state->player].pawns_count; ++i)
-		{
-			if (!battle->players[state->player].pawns[i]->count) continue;
-			if_battle_pawn(game, state, battle->players[state->player].pawns[i]);
-		}
+		if (!battle->players[state->player].pawns[i]->count) continue;
+		if_battle_pawn(game, state, battle->players[state->player].pawns[i]);
 	}
 
 	show_button(S("Ready"), BUTTON_ENTER_X, BUTTON_ENTER_Y);
@@ -556,9 +488,4 @@ void if_battle(const void *argument, const struct game *game)
 		}
 	}
 #endif
-}
-
-void if_set(struct battle *b)
-{
-	battle = b;
 }

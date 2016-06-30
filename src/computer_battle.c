@@ -17,15 +17,18 @@
  * along with Conquest of Levidon.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "errors.h"
+#include "game.h"
+#include "draw.h"
 #include "map.h"
 #include "pathfinding.h"
+#include "movement.h"
 #include "battle.h"
 #include "combat.h"
-#include "movement.h"
 #include "computer.h"
 #include "computer_battle.h"
 
@@ -35,14 +38,16 @@
 
 #include <stdio.h>
 
+/*
 struct pawn_command
 {
 	enum pawn_action action;
-	struct point target;
+	struct position target;
 
 	size_t moves_count;
 	struct move moves[];
 };
+*/
 
 /*struct combat_victims
 {
@@ -54,6 +59,7 @@ struct pawn_command
 	size_t diagonal_count;
 };*/
 
+/*
 static unsigned battle_state_neighbors(const struct game *restrict game, const struct battle *restrict battle, struct pawn *restrict pawn, double reachable[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH], struct point neighbors[static 4])
 {
 	unsigned speed = pawn->troop->unit->speed;
@@ -114,7 +120,7 @@ static unsigned victims_fight_find(const struct game *restrict game, const struc
 		location = pawn->moves[pawn->moves_count - 1].location; // assume pawn movement will be completed by the end of the round
 
 		// If the pawn has a specific fight target and is able to fight it, fight only that target.
-		if ((pawn->action == PAWN_FIGHT) && battlefield_neighbors(location, pawn->target.pawn->moves[0].location))
+		if ((pawn->action == ACTION_FIGHT) && battlefield_neighbors(location, pawn->target.pawn->moves[0].location))
 		{
 			victims[victims_count++] = pawn->target.pawn;
 			return victims_count;
@@ -142,6 +148,7 @@ static unsigned victims_fight_find(const struct game *restrict game, const struc
 
 	return victims_count;
 }
+*/
 
 /*static void victims_shoot_find(const struct pawn *restrict pawn, const struct pawn *pawns[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH], struct combat_victims *restrict victims)
 {
@@ -202,6 +209,7 @@ static unsigned victims_fight_find(const struct game *restrict game, const struc
 }*/
 
 // TODO rewrite this
+/*
 static double battle_state_rating(const struct game *restrict game, struct battle *restrict battle, unsigned char player, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles)
 {
 	double rating = 0.0, rating_max = 0.0;
@@ -241,14 +249,14 @@ static double battle_state_rating(const struct game *restrict game, struct battl
 
 		// TODO current round should have more weight than the following rounds
 		rating_max += 350.0 * 50.0;
-		if (pawn->action == PAWN_SHOOT)
+		if (pawn->action == ACTION_SHOOT)
 		{
 			// estimate shoot impact
 			// TODO this doesn't account for accuracy and damage spreading to nearby targets
 			const struct pawn *victim = battle->field[pawn->target.field.y][pawn->target.field.x].pawn;
 			rating += unit_importance(victim->troop->unit) * damage_expected(pawn, pawn->count, victim);
 		}
-		else if ((pawn->action == PAWN_ASSAULT) && battlefield_neighbors(pawn->moves[pawn->moves_count - 1].location, pawn->target.field))
+		else if ((pawn->action == ACTION_ASSAULT) && battlefield_neighbors(pawn->moves[pawn->moves_count - 1].location, pawn->target.field))
 		{
 			// estimate assault impact
 			// TODO
@@ -289,7 +297,7 @@ static double battle_state_rating(const struct game *restrict game, struct battl
 			rating += unit_importance(other->troop->unit) * damage_expected(pawn, pawn->count, other) * pawn->troop->unit->speed / distance;
 
 			// TODO this is supposed to make the computer prefer setting the action; is this the right way?
-			if ((pawn->action == PAWN_FIGHT) && (pawn->target.pawn == other))
+			if ((pawn->action == ACTION_FIGHT) && (pawn->target.pawn == other))
 				rating += unit_importance(other->troop->unit) * damage_expected(pawn, pawn->count, other) * pawn->troop->unit->speed / distance;
 
 			// TODO assault evaluation
@@ -319,6 +327,7 @@ static double battle_state_rating(const struct game *restrict game, struct battl
 	// assert(rating_max);
 	return rating / rating_max;
 }
+*/
 
 int computer_formation(const struct game *restrict game, struct battle *restrict battle, unsigned char player)
 {
@@ -329,6 +338,9 @@ int computer_formation(const struct game *restrict game, struct battle *restrict
 // Decide the behavior of the computer using simulated annealing.
 int computer_battle(const struct game *restrict game, struct battle *restrict battle, unsigned char player, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles)
 {
+	return 0; // TODO
+
+	/*
 	unsigned step;
 	double rating, rating_new;
 	double temperature = 1.0;
@@ -361,7 +373,7 @@ int computer_battle(const struct game *restrict game, struct battle *restrict ba
 		pawn = battle->players[player].pawns[i];
 
 		pawn->action = 0;
-		pawn->moves_count = 1;
+		pawn->path.count = 0;
 
 		status = path_distances(pawn, graph, obstacles, reachable[i]);
 		if (status < 0) goto finally;
@@ -386,8 +398,9 @@ int computer_battle(const struct game *restrict game, struct battle *restrict ba
 
 			// Remember current pawn command and set a new one.
 			backup->action = pawn->action;
-			if (pawn->action == PAWN_FIGHT) backup->target = pawn->target.pawn->moves[0].location;
-			else backup->target = pawn->target.field;
+			if (pawn->action == ACTION_FIGHT) backup->target = pawn->target.pawn->position;
+			else if (pawn->action == ACTION_ASSAULT) backup->target = pawn->target.field->position;
+			else backup->target = pawn->target.position;
 			backup->moves_count = pawn->moves_count;
 			memcpy(backup->moves, pawn->moves, pawn->moves_count * sizeof(*pawn->moves));
 			battle_state_set(pawn, neighbors[random() % neighbors_count], game, battle, graph, obstacles);
@@ -401,7 +414,7 @@ int computer_battle(const struct game *restrict game, struct battle *restrict ba
 			else
 			{
 				pawn->action = backup->action;
-				if (backup->action == PAWN_FIGHT) pawn->target.pawn = battle->field[backup->target.y][backup->target.x].pawn;
+				if (backup->action == ACTION_FIGHT) pawn->target.pawn = battle->field[backup->target.y][backup->target.x].pawn;
 				else pawn->target.field = backup->target;
 				pawn->moves_count = backup->moves_count;
 				memcpy(pawn->moves, backup->moves, backup->moves_count * sizeof(*backup->moves));
@@ -426,7 +439,7 @@ int computer_battle(const struct game *restrict game, struct battle *restrict ba
 
 			// Remember current pawn command and set a new one.
 			backup->action = pawn->action;
-			if (pawn->action == PAWN_FIGHT) backup->target = pawn->target.pawn->moves[0].location;
+			if (pawn->action == ACTION_FIGHT) backup->target = pawn->target.pawn->moves[0].location;
 			else backup->target = pawn->target.field;
 			backup->moves_count = pawn->moves_count;
 			memcpy(backup->moves, pawn->moves, pawn->moves_count * sizeof(*pawn->moves));
@@ -441,7 +454,7 @@ int computer_battle(const struct game *restrict game, struct battle *restrict ba
 			else
 			{
 				pawn->action = backup->action;
-				if (backup->action == PAWN_FIGHT) pawn->target.pawn = battle->field[backup->target.y][backup->target.x].pawn;
+				if (backup->action == ACTION_FIGHT) pawn->target.pawn = battle->field[backup->target.y][backup->target.x].pawn;
 				else pawn->target.field = backup->target;
 				pawn->moves_count = backup->moves_count;
 				memcpy(pawn->moves, backup->moves, backup->moves_count * sizeof(*backup->moves));
@@ -458,6 +471,7 @@ finally:
 	free(reachable);
 
 	return status;
+	*/
 }
 
 unsigned calculate_battle(struct game *restrict game, struct region *restrict region)

@@ -17,12 +17,16 @@
  * along with Conquest of Levidon.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <stdint.h>
 #include <stdlib.h>
 
 #include <X11/keysym.h>
 
 #include "errors.h"
+#include "game.h"
+#include "draw.h"
 #include "map.h"
+#include "resources.h"
 #include "pathfinding.h"
 #include "input.h"
 #include "input_map.h"

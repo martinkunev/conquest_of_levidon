@@ -47,6 +47,11 @@ static inline int pawns_collide(struct position a, struct position b)
 	return battlefield_distance(a, b) < (PAWN_RADIUS * 2);
 }
 
+static inline int position_eq(struct position a, struct position b)
+{
+	return ((a.x == b.x) && (a.y == b.y));
+}
+
 struct obstacles *path_obstacles_alloc(const struct game *restrict game, const struct battle *restrict battle, unsigned char player);
 
 int path_visible(struct position origin, struct position target, const struct obstacles *restrict obstacles);

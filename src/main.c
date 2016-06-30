@@ -50,6 +50,8 @@
 
 // WARNING: Player 0 and alliance 0 are hard-coded as neutral.
 
+// TODO in some circumstances player 0 is used for objects without owner
+
 /*
 Invariants at the beginning of a turn:
 - no enemies are located in the same (region, in_garrison)
@@ -120,6 +122,8 @@ static int play_battle(struct game *restrict game, struct region *restrict regio
 		obstacles[PLAYER_NEUTRAL] = path_obstacles_alloc(game, &battle, PLAYER_NEUTRAL);
 		if (!obstacles[PLAYER_NEUTRAL]) abort();
 
+		battlefield_index_build(&battle);
+
 		// Ask each player to give commands to their pawns.
 		for(player = 0; player < game->players_count; ++player)
 		{
@@ -151,8 +155,6 @@ static int play_battle(struct game *restrict game, struct region *restrict regio
 				break;
 			}
 		}
-
-		// TODO ?Deal damage to each pawn escaping from enemy pawns.
 
 		// Deal damage from shooters.
 		input_animation_shoot(game, &battle); // TODO this should be part of player-specific input

@@ -20,6 +20,8 @@
 #include <GL/glx.h>
 
 #include "base.h"
+#include "game.h"
+#include "draw.h"
 #include "map.h"
 #include "interface.h"
 #include "input_menu.h"

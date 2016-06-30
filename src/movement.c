@@ -25,9 +25,9 @@
 #include "errors.h"
 #include "game.h"
 #include "pathfinding.h"
-#include "combat.h"
 #include "movement.h"
 #include "battle.h"
+#include "combat.h"
 #include "draw.h"
 #include "map.h"
 
@@ -70,7 +70,6 @@ int array_moves_expand(struct array_moves *restrict array, size_t count)
 
 void pawn_place(struct battle *restrict battle, struct pawn *restrict pawn, struct position position)
 {
-	//size_t i;
 	struct battlefield *field;
 
 	pawn->position = position;
@@ -79,39 +78,64 @@ void pawn_place(struct battle *restrict battle, struct pawn *restrict pawn, stru
 
 	field = battle_field(battle, pawn->position);
 	field->pawn = pawn;
-	/*for(i = 0; field->pawns[i]; ++i)
-		;
-	field->pawns[i] = pawn; // TODO what if i > 3 // TODO this member no longer exists*/
 }
 
-static void battlefield_pawn_move(struct battle *restrict battle, struct pawn *pawn)
+static void index_add(struct battlefield *restrict field, struct pawn *restrict pawn)
 {
-	/*size_t i;
-	const size_t pawns_limit = sizeof(battle->field[0][0].pawns) / sizeof(battle->field[0][0].pawns);
-
-	struct battlefield *field_old = battle_field(battle, pawn->position);
-	struct battlefield *field_new = battle_field(battle, pawn->position_next);
-
-	// TODO due to collisions more than 4 pawns may try to go to a given field (the array is not large enough to remember them)
-
-	if (field_new == field_old)
-		return;
-
-	// Remove the pawn from the old battle field.
-	for(i = 0; (i < pawns_limit) && field_old->pawns[i]; ++i)
+	size_t i;
+	for(i = 0; field->pawns[i]; ++i)
 	{
-		if (field_old->pawns[i] == pawn)
-		{
-			if (++i < pawns_limit)
-				memmove(field_old->pawns + i - 1, field_old->pawns + i, pawns_limit - i);
-			field_old->pawns[pawns_limit - 1] = 0;
-		}
+		// assert(i < sizeof(field->pawns) / sizeof(*field->pawns) - 1);
 	}
+	field->pawns[i] = pawn;
+}
 
-	// Add the pawn to the new battle field.
-	for(i = 0; field_new->pawns[i]; ++i)
-		;
-	field_new->pawns[i] = pawn;*/
+// Build index of pawns by battle field.
+void battlefield_index_build(struct battle *restrict battle)
+{
+	size_t x, y;
+	size_t i;
+
+	// Clear the index.
+	for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
+		for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
+		{
+			struct battlefield *field = &battle->field[y][x];
+			for(i = 0; i < sizeof(field->pawns) / sizeof(*field->pawns); ++i)
+				field->pawns[i] = 0;
+		}
+
+	for(i = 0; i < battle->pawns_count; ++i)
+	{
+		struct position position = battle->pawns[i].position;
+
+		x = (unsigned)position.x;
+		y = (unsigned)position.y;
+
+		// Add pointer to the pawn in each field that the pawn occupies.
+
+		index_add(&battle->field[y][x], battle->pawns + i);
+
+		if (position.y - y < PAWN_RADIUS)
+			index_add(&battle->field[y - 1][x], battle->pawns + i);
+		else if (y + 1 - position.y < PAWN_RADIUS)
+			index_add(&battle->field[y + 1][x], battle->pawns + i);
+
+		if (position.x - x < PAWN_RADIUS)
+			index_add(&battle->field[y][x - 1], battle->pawns + i);
+		else if (x + 1 - position.x < PAWN_RADIUS)
+			index_add(&battle->field[y][x + 1], battle->pawns + i);
+
+		if (battlefield_distance(position, (struct position){x, y}) < PAWN_RADIUS)
+			index_add(&battle->field[y - 1][x - 1], battle->pawns + i);
+		else if (battlefield_distance(position, (struct position){x + 1, y + 1}) < PAWN_RADIUS)
+			index_add(&battle->field[y + 1][x + 1], battle->pawns + i);
+
+		if (battlefield_distance(position, (struct position){x + 1, y}) < PAWN_RADIUS)
+			index_add(&battle->field[y - 1][x + 1], battle->pawns + i);
+		else if (battlefield_distance(position, (struct position){x, y + 1}) < PAWN_RADIUS)
+			index_add(&battle->field[y + 1][x - 1], battle->pawns + i);
+	}
 }
 
 static inline int position_diff(struct position a, struct position b)
@@ -154,7 +178,6 @@ path_find_next:
 			else
 			{
 				pawn->position_next = position;
-				battlefield_pawn_move(battle, pawn);
 				continue; // nothing to do for this pawn
 			}
 
@@ -165,7 +188,6 @@ path_find_next:
 
 			case ERROR_MISSING:
 				pawn->position_next = position;
-				battlefield_pawn_move(battle, pawn);
 				continue; // cannot reach destination at this time
 			}
 		}
@@ -197,7 +219,6 @@ path_find_next:
 		progress = distance_covered / distance;
 		pawn->position_next.x = position.x * (1 - progress) + pawn->moves.data[0].x * progress;
 		pawn->position_next.y = position.y * (1 - progress) + pawn->moves.data[0].y * progress;
-		battlefield_pawn_move(battle, pawn);
 	}
 
 	return 0;
@@ -241,11 +262,6 @@ static int collisions_detect(const struct game *restrict game, const struct batt
 	}
 
 	return enemies_colliding;
-}
-
-static inline int position_eq(struct position a, struct position b)
-{
-	return ((a.x == b.x) && (a.y == b.y));
 }
 
 // Find the moving colliding pawns that are faster than the moving pawns they are colliding with.
@@ -366,40 +382,23 @@ int movement_collisions_resolve(const struct game *restrict game, struct battle 
 	return 0;
 }
 
-/*
-// Returns the index of the first not yet reached move location or pawn->moves_count if there is no unreached location. Sets current location in real_x and real_y.
-size_t movement_location(const struct pawn *restrict pawn, double time_now, double *restrict real_x, double *restrict real_y)
+void movement_stay(struct pawn *restrict pawn)
 {
-	double progress; // progress of the current move; 0 == start point; 1 == end point
-
-	if (time_now < pawn->moves[0].time)
-	{
-		// The pawn has not started moving yet.
-		*real_x = pawn->moves[0].location.x;
-		*real_y = pawn->moves[0].location.y;
-		return 0;
-	}
-
-	size_t i;
-	for(i = 1; i < pawn->moves_count; ++i)
-	{
-		double time_start = pawn->moves[i - 1].time;
-		double time_end = pawn->moves[i].time;
-		if (time_now >= time_end) continue; // this move is already done
-
-		progress = (time_now - time_start) / (time_end - time_start);
-		*real_x = pawn->moves[i].location.x * progress + pawn->moves[i - 1].location.x * (1 - progress);
-		*real_y = pawn->moves[i].location.y * progress + pawn->moves[i - 1].location.y * (1 - progress);
-
-		return i;
-	}
-
-	// The pawn has reached its final location.
-	*real_x = pawn->moves[pawn->moves_count - 1].location.x;
-	*real_y = pawn->moves[pawn->moves_count - 1].location.y;
-	return pawn->moves_count;
+	pawn->path.count = 0;
+	pawn->moves.count = 0;
 }
 
+int movement_queue(struct pawn *restrict pawn, struct position target, struct adjacency_list *restrict nodes, const struct obstacles *restrict obstacles)
+{
+	// TODO verify that the target is reachable
+
+	int status = array_moves_expand(&pawn->path, pawn->path.count + 1);
+	if (status < 0) return ERROR_MEMORY;
+	pawn->path.data[pawn->path.count++] = target;
+	return 0;
+}
+
+/*
 unsigned movement_visited(const struct pawn *restrict pawn, struct point visited[static UNIT_SPEED_LIMIT])
 {
 	struct point location;
@@ -442,18 +441,6 @@ finally:
 		visited[fields_count++] = location;
 
 	return fields_count;
-}
-
-void movement_stay(struct pawn *restrict pawn)
-{
-	pawn->moves_count = 1;
-}
-
-int movement_queue(struct pawn *restrict pawn, struct point target, struct adjacency_list *restrict nodes, const struct obstacles *restrict obstacles)
-{
-	int error = path_queue(pawn, target, nodes, obstacles); // TODO this is renamed to path_find and changed
-	if (!error) pawn->action = 0;
-	return error;
 }
 
 // WARNING: This function cancels the action of the pawn.

@@ -18,7 +18,7 @@
  */
 
 // MOVEMENT_STEPS is chosen as to ensure that enemies are close enough to fight on the step before they collide.
-#define MOVEMENT_STEPS (unsigned)(2 * UNIT_SPEED_LIMIT / DISTANCE_MELEE)
+#define MOVEMENT_STEPS (unsigned)(2 * UNIT_SPEED_LIMIT * STEPS_FIELD)
 
 struct pawn;
 // struct adjacency_list;
@@ -38,14 +38,15 @@ static inline void array_moves_term(struct array_moves *restrict array)
 int array_moves_expand(struct array_moves *restrict array, size_t count);
 
 void pawn_place(struct battle *restrict battle, struct pawn *restrict pawn, struct position position);
+void battlefield_index_build(struct battle *restrict battle);
 
 int movement_plan(struct battle *restrict battle, struct adjacency_list *restrict graph[static PLAYERS_LIMIT], struct obstacles *restrict obstacles[static PLAYERS_LIMIT]);
 int movement_collisions_resolve(const struct game *restrict game, struct battle *restrict battle, struct adjacency_list *restrict graph[static PLAYERS_LIMIT], struct obstacles *restrict obstacles[static PLAYERS_LIMIT]);
 
-/*size_t movement_location(const struct pawn *restrict pawn, double time_now, double *restrict real_x, double *restrict real_y);
-
 void movement_stay(struct pawn *restrict pawn);
-int movement_queue(struct pawn *restrict pawn, struct point target, struct adjacency_list *restrict nodes, const struct obstacles *restrict obstacles);
+int movement_queue(struct pawn *restrict pawn, struct position target, struct adjacency_list *restrict nodes, const struct obstacles *restrict obstacles);
+
+/*size_t movement_location(const struct pawn *restrict pawn, double time_now, double *restrict real_x, double *restrict real_y);
 
 int movement_attack(struct pawn *restrict pawn, struct point target, const struct battlefield field[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH], double reachable[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH], struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles);
 int movement_attack_plan(struct pawn *restrict pawn, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles);

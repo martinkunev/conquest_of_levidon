@@ -139,7 +139,7 @@ int battlefield_neighbors(struct point a, struct point b)
 }
 */
 
-/*int battlefield_passable(const struct game *restrict game, const struct battlefield *restrict field, unsigned player)
+int battlefield_passable(const struct game *restrict game, const struct battlefield *restrict field, unsigned player)
 {
 	// TODO review this function; field->pawns[0] no longer exists
 
@@ -149,7 +149,7 @@ int battlefield_neighbors(struct point a, struct point b)
 		if (allies(game, player, field->owner) || field->pawns[0])
 			return 1;
 	return 0;
-}*/
+}
 
 // TODO revise this function
 static void battlefield_init_open(const struct game *restrict game, struct battle *restrict battle)

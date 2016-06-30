@@ -90,6 +90,9 @@
 #define BUTTON_MENU_X 130
 #define BUTTON_MENU_Y 620
 
+#define BATTLEFIELD_WIDTH 25
+#define BATTLEFIELD_HEIGHT 25
+
 enum object {Worlds, WorldTabs, Players, Building, Train, Dismiss, TroopSelf, TroopOther, TroopGarrison, Battlefield};
 
 // rows, columns, left, top, width, height, padding

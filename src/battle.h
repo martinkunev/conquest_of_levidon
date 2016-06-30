@@ -22,6 +22,8 @@
 
 #define PAWNS_LIMIT 12
 
+#define BATTLEFIELD_PAWNS_LIMIT 5
+
 #define REACHABLE_LIMIT (BATTLEFIELD_WIDTH * BATTLEFIELD_HEIGHT)
 
 #define OWNER_NONE 0 /* sentinel alliance value used for walls */ /* TODO fix this: neutral players should not own walls */
@@ -37,7 +39,7 @@ struct pawn
 {
 	struct troop *troop;
 	unsigned count;
-	unsigned dead; // TODO is this necessary?
+	unsigned dead;
 	unsigned hurt;
 
 	struct position position; // current pawn position
@@ -46,7 +48,7 @@ struct pawn
 	struct array_moves path; // user-specified path of not yet reached positions
 	struct array_moves moves; // pathfinding-generated movement to the next path position
 
-	enum {ACTION_DEFAULT, ACTION_FIGHT, ACTION_SHOOT, ACTION_ASSAULT} action;
+	enum pawn_action {ACTION_DEFAULT, ACTION_FIGHT, ACTION_SHOOT, ACTION_ASSAULT} action;
 	union
 	{
 		struct pawn *pawn; // for ACTION_FIGHT
@@ -54,7 +56,7 @@ struct pawn
 		struct battlefield *field; // for ACTION_ASSAULT
 	} target;
 
-	unsigned startup; // index of startup location on the battlefield
+	unsigned startup; // index of startup location on the battlefield or NEIGHBOR_SELF/NEIGHBOR_GARRISON
 };
 
 enum {POSITION_RIGHT = 0x1, POSITION_TOP = 0x2, POSITION_LEFT = 0x4, POSITION_BOTTOM = 0x8};
@@ -72,7 +74,7 @@ struct battlefield
 
 	// TODO for BLOCKAGE_TOWER there should be specified a field for descending
 
-	struct pawn *pawns[5];
+	struct pawn *pawns[BATTLEFIELD_PAWNS_LIMIT];
 };
 
 struct battle

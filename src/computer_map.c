@@ -18,12 +18,16 @@
  */
 
 #include <math.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "errors.h"
 #include "log.h"
+#include "game.h"
+#include "draw.h"
 #include "map.h"
+#include "resources.h"
 #include "computer.h"
 #include "computer_map.h"
 

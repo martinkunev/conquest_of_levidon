@@ -25,6 +25,9 @@
 #include <GL/glext.h>
 
 #include "format.h"
+#include "game.h"
+#include "draw.h"
+#include "resources.h"
 #include "map.h"
 #include "pathfinding.h"
 #include "interface.h"
