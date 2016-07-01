@@ -200,6 +200,7 @@ void if_animation_shoot(const void *argument, const struct game *game)
 	glXSwapBuffers(display, drawable);
 }
 
+// TODO rewrite this
 static void if_formation_players(const struct game *restrict game, const struct battle *restrict battle, unsigned char player)
 {
 	size_t i;
@@ -209,20 +210,13 @@ static void if_formation_players(const struct game *restrict game, const struct 
 		const struct pawn *restrict pawn;
 		const double *position;
 
-		struct position reachable[REACHABLE_LIMIT];
+		struct tile reachable[REACHABLE_LIMIT];
 		size_t reachable_count;
 
 		if (i == player) continue;
 		if (!battle->players[i].pawns_count) continue;
 
 		pawn = battle->players[i].pawns[0];
-
-		/////////////////////////////
-
-		// TODO get pawn startup
-
-
-
 
 		if (battle->assault)
 		{
@@ -352,7 +346,7 @@ static void if_battle_pawn(const struct game *game, const struct state_battle *r
 		break;
 
 	case ACTION_ASSAULT:
-		target = pawn->target.field->position;
+		target = (struct position){pawn->target.field->tile.x, pawn->target.field->tile.y};
 		image_draw(&image_pawn_assault, BATTLEFIELD_X(target.x), BATTLEFIELD_Y(target.y));
 		break;
 	}
@@ -476,6 +470,7 @@ void if_battle(const void *argument, const struct game *game)
 	}*/
 
 #if defined(DEBUG)
+	size_t x, y;
 	for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
 	{
 		for(x = 0; x < BATTLEFIELD_WIDTH; ++x)

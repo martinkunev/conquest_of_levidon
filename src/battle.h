@@ -22,7 +22,7 @@
 
 #define PAWNS_LIMIT 12
 
-#define BATTLEFIELD_PAWNS_LIMIT 5
+#define BATTLEFIELD_PAWNS_LIMIT 7
 
 #define REACHABLE_LIMIT (BATTLEFIELD_WIDTH * BATTLEFIELD_HEIGHT)
 
@@ -45,7 +45,7 @@ struct pawn
 	struct position position; // current pawn position
 	struct position position_next; // expected pawn position at the next step
 
-	struct array_moves path; // user-specified path of not yet reached positions
+	struct array_moves path; // user-specified path of not yet reached positions // TODO don't use a dynamic array for this
 	struct array_moves moves; // pathfinding-generated movement to the next path position
 
 	enum pawn_action {ACTION_DEFAULT, ACTION_FIGHT, ACTION_SHOOT, ACTION_ASSAULT} action;
@@ -62,7 +62,7 @@ struct pawn
 enum {POSITION_RIGHT = 0x1, POSITION_TOP = 0x2, POSITION_LEFT = 0x4, POSITION_BOTTOM = 0x8};
 struct battlefield
 {
-	struct position position;
+	struct tile tile;
 	//enum {BLOCKAGE_NONE, BLOCKAGE_TERRAIN, BLOCKAGE_OBSTACLE, BLOCKAGE_TOWER} blockage;
 	enum {BLOCKAGE_NONE, BLOCKAGE_TERRAIN, BLOCKAGE_OBSTACLE} blockage;
 	unsigned char location; // blockage location
@@ -102,16 +102,13 @@ extern const double formation_position_attack[NEIGHBORS_LIMIT][2];
 extern const double formation_position_garrison[2];
 extern const double formation_position_assault[ASSAULT_LIMIT][2];
 
-static inline struct battlefield *battle_field(struct battle *restrict battle, struct position position)
+static inline struct battlefield *battle_field(struct battle *restrict battle, struct tile tile)
 {
-	size_t x = position.x + 0.5, y = position.y + 0.5;
-	return &battle->field[y][x];
+	return &battle->field[tile.y][tile.x];
 }
 
-size_t formation_reachable_open(const struct game *restrict game, const struct battle *restrict battle, const struct pawn *restrict pawn, struct position reachable[REACHABLE_LIMIT]);
-size_t formation_reachable_assault(const struct game *restrict game, const struct battle *restrict battle, const struct pawn *restrict pawn, struct position reachable[REACHABLE_LIMIT]);
-
-//int battlefield_neighbors(struct point a, struct point b);
+size_t formation_reachable_open(const struct game *restrict game, const struct battle *restrict battle, const struct pawn *restrict pawn, struct tile reachable[REACHABLE_LIMIT]);
+size_t formation_reachable_assault(const struct game *restrict game, const struct battle *restrict battle, const struct pawn *restrict pawn, struct tile reachable[REACHABLE_LIMIT]);
 
 // Returns whether a pawn owned by the given player can pass through the field.
 int battlefield_passable(const struct game *restrict game, const struct battlefield *restrict field, unsigned player);

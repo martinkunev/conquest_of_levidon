@@ -151,7 +151,7 @@ static void shoot(const struct pawn *shooter, struct pawn *victim, double damage
 	damage_deal(damage, shooter->count, victim);
 }
 
-static inline int reachable(struct position origin, struct position target, double distance_max)
+static inline int battlefield_reachable(struct position origin, struct position target, double distance_max)
 {
 	double distance = battlefield_distance(origin, target);
 	return (distance <= distance_max);
@@ -170,7 +170,18 @@ void battle_fight(const struct game *restrict game, struct battle *restrict batt
 
 		if (fighter->action == ACTION_ASSAULT)
 		{
-			if (reachable(fighter->position, fighter->target.field->position, DISTANCE_MELEE))
+			// Determine whether the target field is close enough to be attacked.
+
+			// TODO maybe reduce the size of the target to the actual size of the wall (use WALL_OFFSET)
+
+			struct tile tile = fighter->target.field->tile;
+
+			float distance_left = fabs(tile.x - fighter->position.x), distance_right = fabs(tile.x + 1 - fighter->position.x);
+			float distance_bottom = fabs(tile.y - fighter->position.y), distance_top = fabs(tile.y + 1 - fighter->position.y);
+			float dx = ((distance_left <= distance_right) ? distance_left : distance_right);
+			float dy = ((distance_bottom <= distance_top) ? distance_bottom : distance_top);
+
+			if (dx * dx + dy * dy <= DISTANCE_MELEE * DISTANCE_MELEE)
 				assault(fighter, fighter->target.field);
 		}
 		else
@@ -182,7 +193,7 @@ void battle_fight(const struct game *restrict game, struct battle *restrict batt
 
 			// If the pawn has a specific fight target and is able to fight it, fight only that target.
 			// Otherwise, fight all enemy pawns nearby.
-			if ((fighter->action == ACTION_FIGHT) && reachable(fighter->position, fighter->target.pawn->position, DISTANCE_MELEE))
+			if ((fighter->action == ACTION_FIGHT) && battlefield_reachable(fighter->position, fighter->target.pawn->position, DISTANCE_MELEE))
 			{
 				victims[victims_count++] = fighter->target.pawn;
 			}
@@ -191,7 +202,7 @@ void battle_fight(const struct game *restrict game, struct battle *restrict batt
 				struct pawn *victim = battle->pawns + j;
 				if (game->players[victim->troop->owner].alliance == fighter_alliance)
 					continue;
-				if (reachable(fighter->position, victim->position, DISTANCE_MELEE))
+				if (battlefield_reachable(fighter->position, victim->position, DISTANCE_MELEE))
 					victims[victims_count++] = victim;
 			}
 
@@ -341,7 +352,7 @@ int combat_order_shoot(const struct game *restrict game, const struct battle *re
 
 		if (!pawn->count) continue;
 
-		if ((game->players[pawn->troop->owner].alliance != fighter_alliance) && reachable(shooter->position, pawn->position, DISTANCE_MELEE))
+		if ((game->players[pawn->troop->owner].alliance != fighter_alliance) && battlefield_reachable(shooter->position, pawn->position, DISTANCE_MELEE))
 			return 0;
 	}
 
@@ -358,7 +369,7 @@ int combat_order_shoot(const struct game *restrict game, const struct battle *re
 			return 0;
 	}
 
-	movement_stay(shooter);
+	pawn_stay(shooter);
 	shooter->action = ACTION_SHOOT;
 	shooter->target.position = target;
 

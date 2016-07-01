@@ -1,8 +1,10 @@
-H	battle mechanics fixes
-H	bug: after battle surrender the surrendering units don't return to their original region
+H	fix surrender problems
+	bug: after battle surrender the surrendering units don't return to their original region
+	bug: surrender can be abused for scouting
+	? rename surrender
 H	levidon map
 H	computer doesn't attack regions
-H	make battle AI a more reasonable
+H	battle AI
 M	editor: position region neighbors properly
 M	make formation consistent with the new battle mechanics
 M	improve AI
@@ -46,17 +48,12 @@ battle mechanics
 	pawns don't understand how to sidestep other pawns to reach their destination
 	pawns of the same player deadlock (seen with peasant and light cavalry)
 
-bugs / issues
-	surrender can be abused for scouting
-
 TODO ? change direction of everything to counterclockwise; currently the y axis is in the opposite direction (and the cross product is negated)
-TODO ? rename field to tile
 TODO ? rename image to sprite
 TODO ? redesign input functions (handling mouse movement is tedious; handling writing should be unified; there should be a way to terminate input with timer)
 TODO ? make it simpler to check if two players are allies
 TODO ? dynamic battlefield size
 TODO ? separate constants for BLOCKAGE_WALL and BLOCKAGE_GATE
-TODO ? rename surrender
 
 -- interface --
 

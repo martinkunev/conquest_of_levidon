@@ -35,8 +35,7 @@
 #define array_type struct pawn *
 #include "generic/array.g"
 
-// Due to pawn dimensions, at most 4 pawns can try to move to a given square at the same time.
-#define OVERLAP_LIMIT 4
+#define PATH_QUEUE_LIMIT 8
 
 struct collision
 {
@@ -68,21 +67,34 @@ int array_moves_expand(struct array_moves *restrict array, size_t count)
 	return 0;
 }
 
-void pawn_place(struct battle *restrict battle, struct pawn *restrict pawn, struct position position)
+void pawn_place(struct battle *restrict battle, struct pawn *restrict pawn, struct tile tile)
 {
 	struct battlefield *field;
 
-	pawn->position = position;
+	pawn->position = (struct position){tile.x, tile.y};
 	pawn->path.count = 0;
 	pawn->moves.count = 0;
 
-	field = battle_field(battle, pawn->position);
+	field = battle_field(battle, tile);
 	field->pawn = pawn;
 }
 
-static void index_add(struct battlefield *restrict field, struct pawn *restrict pawn)
+void pawn_stay(struct pawn *restrict pawn)
 {
+	pawn->path.count = 0;
+	pawn->moves.count = 0;
+}
+
+static void index_add(struct battle *restrict battle, int x, int y, struct pawn *restrict pawn)
+{
+	struct battlefield *restrict field;
 	size_t i;
+
+	if ((x < 0) || (x >= BATTLEFIELD_WIDTH) || (y < 0) || (y >= BATTLEFIELD_HEIGHT))
+		return;
+
+	field = &battle->field[y][x];
+
 	for(i = 0; field->pawns[i]; ++i)
 	{
 		// assert(i < sizeof(field->pawns) / sizeof(*field->pawns) - 1);
@@ -93,54 +105,50 @@ static void index_add(struct battlefield *restrict field, struct pawn *restrict 
 // Build index of pawns by battle field.
 void battlefield_index_build(struct battle *restrict battle)
 {
-	size_t x, y;
-	size_t i;
-
 	// Clear the index.
-	for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
-		for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
+	for(size_t y = 0; y < BATTLEFIELD_HEIGHT; ++y)
+		for(size_t x = 0; x < BATTLEFIELD_WIDTH; ++x)
 		{
 			struct battlefield *field = &battle->field[y][x];
-			for(i = 0; i < sizeof(field->pawns) / sizeof(*field->pawns); ++i)
+			for(size_t i = 0; i < sizeof(field->pawns) / sizeof(*field->pawns); ++i)
 				field->pawns[i] = 0;
 		}
 
-	for(i = 0; i < battle->pawns_count; ++i)
+	for(size_t i = 0; i < battle->pawns_count; ++i)
 	{
 		struct position position = battle->pawns[i].position;
-
-		x = (unsigned)position.x;
-		y = (unsigned)position.y;
+		int x = (int)position.x;
+		int y = (int)position.y;
 
 		// Add pointer to the pawn in each field that the pawn occupies.
 
-		index_add(&battle->field[y][x], battle->pawns + i);
+		index_add(battle, x, y, battle->pawns + i);
 
 		if (position.y - y < PAWN_RADIUS)
-			index_add(&battle->field[y - 1][x], battle->pawns + i);
+			index_add(battle, x, y - 1, battle->pawns + i);
 		else if (y + 1 - position.y < PAWN_RADIUS)
-			index_add(&battle->field[y + 1][x], battle->pawns + i);
+			index_add(battle, x, y + 1, battle->pawns + i);
 
 		if (position.x - x < PAWN_RADIUS)
-			index_add(&battle->field[y][x - 1], battle->pawns + i);
+			index_add(battle, x - 1, y, battle->pawns + i);
 		else if (x + 1 - position.x < PAWN_RADIUS)
-			index_add(&battle->field[y][x + 1], battle->pawns + i);
+			index_add(battle, x + 1, y, battle->pawns + i);
 
 		if (battlefield_distance(position, (struct position){x, y}) < PAWN_RADIUS)
-			index_add(&battle->field[y - 1][x - 1], battle->pawns + i);
+			index_add(battle, x - 1, y - 1, battle->pawns + i);
 		else if (battlefield_distance(position, (struct position){x + 1, y + 1}) < PAWN_RADIUS)
-			index_add(&battle->field[y + 1][x + 1], battle->pawns + i);
+			index_add(battle, x + 1, y + 1, battle->pawns + i);
 
 		if (battlefield_distance(position, (struct position){x + 1, y}) < PAWN_RADIUS)
-			index_add(&battle->field[y - 1][x + 1], battle->pawns + i);
+			index_add(battle, x + 1, y - 1, battle->pawns + i);
 		else if (battlefield_distance(position, (struct position){x, y + 1}) < PAWN_RADIUS)
-			index_add(&battle->field[y + 1][x - 1], battle->pawns + i);
+			index_add(battle, x - 1, y + 1, battle->pawns + i);
 	}
 }
 
-static inline int position_diff(struct position a, struct position b)
+static inline int position_eq(struct position a, struct position b)
 {
-	return ((a.x != b.x) || (a.y != b.y));
+	return ((a.x == b.x) && (a.y == b.y));
 }
 
 // Calculates the expected position of each pawn at the next step.
@@ -173,7 +181,7 @@ path_find_next:
 			// Determine the next destination.
 			if (pawn->path.count)
 				destination = pawn->path.data[0];
-			else if ((pawn->action == ACTION_FIGHT) && position_diff(position, pawn->target.pawn->position))
+			else if ((pawn->action == ACTION_FIGHT) && !position_eq(position, pawn->target.pawn->position))
 				destination = pawn->target.pawn->position;
 			else
 			{
@@ -382,14 +390,11 @@ int movement_collisions_resolve(const struct game *restrict game, struct battle 
 	return 0;
 }
 
-void movement_stay(struct pawn *restrict pawn)
-{
-	pawn->path.count = 0;
-	pawn->moves.count = 0;
-}
-
 int movement_queue(struct pawn *restrict pawn, struct position target, struct adjacency_list *restrict nodes, const struct obstacles *restrict obstacles)
 {
+	if (pawn->path.count == PATH_QUEUE_LIMIT)
+		return ERROR_INPUT;
+
 	// TODO verify that the target is reachable
 
 	int status = array_moves_expand(&pawn->path, pawn->path.count + 1);
@@ -397,242 +402,3 @@ int movement_queue(struct pawn *restrict pawn, struct position target, struct ad
 	pawn->path.data[pawn->path.count++] = target;
 	return 0;
 }
-
-/*
-unsigned movement_visited(const struct pawn *restrict pawn, struct point visited[static UNIT_SPEED_LIMIT])
-{
-	struct point location;
-	unsigned fields_count;
-
-	size_t move_index;
-	unsigned step;
-
-	// Add the start location to the visited fields.
-	visited[0] = pawn->moves[0].location;
-	fields_count = 1;
-
-	move_index = 0;
-	for(step = 1; step <= UNIT_SPEED_LIMIT; ++step)
-	{
-		double time_now = (double)step / UNIT_SPEED_LIMIT, time_start;
-		double progress; // progress of the current move; 0 == start point; 1 == end point
-
-		if (time_now < pawn->moves[0].time) continue; // no movement yet
-
-		while (time_now >= pawn->moves[move_index].time)
-		{
-			move_index += 1;
-			if (move_index == pawn->moves_count) goto finally;
-		}
-
-		time_start = pawn->moves[move_index - 1].time;
-		progress = (time_now - time_start) / (pawn->moves[move_index].time - time_start);
-		location.x = pawn->moves[move_index].location.x * progress + pawn->moves[move_index - 1].location.x * (1 - progress) + 0.5;
-		location.y = pawn->moves[move_index].location.y * progress + pawn->moves[move_index - 1].location.y * (1 - progress) + 0.5;
-
-		if (!point_eq(location, visited[fields_count - 1]))
-			visited[fields_count++] = location;
-	}
-
-finally:
-	// Add the final location to the visited fields.
-	location = pawn->moves[pawn->moves_count - 1].location;
-	if (!point_eq(location, visited[fields_count - 1]))
-		visited[fields_count++] = location;
-
-	return fields_count;
-}
-
-// WARNING: This function cancels the action of the pawn.
-static int movement_follow(struct pawn *restrict pawn, const struct pawn *restrict target, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles)
-{
-	size_t i;
-
-	int status;
-
-	status = movement_queue(pawn, target->moves[0].location, graph, obstacles);
-	if (status < 0) return status;
-
-	for(i = 1; i < target->moves_count; ++i)
-	{
-		double time_start, time_end;
-		double target_time_duration;
-
-		time_start = pawn->moves[pawn->moves_count - 1].time;
-		if (time_start >= 1.0) break; // no need to add moves that won't be started this round
-
-		target_time_duration = target->moves[i].time - target->moves[i - 1].time;
-
-		status = movement_queue(pawn, target->moves[i].location, graph, obstacles);
-		if (status < 0)
-		{
-			if (status == ERROR_MISSING)
-			{
-				// The pawn can't reach its target.
-				// Follow the target to the last field possible.
-
-				double reachable[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH];
-
-				struct point visited[UNIT_SPEED_LIMIT];
-				unsigned visited_count = movement_visited(pawn, visited);
-
-				status = path_distances(pawn, graph, obstacles, reachable);
-				if (status < 0) return status;
-
-				while (visited_count--)
-				{
-					struct point field = visited[visited_count];
-					if (reachable[field.y][field.x] < INFINITY)
-					{
-						status = movement_queue(pawn, target->moves[i].location, graph, obstacles);
-						if (status < 0) return status;
-						break;
-					}
-				}
-
-				status = ERROR_MISSING;
-			}
-			return status;
-		}
-
-		time_end = pawn->moves[pawn->moves_count - 1].time;
-		if (time_end - time_start < target_time_duration)
-		{
-			pawn->moves[pawn->moves_count - 1].time = time_start + target_time_duration;
-			time_end = pawn->moves[pawn->moves_count - 1].time;
-		}
-	}
-
-	return 0;
-}
-
-// Moves the pawn to the closest position for attacking the specified target.
-// ERROR_MEMORY
-// ERROR_MISSING - there is no attacking position available
-int movement_attack(struct pawn *restrict pawn, struct point target, const struct battlefield field[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH], double reachable[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH], struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles)
-{
-	if (!battlefield_neighbors(pawn->moves[pawn->moves_count - 1].location, target))
-	{
-		double move_distance = INFINITY;
-		int move_x, move_y;
-
-		int x = target.x, y = target.y;
-
-		if ((x > 0) && !field[y][x - 1].pawn && (reachable[y][x - 1] < move_distance))
-		{
-			move_x = x - 1;
-			move_y = y;
-			move_distance = reachable[move_y][move_x];
-		}
-		if ((x < (BATTLEFIELD_WIDTH - 1)) && !field[y][x + 1].pawn && (reachable[y][x + 1] < move_distance))
-		{
-			move_x = x + 1;
-			move_y = y;
-			move_distance = reachable[move_y][move_x];
-		}
-		if ((y > 0) && !field[y - 1][x].pawn && (reachable[y - 1][x] < move_distance))
-		{
-			move_x = x;
-			move_y = y - 1;
-			move_distance = reachable[move_y][move_x];
-		}
-		if ((y < (BATTLEFIELD_HEIGHT - 1)) && !field[y + 1][x].pawn && (reachable[y + 1][x] < move_distance))
-		{
-			move_x = x;
-			move_y = y + 1;
-			move_distance = reachable[move_y][move_x];
-		}
-
-		if (move_distance < INFINITY)
-			return movement_queue(pawn, (struct point){move_x, move_y}, graph, obstacles);
-		else
-			return ERROR_MISSING;
-	}
-
-	return 0;
-}
-
-// Plan the necessary movements for a pawn to attack its target.
-int movement_attack_plan(struct pawn *restrict pawn, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles)
-{
-	int status;
-
-	// Mark all movements as manually assigned.
-	pawn->moves_manual = pawn->moves_count;
-
-	if (pawn->action != PAWN_FIGHT) return 0;
-
-	// Nothing to do if the target pawn is immobile.
-	if (pawn->target.pawn->moves_count == 1) return 0;
-
-	status = movement_follow(pawn, pawn->target.pawn, graph, obstacles);
-	switch (status)
-	{
-	case ERROR_MISSING: // target pawn is not reachable
-		return 0;
-
-	default:
-		pawn->action = PAWN_FIGHT;
-	case ERROR_MEMORY:
-		return status;
-	}
-}
-
-// Returns the step at which the pawn will first change its position or -1 if it will not move until the end of the round.
-static int pawn_move_step(struct pawn *pawns[OVERLAP_LIMIT], size_t pawn_index, unsigned step)
-{
-	size_t i;
-	unsigned step_next;
-	for(step_next = step + 1; step_next <= MOVEMENT_STEPS; ++step_next)
-	{
-		struct point next;
-		double time_next = (double)step_next / MOVEMENT_STEPS;
-		pawn_position(pawns[pawn_index], time_next, &next);
-
-		if (!point_eq(next, pawns[pawn_index]->step))
-		{
-			for(i = 0; (i < OVERLAP_LIMIT) && pawns[i]; ++i)
-			{
-				if (i == pawn_index) continue;
-
-				// Check if the pawn will collide when it moves.
-				struct point wait = pawns[i]->failback;
-				if ((abs((int)next.x - (int)wait.x) < 2) && (abs((int)next.y - (int)wait.y) < 2))
-					return -1;
-			}
-
-			return step_next;
-		}
-	}
-	return -1;
-}
-
-// Update pawn action and movement.
-int battlefield_movement_attack(struct battle *restrict battle, struct pawn *restrict pawn, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles)
-{
-	// If the pawn follows another pawn, update its movement to correspond to the current battlefield situation.
-	if (pawn->action == PAWN_FIGHT)
-	{
-		int status;
-		double reachable[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH];
-
-		status = path_distances(pawn, graph, obstacles, reachable);
-		if (status < 0) return status;
-
-		status = movement_attack(pawn, pawn->target.pawn->moves[0].location, ((const struct battle *)battle)->field, reachable, graph, obstacles);
-		switch (status)
-		{
-		case ERROR_MISSING: // target pawn is not reachable
-			movement_stay(pawn);
-			return 0;
-
-		default:
-			pawn->action = PAWN_FIGHT;
-		case ERROR_MEMORY:
-			return status;
-		}
-	}
-
-	return 0;
-}
-*/

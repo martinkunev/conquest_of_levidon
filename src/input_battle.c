@@ -62,7 +62,7 @@ static int input_round(int code, unsigned x, unsigned y, uint16_t modifiers, con
 
 			// Cancel the commands given to the current pawn.
 			pawn->action = 0;
-			movement_stay(pawn);
+			pawn_stay(pawn);
 
 			// TODO init distances for reachable locations for the current pawn
 
@@ -77,17 +77,10 @@ static int input_round(int code, unsigned x, unsigned y, uint16_t modifiers, con
 	}
 }
 
-static struct battlefield *target_find_field(struct battle *restrict battle, struct position position)
+static struct pawn *pawn_find(struct battlefield *restrict field, struct position position)
 {
-	unsigned field_x = position.x / FIELD_SIZE, field_y = position.y / FIELD_SIZE;
-	return &battle->field[field_y][field_x];
-}
-
-static struct pawn *target_find_pawn(struct battlefield *restrict field, struct position position)
-{
-	size_t i;
 	struct pawn **pawns = field->pawns;
-	for(i = 0; i < BATTLEFIELD_PAWNS_LIMIT; i += 1)
+	for(size_t i = 0; (i < BATTLEFIELD_PAWNS_LIMIT) && pawns[i]; i += 1)
 		if (battlefield_distance(pawns[i]->position, position) < PAWN_RADIUS)
 		{
 			return pawns[i];
@@ -99,8 +92,8 @@ static struct pawn *target_find_pawn(struct battlefield *restrict field, struct 
 // On success, returns 0. On error no changes are made and error code (< 0) is returned.
 static int pawn_command(const struct game *restrict game, struct battle *restrict battle, struct pawn *restrict pawn, struct position target, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles, double reachable[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH])
 {
-	struct battlefield *target_field = target_find_field(battle, target);
-	struct pawn *target_pawn = target_find_pawn(target_field, target);
+	struct battlefield *target_field = &battle->field[(size_t)target.y][(size_t)target.x];
+	struct pawn *target_pawn = pawn_find(target_field, target);
 
 	// TODO tower support
 	// TODO make sure the target position is reachable
@@ -137,14 +130,16 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 
 	if (code >= 0) return INPUT_NOTME;
 
+	x /= FIELD_SIZE;
+	y /= FIELD_SIZE;
 	position = (struct position){x, y};
 
 	if (code == EVENT_MOUSE_LEFT)
 	{
-		struct battlefield *field = target_find_field(battle, position);
+		struct battlefield *field = &battle->field[y][x];
 
 		state->field = (field->blockage ? field : 0);
-		state->pawn = target_find_pawn(field, position);
+		state->pawn = pawn_find(field, position);
 		// TODO init distances for reachable locations for the current pawn // if (state->pawn) ...
 
 		return 0;
@@ -167,7 +162,7 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 			int status;
 
 			if (!(modifiers & XCB_MOD_MASK_SHIFT))
-				movement_stay(pawn);
+				pawn_stay(pawn);
 
 			switch (status = pawn_command(game, battle, pawn, position, state->graph, state->obstacles, state->reachable))
 			{
@@ -200,8 +195,6 @@ static int input_place(int code, unsigned x, unsigned y, uint16_t modifiers, con
 	x /= FIELD_SIZE;
 	y /= FIELD_SIZE;
 
-	struct position point = {x, y};
-
 	if (code == EVENT_MOUSE_LEFT)
 	{
 		struct pawn *selected = state->pawn;
@@ -214,12 +207,12 @@ static int input_place(int code, unsigned x, unsigned y, uint16_t modifiers, con
 		{
 			size_t i = 0;
 			for(i = 0; i < state->reachable_count; ++i)
-				if (position_eq(state->reachable[i], point))
+				if ((state->reachable[i].x == x) && (state->reachable[i].y == y))
 					goto reachable;
 			return INPUT_IGNORE;
 
 reachable:
-			selected->position = point;
+			selected->position = (struct position){x, y};
 		}
 
 		battle->field[y][x].pawn = selected;

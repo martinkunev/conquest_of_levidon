@@ -42,7 +42,7 @@ struct state_formation
 
 	struct pawn *pawn; // selected pawn
 
-	struct position reachable[REACHABLE_LIMIT];
+	struct tile reachable[REACHABLE_LIMIT];
 	size_t reachable_count;
 };
 

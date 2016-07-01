@@ -49,7 +49,7 @@ static inline double distance(const double origin[static restrict 2], const doub
 }
 
 // Returns whether the troop can be placed at the given field.
-size_t formation_reachable_open(const struct game *restrict game, const struct battle *restrict battle, const struct pawn *restrict pawn, struct position reachable[REACHABLE_LIMIT])
+size_t formation_reachable_open(const struct game *restrict game, const struct battle *restrict battle, const struct pawn *restrict pawn, struct tile reachable[REACHABLE_LIMIT])
 {
 	size_t x, y;
 
@@ -64,7 +64,7 @@ size_t formation_reachable_open(const struct game *restrict game, const struct b
 				{
 					if (battle->field[y][x].blockage) continue;
 					if (distance(formation_position_defend, (double [2]){x + 0.5, y + 0.5}) <= FORMATION_RADIUS_DEFEND)
-						reachable[reachable_count++] = (struct position){x, y};
+						reachable[reachable_count++] = (struct tile){x, y};
 				}
 		}
 		else // the pawn attacks from the garrison
@@ -75,7 +75,7 @@ size_t formation_reachable_open(const struct game *restrict game, const struct b
 					if (battle->field[y][x].blockage) continue;
 					if (distance(formation_position_defend, (double [2]){x + 0.5, y + 0.5}) <= FORMATION_RADIUS_DEFEND) continue;
 					if (distance(formation_position_defend, (double [2]){x + 0.5, y + 0.5}) < FORMATION_RADIUS_FREE)
-						reachable[reachable_count++] = (struct position){x, y};
+						reachable[reachable_count++] = (struct tile){x, y};
 				}
 		}
 	}
@@ -88,14 +88,14 @@ size_t formation_reachable_open(const struct game *restrict game, const struct b
 				if (battle->field[y][x].blockage) continue;
 				if (distance(formation_position_defend, target) < FORMATION_RADIUS_FREE) continue;
 				if (distance(formation_position_attack[pawn->startup], target) <= FORMATION_RADIUS_ATTACK)
-					reachable[reachable_count++] = (struct position){x, y};
+					reachable[reachable_count++] = (struct tile){x, y};
 			}
 	}
 
 	return reachable_count;
 }
 
-size_t formation_reachable_assault(const struct game *restrict game, const struct battle *restrict battle, const struct pawn *restrict pawn, struct position reachable[REACHABLE_LIMIT])
+size_t formation_reachable_assault(const struct game *restrict game, const struct battle *restrict battle, const struct pawn *restrict pawn, struct tile reachable[REACHABLE_LIMIT])
 {
 	size_t x, y;
 
@@ -108,7 +108,7 @@ size_t formation_reachable_assault(const struct game *restrict game, const struc
 			{
 				if (battle->field[y][x].blockage) continue;
 				if (distance(formation_position_garrison, (double [2]){x + 0.5, y + 0.5}) <= FORMATION_RADIUS_DEFEND)
-					reachable[reachable_count++] = (struct position){x, y};
+					reachable[reachable_count++] = (struct tile){x, y};
 			}
 	}
 	else
@@ -118,26 +118,12 @@ size_t formation_reachable_assault(const struct game *restrict game, const struc
 			{
 				if (battle->field[y][x].blockage) continue;
 				if (distance(formation_position_assault[pawn->startup], (double [2]){x + 0.5, y + 0.5}) <= FORMATION_RADIUS_ATTACK)
-					reachable[reachable_count++] = (struct position){x, y};
+					reachable[reachable_count++] = (struct tile){x, y};
 			}
 	}
 
 	return reachable_count;
 }
-
-// TODO remove this
-/*
-int battlefield_neighbors(struct point a, struct point b)
-{
-	int distance;
-
-	if (a.x == b.x) distance = (int)b.y - (int)a.y;
-	else if (a.y == b.y) distance = (int)b.x - (int)a.x;
-	else return 0;
-
-	return ((distance == -1) || (distance == 1));
-}
-*/
 
 int battlefield_passable(const struct game *restrict game, const struct battlefield *restrict field, unsigned player)
 {
@@ -162,7 +148,7 @@ static void battlefield_init_open(const struct game *restrict game, struct battl
 
 	int reorder = 0;
 
-	struct position reachable[REACHABLE_LIMIT];
+	struct tile reachable[REACHABLE_LIMIT];
 	size_t reachable_count;
 
 	memset(locations, -1, sizeof(locations));
@@ -312,7 +298,7 @@ static void battlefield_init_assault(const struct game *restrict game, struct ba
 	{
 		struct pawn *pawn = battle->pawns + i;
 
-		struct position reachable[REACHABLE_LIMIT];
+		struct tile reachable[REACHABLE_LIMIT];
 		size_t reachable_count;
 
 		if (pawn->startup != NEIGHBOR_GARRISON)
@@ -365,7 +351,7 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 		for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
 		{
 			struct battlefield *field = &battle->field[y][x];
-			field->position = (struct position){x, y};
+			field->tile = (struct tile){x, y};
 			field->blockage = BLOCKAGE_NONE;
 			field->pawn = 0;
 		}
