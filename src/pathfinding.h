@@ -1,5 +1,8 @@
 #include <math.h>
 
+#define BATTLEFIELD_WIDTH 25
+#define BATTLEFIELD_HEIGHT 25
+
 #define PAWN_RADIUS 0.5
 
 struct game;
@@ -20,20 +23,7 @@ struct position
 	float x, y;
 };
 
-struct adjacency_list
-{
-	size_t count;
-	struct adjacency
-	{
-		struct position position;
-		struct neighbor
-		{
-			size_t index;
-			double distance;
-			struct neighbor *next;
-		} *neighbors;
-	} list[];
-};
+struct adjacency_list;
 
 // Calculates the euclidean distance between a and b.
 static inline double battlefield_distance(struct position a, struct position b)
@@ -54,10 +44,9 @@ int path_visible(struct position origin, struct position target, const struct ob
 struct adjacency_list *visibility_graph_build(const struct battle *restrict battle, const struct obstacles *restrict obstacles, unsigned vertices_reserved);
 void visibility_graph_free(struct adjacency_list *graph);
 
-// TODO think how to implement this
-//int path_distances(const struct pawn *restrict pawn, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles, double reachable[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH]);
-
 // Calculates the distance between origin and target and stores it in distance. On error, returns negative error code.
-int path_distance(struct position origin, struct position target, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles, double *restrict distance);
+//int path_distance(struct position origin, struct position target, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles, double *restrict distance);
 
 int path_find(struct pawn *restrict pawn, struct position destination, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles);
+
+int path_distances(const struct pawn *restrict pawn, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles, double reachable[static BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH]);

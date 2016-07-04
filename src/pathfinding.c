@@ -44,6 +44,21 @@ struct path_node
 #define heap_update(heap, position) ((heap)->data[position]->heap_index = (position))
 #include "generic/heap.g"
 
+struct adjacency_list
+{
+	size_t count;
+	struct adjacency
+	{
+		struct position position;
+		struct neighbor
+		{
+			size_t index;
+			double distance;
+			struct neighbor *next;
+		} *neighbors;
+	} list[];
+};
+
 static inline int sign(int number)
 {
 	return ((number > 0) - (number < 0));
@@ -559,7 +574,7 @@ finally:
 }
 
 // Calculates the distance between origin and target and stores it in distance. On error, returns negative error code.
-int path_distance(struct position origin, struct position target, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles, double *restrict distance)
+/*int path_distance(struct position origin, struct position target, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles, double *restrict distance)
 {
 	ssize_t vertex_target, vertex_origin;
 	struct path_node *traverse_info;
@@ -591,7 +606,9 @@ finally:
 	graph_remove(graph, vertex_origin);
 	graph_remove(graph, vertex_target);
 	return status;
-}
+}*/
+
+// TODO use pawn->path.data[pawn->path.count - 1] for start vertex
 
 // Finds path from the pawn's current position to destination and stores it in pawn->moves.
 // On error, returns error code and pawn movement queue remains unchanged.
@@ -614,7 +631,7 @@ int path_find(struct pawn *restrict pawn, struct position destination, struct ad
 		return vertex_origin;
 	}
 
-	// Look for a path from the pawn's final location to the target vector.
+	// Look for a path from the pawn's final position to the target vertex.
 	traverse_info = path_traverse(graph, vertex_target);
 	if (!traverse_info)
 	{
@@ -658,5 +675,52 @@ finally:
 	free(traverse_info);
 	graph_remove(graph, vertex_origin);
 	graph_remove(graph, vertex_target);
+	return status;
+}
+
+int path_distances(const struct pawn *restrict pawn, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles, double reachable[static BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH])
+{
+	ssize_t vertex_origin;
+	struct path_node *traverse_info;
+	int status;
+
+	vertex_origin = graph_insert(graph, obstacles, pawn->position);
+	if (vertex_origin < 0) return vertex_origin;
+
+	// Look for a path from the pawn's position to a non-existent target (so that all vertices are traversed).
+	traverse_info = path_traverse(graph, graph->count);
+	if (!traverse_info)
+	{
+		status = ERROR_MEMORY;
+		goto finally;
+	}
+
+	// Find which tiles are visible from any graph vertex.
+	// Store the least distance to each visible tile.
+	// TODO this is slow; maybe use a queue of tiles which to visit and check only the distance to them (if a tile is reachable, add its neighbors to the queue)
+	for(size_t y = 0; y < BATTLEFIELD_HEIGHT; ++y)
+	{
+		for(size_t x = 0; x < BATTLEFIELD_WIDTH; ++x)
+		{
+			reachable[y][x] = INFINITY;
+			for(size_t i = 0; i < graph->count; ++i)
+			{
+				struct position target = {x, y};
+				double distance = traverse_info[i].distance;
+
+				if ((distance < INFINITY) && path_visible(graph->list[i].position, target, obstacles))
+				{
+					distance += battlefield_distance(graph->list[i].position, target);
+					if (distance < reachable[y][x]) reachable[y][x] = distance;
+				}
+			}
+		}
+	}
+
+	status = 0;
+
+finally:
+	free(traverse_info);
+	graph_remove(graph, vertex_origin);
 	return status;
 }

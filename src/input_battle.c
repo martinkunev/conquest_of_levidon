@@ -116,6 +116,8 @@ static int pawn_command(const struct game *restrict game, struct battle *restric
 	}
 	else
 	{
+		// TODO this should cancel pawn action?
+
 		return movement_queue(pawn, target, graph, obstacles);
 	}
 }
@@ -130,9 +132,9 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 
 	if (code >= 0) return INPUT_NOTME;
 
-	x /= FIELD_SIZE;
-	y /= FIELD_SIZE;
-	position = (struct position){x, y};
+	position = (struct position){(double)x / FIELD_SIZE, (double)y / FIELD_SIZE};
+	x = (unsigned)position.x;
+	y = (unsigned)position.y;
 
 	if (code == EVENT_MOUSE_LEFT)
 	{
@@ -161,8 +163,10 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 		{
 			int status;
 
+			// TODO don't change pawn path and action if pawn_command fails
 			if (!(modifiers & XCB_MOD_MASK_SHIFT))
 				pawn_stay(pawn);
+			pawn->action = 0;
 
 			switch (status = pawn_command(game, battle, pawn, position, state->graph, state->obstacles, state->reachable))
 			{

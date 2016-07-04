@@ -368,7 +368,7 @@ int movement_collisions_resolve(const struct game *restrict game, struct battle 
 
 	// TODO ? with the current logic, each colliding pawn needs to have a separate list of obstacles to which positions and paths of other pawns are added
 
-	/* TODO implement modification of paths; some idea of the logic to do this is:
+	/* TODO OLD implement modification of paths; some idea of the logic to do this is:
 	while there are pawns colliding:
 		while there are pawns, each one of which overlaps only with slower pawns:
 			keep the path of the fastest pawns; modify the paths of the slower pawns while considering the faster pawns as obstacles
@@ -378,6 +378,7 @@ int movement_collisions_resolve(const struct game *restrict game, struct battle 
 		for all pawns just taken that still collide with a pawn with the same speed
 			make it stay at its current position
 	*/
+	// TODO NEW maybe just modify paths if there are two fastest pawns
 
 	array_pawns_term(&fastest);
 

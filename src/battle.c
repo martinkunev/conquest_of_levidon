@@ -420,7 +420,7 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 		pawns[i].path = (struct array_moves){0};
 		pawns[i].moves = (struct array_moves){0};
 
-		pawns[i].action = ACTION_DEFAULT;
+		pawns[i].action = 0;
 
 		if (troop->location == LOCATION_GARRISON) pawns[i].startup = NEIGHBOR_GARRISON;
 		else pawns[i].startup = 0; // this will be initialized later
