@@ -67,7 +67,7 @@ void if_load(const void *argument, const struct game *game)
 
 	if (!state->loaded)
 	{
-		draw_rectangle(object_group[Worlds].left - 1, object_group[Worlds].top - 1, object_group[Worlds].span_x + 2, object_group[Worlds].span_y + 2, White);
+		draw_rectangle(object_group[Worlds].left - 1, object_group[Worlds].top - 1, object_group[Worlds].span_x + 2, object_group[Worlds].span_y + 2, display_colors[White]);
 		for(i = 0; i < state->worlds->count; ++i)
 		{
 			if (i == object_group[Worlds].rows) break; // TODO scrolling support
@@ -75,7 +75,7 @@ void if_load(const void *argument, const struct game *game)
 			position = if_position(Worlds, i);
 			if (state->world_index == i) // selected
 			{
-				fill_rectangle(position.x, position.y, object_group[Worlds].width, object_group[Worlds].height, White);
+				fill_rectangle(position.x, position.y, object_group[Worlds].width, object_group[Worlds].height, display_colors[White]);
 				draw_string(state->worlds->names[i]->data, state->worlds->names[i]->size, position.x, position.y + (object_group[Worlds].height - font12.height) / 2, &font12, Black);
 			}
 			else
@@ -96,7 +96,10 @@ void if_load(const void *argument, const struct game *game)
 			if (i == PLAYER_NEUTRAL) continue;
 
 			position = if_position(Players, i);
-			fill_rectangle(position.x, position.y, PLAYERS_INDICATOR_SIZE, object_group[Players].height, Player + i); // TODO replace this with a flag
+
+			// TODO flag
+
+			fill_rectangle(position.x, position.y, PLAYERS_INDICATOR_SIZE, object_group[Players].height, display_colors[Player + i]); // TODO replace this with a flag
 			switch (game->players[i].type)
 			{
 			case Local:
@@ -142,7 +145,7 @@ void if_save(const void *argument, const struct game *game)
 	position = if_position(WorldTabs, 2);
 	draw_string(S("save"), position.x + TAB_PADDING, position.y + TAB_PADDING, &font12, White);
 
-	draw_rectangle(object_group[Worlds].left - 1, object_group[Worlds].top - 1, object_group[Worlds].span_x + 2, object_group[Worlds].span_y + 2, White);
+	draw_rectangle(object_group[Worlds].left - 1, object_group[Worlds].top - 1, object_group[Worlds].span_x + 2, object_group[Worlds].span_y + 2, display_colors[White]);
 	for(i = 0; i < state->worlds->count; ++i)
 	{
 		if (i == object_group[Worlds].rows) break; // TODO scrolling support
@@ -150,7 +153,7 @@ void if_save(const void *argument, const struct game *game)
 		position = if_position(Worlds, i);
 		if (state->world_index == i) // selected
 		{
-			fill_rectangle(position.x, position.y, object_group[Worlds].width, object_group[Worlds].height, White);
+			fill_rectangle(position.x, position.y, object_group[Worlds].width, object_group[Worlds].height, display_colors[White]);
 			draw_string(state->worlds->names[i]->data, state->worlds->names[i]->size, position.x, position.y + (object_group[Worlds].height - font12.height) / 2, &font12, Black);
 		}
 		else

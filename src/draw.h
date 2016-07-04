@@ -49,7 +49,7 @@ struct font
 };
 
 enum color {White, Gray, Black, Error, Unexplored, Progress, Select, Self, Ally, Enemy, PathReachable, PathUnreachable, Hover, FieldReachable, Player};
-extern unsigned char display_colors[][4]; // TODO remove this
+extern const unsigned char display_colors[][4];
 
 static inline int point_eq(struct point a, struct point b)
 {
@@ -58,11 +58,11 @@ static inline int point_eq(struct point a, struct point b)
 
 void fill_circle(unsigned x, unsigned y, unsigned radius, enum color color);
 
-void draw_rectangle(unsigned x, unsigned y, unsigned width, unsigned height, enum color color);
-void fill_rectangle(unsigned x, unsigned y, unsigned width, unsigned height, enum color color);
+void draw_rectangle(unsigned x, unsigned y, unsigned width, unsigned height, const unsigned char color[static 4]);
+void fill_rectangle(unsigned x, unsigned y, unsigned width, unsigned height, const unsigned char color[static 4]);
 
-void draw_polygon(const struct polygon *restrict polygon, int offset_x, int offset_y, const unsigned char color[4]);
-void fill_polygon(const struct polygon *restrict polygon, int offset_x, int offset_y, const unsigned char color[4]);
+void draw_polygon(const struct polygon *restrict polygon, int offset_x, int offset_y, const unsigned char color[static 4]);
+void fill_polygon(const struct polygon *restrict polygon, int offset_x, int offset_y, const unsigned char color[static 4]);
 
 void display_arrow(struct point from, struct point to, int offset_x, int offset_y, enum color color);
 

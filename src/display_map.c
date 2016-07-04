@@ -181,7 +181,7 @@ static void show_progress(unsigned current, unsigned total, unsigned x, unsigned
 
 		glEnd();
 	}
-	else fill_rectangle(x, y, width, height, Progress);
+	else fill_rectangle(x, y, width, height, display_colors[Progress]);
 }
 
 static void show_resource(const struct image *restrict image, int treasury, int income, int expense, unsigned y)
@@ -282,11 +282,11 @@ static void if_map_troops(unsigned x, unsigned y, unsigned count_self, unsigned 
 	{
 		if (count_self > TROOPS_BAR_HEIGHT)
 		{
-			fill_rectangle(x - 1, y - TROOPS_BAR_HEIGHT - 2, TROOPS_BAR_WIDTH + 2, 1, Self);
+			fill_rectangle(x - 1, y - TROOPS_BAR_HEIGHT - 2, TROOPS_BAR_WIDTH + 2, 1, display_colors[Self]);
 			count_self = TROOPS_BAR_HEIGHT;
 		}
-		fill_rectangle(x, y - count_self, TROOPS_BAR_WIDTH, count_self, Self);
-		draw_rectangle(x - 1, y - count_self - 1, TROOPS_BAR_WIDTH + 2, count_self + 2, Black);
+		fill_rectangle(x, y - count_self, TROOPS_BAR_WIDTH, count_self, display_colors[Self]);
+		draw_rectangle(x - 1, y - count_self - 1, TROOPS_BAR_WIDTH + 2, count_self + 2, display_colors[Black]);
 
 		x += TROOPS_BAR_WIDTH + 1;
 	}
@@ -295,11 +295,11 @@ static void if_map_troops(unsigned x, unsigned y, unsigned count_self, unsigned 
 	{
 		if (count_ally > TROOPS_BAR_HEIGHT)
 		{
-			fill_rectangle(x - 1, y - TROOPS_BAR_HEIGHT - 2, TROOPS_BAR_WIDTH + 2, 1, Ally);
+			fill_rectangle(x - 1, y - TROOPS_BAR_HEIGHT - 2, TROOPS_BAR_WIDTH + 2, 1, display_colors[Ally]);
 			count_ally = TROOPS_BAR_HEIGHT;
 		}
-		fill_rectangle(x, y - count_ally, TROOPS_BAR_WIDTH, count_ally, Ally);
-		draw_rectangle(x - 1, y - count_ally - 1, TROOPS_BAR_WIDTH + 2, count_ally + 2, Black);
+		fill_rectangle(x, y - count_ally, TROOPS_BAR_WIDTH, count_ally, display_colors[Ally]);
+		draw_rectangle(x - 1, y - count_ally - 1, TROOPS_BAR_WIDTH + 2, count_ally + 2, display_colors[Black]);
 
 		x += TROOPS_BAR_WIDTH + 1;
 	}
@@ -308,11 +308,11 @@ static void if_map_troops(unsigned x, unsigned y, unsigned count_self, unsigned 
 	{
 		if (count_enemy > TROOPS_BAR_HEIGHT)
 		{
-			fill_rectangle(x - 1, y - TROOPS_BAR_HEIGHT - 2, TROOPS_BAR_WIDTH + 2, 1, Enemy);
+			fill_rectangle(x - 1, y - TROOPS_BAR_HEIGHT - 2, TROOPS_BAR_WIDTH + 2, 1, display_colors[Enemy]);
 			count_enemy = TROOPS_BAR_HEIGHT;
 		}
-		fill_rectangle(x, y - count_enemy, TROOPS_BAR_WIDTH, count_enemy, Enemy);
-		draw_rectangle(x - 1, y - count_enemy - 1, TROOPS_BAR_WIDTH + 2, count_enemy + 2, Black);
+		fill_rectangle(x, y - count_enemy, TROOPS_BAR_WIDTH, count_enemy, display_colors[Enemy]);
+		draw_rectangle(x - 1, y - count_enemy - 1, TROOPS_BAR_WIDTH + 2, count_enemy + 2, display_colors[Black]);
 
 		x += TROOPS_BAR_WIDTH + 1;
 	}
@@ -367,12 +367,12 @@ static void if_map_region(const struct region *region, const struct state_map *s
 			struct point position = if_position(Building, i);
 			if (region_built(region, i))
 			{
-				draw_rectangle(position.x - 1, position.y - 1, image_buildings[i].width + 2, image_buildings[i].height + 2, Black);
+				draw_rectangle(position.x - 1, position.y - 1, image_buildings[i].width + 2, image_buildings[i].height + 2, display_colors[Black]);
 				image_draw(image_buildings + i, position.x, position.y);
 			}
 			else if ((state->player == region->owner) && region_building_available(region, buildings[i]) && !siege)
 			{
-				draw_rectangle(position.x - 1, position.y - 1, image_buildings[i].width + 2, image_buildings[i].height + 2, Black);
+				draw_rectangle(position.x - 1, position.y - 1, image_buildings[i].width + 2, image_buildings[i].height + 2, display_colors[Black]);
 				image_draw(image_buildings_gray + i, position.x, position.y);
 			}
 		}
@@ -411,7 +411,7 @@ static void if_map_region(const struct region *region, const struct state_map *s
 					}
 				}
 
-				if (!self_count) fill_rectangle(PANEL_X, object_group[TroopSelf].top - 2, PANEL_WIDTH, 2 + object_group[TroopSelf].height + 12 + 2, Self);
+				if (!self_count) fill_rectangle(PANEL_X, object_group[TroopSelf].top - 2, PANEL_WIDTH, 2 + object_group[TroopSelf].height + 12 + 2, display_colors[Self]);
 				x = self_count++;
 				object = TroopSelf;
 				offset = state->self_offset;
@@ -421,7 +421,7 @@ static void if_map_region(const struct region *region, const struct state_map *s
 			{
 				if (troop->location == LOCATION_GARRISON) continue;
 
-				if (!other_count) fill_rectangle(PANEL_X, object_group[TroopOther].top - 2, PANEL_WIDTH, 2 + object_group[TroopOther].height + 12 + 2, Ally);
+				if (!other_count) fill_rectangle(PANEL_X, object_group[TroopOther].top - 2, PANEL_WIDTH, 2 + object_group[TroopOther].height + 12 + 2, display_colors[Ally]);
 				x = other_count++;
 				object = TroopOther;
 				offset = state->other_offset;
@@ -431,7 +431,7 @@ static void if_map_region(const struct region *region, const struct state_map *s
 			{
 				if (troop->location == LOCATION_GARRISON) continue;
 
-				if (!other_count) fill_rectangle(PANEL_X, object_group[TroopOther].top - 2, PANEL_WIDTH, 2 + object_group[TroopOther].height + 12 + 2, Enemy);
+				if (!other_count) fill_rectangle(PANEL_X, object_group[TroopOther].top - 2, PANEL_WIDTH, 2 + object_group[TroopOther].height + 12 + 2, display_colors[Enemy]);
 				x = other_count++;
 				object = TroopOther;
 				offset = state->other_offset;
@@ -444,7 +444,7 @@ static void if_map_region(const struct region *region, const struct state_map *s
 				struct point position = if_position(object, x - offset);
 				display_troop(troop->unit->index, position.x, position.y, Player + troop->owner, color_text, troop->count);
 				if (image_action) image_draw(image_action, position.x, position.y); // draw action indicator for the troop
-				if (troop == state->troop) draw_rectangle(position.x - 1, position.y - 1, object_group[object].width + 2, object_group[object].height + 2, White);
+				if (troop == state->troop) draw_rectangle(position.x - 1, position.y - 1, object_group[object].width + 2, object_group[object].height + 2, display_colors[White]);
 			}
 		}
 
@@ -474,7 +474,7 @@ static void if_map_region(const struct region *region, const struct state_map *s
 
 					struct point position = if_position(TroopGarrison, i);
 					display_troop(troop->unit->index, position.x, position.y, Player + troop->owner, Black, troop->count);
-					if (troop == state->troop) draw_rectangle(position.x - 1, position.y - 1, object_group[TroopGarrison].width + 2, object_group[TroopGarrison].height + 2, White);
+					if (troop == state->troop) draw_rectangle(position.x - 1, position.y - 1, object_group[TroopGarrison].width + 2, object_group[TroopGarrison].height + 2, display_colors[White]);
 
 					i += 1;
 				}
@@ -529,7 +529,7 @@ static void if_map_region(const struct region *region, const struct state_map *s
 				display_troop(region->train[index]->index, position.x, position.y, Player, 0, 0);
 				show_progress((index ? 0 : region->train_progress), region->train[0]->time, position.x, position.y, object_group[Dismiss].width, object_group[Dismiss].height);
 			}
-			else fill_rectangle(position.x, position.y, object_group[Dismiss].width, object_group[Dismiss].height, Black);
+			else fill_rectangle(position.x, position.y, object_group[Dismiss].width, object_group[Dismiss].height, display_colors[Black]);
 		}
 
 		// Display units available for training.
@@ -583,9 +583,9 @@ void if_map(const void *argument, const struct game *game)
 
 	// Display current player's color.
 	// TODO use darker color in the center
-	draw_rectangle(PANEL_X - 4, PANEL_Y - 4, PANEL_WIDTH + 8, PANEL_HEIGHT + 8, Player + state->player);
-	draw_rectangle(PANEL_X - 3, PANEL_Y - 3, PANEL_WIDTH + 6, PANEL_HEIGHT + 6, Player + state->player);
-	draw_rectangle(PANEL_X - 2, PANEL_Y - 2, PANEL_WIDTH + 4, PANEL_HEIGHT + 4, Player + state->player);
+	draw_rectangle(PANEL_X - 4, PANEL_Y - 4, PANEL_WIDTH + 8, PANEL_HEIGHT + 8, display_colors[Player + state->player]);
+	draw_rectangle(PANEL_X - 3, PANEL_Y - 3, PANEL_WIDTH + 6, PANEL_HEIGHT + 6, display_colors[Player + state->player]);
+	draw_rectangle(PANEL_X - 2, PANEL_Y - 2, PANEL_WIDTH + 4, PANEL_HEIGHT + 4, display_colors[Player + state->player]);
 
 	// Display panel background pattern.
 	display_image(&image_panel, PANEL_X, PANEL_Y, PANEL_WIDTH, PANEL_HEIGHT);

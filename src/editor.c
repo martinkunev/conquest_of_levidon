@@ -739,12 +739,12 @@ static void if_regions(const void *restrict argument, const struct game *restric
 		location.y += EDITOR_Y - image_garrison.height / 2;
 		display_image(&image_garrison, location.x, location.y, image_garrison.width, image_garrison.height);
 
-		fill_rectangle(game->regions[i].center.x - 2, game->regions[i].center.y - 2, CENTER_WIDTH, CENTER_HEIGHT, Black);
+		fill_rectangle(game->regions[i].center.x - 2, game->regions[i].center.y - 2, CENTER_WIDTH, CENTER_HEIGHT, display_colors[Black]);
 	}
 
 	if (state->region_index >= 0)
 	{
-		fill_rectangle(REGIONNAME_X - 2, REGIONNAME_Y - 2, 244, 24, Black);
+		fill_rectangle(REGIONNAME_X - 2, REGIONNAME_Y - 2, 244, 24, display_colors[Black]);
 
 		if (state->name_size)
 			draw_string(state->name, state->name_size, REGIONNAME_X, REGIONNAME_Y + MARGIN, &font12, White);
@@ -815,14 +815,14 @@ static void if_points(const void *argument, const struct game *game)
 	for(i = 0; i < state->index_start; ++i)
 	{
 		struct point point = state->points.data[i].point;
-		draw_rectangle(point.x - 3, point.y - 3, 7, 7, Black);
-		fill_rectangle(point.x - 2, point.y - 2, 5, 5, Ally);
+		draw_rectangle(point.x - 3, point.y - 3, 7, 7, display_colors[Black]);
+		fill_rectangle(point.x - 2, point.y - 2, 5, 5, display_colors[Ally]);
 	}
 	for(; i < state->points.count; ++i)
 	{
 		struct point point = state->points.data[i].point;
-		draw_rectangle(point.x - 3, point.y - 3, 7, 7, Black);
-		fill_rectangle(point.x - 2, point.y - 2, 5, 5, Enemy);
+		draw_rectangle(point.x - 3, point.y - 3, 7, 7, display_colors[Black]);
+		fill_rectangle(point.x - 2, point.y - 2, 5, 5, display_colors[Enemy]);
 	}
 
 	show_button(S("Regions tool"), BUTTON_REGIONS_X, BUTTON_REGIONS_Y);

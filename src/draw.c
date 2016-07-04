@@ -44,7 +44,7 @@ struct polygon_draw
 
 extern struct font font;
 
-unsigned char display_colors[][4] = {
+const unsigned char display_colors[][4] = {
 	[White] = {255, 255, 255, 255},
 	[Gray] = {128, 128, 128, 255},
 	[Black] = {0, 0, 0, 255},
@@ -133,9 +133,9 @@ void fill_circle(unsigned x, unsigned y, unsigned radius, enum color color)
 	glEnd();
 }
 
-void fill_rectangle(unsigned x, unsigned y, unsigned width, unsigned height, enum color color)
+void fill_rectangle(unsigned x, unsigned y, unsigned width, unsigned height, const unsigned char color[4])
 {
-	glColor4ubv(display_colors[color]);
+	glColor4ubv(color);
 
 	glBegin(GL_QUADS);
 	glVertex2i(x + width, y + height);
@@ -145,11 +145,11 @@ void fill_rectangle(unsigned x, unsigned y, unsigned width, unsigned height, enu
 	glEnd();
 }
 
-void draw_rectangle(unsigned x, unsigned y, unsigned width, unsigned height, enum color color)
+void draw_rectangle(unsigned x, unsigned y, unsigned width, unsigned height, const unsigned char color[4])
 {
 	// http://stackoverflow.com/questions/10040961/opengl-pixel-perfect-2d-drawing
 
-	glColor4ubv(display_colors[color]);
+	glColor4ubv(color);
 
 	glBegin(GL_LINE_LOOP);
 	glVertex2f(x + width - 0.5, y + height - 0.5);
@@ -159,7 +159,7 @@ void draw_rectangle(unsigned x, unsigned y, unsigned width, unsigned height, enu
 	glEnd();
 }
 
-void draw_polygon(const struct polygon *restrict polygon, int offset_x, int offset_y, const unsigned char color[4])
+void draw_polygon(const struct polygon *restrict polygon, int offset_x, int offset_y, const unsigned char color[static 4])
 {
 	size_t i;
 
@@ -172,7 +172,7 @@ void draw_polygon(const struct polygon *restrict polygon, int offset_x, int offs
 }
 
 // Display a region as a polygon, using ear clipping.
-void fill_polygon(const struct polygon *restrict polygon, int offset_x, int offset_y, const unsigned char color[4])
+void fill_polygon(const struct polygon *restrict polygon, int offset_x, int offset_y, const unsigned char color[static 4])
 {
 	// assert(polygon->vertices_count > 2);
 

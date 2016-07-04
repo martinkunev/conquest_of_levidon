@@ -59,6 +59,8 @@ struct adjacency_list
 	} list[];
 };
 
+// TODO maybe use pawn->path.data[pawn->path.count - 1] for start vertex
+
 static inline int sign(int number)
 {
 	return ((number > 0) - (number < 0));
@@ -608,8 +610,6 @@ finally:
 	return status;
 }*/
 
-// TODO use pawn->path.data[pawn->path.count - 1] for start vertex
-
 // Finds path from the pawn's current position to destination and stores it in pawn->moves.
 // On error, returns error code and pawn movement queue remains unchanged.
 int path_find(struct pawn *restrict pawn, struct position destination, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles)
@@ -705,7 +705,7 @@ int path_distances(const struct pawn *restrict pawn, struct adjacency_list *rest
 			reachable[y][x] = INFINITY;
 			for(size_t i = 0; i < graph->count; ++i)
 			{
-				struct position target = {x, y};
+				struct position target = {x + 0.5, y + 0.5};
 				double distance = traverse_info[i].distance;
 
 				if ((distance < INFINITY) && path_visible(graph->list[i].position, target, obstacles))

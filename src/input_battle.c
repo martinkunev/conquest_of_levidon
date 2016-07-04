@@ -82,10 +82,7 @@ static struct pawn *pawn_find(struct battlefield *restrict field, struct positio
 	struct pawn **pawns = field->pawns;
 	for(size_t i = 0; (i < BATTLEFIELD_PAWNS_LIMIT) && pawns[i]; i += 1)
 		if (battlefield_distance(pawns[i]->position, position) < PAWN_RADIUS)
-		{
 			return pawns[i];
-			// TODO init distances for reachable locations for the current pawn
-		}
 	return 0;
 }
 
@@ -116,8 +113,6 @@ static int pawn_command(const struct game *restrict game, struct battle *restric
 	}
 	else
 	{
-		// TODO this should cancel pawn action?
-
 		return movement_queue(pawn, target, graph, obstacles);
 	}
 }
@@ -129,6 +124,7 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 	struct state_battle *state = argument;
 
 	struct position position;
+	int status;
 
 	if (code >= 0) return INPUT_NOTME;
 
@@ -142,7 +138,10 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 
 		state->field = (field->blockage ? field : 0);
 		state->pawn = pawn_find(field, position);
-		// TODO init distances for reachable locations for the current pawn // if (state->pawn) ...
+
+		if (state->pawn)
+			if (status = path_distances(state->pawn, state->graph, state->obstacles, state->reachable))
+				return status;
 
 		return 0;
 	}
@@ -150,6 +149,8 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 	{
 		struct pawn *pawn = state->pawn;
 		if (!pawn || (pawn->troop->owner != state->player)) return INPUT_IGNORE;
+
+		// TODO maybe update distances for reachable locations for the current pawn (to reflect path)
 
 		// if CONTROL is pressed, shoot
 		// if SHIFT is pressed, don't overwrite the current command
@@ -161,8 +162,6 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 		}
 		else
 		{
-			int status;
-
 			// TODO don't change pawn path and action if pawn_command fails
 			if (!(modifiers & XCB_MOD_MASK_SHIFT))
 				pawn_stay(pawn);
@@ -181,7 +180,6 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 			}
 		}
 
-		// TODO init distances for reachable locations for the current pawn
 		return 0;
 	}
 

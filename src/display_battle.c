@@ -66,10 +66,10 @@ static void if_battlefield(unsigned char player, const struct game *game, const 
 	display_image(&image_terrain[0], BATTLE_X - 8, BATTLE_Y - 8, BATTLEFIELD_WIDTH * FIELD_SIZE + 16, BATTLEFIELD_HEIGHT * FIELD_SIZE + 16);
 
 	// Draw rectangle with current player's color.
-	fill_rectangle(CTRL_X, CTRL_Y, 256, 16, Player + player);
+	fill_rectangle(CTRL_X, CTRL_Y, 256, 16, display_colors[Player + player]);
 
 	// Draw the control section in gray.
-	fill_rectangle(CTRL_X, CTRL_Y + CTRL_MARGIN, CTRL_WIDTH, CTRL_HEIGHT - CTRL_MARGIN, Gray);
+	fill_rectangle(CTRL_X, CTRL_Y + CTRL_MARGIN, CTRL_WIDTH, CTRL_HEIGHT - CTRL_MARGIN, display_colors[Gray]);
 
 	// Display battlefield obstacles.
 	for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
@@ -262,10 +262,10 @@ void if_formation(const void *argument, const struct game *game)
 			// Display at which fields the pawn can be placed.
 			for(j = 0; j < state->reachable_count; ++j)
 				if (!battle_field(battle, state->reachable[j])->pawn)
-					fill_rectangle(BATTLE_X + state->reachable[j].x * object_group[Battlefield].width, BATTLE_Y + state->reachable[j].y * object_group[Battlefield].height, object_group[Battlefield].width, object_group[Battlefield].height, FieldReachable);
+					fill_rectangle(BATTLE_X + state->reachable[j].x * object_group[Battlefield].width, BATTLE_Y + state->reachable[j].y * object_group[Battlefield].height, object_group[Battlefield].width, object_group[Battlefield].height, display_colors[FieldReachable]);
 
 			// Display the selected pawn in the control section.
-			fill_rectangle(CTRL_X, CTRL_Y + CTRL_MARGIN, FIELD_SIZE + MARGIN * 2, FIELD_SIZE + font12.height + MARGIN * 2, Self);
+			fill_rectangle(CTRL_X, CTRL_Y + CTRL_MARGIN, FIELD_SIZE + MARGIN * 2, FIELD_SIZE + font12.height + MARGIN * 2, display_colors[Self]);
 			display_troop(troop->unit->index, CTRL_X + MARGIN, CTRL_Y + CTRL_MARGIN + MARGIN, Player + troop->owner, Black, pawns[i]->count);
 		}
 		else
@@ -280,7 +280,7 @@ void if_formation(const void *argument, const struct game *game)
 	// Display hovered field in color.
 	// TODO this is buggy
 	/*if (!point_eq(state->hover, POINT_NONE))
-		fill_rectangle(BATTLE_X + state->hover.x * object_group[Battlefield].width, BATTLE_Y + state->hover.y * object_group[Battlefield].height, object_group[Battlefield].width, object_group[Battlefield].height, Hover);*/
+		fill_rectangle(BATTLE_X + state->hover.x * object_group[Battlefield].width, BATTLE_Y + state->hover.y * object_group[Battlefield].height, object_group[Battlefield].width, object_group[Battlefield].height, display_colors[Hover]);*/
 }
 
 static void show_health(const struct pawn *pawn, unsigned x, unsigned y)
@@ -299,7 +299,7 @@ static void show_health(const struct pawn *pawn, unsigned x, unsigned y)
 
 	// HEALTH_BAR * left / total
 	// HEALTH_BAR * total / total == HEALTH_BAR
-	//fill_rectangle(CTRL_X, CTRL_Y + CTRL_MARGIN, FIELD_SIZE + MARGIN * 2, FIELD_SIZE + font12.height + MARGIN * 2, color);
+	//fill_rectangle(CTRL_X, CTRL_Y + CTRL_MARGIN, FIELD_SIZE + MARGIN * 2, FIELD_SIZE + font12.height + MARGIN * 2, display_colors[color]);
 	//
 }
 
@@ -366,19 +366,7 @@ void if_battle(const void *argument, const struct game *game)
 
 	if_battlefield(state->player, game, battle, open);
 
-	// Display pawns.
-	for(i = 0; i < battle->pawns_count; ++i)
-	{
-		pawn = battle->pawns + i;
-
-		if (pawn->troop->owner == state->player) color = Self;
-		else if (game->players[pawn->troop->owner].alliance == game->players[state->player].alliance) color = Ally;
-		else color = Enemy;
-
-		display_troop(pawn->troop->unit->index, BATTLEFIELD_X(pawn->position.x), BATTLEFIELD_Y(pawn->position.y), color, 0, 0);
-	}
-
-	// TODO indicate which object is hovered?
+	// TODO indicate which pawn/field is hovered?
 
 	// Display information about the selected pawn or field (or all pawns if nothing is selected).
 	if (pawn = state->pawn)
@@ -390,24 +378,27 @@ void if_battle(const void *argument, const struct game *game)
 		if (pawn->troop->owner == state->player) color = Self;
 		else if (allies(game, state->player, pawn->troop->owner)) color = Ally;
 		else color = Enemy;
-		fill_rectangle(CTRL_X, CTRL_Y + CTRL_MARGIN, FIELD_SIZE + MARGIN * 2, FIELD_SIZE + font12.height + MARGIN * 2, color);
+		fill_rectangle(CTRL_X, CTRL_Y + CTRL_MARGIN, FIELD_SIZE + MARGIN * 2, FIELD_SIZE + font12.height + MARGIN * 2, display_colors[color]);
 		display_troop(pawn->troop->unit->index, CTRL_X + MARGIN, CTRL_Y + CTRL_MARGIN + MARGIN, Player + pawn->troop->owner, Black, pawn->count);
 
 		show_health(pawn, CTRL_X, CTRL_Y + CTRL_MARGIN + FIELD_SIZE + font12.height + MARGIN * 2 + MARGIN);
 
 		if (pawn->troop->owner == state->player)
 		{
-			if_battle_pawn(game, state, pawn);
+			// Show which tiles are reachable by the pawn.
+			// TODO maybe only do this if there is no pawn action?
+			for(size_t y = 0; y < BATTLEFIELD_HEIGHT; ++y)
+				for(size_t x = 0; x < BATTLEFIELD_WIDTH; ++x)
+					if ((state->reachable[y][x] <= pawn->troop->unit->speed) && !battle->field[y][x].pawn)
+					{
+						// If a tile is only partially reachable, color it with less opaqueness.
+						double distance_left = pawn->troop->unit->speed - state->reachable[y][x];
+						double opaqueness = ((distance_left >= M_SQRT2 / 2) ? 1.0 : distance_left / (M_SQRT2 / 2));
+						unsigned char color[4] = {0, 0, 0, 64 * opaqueness};
+						fill_rectangle(BATTLE_X + x * object_group[Battlefield].width, BATTLE_Y + y * object_group[Battlefield].height, object_group[Battlefield].width, object_group[Battlefield].height, color);
+					}
 
-			// TODO fix this
-			/*if (!pawn->action)
-			{
-				// Show which fields are reachable by the pawn.
-				for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
-					for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
-						if ((state->reachable[y][x] <= pawn->troop->unit->speed) && !battle->field[y][x].pawn)
-							fill_rectangle(BATTLE_X + x * object_group[Battlefield].width, BATTLE_Y + y * object_group[Battlefield].height, object_group[Battlefield].width, object_group[Battlefield].height, FieldReachable);
-			}*/
+			if_battle_pawn(game, state, pawn);
 		}
 	}
 	else if (state->field)
@@ -419,6 +410,18 @@ void if_battle(const void *argument, const struct game *game)
 	{
 		if (!battle->players[state->player].pawns[i]->count) continue;
 		if_battle_pawn(game, state, battle->players[state->player].pawns[i]);
+	}
+
+	// Display pawns.
+	for(i = 0; i < battle->pawns_count; ++i)
+	{
+		pawn = battle->pawns + i;
+
+		if (pawn->troop->owner == state->player) color = Self;
+		else if (game->players[pawn->troop->owner].alliance == game->players[state->player].alliance) color = Ally;
+		else color = Enemy;
+
+		display_troop(pawn->troop->unit->index, BATTLEFIELD_X(pawn->position.x), BATTLEFIELD_Y(pawn->position.y), color, 0, 0);
 	}
 
 	show_button(S("Ready"), BUTTON_ENTER_X, BUTTON_ENTER_Y);

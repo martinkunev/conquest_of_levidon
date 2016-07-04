@@ -21,10 +21,6 @@
 
 #define PLAYER_NEUTRAL 0 /* player 0 is hard-coded as neutral */
 
-//#include "game.h"
-//#include "resources.h"
-//#include "draw.h"
-
 // TODO don't use struct point here
 
 #define region_unit_available(region, unit) (!((unit).requires & ~(region)->built))
