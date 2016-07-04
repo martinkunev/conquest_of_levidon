@@ -97,9 +97,7 @@ void if_load(const void *argument, const struct game *game)
 
 			position = if_position(Players, i);
 
-			// TODO flag
-
-			fill_rectangle(position.x, position.y, PLAYERS_INDICATOR_SIZE, object_group[Players].height, display_colors[Player + i]); // TODO replace this with a flag
+			show_flag(position.x, position.y, Player + i);
 			switch (game->players[i].type)
 			{
 			case Local:
