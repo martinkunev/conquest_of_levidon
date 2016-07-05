@@ -533,7 +533,7 @@ static struct path_node *path_traverse(struct adjacency_list *restrict graph, si
 	size_t i;
 	ssize_t vertex;
 
-	// assert(graph->count > 1);
+	// assert(graph->count);
 
 	size_t vertex_origin = graph->count - 1;
 
@@ -549,27 +549,30 @@ static struct path_node *path_traverse(struct adjacency_list *restrict graph, si
 	traverse_info[vertex_origin].path_link = 0;
 
 	// Find the shortest path to target using Dijkstra's algorithm.
-	closest.count = vertex_origin;
-	closest.data = malloc(closest.count * sizeof(traverse_info));
-	if (!closest.data)
+	if (vertex_origin)
 	{
-		free(traverse_info);
-		traverse_info = 0;
-		goto finally; // memory error
+		closest.count = vertex_origin;
+		closest.data = malloc(closest.count * sizeof(traverse_info));
+		if (!closest.data)
+		{
+			free(traverse_info);
+			traverse_info = 0;
+			goto finally; // memory error
+		}
+		for(i = 0; i < vertex_origin; ++i)
+		{
+			closest.data[i] = traverse_info + i;
+			traverse_info[i].heap_index = i;
+		}
+		vertex = vertex_origin;
+		while (1)
+		{
+			vertex = find_closest(&closest, traverse_info, graph->list[vertex].neighbors, vertex);
+			if (vertex == vertex_target) break; // found
+			if (vertex < 0) break; // no more reachable vertices
+		}
+		free(closest.data);
 	}
-	for(i = 0; i < vertex_origin; ++i)
-	{
-		closest.data[i] = traverse_info + i;
-		traverse_info[i].heap_index = i;
-	}
-	vertex = vertex_origin;
-	while (1)
-	{
-		vertex = find_closest(&closest, traverse_info, graph->list[vertex].neighbors, vertex);
-		if (vertex == vertex_target) break; // found
-		if (vertex < 0) break; // no more reachable vertices
-	}
-	free(closest.data);
 
 finally:
 	return traverse_info;

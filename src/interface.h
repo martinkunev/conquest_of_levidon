@@ -25,4 +25,5 @@ struct game;
 int if_init(void);
 void if_display(void);
 void input_display(void (*if_display)(const void *, const struct game *), const struct game *restrict game, void *state);
+void input_display_timer(void (*if_display)(const void *, const struct game *, double), const struct game *restrict game, double progress, void *state);
 void if_term(void);

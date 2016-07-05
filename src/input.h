@@ -41,3 +41,4 @@ int input_finish(int code, unsigned x, unsigned y, uint16_t modifiers, const str
 int input_terminate(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument);
 
 int input_local(const struct area *restrict areas, size_t areas_count, void (*display)(const void *, const struct game *), const struct game *restrict game, void *state);
+int input_timer(void (*display)(const void *, const struct game *, double), const struct game *restrict game, double duration, void *state);

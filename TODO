@@ -48,6 +48,14 @@ battle mechanics
 	pawns don't understand how to sidestep other pawns to reach their destination
 	pawns of the same player deadlock (seen with peasant and light cavalry)
 
+	-- bugs --
+	F don't quit game when queue becomes too long
+	F start of the movement arrow should be at the center of the pawn
+	F horse and peasant: the peasant wasn't supposed to move, but it moved and overlapped with the horse; probably working with the top left corner instead of the center
+	F startup locations set at formation are excluded from reachable fields
+	F animation is not refreshed while still not finished
+	F fight image is displayed below the pawn
+
 TODO ? change direction of everything to counterclockwise; currently the y axis is in the opposite direction (and the cross product is negated)
 TODO ? rename image to sprite
 TODO ? redesign input functions (handling mouse movement is tedious; handling writing should be unified; there should be a way to terminate input with timer)

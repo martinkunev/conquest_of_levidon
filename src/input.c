@@ -18,6 +18,7 @@
  */
 
 #include <stdlib.h>
+#include <sys/time.h>
 
 #include <X11/Xlib.h>
 #include <X11/keysym.h>
@@ -116,7 +117,6 @@ wait:
 			x = keyboard->event_x;
 			y = keyboard->event_y;
 			modifiers = keyboard->state;
-
 			break;
 
 		case XCB_MOTION_NOTIFY:
@@ -161,4 +161,84 @@ wait:
 			}
 		} while (index--);
 	}
+}
+
+static double timer_progress(const struct timeval *restrict start, double duration)
+{
+	struct timeval now;
+	unsigned long time_difference;
+	gettimeofday(&now, 0);
+	time_difference = (now.tv_sec * 1000000 + now.tv_usec - start->tv_sec * 1000000 - start->tv_usec);
+	return time_difference / (duration * 1000000.0);
+}
+
+int input_timer(void (*display)(const void *, const struct game *, double), const struct game *restrict game, double duration, void *state)
+{
+	xcb_generic_event_t *event;
+	xcb_button_release_event_t *mouse;
+	xcb_key_press_event_t *keyboard;
+	xcb_motion_notify_event_t *motion;
+
+	// TODO support capital letters with shift and caps lock
+
+	int code; // TODO this is oversimplification
+	unsigned x, y;
+	uint16_t modifiers;
+
+	struct timeval start; // start time of the animation
+	double progress; // progress of the animation as a fraction
+
+	// Ignore all the queued events.
+	while (event = xcb_poll_for_event(connection))
+		free(event);
+
+	gettimeofday(&start, 0);
+
+	do
+	{
+		progress = timer_progress(&start, duration);
+		if (progress > 1.0)
+			break;
+
+		input_display_timer(display, game, progress, state);
+
+		event = xcb_poll_for_event(connection);
+		if (!event) continue;
+
+		switch (event->response_type & ~0x80)
+		{
+		case XCB_BUTTON_PRESS:
+			mouse = (xcb_button_release_event_t *)event;
+			code = -mouse->detail;
+			x = mouse->event_x;
+			y = mouse->event_y;
+			modifiers = mouse->state;
+			break;
+
+		case XCB_KEY_PRESS:
+			keyboard = (xcb_key_press_event_t *)event;
+			code = keymap[(keyboard->detail - keycode_min) * keysyms_per_keycode];
+			if (is_modifier(code)) continue;
+			x = keyboard->event_x;
+			y = keyboard->event_y;
+			modifiers = keyboard->state;
+			break;
+
+		case XCB_MOTION_NOTIFY:
+			motion = (xcb_motion_notify_event_t *)event;
+			code = EVENT_MOTION;
+			x = motion->event_x;
+			y = motion->event_y;
+			modifiers = motion->state;
+			break;
+
+		case XCB_EXPOSE:
+		default:
+			continue;
+		}
+
+		free(event);
+	} while (code != XK_Escape);
+
+	return 0;
 }

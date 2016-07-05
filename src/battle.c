@@ -127,13 +127,13 @@ size_t formation_reachable_assault(const struct game *restrict game, const struc
 
 int battlefield_passable(const struct game *restrict game, const struct battlefield *restrict field, unsigned player)
 {
-	// TODO review this function; field->pawns[0] no longer exists
-
 	if (!field->blockage)
 		return 1;
+
 	if (field->blockage == BLOCKAGE_OBSTACLE)
 		if (allies(game, player, field->owner) || field->pawns[0])
 			return 1;
+
 	return 0;
 }
 

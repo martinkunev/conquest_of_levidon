@@ -225,6 +225,14 @@ void input_display(void (*if_display)(const void *, const struct game *), const 
 	glXSwapBuffers(display, drawable);
 }
 
+void input_display_timer(void (*if_display)(const void *, const struct game *, double), const struct game *restrict game, double progress, void *state)
+{
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	if_display(state, game, progress);
+	glFlush();
+	glXSwapBuffers(display, drawable);
+}
+
 void if_term(void)
 {
 	XFree(keymap);

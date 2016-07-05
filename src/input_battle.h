@@ -50,9 +50,6 @@ struct state_animation
 {
 	const struct battle *battle;
 
-	struct timeval start; // start time of the animation
-	double animation_duration; // duration of the animation in seconds
-
 	struct position (*movements)[MOVEMENT_STEPS + 1];
 	unsigned char traversed[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH];
 };

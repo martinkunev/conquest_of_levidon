@@ -20,7 +20,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/time.h>
 
 #include <X11/keysym.h>
 
@@ -162,7 +161,6 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 		}
 		else
 		{
-			// TODO don't change pawn path and action if pawn_command fails
 			if (!(modifiers & XCB_MOD_MASK_SHIFT))
 				pawn_stay(pawn);
 			pawn->action = 0;
@@ -172,7 +170,9 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 			case 0:
 				break;
 
+			case ERROR_INPUT:
 			case ERROR_MISSING:
+				// TODO restore pawn path and action if pawn_command fails
 				return INPUT_IGNORE;
 
 			default:
@@ -230,19 +230,6 @@ reachable:
 
 		return 0;
 	}
-
-	return INPUT_IGNORE;
-}
-
-static int input_ignore(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
-{
-	struct state_animation *state = argument;
-
-	// TODO finish animation when there is nothing left to show
-
-	// TODO there should be no input required to finish the animation
-	if (animation_progress(&state->start, ANIMATION_DURATION) >= 1)
-		return INPUT_FINISH;
 
 	return INPUT_IGNORE;
 }
@@ -330,22 +317,9 @@ int input_battle(const struct game *restrict game, struct battle *restrict battl
 
 int input_animation(const struct game *restrict game, const struct battle *restrict battle, struct position (*movements)[MOVEMENT_STEPS + 1])
 {
-	struct area areas[] = {
-		{
-			.left = 0,
-			.right = SCREEN_WIDTH - 1,
-			.top = 0,
-			.bottom = SCREEN_HEIGHT - 1,
-			.callback = input_ignore
-		},
-	};
-
 	struct state_animation state = {0};
 	state.battle = battle;
 	state.movements = movements;
-	state.animation_duration = ANIMATION_DURATION;
-
-	gettimeofday(&state.start, 0);
 
 	// Mark each field that is traversed by a pawn (used to display gates as open).
 	size_t i, j;
@@ -358,26 +332,15 @@ int input_animation(const struct game *restrict game, const struct battle *restr
 		}
 	}
 
-	return input_local(areas, sizeof(areas) / sizeof(*areas), if_animation, game, &state);
+	return input_timer(if_animation, game, ANIMATION_DURATION, &state);
 }
 
 int input_animation_shoot(const struct game *restrict game, const struct battle *restrict battle)
 {
-	struct area areas[] = {
-		{
-			.left = 0,
-			.right = SCREEN_WIDTH - 1,
-			.top = 0,
-			.bottom = SCREEN_HEIGHT - 1,
-			.callback = input_ignore
-		},
-	};
-
 	struct state_animation state = {0};
 	state.battle = battle;
-	state.animation_duration = ANIMATION_SHOOT_DURATION;
 
-	gettimeofday(&state.start, 0);
+	// TODO skip this if there are no shooters
 
-	return input_local(areas, sizeof(areas) / sizeof(*areas), if_animation_shoot, game, &state);
+	return input_timer(if_animation_shoot, game, ANIMATION_SHOOT_DURATION, &state);
 }

@@ -206,7 +206,8 @@ void battle_fight(const struct game *restrict game, struct battle *restrict batt
 					victims[victims_count++] = victim;
 			}
 
-			fight(fighter, victims, victims_count);
+			if (victims_count)
+				fight(fighter, victims, victims_count);
 		}
 	}
 }

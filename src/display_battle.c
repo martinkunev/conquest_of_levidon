@@ -18,7 +18,6 @@
  */
 
 #include <stdlib.h>
-#include <sys/time.h>
 #include <unistd.h>
 
 #define GL_GLEXT_PROTOTYPES
@@ -44,8 +43,8 @@
 
 #define PLAYER_INDICATOR_RADIUS 10
 
-#define BATTLEFIELD_X(x) (BATTLE_X + x * FIELD_SIZE + 0.5)
-#define BATTLEFIELD_Y(y) (BATTLE_Y + y * FIELD_SIZE + 0.5)
+#define BATTLEFIELD_X(x) (unsigned)(BATTLE_X + (x - PAWN_RADIUS) * FIELD_SIZE + 0.5)
+#define BATTLEFIELD_Y(y) (unsigned)(BATTLE_Y + (y - PAWN_RADIUS) * FIELD_SIZE + 0.5)
 
 extern Display *display;
 extern GLXDrawable drawable;
@@ -98,26 +97,13 @@ static void if_battlefield(unsigned char player, const struct game *game, const 
 	// TODO towers
 }
 
-double animation_progress(const struct timeval *restrict start, double animation_duration)
-{
-	struct timeval now;
-	unsigned long time_difference;
-	gettimeofday(&now, 0);
-	time_difference = (now.tv_sec * 1000000 + now.tv_usec - start->tv_sec * 1000000 - start->tv_usec);
-	return time_difference / (animation_duration * 1000000.0);
-}
-
-void if_animation(const void *argument, const struct game *game)
+void if_animation(const void *argument, const struct game *game, double progress)
 {
 	const struct state_animation *state = argument;
 
 	size_t p;
 
-	size_t step;
-	double progress = animation_progress(&state->start, state->animation_duration);
-
-	if (progress > 1) progress = 1;
-	step = (unsigned)(progress * MOVEMENT_STEPS);
+	size_t step = (unsigned)(progress * MOVEMENT_STEPS);
 	progress = progress * MOVEMENT_STEPS - step;
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -142,14 +128,11 @@ void if_animation(const void *argument, const struct game *game)
 	glXSwapBuffers(display, drawable);
 }
 
-void if_animation_shoot(const void *argument, const struct game *game)
+void if_animation_shoot(const void *argument, const struct game *game, double progress)
 {
 	const struct state_animation *state = argument;
 
 	size_t p;
-
-	double progress = animation_progress(&state->start, state->animation_duration);
-	if (progress > 1) progress = 1;
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -317,20 +300,26 @@ static void if_battle_pawn(const struct game *game, const struct state_battle *r
 {
 	// TODO fix this
 	// Show pawn movement target.
-	/*for(i = 1; i < pawn->moves_count; ++i)
+	struct position position = pawn->position, next;
+	for(size_t i = 0; i < pawn->path.count; ++i)
 	{
-		struct point from = pawn->moves[i - 1].location;
-		from.x = from.x * FIELD_SIZE + FIELD_SIZE / 2;
-		from.y = from.y * FIELD_SIZE + FIELD_SIZE / 2;
+		struct point from, to;
 
-		struct point to = pawn->moves[i].location;
-		to.x = to.x * FIELD_SIZE + FIELD_SIZE / 2;
-		to.y = to.y * FIELD_SIZE + FIELD_SIZE / 2;
+		next = pawn->path.data[i];
 
-		if (pawn->moves[i].time <= 1.0) color = PathReachable;
-		else color = PathUnreachable;
-		display_arrow(from, to, BATTLE_X, BATTLE_Y, color);
-	}*/
+		from.x = (int)(position.x * FIELD_SIZE + 0.5);
+		from.y = (int)(position.y * FIELD_SIZE + 0.5);
+
+		to.x = (int)(next.x * FIELD_SIZE + 0.5);
+		to.y = (int)(next.y * FIELD_SIZE + 0.5);
+
+		//if (pawn->moves[i].time <= 1.0) color = PathReachable;
+		//else color = PathUnreachable;
+		//display_arrow(from, to, BATTLE_X, BATTLE_Y, color);
+		display_arrow(from, to, BATTLE_X, BATTLE_Y, PathReachable);
+
+		position = next;
+	}
 
 	switch (pawn->action)
 	{
@@ -359,14 +348,40 @@ void if_battle(const void *argument, const struct game *game)
 	const struct state_battle *state = argument;
 	const unsigned char open[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH] = {0};
 
-	size_t i;
-
 	const struct pawn *pawn;
 	enum color color;
 
 	if_battlefield(state->player, game, battle, open);
 
 	// TODO indicate which pawn/field is hovered?
+
+	if ((pawn = state->pawn) && (pawn->troop->owner == state->player))
+	{
+		// Show which tiles are reachable by the selected pawn.
+		// TODO maybe only do this if there is no pawn action?
+		for(size_t y = 0; y < BATTLEFIELD_HEIGHT; ++y)
+			for(size_t x = 0; x < BATTLEFIELD_WIDTH; ++x)
+				if (state->reachable[y][x] <= pawn->troop->unit->speed)
+				{
+					// If a tile is only partially reachable, color it with less opaqueness.
+					double distance_left = pawn->troop->unit->speed - state->reachable[y][x];
+					double opaqueness = ((distance_left >= M_SQRT2 / 2) ? 1.0 : distance_left / (M_SQRT2 / 2));
+					unsigned char color[4] = {0, 0, 0, 64 * opaqueness};
+					fill_rectangle(BATTLE_X + x * object_group[Battlefield].width, BATTLE_Y + y * object_group[Battlefield].height, object_group[Battlefield].width, object_group[Battlefield].height, color);
+				}
+	}
+
+	// Display pawns.
+	for(size_t i = 0; i < battle->pawns_count; ++i)
+	{
+		pawn = battle->pawns + i;
+
+		if (pawn->troop->owner == state->player) color = Self;
+		else if (game->players[pawn->troop->owner].alliance == game->players[state->player].alliance) color = Ally;
+		else color = Enemy;
+
+		display_troop(pawn->troop->unit->index, BATTLEFIELD_X(pawn->position.x), BATTLEFIELD_Y(pawn->position.y), color, 0, 0);
+	}
 
 	// Display information about the selected pawn or field (or all pawns if nothing is selected).
 	if (pawn = state->pawn)
@@ -384,44 +399,17 @@ void if_battle(const void *argument, const struct game *game)
 		show_health(pawn, CTRL_X, CTRL_Y + CTRL_MARGIN + FIELD_SIZE + font12.height + MARGIN * 2 + MARGIN);
 
 		if (pawn->troop->owner == state->player)
-		{
-			// Show which tiles are reachable by the pawn.
-			// TODO maybe only do this if there is no pawn action?
-			for(size_t y = 0; y < BATTLEFIELD_HEIGHT; ++y)
-				for(size_t x = 0; x < BATTLEFIELD_WIDTH; ++x)
-					if ((state->reachable[y][x] <= pawn->troop->unit->speed) && !battle->field[y][x].pawn)
-					{
-						// If a tile is only partially reachable, color it with less opaqueness.
-						double distance_left = pawn->troop->unit->speed - state->reachable[y][x];
-						double opaqueness = ((distance_left >= M_SQRT2 / 2) ? 1.0 : distance_left / (M_SQRT2 / 2));
-						unsigned char color[4] = {0, 0, 0, 64 * opaqueness};
-						fill_rectangle(BATTLE_X + x * object_group[Battlefield].width, BATTLE_Y + y * object_group[Battlefield].height, object_group[Battlefield].width, object_group[Battlefield].height, color);
-					}
-
 			if_battle_pawn(game, state, pawn);
-		}
 	}
 	else if (state->field)
 	{
 		if (state->field->blockage == BLOCKAGE_OBSTACLE)
 			show_strength(state->field, CTRL_X, CTRL_Y + CTRL_MARGIN);
 	}
-	else for(i = 0; i < battle->players[state->player].pawns_count; ++i)
+	else for(size_t i = 0; i < battle->players[state->player].pawns_count; ++i)
 	{
 		if (!battle->players[state->player].pawns[i]->count) continue;
 		if_battle_pawn(game, state, battle->players[state->player].pawns[i]);
-	}
-
-	// Display pawns.
-	for(i = 0; i < battle->pawns_count; ++i)
-	{
-		pawn = battle->pawns + i;
-
-		if (pawn->troop->owner == state->player) color = Self;
-		else if (game->players[pawn->troop->owner].alliance == game->players[state->player].alliance) color = Ally;
-		else color = Enemy;
-
-		display_troop(pawn->troop->unit->index, BATTLEFIELD_X(pawn->position.x), BATTLEFIELD_Y(pawn->position.y), color, 0, 0);
 	}
 
 	show_button(S("Ready"), BUTTON_ENTER_X, BUTTON_ENTER_Y);

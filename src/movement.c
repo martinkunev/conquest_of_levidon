@@ -71,7 +71,7 @@ void pawn_place(struct battle *restrict battle, struct pawn *restrict pawn, stru
 {
 	struct battlefield *field;
 
-	pawn->position = (struct position){tile.x, tile.y};
+	pawn->position = (struct position){tile.x + PAWN_RADIUS, tile.y + PAWN_RADIUS};
 	pawn->path.count = 0;
 	pawn->moves.count = 0;
 
