@@ -147,9 +147,9 @@ void if_load_images(void)
 	image_load_png(&image_fortress_gate[1], PREFIX_IMG "fortress_gate1.png", 0);
 }
 
-void display_troop(size_t unit, unsigned x, unsigned y, enum color color, enum color text, unsigned count)
+void display_troop(size_t unit, unsigned x, unsigned y, enum color player, enum color text, unsigned count)
 {
-	fill_rectangle(x, y, FIELD_SIZE, FIELD_SIZE, display_colors[color]);
+	fill_rectangle(x, y, FIELD_SIZE, FIELD_SIZE, display_colors[player]);
 	image_draw(&image_units[unit], x, y);
 
 	if (count)

@@ -97,7 +97,7 @@ void if_load(const void *argument, const struct game *game)
 
 			position = if_position(Players, i);
 
-			show_flag(position.x, position.y, Player + i);
+			show_flag(position.x, position.y, i);
 			switch (game->players[i].type)
 			{
 			case Local:

@@ -121,7 +121,7 @@ void if_animation(const void *argument, const struct game *game, double progress
 		x = state->movements[p][step].x * (1 - progress) + state->movements[p][step + 1].x * progress;
 		y = state->movements[p][step].y * (1 - progress) + state->movements[p][step + 1].y * progress;
 
-		display_troop(pawn->troop->unit->index, BATTLE_X + x * object_group[Battlefield].width, BATTLE_Y + y * object_group[Battlefield].height, Player + pawn->troop->owner, 0, 0);
+		display_troop(pawn->troop->unit->index, BATTLEFIELD_X(x), BATTLEFIELD_Y(y), Player + pawn->troop->owner, 0, 0);
 	}
 
 	glFlush();
@@ -143,7 +143,7 @@ void if_animation_shoot(const void *argument, const struct game *game, double pr
 	{
 		struct pawn *pawn = battle->pawns + p;
 		if (!pawn->count) continue;
-		display_troop(pawn->troop->unit->index, BATTLE_X + pawn->position.x * object_group[Battlefield].width, BATTLE_Y + pawn->position.y * object_group[Battlefield].height, Player + pawn->troop->owner, 0, 0);
+		display_troop(pawn->troop->unit->index, BATTLEFIELD_X(pawn->position.x), BATTLEFIELD_Y(pawn->position.y), Player + pawn->troop->owner, 0, 0);
 	}
 
 	// arrows
@@ -176,7 +176,7 @@ void if_animation_shoot(const void *argument, const struct game *game, double pr
 		// Determine arrows position and draw image.
 		x = origin.x * (1.0 - progress) + target.x * progress;
 		y = origin.y * (1.0 - progress) + target.y * progress;
-		image_draw(image, BATTLE_X + x * object_group[Battlefield].width, BATTLE_Y + y * object_group[Battlefield].height);
+		image_draw(image, BATTLEFIELD_X(x), BATTLEFIELD_Y(y));
 	}
 
 	glFlush();
@@ -254,7 +254,7 @@ void if_formation(const void *argument, const struct game *game)
 		else
 		{
 			// Display the pawn at its present location.
-			display_troop(troop->unit->index, BATTLE_X + pawns[i]->position.x * object_group[Battlefield].width, BATTLE_Y + pawns[i]->position.y * object_group[Battlefield].height, Player + state->player, 0, 0);
+			display_troop(troop->unit->index, BATTLEFIELD_X(pawns[i]->position.x), BATTLEFIELD_Y(pawns[i]->position.y), Player + state->player, 0, 0);
 		}
 	}
 
