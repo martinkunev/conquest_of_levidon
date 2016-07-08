@@ -237,19 +237,23 @@ path_find_next:
 // TODO implement a faster algorithm: http://stackoverflow.com/questions/36401562/find-overlapping-circles
 static int collisions_detect(const struct game *restrict game, const struct battle *restrict battle, struct collision *restrict collisions)
 {
-	size_t i, j;
-
 	int enemies_colliding = 0;
 
-	for(i = 0; i < battle->pawns_count; ++i)
+	for(size_t i = 0; i < battle->pawns_count; ++i)
 	{
+		if (!battle->pawns[i].count)
+			continue;
+
 		if (collisions[i].set)
 			continue;
 		collisions[i].set = 1;
 
-		for(j = 0; j < battle->pawns_count; ++j)
+		for(size_t j = 0; j < battle->pawns_count; ++j)
 		{
 			if (i == j)
+				continue;
+
+			if (!battle->pawns[j].count)
 				continue;
 
 			if (pawns_collide(battle->pawns[i].position, battle->pawns[j].position))
@@ -297,8 +301,7 @@ static int collisions_fastest(struct battle *restrict battle, const struct colli
 		}
 		if (array_pawns_expand(fastest, fastest->count + 1) < 0)
 			return ERROR_MEMORY;
-		fastest->data[fastest->count] = battle->pawns + i;
-		fastest->count += 1;
+		fastest->data[fastest->count++] = battle->pawns + i;
 		continue;
 skip:
 		// For the moment make the colliding pawns stay at their current location. TODO remove this line and handle this in the calling function
@@ -325,7 +328,7 @@ int movement_collisions_resolve(const struct game *restrict game, struct battle 
 	if (!collisions) return ERROR_MEMORY;
 	memset(collisions, 0, battle->pawns_count * sizeof(*collisions));
 	for(i = 0; i < battle->pawns_count; ++i)
-		collisions[i].pawns.data = 0;
+		collisions[i].pawns = (struct array_pawns){0};
 
 	// Modify next positions of pawns until all positions are certain. Positions that are certain cannot be changed.
 	// A position being certain is indicated by pawn->position == pawn->position_next.
@@ -334,6 +337,8 @@ int movement_collisions_resolve(const struct game *restrict game, struct battle 
 	{
 		if (status < 0)
 		{
+			for(i = 0; i < battle->pawns_count; ++i)
+				array_pawns_term(&collisions[i].pawns);
 			free(collisions);
 			return status;
 		}
@@ -362,6 +367,8 @@ int movement_collisions_resolve(const struct game *restrict game, struct battle 
 	if (status = collisions_fastest(battle, collisions, &fastest))
 	{
 		array_pawns_term(&fastest);
+		for(i = 0; i < battle->pawns_count; ++i)
+			array_pawns_term(&collisions[i].pawns);
 		free(collisions);
 		return status;
 	}
@@ -382,6 +389,8 @@ int movement_collisions_resolve(const struct game *restrict game, struct battle 
 
 	array_pawns_term(&fastest);
 
+	for(i = 0; i < battle->pawns_count; ++i)
+		array_pawns_term(&collisions[i].pawns);
 	free(collisions);
 
 	// Update current pawn positions.
@@ -394,6 +403,9 @@ int movement_collisions_resolve(const struct game *restrict game, struct battle 
 int movement_queue(struct pawn *restrict pawn, struct position target, struct adjacency_list *restrict nodes, const struct obstacles *restrict obstacles)
 {
 	if (pawn->path.count == PATH_QUEUE_LIMIT)
+		return ERROR_INPUT;
+
+	if ((target.x - PAWN_RADIUS < 0) || (target.x + PAWN_RADIUS > BATTLEFIELD_WIDTH) || (target.y - PAWN_RADIUS < 0) || (target.y + PAWN_RADIUS > BATTLEFIELD_HEIGHT))
 		return ERROR_INPUT;
 
 	// TODO verify that the target is reachable

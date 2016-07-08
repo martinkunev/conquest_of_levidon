@@ -178,7 +178,6 @@ static int play_battle(struct game *restrict game, struct region *restrict regio
 			if (movement_collisions_resolve(game, &battle, graph, obstacles) < 0)
 				abort(); // TODO
 		}
-
 		// Remember the final position of each pawn because it is necessary for the movement animation.
 		for(i = 0; i < battle.pawns_count; ++i)
 			movements[i][step] = battle.pawns[i].position;

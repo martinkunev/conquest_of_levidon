@@ -19,6 +19,7 @@
 
 #include <stdlib.h>
 #include <sys/time.h>
+#include <unistd.h>
 
 #include <X11/Xlib.h>
 #include <X11/keysym.h>
@@ -203,7 +204,11 @@ int input_timer(void (*display)(const void *, const struct game *, double), cons
 		input_display_timer(display, game, progress, state);
 
 		event = xcb_poll_for_event(connection);
-		if (!event) continue;
+		if (!event)
+		{
+			usleep(1000);
+			continue;
+		}
 
 		switch (event->response_type & ~0x80)
 		{

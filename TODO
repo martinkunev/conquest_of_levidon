@@ -49,12 +49,12 @@ battle mechanics
 	pawns of the same player deadlock (seen with peasant and light cavalry)
 
 	-- bugs --
-	F don't quit game when queue becomes too long
-	F start of the movement arrow should be at the center of the pawn
 	F horse and peasant: the peasant wasn't supposed to move, but it moved and overlapped with the horse; probably working with the top left corner instead of the center
-	F startup locations set at formation are excluded from reachable fields
 	F animation is not refreshed while still not finished
-	F fight image is displayed below the pawn
+	F pawn center can be anywhere (including at the border of the battlefield)
+	F positions during shooting animation are not accurate
+	endless loop while resolving pawn collision
+	memory corruption on next round
 
 TODO ? change direction of everything to counterclockwise; currently the y axis is in the opposite direction (and the cross product is negated)
 TODO ? rename image to sprite

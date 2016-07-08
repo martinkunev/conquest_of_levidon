@@ -214,7 +214,7 @@ static int input_place(int code, unsigned x, unsigned y, uint16_t modifiers, con
 			return INPUT_IGNORE;
 
 reachable:
-			selected->position = (struct position){x, y};
+			selected->position = (struct position){x + PAWN_RADIUS, y + PAWN_RADIUS};
 		}
 
 		battle->field[y][x].pawn = selected;

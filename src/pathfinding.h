@@ -28,7 +28,7 @@ struct adjacency_list;
 // Calculates the euclidean distance between a and b.
 static inline double battlefield_distance(struct position a, struct position b)
 {
-	int dx = b.x - a.x, dy = b.y - a.y;
+	double dx = b.x - a.x, dy = b.y - a.y;
 	return sqrt(dx * dx + dy * dy);
 }
 
