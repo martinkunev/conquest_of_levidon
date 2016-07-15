@@ -256,7 +256,7 @@ static int collisions_detect(const struct game *restrict game, const struct batt
 			if (!battle->pawns[j].count)
 				continue;
 
-			if (pawns_collide(battle->pawns[i].position, battle->pawns[j].position))
+			if (pawns_collide(battle->pawns[i].position_next, battle->pawns[j].position_next))
 			{
 				if (array_pawns_expand(&collisions[i].pawns, collisions[i].pawns.count + 1) < 0)
 					return ERROR_MEMORY;
@@ -392,6 +392,11 @@ int movement_collisions_resolve(const struct game *restrict game, struct battle 
 	for(i = 0; i < battle->pawns_count; ++i)
 		array_pawns_term(&collisions[i].pawns);
 	free(collisions);
+
+	if (pawns_collide(battle->pawns[0].position_next, battle->pawns[1].position_next))
+	{
+		i = 5;
+	}
 
 	// Update current pawn positions.
 	for(i = 0; i < battle->pawns_count; ++i)

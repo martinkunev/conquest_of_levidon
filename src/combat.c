@@ -154,7 +154,7 @@ static void shoot(const struct pawn *shooter, struct pawn *victim, double damage
 static inline int battlefield_reachable(struct position origin, struct position target, double distance_max)
 {
 	double distance = battlefield_distance(origin, target);
-	return (distance <= distance_max);
+	return (distance <= distance_max); // TODO why isn't this strict inequality
 }
 
 void battle_fight(const struct game *restrict game, struct battle *restrict battle) // TODO rename to something like combat_melee
@@ -181,12 +181,12 @@ void battle_fight(const struct game *restrict game, struct battle *restrict batt
 			float dx = ((distance_left <= distance_right) ? distance_left : distance_right);
 			float dy = ((distance_bottom <= distance_top) ? distance_bottom : distance_top);
 
-			if (dx * dx + dy * dy <= DISTANCE_MELEE * DISTANCE_MELEE)
+			if (dx * dx + dy * dy <= DISTANCE_MELEE * DISTANCE_MELEE) // TODO why am I not using battlefield_reachable here?
 				assault(fighter, fighter->target.field);
 		}
 		else
 		{
-			struct pawn *victims[8];
+			struct pawn *victims[8]; // TODO is this big enough?
 			unsigned victims_count = 0;
 
 			// TODO what if one of the pawns is on a tower
@@ -205,6 +205,8 @@ void battle_fight(const struct game *restrict game, struct battle *restrict batt
 				if (battlefield_reachable(fighter->position, victim->position, DISTANCE_MELEE))
 					victims[victims_count++] = victim;
 			}
+
+			// assert(victims_count <= 8); // TODO make sure this is true
 
 			if (victims_count)
 				fight(fighter, victims, victims_count);

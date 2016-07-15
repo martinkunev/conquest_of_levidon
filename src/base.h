@@ -73,14 +73,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-static inline void *alloc(size_t size)
-{
-	void *buffer = malloc(size);
-	if (!buffer) abort();
-	return buffer;
-}
-#define alloc_try(size) malloc(size)
-
 /*static inline void *realloc_(void *old, size_t size)
 {
 	void *new = (realloc)(old, size);
@@ -97,8 +89,8 @@ static inline void *alloc(size_t size)
 static inline void *dupalloc(void *old, size_t size)
 {
 	void *new = malloc(size);
-	if (!new) abort();
-	memcpy(new, old, size);
+	if (new)
+		memcpy(new, old, size);
 	return new;
 }
 
@@ -110,7 +102,7 @@ struct bytes
 	unsigned char data[];
 };
 
-#define bytes_t(n) struct \
+/*#define bytes_t(n) struct \
 	{ \
 		size_t size; \
 		char data[n]; \
@@ -119,6 +111,7 @@ struct bytes
 #define bytes(value) {sizeof(value) - 1, value}
 
 #define bytes_define(variable, value) bytes_t(sizeof(value) - 1) variable = bytes(value)
+*/
 
 // TODO ? make static assert for offsetof(..., data) as this ensures the struct is compatible with bytes_t
 /*#define bytes_p(s) (bytes_t *)&( \
