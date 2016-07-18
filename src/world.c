@@ -68,7 +68,7 @@ const struct unit UNITS[] =
 		.ranged = {.weapon = WEAPON_ARROW, .damage = 2.0, .range = 6},
 	},
 	[UnitLightCavalry] = {
-		.index = UnitLightCavalry, NAME("Light Cavalry"), .speed = 9, .health = 10, .armor = ARMOR_LEATHER,
+		.index = UnitLightCavalry, NAME("Light Cavalry"), .speed = 9, .health = 12, .armor = ARMOR_LEATHER,
 		.cost = {.gold = 2, .wood = 1}, .expense = {.food = 2}, .time = 2, .troops_count = 16, .requires = (1 << BuildingBarracks) | (1 << BuildingStables),
 		.melee = {.weapon = WEAPON_CLEAVING, .damage = 2.0, .agility = 1.0},
 	},
