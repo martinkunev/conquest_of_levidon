@@ -375,6 +375,7 @@ void if_battle(const void *argument, const struct game *game)
 	for(size_t i = 0; i < battle->pawns_count; ++i)
 	{
 		pawn = battle->pawns + i;
+		if (!pawn->count) continue;
 
 		if (pawn->troop->owner == state->player) color = Self;
 		else if (game->players[pawn->troop->owner].alliance == game->players[state->player].alliance) color = Ally;

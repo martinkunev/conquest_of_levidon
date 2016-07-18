@@ -41,6 +41,11 @@ struct tile
 	int x, y; // use signed int to ensure subtraction doesn't wrap around.
 };
 
+static inline int position_eq(struct position a, struct position b)
+{
+	return ((a.x == b.x) && (a.y == b.y));
+}
+
 void pawn_place(struct battle *restrict battle, struct pawn *restrict pawn, struct tile tile);
 void pawn_stay(struct pawn *restrict pawn);
 

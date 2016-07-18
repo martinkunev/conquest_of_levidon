@@ -29,9 +29,6 @@
 #include "movement.h"
 #include "battle.h"
 
-#define WALL_THICKNESS 0.5
-#define WALL_OFFSET ((1 - WALL_THICKNESS) / 2) /* walls are placed in the middle of the field */
-
 struct path_node
 {
 	double distance;

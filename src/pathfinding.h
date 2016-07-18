@@ -1,5 +1,8 @@
 #include <math.h>
 
+#define WALL_THICKNESS 0.5
+#define WALL_OFFSET ((1 - WALL_THICKNESS) / 2) /* walls are placed in the middle of the field */
+
 #define BATTLEFIELD_WIDTH 25
 #define BATTLEFIELD_HEIGHT 25
 

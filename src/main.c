@@ -158,7 +158,7 @@ static int play_battle(struct game *restrict game, struct region *restrict regio
 
 		// Deal damage from shooters.
 		input_animation_shoot(game, &battle); // TODO this should be part of player-specific input
-		battle_shoot(&battle, obstacles[PLAYER_NEUTRAL]); // treat all gates as closed for shooting
+		combat_ranged(&battle, obstacles[PLAYER_NEUTRAL]); // treat all gates as closed for shooting
 		if (battlefield_clean(&battle)) round_activity_last = battle.round;
 
 		// Perform pawn movement in steps.
@@ -185,7 +185,7 @@ static int play_battle(struct game *restrict game, struct region *restrict regio
 		input_animation(game, &battle, movements); // TODO this should be part of player-specific input
 
 		// TODO fight animation // TODO this should be part of player-specific input
-		battle_fight(game, &battle);
+		combat_melee(game, &battle);
 		if (battlefield_clean(&battle)) round_activity_last = battle.round;
 
 		for(i = 0; i < PLAYERS_LIMIT; ++i)

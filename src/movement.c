@@ -146,11 +146,6 @@ void battlefield_index_build(struct battle *restrict battle)
 	}
 }
 
-static inline int position_eq(struct position a, struct position b)
-{
-	return ((a.x == b.x) && (a.y == b.y));
-}
-
 // Calculates the expected position of each pawn at the next step.
 int movement_plan(struct battle *restrict battle, struct adjacency_list *restrict graph[static PLAYERS_LIMIT], struct obstacles *restrict obstacles[static PLAYERS_LIMIT])
 {

@@ -317,30 +317,41 @@ int input_battle(const struct game *restrict game, struct battle *restrict battl
 
 int input_animation(const struct game *restrict game, const struct battle *restrict battle, struct position (*movements)[MOVEMENT_STEPS + 1])
 {
+	unsigned steps_active = 0;
+
 	struct state_animation state = {0};
 	state.battle = battle;
 	state.movements = movements;
 
 	// Mark each field that is traversed by a pawn (used to display gates as open).
-	size_t i, j;
-	for(i = 0; i < battle->pawns_count; ++i)
+	// Find the last step on which a pawn moves.
+	for(size_t i = 0; i < battle->pawns_count; ++i)
 	{
-		for(j = 0; j <= MOVEMENT_STEPS; ++j)
+		for(size_t j = 0; j <= MOVEMENT_STEPS; ++j)
 		{
 			struct position p = movements[i][j];
 			state.traversed[(size_t)(p.x + 0.5)][(size_t)(p.y + 0.5)] = 1;
+
+			if (j && !position_eq(movements[i][j - 1], p) && (steps_active < j))
+				steps_active = j;
 		}
 	}
 
-	return input_timer(if_animation, game, ANIMATION_DURATION, &state);
+	if (steps_active)
+		return input_timer(if_animation, game, ANIMATION_DURATION * steps_active / MOVEMENT_STEPS, &state);
+	else
+		return 0;
 }
 
 int input_animation_shoot(const struct game *restrict game, const struct battle *restrict battle)
 {
-	struct state_animation state = {0};
-	state.battle = battle;
-
-	// TODO skip this if there are no shooters
-
-	return input_timer(if_animation_shoot, game, ANIMATION_SHOOT_DURATION, &state);
+	// Display shooting animation only if a pawn will shoot.
+	for(size_t i = 0; i < battle->pawns_count; ++i)
+		if (battle->pawns[i].count && (battle->pawns[i].action = ACTION_SHOOT))
+		{
+			struct state_animation state = {0};
+			state.battle = battle;
+			return input_timer(if_animation_shoot, game, ANIMATION_SHOOT_DURATION, &state);
+		}
+	return 0;
 }

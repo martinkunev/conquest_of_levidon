@@ -39,7 +39,6 @@ struct pawn
 {
 	struct troop *troop;
 	unsigned count;
-	unsigned dead;
 	unsigned hurt;
 
 	struct position position; // current pawn position
@@ -70,11 +69,11 @@ struct battlefield
 	signed char owner; // for BLOCKAGE_OBSTACLE and BLOCKAGE_TOWER
 	unsigned strength; // for BLOCKAGE_OBSTACLE and BLOCKAGE_TOWER
 	enum armor armor; // for BLOCKAGE_OBSTACLE and BLOCKAGE_TOWER
-	struct pawn *pawn; // during formation and for BLOCKAGE_TOWER
+	struct pawn *pawn; // during formation and for BLOCKAGE_TOWER TODO don't use this for formation?
 
 	// TODO for BLOCKAGE_TOWER there should be specified a field for descending
 
-	struct pawn *pawns[BATTLEFIELD_PAWNS_LIMIT];
+	struct pawn *pawns[BATTLEFIELD_PAWNS_LIMIT]; // used only during player input; initialized by battlefield_index_build()
 };
 
 struct battle
