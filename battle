@@ -1,0 +1,107 @@
+// Each pawn is a circle with a fixed diameter. The battlefield has fixed size with scale such as to make pawn diameter equal to 1.
+// Obstacles are rectangular areas that represent non-passable objects such as walls. The borders of obstacles are parallel to the borders of the battlefield.
+// All map objects (pawns and obstacles) are open (their limit points are not part of them), which means they can touch each other.
+
+
+building the path graph
+	When nodes need to be put around a pawn, the pawn is considered a regular octagon and nodes are put on each side.
+		// TODO moving pawns
+
+	when adding edges, each edge is checked for collision with pawns treated as obstacles
+
+? battlefield array (of squares with diameter 1) containing what is located on each field (pawns, walls, etc.)
+
+detour on collision between allies
+	create a heap that will store possible detour positions ordered by closeness to the original path
+	add one item for a position on each side of the pawn
+	pop element from the heap until not empty
+		if the movement is possible, exit the loop and perform it
+
+
+
+
+keep the gate open the whole round if something passes through it; that way good players may find a way to enter a fortress
+
+
+graph vertices near walls
+NE - diagonal field on bottom left; (0.25 - sqrt((0.5^2) / 2) + 1, 0.75 + sqrt(0.5^2 / 2) - 1) = (0.896, 0.104)
+NS - diagonal field on bottom left; (0.25 - sqrt((0.5^2) / 2) + 1, 1 + sqrt(0.5^2 / 2) - 1) = (0.896, 0.354)
+WE - diagonal field on bottom left; (0 - sqrt((0.5^2) / 2) + 1, 0.75 + sqrt(0.5^2 / 2) - 1) = (0.646, 0.104)
+
+----
+
+use 'struct point' only for drawing (draw.h) (fix point_eq calls)
+	remove struct region dependency on struct point by moving center and location_garrison into location
+
+rework formation to correspond to the new battle mechanics
+
+think about displaying reachable locations for a pawn
+
+change image for pawn selection
+
+when setting pawn action, verify that the pawn can reach the target
+
+put an upper limit to the size of array_moves
+
+split BLOCKAGE_OBSTACLE into BLOCAKGE_GATE and BLOCKAGE_WALL; change combat_order_assault (there is a todo)
+
+
+
+
+
+
+
+----
+
+format.c			string formatting library
+hashmap.c			hash map data structure
+json.c				JSON parser/serializer
+image.c				image handing library for OpenGL
+
+main.c
+menu.c				game menu primitives
+map.c				map primitives
+resources.c			resource handling functions for the map
+battle.c			battle handling as part of the gameplay
+pathfinding.c		pathfinding algorithms for battles
+combat.c			in-battle combat functions (fighting, shooting, assault)
+movement.c			in-battle movement functions
+world.c				save/load worlds
+interface.c			abstractions for OpenGL and XCB
+draw.c				generic interface output primitives
+display_common.c	common visual output functions
+display_menu.c		visual output for game menu
+display_map.c		visual output for map
+display_battle.c	visual output for battle
+display_report.c	visual output for game reports
+input.c				generic input functions
+input_menu.c		input for game menu
+input_map.c			input for map interface
+input_battle.c		input for battle interface
+input_report.c		input for game reports
+computer.c			generic AI functions
+computer_map.c		AI functions for map
+computer_battle.c	AI functions for battles
+
+editor.c			world editor
+units.c				unit coefficient calculator
+
+----
+
+resources			relative or absolute quantity of resources
+player				game-global player information								resources
+unit				unit information and indicators
+region				map region information, buildings, indicators and troops	point
+game				global game information
+
+troop				troop information and indicators
+building			building information and indicators
+garrison_info		garrison information for map region
+
+pawn				battle pawn information and indicators						position, array_moves
+battlefield			battle field information and indicators 					position
+battle				global battle information									battlefield
+
+position			battlefield position
+array_moves			battle pawn moves
+point				screen point

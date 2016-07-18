@@ -1,0 +1,127 @@
+key goals of the game include:
+	it should be hard to conquer the world
+	it should not be very hard to defend what is under your control
+	there is no player order - all players play their turns independently of each other (both on the map and in battles); they don't see the actions of others before the end of their own turn
+	computer players have as much information as local (manual) players; no handicap is used to make computers look stronger
+	computers value unit strength and don't hardcode it; unit stats can change and computers will still play as adequately
+
+desired effects:
+	slow to make all regions produce powerful units
+	expensive to have huge armies
+	it's reasonable to develop some regions and not develop others
+
+future goals:
+	war should not be the core part of the gameplay; diplomacy, economy, trade, etc. should also play a part
+
+----
+
+medieval technologies site:
+http://www.engr.psu.edu/mtah/
+
+building		cost		time	income	requirements
+farm			3G			2		2F
+irrigation		5G			4		2F		farm
+sawmill			4G			3		3W
+mine			6G 6W		4		3S
+bloomery		8G 10S		5		1I -1S	mine
+barracks		5G 10S		4
+forge						3				barracks
+armory						5				forge, bloomery
+archery range	3G 4W		2
+stables			10G 15W 10F	4				forge, farm
+watch tower		3G 5W		2
+palisade
+fortress
+workshop
+ditch
+moat
+towers (?keep, ?turrets)
+
+unit			cost		time	expense	weapon		armor	requirements
+peasant			1G			1		1F		cleaving	none
+militia			1G 1W		1		1F		cleaving	leather	barracks
+pikeman			1G 1W 1S	1		1F		cleaving	chain	barracks, forge
+swordsman		2G 1I		2		1F		blade		plate	barracks, forge, armory
+archer			1G 1W		1		1F		arrow		none	archery range
+longbow						1		1F		arrow		leather	barracks, archery range
+crossbowman		2G 2W		2		1F		arrow		chain	barracks, forge, archery range, sawmill
+horse archer	2G 1W		2		3F		arrow		chain	barracks, forge, archery range, sawmill, stables
+light cavalry	2G 1W 1I	2		3F		axe			leather	barracks, forge, stables
+heavy cavalry	3G 2I		3		3F		blade		plate	barracks, forge, armory, stables
+battering ram	2G 5W		2		2F		blunt		wooden	sawmill, workshop
+
+
+
+artillery
+				cost		time	expense	weapon	range	armor	requirements
+siege tower (a.k.a. belfry)
+balista												9		wooden	sawmill, workshop, archery range
+catapult											7		wooden	sawmill, workshop, forge, archery range
+trebuchet											10
+
+// longbow						2		1F		arrow			barracks, archery range, sawmill
+// javelin
+// mace
+// maul/hammer
+// scimitar warrior
+// camel rider
+// elephant rider
+
+http://en.wikipedia.org/wiki/List_of_medieval_weapons
+
+----
+
+? windmill
+	+1 food
+? watermill
+	+1 food
+? tillage
+	food +2
+drift mine (requires: mine)
+	stone +2
+gold mine (requires mine)
+	+1 gold
+
+foundry
+
+
+
+region-specific characteristics
+	water (required for watermill, irrigation, moat, etc.)
+	wood (required for sawmill)
+	ore (required for mine)
+	gold (required for gold mine)
+
+gold comes from taxes (depending on the population)
+
+
+
+
+technologies:
+    conservatory
+    drainage / sewage
+	tillage
+	crop rotation
+
+http://www.euratlas.net/history/europe/1/entity_15233.html
+
+----
+
+trading
+
+constructions involved: marketplace, roads, port
+
+trading benefits are determined by population of the region and its neighbors
+roads increase the benefits from land neighbors
+port increases the benefits from sea neighbors (? whatever that means)
+
+----
+
+units that attack while moving (applicable in many games)
+
+----
+
+battering ram - makes assault conceivable; useful because it can hardly be destroyed by shooters
+balista - makes troops inside garrison vulnerable (which often means they have to attack)
+ditch - slows down movement
+moat - makes battering ram mostly useless

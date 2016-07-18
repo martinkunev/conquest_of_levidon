@@ -66,7 +66,7 @@ static unsigned deaths(unsigned damage, unsigned troops, unsigned health)
 	unsigned min, max;
 
 	if ((health - 1) * troops >= damage) min = 0;
-	else min = damage;
+	else min = damage; // TODO wtf?
 	max = damage / health;
 	if (max > troops) max = troops;
 	if (min > max) min = max;
@@ -180,6 +180,8 @@ void battle_fight(const struct game *restrict game, struct battle *restrict batt
 			float distance_bottom = fabs(tile.y - fighter->position.y), distance_top = fabs(tile.y + 1 - fighter->position.y);
 			float dx = ((distance_left <= distance_right) ? distance_left : distance_right);
 			float dy = ((distance_bottom <= distance_top) ? distance_bottom : distance_top);
+
+			// TODO what if the pawn is in the middle between left and right?
 
 			if (dx * dx + dy * dy <= DISTANCE_MELEE * DISTANCE_MELEE) // TODO why am I not using battlefield_reachable here?
 				assault(fighter, fighter->target.field);
@@ -298,6 +300,7 @@ int battlefield_clean(struct battle *battle)
 		pawn->dead = 0;
 
 		// Stop pawns from attacking dead pawns and destroyed obstacles.
+		// TODO this should be in a separate loop
 		if (pawn->count)
 		{
 			if ((pawn->action == ACTION_FIGHT) && !pawn->target.pawn->count)

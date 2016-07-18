@@ -56,6 +56,18 @@ battle mechanics
 	don't wait for animations when there is nothing to show
 	?set shoot target to the center of the pawn unless ctrl is pressed
 	review the combat TODOs
+	distance to obstacles during assault is not calculated properly
+	after a round a pawn had more hurt than total health
+		(gdb) print pawn->hurt
+		$3 = 30
+		(gdb) print pawn->count
+		$4 = 4
+		(gdb) print pawn->troop->unit->health
+		$5 = 6 '\006'
+		(gdb) print pawn->dead
+		$6 = 0
+		// memory corruption one round after that
+	cancelling actions of dead pawns is probably not done properly (see the TODO)
 
 TODO ? change direction of everything to counterclockwise; currently the y axis is in the opposite direction (and the cross product is negated)
 TODO ? rename image to sprite
