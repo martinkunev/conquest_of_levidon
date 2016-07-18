@@ -69,8 +69,8 @@ static int input_round(int code, unsigned x, unsigned y, uint16_t modifiers, con
 		}
 		return 0;
 
-	case 'q': // surrender
-		battle->players[state->player].alive = 0;
+	case 'q':
+		battle_retreat(battle, state->player);
 	case 'n':
 		return INPUT_FINISH;
 	}
@@ -99,7 +99,7 @@ static int pawn_command(const struct game *restrict game, struct battle *restric
 	{
 		if (allies(game, pawn->troop->owner, target_pawn->troop->owner))
 			return movement_queue(pawn, target, graph, obstacles);
-		else if (!pawn->path.count && combat_order_shoot(game, battle, obstacles, pawn, target))
+		else if (!pawn->path.count && combat_order_shoot(game, battle, obstacles, pawn, target_pawn->position))
 			return 0;
 		else if (combat_order_fight(game, battle, obstacles, pawn, target_pawn))
 			return 0;

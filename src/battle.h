@@ -90,7 +90,7 @@ struct battle
 	{
 		size_t pawns_count;
 		struct pawn **pawns;
-		int alive; // TODO this should be renamed to reflect its real use; it is currently used for aliveness and surrender
+		int alive; // TODO this should be renamed to reflect its real use; it is currently used for aliveness and retreat
 	} players[PLAYERS_LIMIT];
 
 	unsigned round;
@@ -115,4 +115,5 @@ int battlefield_passable(const struct game *restrict game, const struct battlefi
 int battlefield_init(const struct game *restrict game, struct battle *restrict battle, struct region *restrict region, int assault);
 void battlefield_term(const struct game *restrict game, struct battle *restrict battle);
 
+void battle_retreat(struct battle *restrict battle, unsigned char player);
 int battle_end(const struct game *restrict game, struct battle *restrict battle);

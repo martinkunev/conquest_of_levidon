@@ -70,7 +70,7 @@ void if_report_battle(const void *argument, const struct game *game_)
 	unsigned position_after[PLAYERS_LIMIT] = {0};
 	unsigned offset_next = REPORT_Y;
 
-	// TODO indicate whether the attacker or the defender wins and which players win/lose/surrender
+	// TODO indicate whether the attacker or the defender wins and which players win/lose/retreat
 	// TODO somehow indicate which players are allies
 	// TODO for assault display the damage to the garrison
 	// TODO indicate if the battle ended due to timeout

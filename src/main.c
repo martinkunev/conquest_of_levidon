@@ -197,8 +197,6 @@ static int play_battle(struct game *restrict game, struct region *restrict regio
 		// Cancel the battle if nothing is killed/destroyed for a certain number of rounds.
 		if ((battle.round - round_activity_last) >= ROUNDS_STALE_LIMIT)
 		{
-			// TODO revise this; I remember that there was a bug here
-
 			// Attacking troops retreat to the region they came from.
 			for(i = 0; i < battle.pawns_count; ++i)
 			{
@@ -273,7 +271,13 @@ static int play(struct game *restrict game)
 				for(troop = region->troops; troop; troop = troop->_next)
 				{
 					if (troop->move == LOCATION_GARRISON) continue;
-					resource_add(expenses + troop->owner, &troop->unit->expense);
+					else if (troop->move->owner != region->owner)
+					{
+						struct resources expense;
+						resource_multiply(&expense, &troop->unit->expense, 2);
+						resource_add(expenses + troop->owner, &expense);
+					}
+					else resource_add(expenses + troop->owner, &troop->unit->expense);
 				}
 			}
 			else
@@ -348,6 +352,7 @@ static int play(struct game *restrict game)
 			{
 				if (manual_open) winner_alliance = play_battle(game, region, 0);
 				else winner_alliance = calculate_battle(game, region);
+
 				if (winner_alliance < 0) return winner_alliance;
 				region_battle_cleanup(game, region, 0, winner_alliance);
 			}
@@ -355,6 +360,7 @@ static int play(struct game *restrict game)
 			{
 				if (manual_assault) winner_alliance = play_battle(game, region, 1);
 				else winner_alliance = calculate_battle(game, region);
+
 				if (winner_alliance < 0) return winner_alliance;
 				region_battle_cleanup(game, region, 1, winner_alliance);
 			}
@@ -370,7 +376,7 @@ static int play(struct game *restrict game)
 			alive[region->garrison.owner] = 1;
 		}
 
-		// Adjust troop locations and calculate region-specific income and expenses.
+		// Adjust troop locations and calculate region income.
 		for(index = 0; index < game->regions_count; ++index)
 		{
 			region = game->regions + index;

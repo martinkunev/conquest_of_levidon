@@ -412,7 +412,6 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 
 		pawns[i].troop = troop;
 		pawns[i].count = troop->count;
-		pawns[i].dead = 0;
 		pawns[i].hurt = 0;
 
 		// pawns[i].position will be initialized during formation
@@ -437,6 +436,17 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 	else battlefield_init_open(game, battle);
 
 	return 0;
+}
+
+void battle_retreat(struct battle *restrict battle, unsigned char player)
+{
+	for(size_t i = 0; i < battle->players[player].pawns_count; ++i)
+	{
+		struct pawn *restrict pawn = battle->players[player].pawns[i];
+		pawn->troop->move = pawn->troop->location;
+	}
+
+	battle->players[player].alive = 0;
 }
 
 // Returns winner alliance number if the battle ended and -1 otherwise.

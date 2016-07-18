@@ -294,6 +294,7 @@ int battlefield_clean(struct battle *battle)
 	// Reset pawn action if the target is no longer valid.
 	for(p = 0; p < battle->pawns_count; ++p)
 	{
+		struct pawn *pawn = battle->pawns + p;
 		if (!pawn->count) continue;
 
 		// Stop pawns from attacking dead pawns and destroyed obstacles.

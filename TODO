@@ -1,10 +1,10 @@
-H	fix surrender problems
-	bug: after battle surrender the surrendering units don't return to their original region
-	bug: surrender can be abused for scouting
-	? rename surrender
-H	levidon map
-H	computer doesn't attack regions
 H	battle AI
+H	computer doesn't attack regions
+H	levidon map
+H	allied pawns should detour when necessary
+M	retreat can be abused for scouting (25 peasants can go and retreat for 1 food)
+	maybe make retreat take some time (1 or 2 rounds); that way only fast units will be able to retreat
+	maybe allow retreat only when the pawns are near the border of the battlefield?
 M	editor: position region neighbors properly
 M	make formation consistent with the new battle mechanics
 M	improve AI
@@ -14,7 +14,6 @@ M	balance buildings and units
 M	assault towers
 M	region population; income should be calculated as a function of the population; army recruitment should reduce population
 M	region-specific features (income, population, units, buildings, battlefield)
-M	in battle report display troops for surrendered players and show white flag to indicate the surrender
 M	error reporting on invalid map
 M	map scrolling
 M	handle different screen resolutions better
@@ -56,14 +55,14 @@ battle mechanics
 	F don't wait for animations when there is nothing to show
 	F review the combat TODOs
 	F after a round a pawn had more hurt than total health
-		// memory corruption one round after that
 	F cancelling actions of dead pawns is probably not done properly
+	F set shoot target to the center of the pawn unless ctrl is pressed
+	F set move of retreating troops to their location
 	memory corruption on next round
-	?set shoot target to the center of the pawn unless ctrl is pressed
 
 TODO ? change direction of everything to counterclockwise; currently the y axis is in the opposite direction (and the cross product is negated)
 TODO ? rename image to sprite
-TODO ? redesign input functions (handling mouse movement is tedious; handling writing should be unified; there should be a way to terminate input with timer)
+TODO ? redesign input functions (handling mouse movement is tedious; handling writing should be unified; can I unify the two input functions?)
 TODO ? make it simpler to check if two players are allies
 TODO ? dynamic battlefield size
 TODO ? separate constants for BLOCKAGE_WALL and BLOCKAGE_GATE
@@ -73,6 +72,7 @@ TODO ? separate constants for BLOCKAGE_WALL and BLOCKAGE_GATE
 custom mouse pointer
 improve player colors
 player names and flag patterns
+support different resolutions
 
 button input bottom and right coordinates should be exclusive (... - 1)
 
@@ -89,9 +89,15 @@ battle
 	hide mouse pointer during animation
 	display round number
 	enemy on the gate not displayed during shooting in battle animation
+	support showing more pawn stats (not just health)
+	new pawn images
+	new wall and gate images; open gate image
+	fight animation
 
 report
 	display minimap
+	in battle report, display which players retreated (maybe show white flag)
+	group players by alliances and show indicator for the alliance
 
 map
 	village image (will be displayed to the left of troops bar)
@@ -99,3 +105,6 @@ map
 	display current month and year
 	right clicking on a garrison on the map should be the same as clicking for assault
 	indicate on the map which region is selected (maybe with a border around it?)
+	show region-specific expenses
+	support showing troop stats
+	redesign arrows showing troop movement
