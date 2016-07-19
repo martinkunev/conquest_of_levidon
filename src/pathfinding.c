@@ -556,18 +556,20 @@ static struct path_node *path_traverse(struct adjacency_list *restrict graph, si
 			traverse_info = 0;
 			goto finally; // memory error
 		}
+
 		for(i = 0; i < vertex_origin; ++i)
 		{
 			closest.data[i] = traverse_info + i;
 			traverse_info[i].heap_index = i;
 		}
+
 		vertex = vertex_origin;
-		while (1)
+		do
 		{
 			vertex = find_closest(&closest, traverse_info, graph->list[vertex].neighbors, vertex);
 			if (vertex == vertex_target) break; // found
 			if (vertex < 0) break; // no more reachable vertices
-		}
+		} while (closest.count);
 		free(closest.data);
 	}
 

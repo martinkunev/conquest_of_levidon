@@ -347,7 +347,7 @@ int input_animation_shoot(const struct game *restrict game, const struct battle 
 {
 	// Display shooting animation only if a pawn will shoot.
 	for(size_t i = 0; i < battle->pawns_count; ++i)
-		if (battle->pawns[i].count && (battle->pawns[i].action = ACTION_SHOOT))
+		if (battle->pawns[i].count && (battle->pawns[i].action == ACTION_SHOOT))
 		{
 			struct state_animation state = {0};
 			state.battle = battle;
