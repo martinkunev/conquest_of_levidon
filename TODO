@@ -1,9 +1,6 @@
 H	battle AI
 H	computer doesn't attack regions
 H	levidon map
-H	allied pawns should detour when necessary
-	if there is one fastest pawn, choose one of the tangents of the overlapping pawns and move in this direction
-	if there are two fastest pawns, each one chooses a tangent of the other depending on their angle of collision
 M	retreat can be abused for scouting (25 peasants can go and retreat for 1 food)
 	maybe make retreat take some time (1 or 2 rounds); that way only fast units will be able to retreat
 	maybe allow retreat only when the pawns are near the border of the battlefield?
@@ -52,8 +49,10 @@ battle mechanics
 	-- bugs --
 	F distance to obstacles during assault is not calculated properly
 	F pathfinding-related crash during assault (heap handling bug)
+	F allied pawns should detour when necessary
+		if there is one fastest pawn, choose one of the tangents of the overlapping pawns and move in this direction
+		if there are two fastest pawns, each one chooses a tangent of the other depending on their angle of collision
 	memory corruption on next round
-	one should be able to tell all troops to go on assault
 
 TODO ? change direction of everything to counterclockwise; currently the y axis is in the opposite direction (and the cross product is negated)
 TODO ? rename image to sprite
@@ -104,3 +103,4 @@ map
 	support showing troop stats
 	redesign arrows showing troop movement
 	improve boxes for field and garrison troops (it's not obvious one can place units there until there are units)
+	one should be able to tell all troops to go on assault

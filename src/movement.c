@@ -18,6 +18,7 @@
  */
 
 #include <math.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -40,8 +41,11 @@
 struct collision
 {
 	struct array_pawns pawns;
-	int movement_stop;
-	int set;
+	bool enemy; // whether the pawn collides with an enemy
+	bool slow; // whether the pawn is too slow to continue moving
+
+	unsigned char fastest_speed; // speed of the fastest pawn colliding with the target pawn
+	unsigned fastest_count; // number of fastest pawns colliding with the target pawn
 };
 
 // TODO detect whether a pawn is on a battle field (used for closing the gates)
@@ -227,97 +231,156 @@ path_find_next:
 	return 0;
 }
 
-// Find pawn movement collisions. Returns whether there are collisions between enemies.
-// TODO the name of the function doesn't correspond to its return value
-// TODO implement a faster algorithm: http://stackoverflow.com/questions/36401562/find-overlapping-circles
-static int collisions_detect(const struct game *restrict game, const struct battle *restrict battle, struct collision *restrict collisions)
+// Detects which pawns collide with the specified pawn and collects statistics about fastest pawns in the collision.
+// TODO ?implement a faster algorithm: http://stackoverflow.com/questions/36401562/find-overlapping-circles
+static int collisions_detect(const struct game *restrict game, const struct battle *restrict battle, const struct pawn *restrict pawn, struct collision *restrict collision)
 {
-	int enemies_colliding = 0;
+	collision->fastest_speed = pawn->troop->unit->speed;
+	collision->fastest_count = 1;
 
 	for(size_t i = 0; i < battle->pawns_count; ++i)
 	{
-		if (!battle->pawns[i].count)
+		struct pawn *other = battle->pawns + i;
+
+		if (!other->count)
+			continue;
+		if (other == pawn)
 			continue;
 
-		if (collisions[i].set)
+		if (!pawns_collide(pawn->position_next, other->position_next))
 			continue;
-		collisions[i].set = 1;
 
-		for(size_t j = 0; j < battle->pawns_count; ++j)
+		if (array_pawns_expand(&collision->pawns, collision->pawns.count + 1) < 0)
+			return ERROR_MEMORY;
+		collision->pawns.data[collision->pawns.count++] = other;
+
+		if (allies(game, pawn->troop->owner, other->troop->owner))
 		{
-			if (i == j)
-				continue;
+			if (position_eq(other->position, other->position_next)) // the pawn collides with a stationary pawn
+				continue; // stationary pawns do not affect which pawns are the fastest TODO change this comment
 
-			if (!battle->pawns[j].count)
-				continue;
-
-			if (pawns_collide(battle->pawns[i].position_next, battle->pawns[j].position_next))
+			// Update statistics about fastest pawn with the data of the colliding pawn.
+			if (other->troop->unit->speed > collision->fastest_speed)
 			{
-				if (array_pawns_expand(&collisions[i].pawns, collisions[i].pawns.count + 1) < 0)
-					return ERROR_MEMORY;
-				collisions[i].pawns.data[collisions[i].pawns.count] = battle->pawns + j;
-				collisions[i].pawns.count += 1;
-
-				// Mark for stopping a pawn that collides with an enemy.
-				if (!allies(game, battle->pawns[i].troop->owner, battle->pawns[j].troop->owner))
-				{
-					enemies_colliding = 1;
-					collisions[i].movement_stop = 1;
-				}
+				collision->fastest_speed = other->troop->unit->speed;
+				collision->fastest_count = 1;
+			}
+			else if (other->troop->unit->speed == collision->fastest_speed)
+			{
+				collision->fastest_count += 1;
 			}
 		}
+		else collision->enemy = true;
 	}
 
-	return enemies_colliding;
+	if (collision->fastest_speed > pawn->troop->unit->speed)
+		collision->slow = true;
+
+	return 0;
 }
 
-// Find the moving colliding pawns that are faster than the moving pawns they are colliding with.
-static int collisions_fastest(struct battle *restrict battle, const struct collision *restrict collisions, struct array_pawns *restrict fastest)
+// Find the moving colliding pawns that are not slower than the moving pawns they are colliding with.
+// Make the other pawns stay at their current position.
+/*static int collisions_fastest(struct battle *restrict battle, const struct collision *restrict collisions, struct array_pawns *restrict fastest)
 {
-	size_t i, j;
+	bool changed = false;
 
 	*fastest = (struct array_pawns){0};
 
-	for(i = 0; i < battle->pawns_count; ++i)
+	for(size_t i = 0; i < battle->pawns_count; ++i)
 	{
 		unsigned speed = battle->pawns[i].troop->unit->speed;
 
 		if (position_eq(battle->pawns[i].position, battle->pawns[i].position_next) || !collisions[i].pawns.count)
 			continue;
 
-		for(j = 0; j < collisions[i].pawns.count; ++j)
+		collisions[i].fastest_count = 1;
+		for(size_t j = 0; j < collisions[i].pawns.count; ++j)
 		{
 			const struct pawn *pawn_colliding = collisions[i].pawns.data[j];
 
 			if (position_eq(pawn_colliding->position, pawn_colliding->position_next)) // the pawn collides with a stationary pawn
-				goto skip; // TODO add stationary pawn as an obstacle; add graph vertices
-			if (pawn_colliding->troop->unit->speed >= speed) // the pawn collides with a faster pawn
+				continue; // stationary pawns do not affect which pawns are the fastest TODO change this comment
+
+			if (pawn_colliding->troop->unit->speed > speed) // the pawn collides with a faster pawn
 				goto skip;
+
+			if (pawn_colliding->troop->unit->speed == speed)
+				collisions[i].fastest_count += 1;
 		}
 		if (array_pawns_expand(fastest, fastest->count + 1) < 0)
 			return ERROR_MEMORY;
 		fastest->data[fastest->count++] = battle->pawns + i;
 		continue;
 skip:
-		// For the moment make the colliding pawns stay at their current location. TODO remove this line and handle this in the calling function
+		// For the moment make the colliding pawns stay at their current position. TODO is this okay?
 		battle->pawns[i].position_next = battle->pawns[i].position;
+		changed = true;
 	}
 
-	return 0;
+	return changed;
+}*/
+
+// Calculates vector components and scales its length to account for one step of movement.
+static struct position pawn_vector_move(struct position origin, double x, double y, double distance_covered)
+{
+	double length;
+	struct position result;
+
+	x -= origin.x;
+	y -= origin.y;
+	length = sqrt(x * x + y * y);
+	result.x = x * distance_covered / length;
+	result.y = y * distance_covered / length;
+}
+
+// Sets the two possible move positions after one step on the tangent of obstacle.
+static void move_tangent(const struct pawn *restrict pawn, const struct pawn *restrict obstacle, struct position *restrict move0, struct position *restrict move1)
+{
+	// Use the formula descibed here:
+	// http://www.gamedev.net/topic/499818-tangents-to-a-circle-through-a-point/
+
+	const double r = PAWN_RADIUS * 2; // the two pawns must not overlap
+	const double r2 = r * r;
+	const double distance_covered = (double)pawn->troop->unit->speed / MOVEMENT_STEPS;
+
+	double sum_squares;
+	double x, y;
+
+	// Change the coordinate system so that the obstacle circle is at the origin.
+	struct position point = pawn->position;
+	point.x -= obstacle->position.x;
+	point.y -= obstacle->position.y;
+
+	sum_squares = (point.x * point.x + point.y * point.y);
+
+	// Find one tangent.
+	x = (r2 * point.x - r * point.y * sqrt(sum_squares - r2)) / sum_squares;
+	y = (r2 - point.x * x) / point.y;
+	*move0 = pawn_vector_move(point, x, y, distance_covered);
+
+	// Find the other tangent.
+	x = (r2 * point.x + r * point.y * sqrt(sum_squares - r2)) / sum_squares;
+	y = (r2 - point.x * x) / point.y;
+	*move1 = pawn_vector_move(point, x, y, distance_covered);
+}
+
+static inline long cross_product(double fx, double fy, double sx, double sy)
+{
+	// TODO this is for right-handed coordinate system
+	return (fx * sy - sx * fy);
 }
 
 int movement_collisions_resolve(const struct game *restrict game, struct battle *restrict battle, struct adjacency_list *restrict graph[static PLAYERS_LIMIT], struct obstacles *restrict obstacles[static PLAYERS_LIMIT])
 {
 	struct collision *restrict collisions;
-	struct array_pawns fastest;
-
 	size_t i;
-
 	int status;
 
 	// Each pawn can forsee what will happen in one movement step if nothing changes and can adjust its movement to react to that.
 	// If a pawn forsees a collision with an enemy, it will stay at its current position to fight the surrounding enemies.
-	// Pawns that forsee a collision with allies will try to make an alternative movement in order to avoid the collision and continue to their destination. Faster pawns are given higher priority. If the alternative movement still leads a pawn to a collision, that pawn will stay at its current position.
+
+	// Pawns that forsee a collision with allies will try to make an alternative movement in order to avoid the collision and continue to their destination. Slower pawns will stop and wait for the faster pawns to pass. If the alternative movement of the faster pawn still leads to a collision, that pawn will stay at its current position.
 
 	collisions = malloc(battle->pawns_count * sizeof(*collisions));
 	if (!collisions) return ERROR_MEMORY;
@@ -328,76 +391,134 @@ int movement_collisions_resolve(const struct game *restrict game, struct battle 
 	// Modify next positions of pawns until all positions are certain. Positions that are certain cannot be changed.
 	// A position being certain is indicated by pawn->position == pawn->position_next.
 
-	while (collisions_detect(game, battle, collisions))
+	// TODO can I optimize this?
+
+	while (1)
 	{
-		if (status < 0)
+		bool changed = false;
+
+		for(i = 0; i < battle->pawns_count; ++i)
 		{
-			for(i = 0; i < battle->pawns_count; ++i)
-				array_pawns_term(&collisions[i].pawns);
-			free(collisions);
-			return status;
+			struct pawn *restrict pawn = battle->pawns + i;
+
+			if (!pawn->count)
+				continue; // skip dead pawns
+			if (position_eq(pawn->position, pawn->position_next))
+				continue; // skip non-moving pawns
+
+			collisions[i].pawns.count = 0;
+			status = collisions_detect(game, battle, pawn, collisions + i);
+			if (status < 0)
+				goto finally;
+
+			if (collisions[i].enemy || collisions[i].slow) changed = true;
 		}
+
+		if (!changed) break; // break if there are no more collisions to handle here
 
 		// Each pawn that would collide with an enemy will instead stay at its current position.
+		// Each pawn that would collide with a faster ally will instead stay at its current position.
 		for(i = 0; i < battle->pawns_count; ++i)
 		{
-			struct pawn *pawn = battle->pawns + i;
-
-			if (collisions[i].movement_stop)
+			if (collisions[i].enemy)
 			{
-				collisions[i].set = 0;
-				collisions[i].pawns.count = 0;
-				collisions[i].movement_stop = 0;
-
-				pawn->position_next = pawn->position;
+				battle->pawns[i].position_next = battle->pawns[i].position;
+				collisions[i].enemy = false;
 			}
+
+			if (collisions[i].slow)
+				battle->pawns[i].position_next = battle->pawns[i].position;
 		}
 	}
 
-	// Now all colliding pawns are allies.
+	// Now there are only collisions between moving pawns and (other moving pawns with the same speed or non-moving pawns).
 
-	// TODO at this point I could know whether there are allies colliding (and optimize based on this knowledge)
-
-	// Each pawn that would collide with a non-moving ally should change its movement path to avoid the collision.
-	if (status = collisions_fastest(battle, collisions, &fastest))
+	// Try to resolve pawn collisions by modifying paths of the fastest pawns.
+	// If the collision is not easy to resolve, stop the pawn from moving.
+	for(i = 0; i < battle->pawns_count; ++i)
 	{
-		array_pawns_term(&fastest);
-		for(i = 0; i < battle->pawns_count; ++i)
-			array_pawns_term(&collisions[i].pawns);
-		free(collisions);
-		return status;
+		struct pawn *restrict pawn = battle->pawns + i;
+
+		if (!collisions[i].pawns.count)
+			continue;
+
+		// TODO support resolving more complicated collisions
+
+		if ((collisions[i].fastest_count == 1) && (collisions[i].pawns.count == 1))
+		{
+			struct position moves[2];
+			struct pawn *obstacle = collisions[i].pawns.data[0];
+
+			// Find the moves in direction of the tangent of the obstacle pawn.
+			move_tangent(pawn, obstacle, moves, moves + 1);
+
+			// Choose one move randomly from the possible moves.
+			pawn->position_next = moves[random() % 2];
+		}
+		else if ((collisions[i].fastest_count == 2) && (collisions[i].pawns.count == 1))
+		{
+			struct position moves[2];
+			struct pawn *obstacle = collisions[i].pawns.data[0];
+
+			// Find the moves in direction of the tangent of the obstacle pawn.
+			move_tangent(pawn, obstacle, moves, moves + 1);
+
+			// Choose the move on the right side of the collision move.
+			if (cross_product(moves[0].x - pawn->position.x, moves[0].y - pawn->position.y, pawn->position_next.x - pawn->position.x, pawn->position_next.y - pawn->position.y) > 0)
+				pawn->position_next = moves[0];
+			else
+				pawn->position_next = moves[1];
+		}
+		else
+		{
+			// There is no easy way to resolve the collision. Make the pawn stay at its current position.
+			pawn->position_next = pawn->position;
+		}
 	}
 
-	// TODO ? with the current logic, each colliding pawn needs to have a separate list of obstacles to which positions and paths of other pawns are added
-
-	/* TODO OLD implement modification of paths; some idea of the logic to do this is:
-	while there are pawns colliding:
-		while there are pawns, each one of which overlaps only with slower pawns:
-			keep the path of the fastest pawns; modify the paths of the slower pawns while considering the faster pawns as obstacles
-
-		take each pawn that collides with a pawn with the same speed and no pawns with higher speed
-			choose a path for the pawn
-		for all pawns just taken that still collide with a pawn with the same speed
-			make it stay at its current position
-	*/
-	// TODO NEW maybe just modify paths if there are two fastest pawns
-
-	array_pawns_term(&fastest);
-
-	for(i = 0; i < battle->pawns_count; ++i)
-		array_pawns_term(&collisions[i].pawns);
-	free(collisions);
-
-	if (pawns_collide(battle->pawns[0].position_next, battle->pawns[1].position_next))
+	// Look for collisions and stop pawns that would collide until all collisions are resolved.
+	while (1)
 	{
-		i = 5;
+		bool ready = true;
+
+		for(i = 0; i < battle->pawns_count; ++i)
+		{
+			struct pawn *restrict pawn = battle->pawns + i;
+
+			if (!pawn->count)
+				continue; // skip dead pawns
+			if (position_eq(pawn->position, pawn->position_next))
+				continue; // skip non-moving pawns
+
+			collisions[i].pawns.count = 0;
+			status = collisions_detect(game, battle, pawn, collisions + i);
+			if (status < 0)
+				goto finally;
+
+			if (collisions[i].pawns.count)
+				ready = false;
+		}
+
+		if (ready) break; // break if there are no more collisions
+
+		// Each pawn that would collide will instead stay at its current position.
+		for(i = 0; i < battle->pawns_count; ++i)
+			if (collisions[i].pawns.count)
+				battle->pawns[i].position_next = battle->pawns[i].position;
 	}
 
 	// Update current pawn positions.
 	for(i = 0; i < battle->pawns_count; ++i)
 		battle->pawns[i].position = battle->pawns[i].position_next;
 
-	return 0;
+	status = 0;
+
+finally:
+	for(i = 0; i < battle->pawns_count; ++i)
+		array_pawns_term(&collisions[i].pawns);
+	free(collisions);
+
+	return status;
 }
 
 int movement_queue(struct pawn *restrict pawn, struct position target, struct adjacency_list *restrict nodes, const struct obstacles *restrict obstacles)
