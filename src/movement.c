@@ -521,7 +521,7 @@ finally:
 	return status;
 }
 
-int movement_queue(struct pawn *restrict pawn, struct position target, struct adjacency_list *restrict nodes, const struct obstacles *restrict obstacles)
+int movement_queue(struct pawn *restrict pawn, struct position target, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles)
 {
 	if (pawn->path.count == PATH_QUEUE_LIMIT)
 		return ERROR_INPUT;

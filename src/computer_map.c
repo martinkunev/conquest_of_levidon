@@ -623,10 +623,8 @@ static struct region_info *regions_info_collect(const struct game *restrict game
 int computer_map(const struct game *restrict game, unsigned char player)
 {
 	unsigned char regions_visible[REGIONS_LIMIT];
-
+	struct region_info *restrict regions_info;
 	struct array_orders orders;
-	size_t i;
-
 	int status;
 
 	// TODO support cancelling buildings and trainings
@@ -635,16 +633,12 @@ int computer_map(const struct game *restrict game, unsigned char player)
 	map_visible(game, player, regions_visible);
 
 	// Collect information about each region.
-	struct region_info *restrict regions_info = regions_info_collect(game, player, regions_visible);
+	regions_info = regions_info_collect(game, player, regions_visible);
 	if (!regions_info) return ERROR_MEMORY;
 
-	if (computer_map_orders_list(&orders, game, player, regions_visible, regions_info) < 0)
-		goto error_memory;
-	if (!orders.count)
-	{
-		free(regions_info);
-		return 0;
-	}
+	status = computer_map_orders_list(&orders, game, player, regions_visible, regions_info);
+	if (status < 0) goto finally;
+	if (!orders.count) goto finally; // nothing to do
 
 	// Create a priority queue with the available orders.
 	struct heap_orders orders_queue;
@@ -653,12 +647,14 @@ int computer_map(const struct game *restrict game, unsigned char player)
 	if (!orders_queue.data)
 	{
 		array_orders_term(&orders);
-		goto error_memory;
+		status = ERROR_MEMORY;
+		goto finally;
 	}
-	for(i = 0; i < orders.count; ++i)
+	for(size_t i = 0; i < orders.count; ++i)
 		orders_queue.data[i] = orders.data + i;
 	heap_orders_heapify(&orders_queue);
 
+	// Choose greedily which orders to execute.
 	computer_map_orders_execute(&orders_queue, game, player);
 
 	free(orders_queue.data);
@@ -667,10 +663,7 @@ int computer_map(const struct game *restrict game, unsigned char player)
 	// Move player troops.
 	status = computer_map_move(game, player, regions_visible, regions_info);
 
+finally:
 	free(regions_info);
 	return status;
-
-error_memory:
-	free(regions_info);
-	return ERROR_MEMORY;
 }
