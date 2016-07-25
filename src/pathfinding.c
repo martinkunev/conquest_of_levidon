@@ -726,3 +726,66 @@ finally:
 	graph_remove(graph, vertex_origin);
 	return status;
 }
+
+// Sets a move with the specified distance in the direction of the specified point, if that direction does not oppose the original pawn direction.
+static unsigned pawn_move_set(struct position *restrict move, const struct pawn *restrict pawn, double distance, double x, double y)
+{
+	double original_x = pawn->position_next.x - pawn->position.x;
+	double original_y = pawn->position_next.y - pawn->position.y;
+
+	// Use the sign of the dot product to determine whether the angle between the old and the new direction is less than 90 degrees.
+	if (x * original_x + y * original_y < - FLOAT_ERROR)
+	{
+		double length = sqrt(x * x + y * y);
+		move->x = x * distance / length;
+		move->y = y * distance / length;
+		return 1;
+	}
+
+	return 0;
+}
+
+// Initializes the possible one-step moves for the given pawn in a tangent direction to the obstacle pawn.
+void path_moves_tangent(const struct pawn *restrict pawn, const struct pawn *restrict obstacle, double distance_covered, struct position moves[static restrict 2])
+{
+	unsigned moves_count = 0;
+
+	const double r = PAWN_RADIUS * 2; // the two pawns must not overlap
+	const double r2 = r * r;
+
+	double distance2, distance_tangent_point;
+	double x, y;
+	double temp;
+
+	// Find a point (x, y) on the tangent that is at distance r from the tangent point. To do that use the following relations:
+	// The points (x, y), the center of the obstacle circle and the tangent point form an isosceles right triangle.
+	// The oigin point, the tangent point and (x, y) lie on the tangent. The tangent point is between the other two.
+
+	// Change the coordinate system so that the obstacle circle is at the origin.
+	struct position origin = pawn->position;
+	origin.x -= obstacle->position.x;
+	origin.y -= obstacle->position.y;
+
+	distance2 = origin.x * origin.x + origin.y * origin.y;
+	distance_tangent_point = sqrt(distance2 - r2);
+
+	// Exclude false roots that appeared when squaring the original equation by checking the sign of y.
+
+	x = r2 * origin.x - r * origin.x * distance_tangent_point - r * origin.y * sqrt(distance2 + 2 * r * distance_tangent_point);
+	y = sqrt(2 * r2 - x * x);
+	temp = r2 - origin.x * x - r * distance_tangent_point;
+	if (fabs(temp - origin.y * y) < FLOAT_ERROR)
+		moves_count += pawn_move_set(moves + moves_count, pawn, distance_covered, x - origin.x, y - origin.y);
+	if (fabs(temp + origin.y * y) < FLOAT_ERROR)
+		moves_count += pawn_move_set(moves + moves_count, pawn, distance_covered, x - origin.x, -y - origin.y);
+
+	x = r2 * origin.x - r * origin.x * distance_tangent_point + r * origin.y * sqrt(distance2 + 2 * r * distance_tangent_point);
+	y = sqrt(2 * r2 - x * x);
+	temp = r2 - origin.x * x - r * distance_tangent_point;
+	if (fabs(temp - origin.y * y) < FLOAT_ERROR)
+		moves_count += pawn_move_set(moves + moves_count, pawn, distance_covered, x - origin.x, y - origin.y);
+	if (fabs(temp + origin.y * y) < FLOAT_ERROR)
+		moves_count += pawn_move_set(moves + moves_count, pawn, distance_covered, x - origin.x, -y - origin.y);
+
+	// assert(moves_count == 2);
+}

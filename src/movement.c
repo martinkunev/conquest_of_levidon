@@ -279,92 +279,6 @@ static int collisions_detect(const struct game *restrict game, const struct batt
 	return 0;
 }
 
-// Find the moving colliding pawns that are not slower than the moving pawns they are colliding with.
-// Make the other pawns stay at their current position.
-/*static int collisions_fastest(struct battle *restrict battle, const struct collision *restrict collisions, struct array_pawns *restrict fastest)
-{
-	bool changed = false;
-
-	*fastest = (struct array_pawns){0};
-
-	for(size_t i = 0; i < battle->pawns_count; ++i)
-	{
-		unsigned speed = battle->pawns[i].troop->unit->speed;
-
-		if (position_eq(battle->pawns[i].position, battle->pawns[i].position_next) || !collisions[i].pawns.count)
-			continue;
-
-		collisions[i].fastest_count = 1;
-		for(size_t j = 0; j < collisions[i].pawns.count; ++j)
-		{
-			const struct pawn *pawn_colliding = collisions[i].pawns.data[j];
-
-			if (position_eq(pawn_colliding->position, pawn_colliding->position_next)) // the pawn collides with a stationary pawn
-				continue; // stationary pawns do not affect which pawns are the fastest TODO change this comment
-
-			if (pawn_colliding->troop->unit->speed > speed) // the pawn collides with a faster pawn
-				goto skip;
-
-			if (pawn_colliding->troop->unit->speed == speed)
-				collisions[i].fastest_count += 1;
-		}
-		if (array_pawns_expand(fastest, fastest->count + 1) < 0)
-			return ERROR_MEMORY;
-		fastest->data[fastest->count++] = battle->pawns + i;
-		continue;
-skip:
-		// For the moment make the colliding pawns stay at their current position. TODO is this okay?
-		battle->pawns[i].position_next = battle->pawns[i].position;
-		changed = true;
-	}
-
-	return changed;
-}*/
-
-// Calculates vector components and scales its length to account for one step of movement.
-static struct position pawn_vector_move(struct position origin, double x, double y, double distance_covered)
-{
-	double length;
-	struct position result;
-
-	x -= origin.x;
-	y -= origin.y;
-	length = sqrt(x * x + y * y);
-	result.x = x * distance_covered / length;
-	result.y = y * distance_covered / length;
-}
-
-// Sets the two possible move positions after one step on the tangent of obstacle.
-static void move_tangent(const struct pawn *restrict pawn, const struct pawn *restrict obstacle, struct position *restrict move0, struct position *restrict move1)
-{
-	// Use the formula descibed here:
-	// http://www.gamedev.net/topic/499818-tangents-to-a-circle-through-a-point/
-
-	const double r = PAWN_RADIUS * 2; // the two pawns must not overlap
-	const double r2 = r * r;
-	const double distance_covered = (double)pawn->troop->unit->speed / MOVEMENT_STEPS;
-
-	double sum_squares;
-	double x, y;
-
-	// Change the coordinate system so that the obstacle circle is at the origin.
-	struct position point = pawn->position;
-	point.x -= obstacle->position.x;
-	point.y -= obstacle->position.y;
-
-	sum_squares = (point.x * point.x + point.y * point.y);
-
-	// Find one tangent.
-	x = (r2 * point.x - r * point.y * sqrt(sum_squares - r2)) / sum_squares;
-	y = (r2 - point.x * x) / point.y;
-	*move0 = pawn_vector_move(point, x, y, distance_covered);
-
-	// Find the other tangent.
-	x = (r2 * point.x + r * point.y * sqrt(sum_squares - r2)) / sum_squares;
-	y = (r2 - point.x * x) / point.y;
-	*move1 = pawn_vector_move(point, x, y, distance_covered);
-}
-
 static inline long cross_product(double fx, double fy, double sx, double sy)
 {
 	// TODO this is for right-handed coordinate system
@@ -438,6 +352,7 @@ int movement_collisions_resolve(const struct game *restrict game, struct battle 
 	for(i = 0; i < battle->pawns_count; ++i)
 	{
 		struct pawn *restrict pawn = battle->pawns + i;
+		const double distance_covered = (double)pawn->troop->unit->speed / MOVEMENT_STEPS;
 
 		if (!collisions[i].pawns.count)
 			continue;
@@ -446,22 +361,22 @@ int movement_collisions_resolve(const struct game *restrict game, struct battle 
 
 		if ((collisions[i].fastest_count == 1) && (collisions[i].pawns.count == 1))
 		{
-			struct position moves[2];
 			struct pawn *obstacle = collisions[i].pawns.data[0];
+			struct position moves[2];
 
 			// Find the moves in direction of the tangent of the obstacle pawn.
-			move_tangent(pawn, obstacle, moves, moves + 1);
+			path_moves_tangent(pawn, obstacle, distance_covered, moves);
 
 			// Choose one move randomly from the possible moves.
 			pawn->position_next = moves[random() % 2];
 		}
 		else if ((collisions[i].fastest_count == 2) && (collisions[i].pawns.count == 1))
 		{
-			struct position moves[2];
 			struct pawn *obstacle = collisions[i].pawns.data[0];
+			struct position moves[2];
 
 			// Find the moves in direction of the tangent of the obstacle pawn.
-			move_tangent(pawn, obstacle, moves, moves + 1);
+			path_moves_tangent(pawn, obstacle, distance_covered, moves);
 
 			// Choose the move on the right side of the collision move.
 			if (cross_product(moves[0].x - pawn->position.x, moves[0].y - pawn->position.y, pawn->position_next.x - pawn->position.x, pawn->position_next.y - pawn->position.y) > 0)
@@ -509,7 +424,10 @@ int movement_collisions_resolve(const struct game *restrict game, struct battle 
 
 	// Update current pawn positions.
 	for(i = 0; i < battle->pawns_count; ++i)
+	{
 		battle->pawns[i].position = battle->pawns[i].position_next;
+//		printf("%f %f\n", battle->pawns[i].position.x, battle->pawns[i].position.y);
+	}
 
 	status = 0;
 

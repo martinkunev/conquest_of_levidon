@@ -8,6 +8,8 @@
 
 #define PAWN_RADIUS 0.5
 
+#define FLOAT_ERROR 0.001
+
 struct game;
 struct battle;
 struct pawn;
@@ -37,7 +39,7 @@ static inline double battlefield_distance(struct position a, struct position b)
 
 static inline int pawns_collide(struct position a, struct position b)
 {
-	return battlefield_distance(a, b) < (PAWN_RADIUS * 2);
+	return battlefield_distance(a, b) < (PAWN_RADIUS * 2) - FLOAT_ERROR;
 }
 
 struct obstacles *path_obstacles_alloc(const struct game *restrict game, const struct battle *restrict battle, unsigned char player);
@@ -53,3 +55,5 @@ void visibility_graph_free(struct adjacency_list *graph);
 int path_find(struct pawn *restrict pawn, struct position destination, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles);
 
 int path_distances(const struct pawn *restrict pawn, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles, double reachable[static BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH]);
+
+void path_moves_tangent(const struct pawn *restrict pawn, const struct pawn *restrict obstacle, double distance_covered, struct position moves[static restrict 2]);
