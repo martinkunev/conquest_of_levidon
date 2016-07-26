@@ -764,7 +764,6 @@ static unsigned pawn_move_set(struct position *restrict move, const struct pawn 
 }
 
 // Initializes the possible one-step moves for the given pawn in a tangent direction to the obstacle pawn.
-// TODO check whether I should divide by distance2
 unsigned path_moves_tangent(const struct pawn *restrict pawn, const struct pawn *restrict obstacle, double distance_covered, struct position moves[static restrict 2])
 {
 	unsigned moves_count = 0;

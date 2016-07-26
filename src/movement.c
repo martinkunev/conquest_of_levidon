@@ -285,7 +285,6 @@ static inline long cross_product(double fx, double fy, double sx, double sy)
 	return (fx * sy - sx * fy);
 }
 
-#include <stdio.h>
 int movement_collisions_resolve(const struct game *restrict game, struct battle *restrict battle, struct adjacency_list *restrict graph[static PLAYERS_LIMIT], struct obstacles *restrict obstacles[static PLAYERS_LIMIT])
 {
 	struct collision *restrict collisions;
@@ -433,10 +432,7 @@ int movement_collisions_resolve(const struct game *restrict game, struct battle 
 
 	// Update current pawn positions.
 	for(i = 0; i < battle->pawns_count; ++i)
-	{
 		battle->pawns[i].position = battle->pawns[i].position_next;
-//		printf("%f %f\n", battle->pawns[i].position.x, battle->pawns[i].position.y);
-	}
 
 	status = 0;
 
