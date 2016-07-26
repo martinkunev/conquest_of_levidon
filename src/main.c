@@ -61,7 +61,7 @@ Invariants at the beginning of a turn:
 - constructions and training are only possible when the region and its garrison have the same owner
 */
 
-enum {ROUNDS_STALE_LIMIT = 10};
+enum {ROUNDS_STALE_LIMIT_OPEN = 10, ROUNDS_STALE_LIMIT_ASSAULT = 20};
 
 // Returns the number of the alliance that won the battle.
 static int play_battle(struct game *restrict game, struct region *restrict region, int assault)
@@ -195,7 +195,7 @@ static int play_battle(struct game *restrict game, struct region *restrict regio
 		}
 
 		// Cancel the battle if nothing is killed/destroyed for a certain number of rounds.
-		if ((battle.round - round_activity_last) >= ROUNDS_STALE_LIMIT)
+		if ((battle.round - round_activity_last) >= (assault ? ROUNDS_STALE_LIMIT_ASSAULT : ROUNDS_STALE_LIMIT_OPEN))
 		{
 			// Attacking troops retreat to the region they came from.
 			for(i = 0; i < battle.pawns_count; ++i)

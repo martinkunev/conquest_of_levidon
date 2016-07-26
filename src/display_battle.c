@@ -43,8 +43,8 @@
 
 #define PLAYER_INDICATOR_RADIUS 10
 
-#define BATTLEFIELD_X(x) (unsigned)(BATTLE_X + (x - PAWN_RADIUS) * FIELD_SIZE + 0.5)
-#define BATTLEFIELD_Y(y) (unsigned)(BATTLE_Y + (y - PAWN_RADIUS) * FIELD_SIZE + 0.5)
+#define BATTLEFIELD_X(x) (unsigned)(BATTLE_X + ((x) - PAWN_RADIUS) * FIELD_SIZE + 0.5)
+#define BATTLEFIELD_Y(y) (unsigned)(BATTLE_Y + ((y) - PAWN_RADIUS) * FIELD_SIZE + 0.5)
 
 extern Display *display;
 extern GLXDrawable drawable;
@@ -336,7 +336,7 @@ static void if_battle_pawn(const struct game *game, const struct state_battle *r
 
 	case ACTION_ASSAULT:
 		target = (struct position){pawn->target.field->tile.x, pawn->target.field->tile.y};
-		image_draw(&image_pawn_assault, BATTLEFIELD_X(target.x), BATTLEFIELD_Y(target.y));
+		image_draw(&image_pawn_assault, BATTLEFIELD_X(target.x + 0.5), BATTLEFIELD_Y(target.y + 0.5));
 		break;
 	}
 }

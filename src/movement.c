@@ -180,8 +180,10 @@ path_find_next:
 			// Determine the next destination.
 			if (pawn->path.count)
 				destination = pawn->path.data[0];
-			else if ((pawn->action == ACTION_FIGHT) && !position_eq(position, pawn->target.pawn->position))
+			else if ((pawn->action == ACTION_FIGHT) && !position_eq(position, pawn->target.pawn->position)) // TODO implement can_fight
 				destination = pawn->target.pawn->position;
+			else if ((pawn->action == ACTION_ASSAULT) && !can_assault(position, pawn->target.field))
+				destination = (struct position){pawn->target.field->tile.x, pawn->target.field->tile.y};
 			else
 			{
 				pawn->position_next = position;
