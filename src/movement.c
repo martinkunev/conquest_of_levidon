@@ -285,6 +285,7 @@ static inline long cross_product(double fx, double fy, double sx, double sy)
 	return (fx * sy - sx * fy);
 }
 
+#include <stdio.h>
 int movement_collisions_resolve(const struct game *restrict game, struct battle *restrict battle, struct adjacency_list *restrict graph[static PLAYERS_LIMIT], struct obstacles *restrict obstacles[static PLAYERS_LIMIT])
 {
 	struct collision *restrict collisions;
@@ -317,10 +318,12 @@ int movement_collisions_resolve(const struct game *restrict game, struct battle 
 
 			if (!pawn->count)
 				continue; // skip dead pawns
+
+			collisions[i].pawns.count = 0;
+
 			if (position_eq(pawn->position, pawn->position_next))
 				continue; // skip non-moving pawns
 
-			collisions[i].pawns.count = 0;
 			status = collisions_detect(game, battle, pawn, collisions + i);
 			if (status < 0)
 				goto finally;
@@ -363,26 +366,32 @@ int movement_collisions_resolve(const struct game *restrict game, struct battle 
 		{
 			struct pawn *obstacle = collisions[i].pawns.data[0];
 			struct position moves[2];
+			unsigned moves_count;
 
 			// Find the moves in direction of the tangent of the obstacle pawn.
-			path_moves_tangent(pawn, obstacle, distance_covered, moves);
-
 			// Choose one move randomly from the possible moves.
-			pawn->position_next = moves[random() % 2];
+			moves_count = path_moves_tangent(pawn, obstacle, distance_covered, moves);
+			if (moves_count)
+				pawn->position_next = moves[random() % moves_count];
 		}
 		else if ((collisions[i].fastest_count == 2) && (collisions[i].pawns.count == 1))
 		{
 			struct pawn *obstacle = collisions[i].pawns.data[0];
 			struct position moves[2];
+			unsigned moves_count;
+
+			double direction_x = pawn->position_next.x - pawn->position.x;
+			double direction_y = pawn->position_next.y - pawn->position.y;
 
 			// Find the moves in direction of the tangent of the obstacle pawn.
-			path_moves_tangent(pawn, obstacle, distance_covered, moves);
-
-			// Choose the move on the right side of the collision move.
-			if (cross_product(moves[0].x - pawn->position.x, moves[0].y - pawn->position.y, pawn->position_next.x - pawn->position.x, pawn->position_next.y - pawn->position.y) > 0)
-				pawn->position_next = moves[0];
-			else
-				pawn->position_next = moves[1];
+			// Choose the move on the right side of the collision direction.
+			moves_count = path_moves_tangent(pawn, obstacle, distance_covered, moves);
+			while (moves_count--)
+				if (cross_product(moves[moves_count].x - pawn->position.x, moves[moves_count].y - pawn->position.y, direction_x, direction_y) > 0)
+				{
+					pawn->position_next = moves[moves_count];
+					break;
+				}
 		}
 		else
 		{
@@ -444,7 +453,7 @@ int movement_queue(struct pawn *restrict pawn, struct position target, struct ad
 	if (pawn->path.count == PATH_QUEUE_LIMIT)
 		return ERROR_INPUT;
 
-	if ((target.x - PAWN_RADIUS < 0) || (target.x + PAWN_RADIUS > BATTLEFIELD_WIDTH) || (target.y - PAWN_RADIUS < 0) || (target.y + PAWN_RADIUS > BATTLEFIELD_HEIGHT))
+	if (!in_battlefield(target.x, target.y))
 		return ERROR_INPUT;
 
 	// TODO verify that the target is reachable

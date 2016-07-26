@@ -29,6 +29,8 @@
 #include "movement.h"
 #include "battle.h"
 
+#define FLOAT_ERROR 0.001
+
 struct path_node
 {
 	double distance;
@@ -112,7 +114,7 @@ static int move_blocked_obstacle(struct position start, struct position end, con
 }
 
 // WARNING: The move must be a non-zero vector (end != start).
-static int move_blocked_pawn(struct position start, struct position end, struct position pawn)
+/*static int move_blocked_pawn(struct position start, struct position end, struct position pawn)
 {
 	// http://stackoverflow.com/a/1084899/515212
 
@@ -139,7 +141,7 @@ static int move_blocked_pawn(struct position start, struct position end, struct 
 	if ((solution1 >= 0) && (solution1 <= 1)) return 1;
 
 	return 0;
-}
+}*/
 
 static inline void obstacle_insert(struct obstacles *obstacles, float left, float right, float top, float bottom)
 {
@@ -728,38 +730,54 @@ finally:
 }
 
 // Sets a move with the specified distance in the direction of the specified point, if that direction does not oppose the original pawn direction.
-static unsigned pawn_move_set(struct position *restrict move, const struct pawn *restrict pawn, double distance, double x, double y)
+static unsigned pawn_move_set(struct position *restrict move, const struct pawn *restrict pawn, double distance, double x, double y, struct position origin)
 {
-	double original_x = pawn->position_next.x - pawn->position.x;
-	double original_y = pawn->position_next.y - pawn->position.y;
+	double old_x = pawn->position_next.x - pawn->position.x;
+	double old_y = pawn->position_next.y - pawn->position.y;
+
+	// Change movement direction away from the obstacle to prevent rounding error leading to collision.
+	x *= 1 + FLOAT_ERROR;
+	y *= 1 + FLOAT_ERROR;
+
+	// Determine movement direction vector.
+	x -= origin.x;
+	y -= origin.y;
 
 	// Use the sign of the dot product to determine whether the angle between the old and the new direction is less than 90 degrees.
-	if (x * original_x + y * original_y < - FLOAT_ERROR)
+	if (x * old_x + y * old_y > -FLOAT_ERROR)
 	{
 		double length = sqrt(x * x + y * y);
-		move->x = x * distance / length;
-		move->y = y * distance / length;
-		return 1;
+		x = pawn->position.x + x * distance / length;
+		y = pawn->position.y + y * distance / length;
+
+		if (in_battlefield(x, y))
+		{
+			move->x = x;
+			move->y = y;
+			return 1;
+		}
+
+		return 0;
 	}
 
 	return 0;
 }
 
 // Initializes the possible one-step moves for the given pawn in a tangent direction to the obstacle pawn.
-void path_moves_tangent(const struct pawn *restrict pawn, const struct pawn *restrict obstacle, double distance_covered, struct position moves[static restrict 2])
+// TODO check whether I should divide by distance2
+unsigned path_moves_tangent(const struct pawn *restrict pawn, const struct pawn *restrict obstacle, double distance_covered, struct position moves[static restrict 2])
 {
 	unsigned moves_count = 0;
 
 	const double r = PAWN_RADIUS * 2; // the two pawns must not overlap
 	const double r2 = r * r;
 
-	double distance2, distance_tangent_point;
-	double x, y;
-	double temp;
-
 	// Find a point (x, y) on the tangent that is at distance r from the tangent point. To do that use the following relations:
 	// The points (x, y), the center of the obstacle circle and the tangent point form an isosceles right triangle.
 	// The oigin point, the tangent point and (x, y) lie on the tangent. The tangent point is between the other two.
+
+	double x, y;
+	double distance2, distance_tangent_point, discriminant, minus_b, temp;
 
 	// Change the coordinate system so that the obstacle circle is at the origin.
 	struct position origin = pawn->position;
@@ -767,25 +785,35 @@ void path_moves_tangent(const struct pawn *restrict pawn, const struct pawn *res
 	origin.y -= obstacle->position.y;
 
 	distance2 = origin.x * origin.x + origin.y * origin.y;
-	distance_tangent_point = sqrt(distance2 - r2);
+	distance_tangent_point = ((distance2 >= r2) ? sqrt(distance2 - r2) : 0); // handle the case when the argument is negative due to rounding errors
 
-	// Exclude false roots that appeared when squaring the original equation by checking the sign of y.
+	// Solutions:
+	//  x = (r2 * origin.x - r * origin.x * distance_tangent_point +- r * origin.y * sqrt(distance2 + 2 * r * distance_tangent_point)) / distance2
+	//  y = sqrt(2 * r2 - x * x)
+	// where r2 - origin.x * x - r * distance_tangent_point == origin.y * y
+	//  x = (r2 * origin.x - r * origin.x * distance_tangent_point +- r * origin.y * sqrt(distance2 + 2 * r * distance_tangent_point)) / distance2
+	//  y = - sqrt(2 * r2 - x * x)
+	// where r2 - origin.x * x - r * distance_tangent_point == - origin.y * y
 
-	x = r2 * origin.x - r * origin.x * distance_tangent_point - r * origin.y * sqrt(distance2 + 2 * r * distance_tangent_point);
-	y = sqrt(2 * r2 - x * x);
-	temp = r2 - origin.x * x - r * distance_tangent_point;
+	minus_b = r2 * origin.x - origin.x * r * distance_tangent_point;
+	discriminant = r * origin.y * sqrt(distance2 + 2 * r * distance_tangent_point);
+
+	x = (minus_b - discriminant) / distance2;
+	y = ((2 * r2 >= x * x) ? sqrt(2 * r2 - x * x) : 0); // handle the case when the argument is negative due to rounding errors
+	temp = r2 - origin.x * x - r * distance_tangent_point; // exclude false roots that appeared when squaring the original equation
 	if (fabs(temp - origin.y * y) < FLOAT_ERROR)
-		moves_count += pawn_move_set(moves + moves_count, pawn, distance_covered, x - origin.x, y - origin.y);
+		moves_count += pawn_move_set(moves + moves_count, pawn, distance_covered, x, y, origin);
 	if (fabs(temp + origin.y * y) < FLOAT_ERROR)
-		moves_count += pawn_move_set(moves + moves_count, pawn, distance_covered, x - origin.x, -y - origin.y);
+		moves_count += pawn_move_set(moves + moves_count, pawn, distance_covered, x, -y, origin);
 
-	x = r2 * origin.x - r * origin.x * distance_tangent_point + r * origin.y * sqrt(distance2 + 2 * r * distance_tangent_point);
-	y = sqrt(2 * r2 - x * x);
-	temp = r2 - origin.x * x - r * distance_tangent_point;
+	x = (minus_b + discriminant) / distance2;
+	y = ((2 * r2 >= x * x) ? sqrt(2 * r2 - x * x) : 0); // handle the case when the argument is negative due to rounding errors
+	temp = r2 - origin.x * x - r * distance_tangent_point; // exclude false roots that appeared when squaring the original equation
 	if (fabs(temp - origin.y * y) < FLOAT_ERROR)
-		moves_count += pawn_move_set(moves + moves_count, pawn, distance_covered, x - origin.x, y - origin.y);
+		moves_count += pawn_move_set(moves + moves_count, pawn, distance_covered, x, y, origin);
 	if (fabs(temp + origin.y * y) < FLOAT_ERROR)
-		moves_count += pawn_move_set(moves + moves_count, pawn, distance_covered, x - origin.x, -y - origin.y);
+		moves_count += pawn_move_set(moves + moves_count, pawn, distance_covered, x, -y, origin);
 
-	// assert(moves_count == 2);
+	// assert(moves_count <= 2);
+	return moves_count;
 }
