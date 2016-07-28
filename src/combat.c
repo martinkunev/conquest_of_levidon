@@ -44,6 +44,7 @@ const double damage_boost[7][6] =
 	[WEAPON_BLUNT] = {		1.0,		1.0,		1.0,		0.5,		1.0,		0.7},
 };
 
+// TODO merge these functions
 double damage_expected(const struct pawn *restrict fighter, double troops_count, const struct pawn *restrict victim)
 {
 	enum weapon weapon = fighter->troop->unit->melee.weapon;
@@ -51,13 +52,19 @@ double damage_expected(const struct pawn *restrict fighter, double troops_count,
 	double damage = fighter->troop->unit->melee.damage * fighter->troop->unit->melee.agility;
 	return troops_count * damage * damage_boost[weapon][armor];
 }
-
-// TODO this is not that simple - it should take into account accuracy and damage to neighboring fields
 double damage_expected_ranged(const struct pawn *restrict shooter, double troops_count, const struct pawn *restrict victim)
 {
+	// TODO this is not that simple - it should take into account accuracy and damage to neighboring fields
 	enum weapon weapon = shooter->troop->unit->ranged.weapon;
 	enum armor armor = victim->troop->unit->armor;
 	double damage = shooter->troop->unit->ranged.damage;
+	return troops_count * damage * damage_boost[weapon][armor];
+}
+double damage_expected_assault(const struct pawn *restrict fighter, double troops_count, const struct battlefield *restrict field)
+{
+	enum weapon weapon = fighter->troop->unit->melee.weapon;
+	enum armor armor = field->armor;
+	double damage = fighter->troop->unit->melee.damage;
 	return troops_count * damage * damage_boost[weapon][armor];
 }
 
@@ -145,6 +152,27 @@ static unsigned deaths(unsigned damage, unsigned troops, unsigned health)
 	return min + random() % (max - min + 1);
 }
 
+// Determine whether the target obstacle is close enough to be attacked.
+int can_assault(const struct position position, const struct battlefield *restrict field)
+{
+	float tile_left = ((field->location & POSITION_LEFT) ? field->tile.x : field->tile.x + WALL_OFFSET);
+	float tile_right = ((field->location & POSITION_RIGHT) ? field->tile.x + 1 : field->tile.x + 1 - WALL_OFFSET);
+	float tile_top = ((field->location & POSITION_TOP) ? field->tile.y : field->tile.y + WALL_OFFSET);
+	float tile_bottom = ((field->location & POSITION_BOTTOM) ? field->tile.y + 1 : field->tile.y + 1 - WALL_OFFSET);
+
+	float dx, dy;
+
+	if (tile_left > position.x) dx = tile_left - position.x;
+	else if (position.x > tile_right) dx = position.x - tile_right;
+	else dx = 0;
+
+	if (tile_top > position.y) dy = tile_top - position.y;
+	else if (position.y > tile_bottom) dy = position.y - tile_bottom;
+	else dy = 0;
+
+	return (dx * dx + dy * dy <= DISTANCE_MELEE * DISTANCE_MELEE);
+}
+
 void combat_melee(const struct game *restrict game, struct battle *restrict battle)
 {
 	size_t i, j;
@@ -158,26 +186,7 @@ void combat_melee(const struct game *restrict game, struct battle *restrict batt
 
 		if (fighter->action == ACTION_ASSAULT)
 		{
-			// Determine whether the target field is close enough to be attacked.
-
-			struct battlefield *field = fighter->target.field;
-
-			float tile_left = ((field->location & POSITION_LEFT) ? field->tile.x : field->tile.x + WALL_OFFSET);
-			float tile_right = ((field->location & POSITION_RIGHT) ? field->tile.x + 1 : field->tile.x + 1 - WALL_OFFSET);
-			float tile_top = ((field->location & POSITION_TOP) ? field->tile.y : field->tile.y + WALL_OFFSET);
-			float tile_bottom = ((field->location & POSITION_BOTTOM) ? field->tile.y + 1 : field->tile.y + 1 - WALL_OFFSET);
-
-			float dx, dy;
-
-			if (tile_left > fighter->position.x) dx = tile_left - fighter->position.x;
-			else if (fighter->position.x > tile_right) dx = fighter->position.x - tile_right;
-			else dx = 0;
-
-			if (tile_top > fighter->position.y) dy = tile_top - fighter->position.y;
-			else if (fighter->position.y > tile_bottom) dy = fighter->position.y - tile_bottom;
-			else dy = 0;
-
-			if (dx * dx + dy * dy <= DISTANCE_MELEE * DISTANCE_MELEE)
+			if (can_assault(fighter->position, fighter->target.field))
 				assault(fighter, fighter->target.field);
 		}
 		else
@@ -196,6 +205,8 @@ void combat_melee(const struct game *restrict game, struct battle *restrict batt
 			else for(j = 0; j < battle->pawns_count; ++j)
 			{
 				struct pawn *victim = battle->pawns + j;
+				if (!victim->count)
+					continue;
 				if (game->players[victim->troop->owner].alliance == fighter_alliance)
 					continue;
 				if (battlefield_distance(fighter->position, victim->position) <= DISTANCE_MELEE)

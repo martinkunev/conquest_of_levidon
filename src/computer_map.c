@@ -238,7 +238,7 @@ static int computer_map_orders_list(struct array_orders *restrict orders, const 
 
 				// Calculate the value of training the troop.
 				// TODO improve these coefficients and the whole logic
-				double troop_value = (unit_importance(UNITS + j) * (UNITS[j].troops_count / 25.0)) / sqrt(unit_cost(UNITS + j)); // TODO this can be > 1
+				double troop_value = (unit_importance(UNITS + j, 0) * (UNITS[j].troops_count / 25.0)) / sqrt(unit_cost(UNITS + j)); // TODO this can be > 1
 				if (!resource_enough(&income, &UNITS[j].expense)) troop_value /= 2.0;
 				if (!neighbors_dangerous) troop_value /= 2.0;
 				switch (unit_class(UNITS + j))
@@ -408,7 +408,7 @@ static double map_state_rating(const struct game *restrict game, unsigned char p
 					{
 						if ((troop->owner != player) || (troop->move != LOCATION_GARRISON))
 							continue;
-						strength += unit_importance_assault(troop->unit, garrison) * troop->count;
+						strength += unit_importance(troop->unit, garrison) * troop->count;
 					}
 
 					if ((0.5 * strength) >= regions_info[i].strength_enemy) rating_region += 1.0;
@@ -509,7 +509,7 @@ static int computer_map_move(const struct game *restrict game, unsigned char pla
 			if (!neighbors_count) continue;
 
 			// Remember current troop movement command and set a new one.
-			strength = unit_importance(troop->unit) * troop->count;
+			strength = unit_importance(troop->unit, 0) * troop->count;
 			move_backup = troop->move;
 			map_state_set(troop, region, neighbors[random() % neighbors_count], strength, regions_info);
 
@@ -530,7 +530,7 @@ static int computer_map_move(const struct game *restrict game, unsigned char pla
 		troop = troops.data[i].troop;
 
 		neighbors_count = map_state_neighbors(region, troop, neighbors);
-		strength = unit_importance(troop->unit) * troop->count;
+		strength = unit_importance(troop->unit, 0) * troop->count;
 		for(j = 0; j < neighbors_count; ++j)
 		{
 			// Remember current troop movement command and set a new one.
@@ -586,7 +586,7 @@ static struct region_info *regions_info_collect(const struct game *restrict game
 		for(troop = region->troops; troop; troop = troop->_next)
 		{
 			// Take into account that enemy troops may not be visible.
-			strength = unit_importance(troop->unit) * troop->count;
+			strength = unit_importance(troop->unit, 0) * troop->count;
 			if (troop->owner == player)
 			{
 				if (troop->location != LOCATION_GARRISON)

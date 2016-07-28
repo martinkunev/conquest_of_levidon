@@ -45,28 +45,29 @@ const double desire_buildings[] =
 	[BuildingForge] = 0.5,
 };
 
-double unit_importance(const struct unit *restrict unit)
+double unit_importance(const struct unit *restrict unit, const struct garrison_info *restrict garrison)
 {
 	// TODO more sophisticated logic here
 	// TODO importance should depend on battle obstacles (e.g. the more they are, the more important is battering ram)
 
-	double importance = unit->health / damage_boost[WEAPON_CLEAVING][unit->armor] + unit->speed * 1.5;
-	importance += unit->melee.damage * damage_boost[unit->melee.weapon][ARMOR_LEATHER] * unit->melee.agility * 3;
-	importance += unit->melee.damage * damage_boost[unit->melee.weapon][ARMOR_WOODEN] * 2;
-	importance += unit->melee.damage * damage_boost[unit->melee.weapon][ARMOR_STONE] * 2;
-	importance += unit->ranged.damage * unit->ranged.range;
-	return importance;
-}
+	double importance;
 
-double unit_importance_assault(const struct unit *restrict unit, const struct garrison_info *restrict garrison)
-{
-	// TODO more sophisticated logic here
-	// TODO importance should depend on battle obstacles (e.g. the more they are, the more important is battering ram)
+	if (garrison)
+	{
+		importance = unit->health / damage_boost[WEAPON_CLEAVING][unit->armor] + (unit->speed - 1) * 1.5;
+		importance += unit->melee.damage * damage_boost[unit->melee.weapon][ARMOR_LEATHER] * unit->melee.agility * 3;
+		importance += unit->melee.damage * damage_boost[unit->melee.weapon][garrison->armor_gate] * 5;
+		importance += unit->ranged.damage * (unit->ranged.range - 1);
+	}
+	else
+	{
+		importance = unit->health / damage_boost[WEAPON_CLEAVING][unit->armor] + unit->speed * 1.5;
+		importance += unit->melee.damage * damage_boost[unit->melee.weapon][ARMOR_LEATHER] * unit->melee.agility * 3;
+		importance += unit->melee.damage * damage_boost[unit->melee.weapon][ARMOR_WOODEN] * 2;
+		importance += unit->melee.damage * damage_boost[unit->melee.weapon][ARMOR_STONE] * 2;
+		importance += unit->ranged.damage * unit->ranged.range;
+	}
 
-	double importance = unit->health / damage_boost[WEAPON_CLEAVING][unit->armor] + (unit->speed - 1) * 1.5;
-	importance += unit->melee.damage * damage_boost[unit->melee.weapon][ARMOR_LEATHER] * unit->melee.agility * 3;
-	importance += unit->melee.damage * damage_boost[unit->melee.weapon][garrison->armor_gate] * 5;
-	importance += unit->ranged.damage * (unit->ranged.range - 1);
 	return importance;
 }
 
@@ -82,3 +83,18 @@ int state_wanted(double rate, double rate_new, double temperature)
 	double probability = exp((rate_new - rate) / temperature);
 	return probability > ((double)random() / RAND_MAX);
 }
+
+#if defined(UNIT_IMPORTANCE)
+#include <stdio.h>
+
+int main(void)
+{
+	printf("%16s %12s %8s %20s\n", "name", "importance", "count", "total importance");
+	for(size_t i = 0; i < UNITS_COUNT; ++i)
+	{
+		double importance = unit_importance(UNITS + i, 0);
+		printf("%16.*s %12f %8u %20f\n", (int)UNITS[i].name_length, UNITS[i].name, importance, (unsigned)UNITS[i].troops_count, importance * UNITS[i].troops_count);
+	}
+	return 0;
+}
+#endif

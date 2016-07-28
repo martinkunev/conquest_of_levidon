@@ -50,17 +50,6 @@ struct pawn_command
     } target;
 };
 
-/*
-struct pawn_command
-{
-	enum pawn_action action;
-	struct position target;
-
-	size_t moves_count;
-	struct move moves[];
-};
-*/
-
 /*struct combat_victims
 {
 	const struct pawn *central;
@@ -73,35 +62,33 @@ struct pawn_command
 
 static unsigned battle_state_neighbors(const struct game *restrict game, const struct battle *restrict battle, struct pawn *restrict pawn, double reachable[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH], struct tile neighbors[static 4])
 {
-	return 0;
+	// TODO exclude positions that are too far to get to in one round
 
-	/*
 	unsigned speed = pawn->troop->unit->speed;
-	struct point location = pawn->moves[pawn->moves_count - 1].location, target;
+	struct position position = *pawn->path.data;
+	struct tile target;
 
 	unsigned neighbors_count = 0;
 
-	// TODO fix this
-
-	target = (struct point){location.x - 1, location.y};
-	if ((target.x >= 0) && (speed >= reachable[target.y][target.x]) && battlefield_passable(game, &battle->field[target.y][target.x], pawn->troop->owner))
+	target = (struct tile){(unsigned)position.x - 1, (unsigned)position.y};
+	if (in_battlefield(target.x, target.y) && (speed >= reachable[target.y][target.x]) && battlefield_passable(game, &battle->field[target.y][target.x], pawn->troop->owner))
 		neighbors[neighbors_count++] = target;
 
-	target = (struct point){location.x + 1, location.y};
-	if ((target.x < BATTLEFIELD_WIDTH) && (speed >= reachable[target.y][target.x]) && battlefield_passable(game, &battle->field[target.y][target.x], pawn->troop->owner))
+	target = (struct tile){(unsigned)position.x + 1, (unsigned)position.y};
+	if (in_battlefield(target.x, target.y) && (speed >= reachable[target.y][target.x]) && battlefield_passable(game, &battle->field[target.y][target.x], pawn->troop->owner))
 		neighbors[neighbors_count++] = target;
 
-	target = (struct point){location.x, location.y - 1};
-	if ((target.y >= 0) && (speed >= reachable[target.y][target.x]) && battlefield_passable(game, &battle->field[target.y][target.x], pawn->troop->owner))
+	target = (struct tile){(unsigned)position.x, (unsigned)position.y - 1};
+	if (in_battlefield(target.x, target.y) && (speed >= reachable[target.y][target.x]) && battlefield_passable(game, &battle->field[target.y][target.x], pawn->troop->owner))
 		neighbors[neighbors_count++] = target;
 
-	target = (struct point){location.x, location.y + 1};
-	if ((target.y < BATTLEFIELD_HEIGHT) && (speed >= reachable[target.y][target.x]) && battlefield_passable(game, &battle->field[target.y][target.x], pawn->troop->owner))
+	target = (struct tile){(unsigned)position.x, (unsigned)position.y + 1};
+	if (in_battlefield(target.x, target.y) && (speed >= reachable[target.y][target.x]) && battlefield_passable(game, &battle->field[target.y][target.x], pawn->troop->owner))
 		neighbors[neighbors_count++] = target;
 
 	// TODO support assault
 
-	return neighbors_count;*/
+	return neighbors_count;
 }
 
 static void battle_state_set(struct pawn *restrict pawn, struct tile neighbor, const struct game *restrict game, struct battle *restrict battle, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles)
@@ -110,11 +97,16 @@ static void battle_state_set(struct pawn *restrict pawn, struct tile neighbor, c
 
 	if (*field->pawns)
 	{
-		if (combat_order_shoot(game, battle, obstacles, pawn, (struct position){neighbor.x, neighbor.y}))
-			return;
-		else if (combat_order_assault(game, pawn, field))
+		// TODO what if there is more than one pawn at the field
+
+		if (combat_order_shoot(game, battle, obstacles, pawn, field->pawns[0]->position))
 			return;
 		else if (combat_order_fight(game, battle, obstacles, pawn, *field->pawns))
+			return;
+	}
+	else if (field->blockage == BLOCKAGE_OBSTACLE)
+	{
+		if (combat_order_assault(game, pawn, field))
 			return;
 	}
 
@@ -122,50 +114,42 @@ static void battle_state_set(struct pawn *restrict pawn, struct tile neighbor, c
 	movement_queue(pawn, (struct position){neighbor.x, neighbor.y}, graph, obstacles);
 }
 
-/*
-static unsigned victims_fight_find(const struct game *restrict game, const struct pawn *restrict pawn, unsigned char player, const struct pawn *pawns[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH], const struct pawn *restrict victims[static 4])
+// TODO is 8 enough for victims?
+static unsigned victims_fight_find(const struct game *restrict game, const struct battle *restrict battle, const struct pawn *restrict fighter, const struct position *restrict positions, const struct pawn *restrict victims[static 8])
 {
-	const struct pawn *victim;
+	unsigned char fighter_alliance = game->players[fighter->troop->owner].alliance;
+	struct position fighter_position = positions[fighter - battle->pawns];
 	unsigned victims_count = 0;
-
-	struct point location, target;
 
 	// TODO what if one of the pawns is on a tower
 
-	if (pawn->troop->owner == player)
+	// If the pawn has a fight target and is close enough to it, set that pawn as a victim.
+	if (fighter->action == ACTION_FIGHT)
 	{
-		location = pawn->moves[pawn->moves_count - 1].location; // assume pawn movement will be completed by the end of the round
-
-		// If the pawn has a specific fight target and is able to fight it, fight only that target.
-		if ((pawn->action == ACTION_FIGHT) && battlefield_neighbors(location, pawn->target.pawn->moves[0].location))
+		struct position target_position = positions[fighter->target.pawn - battle->pawns];
+		if (battlefield_distance(fighter_position, target_position) <= DISTANCE_MELEE)
 		{
-			victims[victims_count++] = pawn->target.pawn;
+			victims[victims_count++] = fighter->target.pawn;
 			return victims_count;
 		}
 	}
-	else location = pawn->moves[0].location;
 
-	// Look for pawns to fight at the neighboring fields.
+	// Set all enemy pawns close enough as victims.
+	for(size_t i = 0; i < battle->pawns_count; ++i)
+	{
+		struct pawn *victim = battle->pawns + i;
+		if (!victim->count)
+			continue;
+		if (game->players[victim->troop->owner].alliance == fighter_alliance)
+			continue;
+		if (battlefield_distance(fighter_position, positions[i]) <= DISTANCE_MELEE)
+			victims[victims_count++] = victim;
+	}
 
-	target = (struct point){location.x - 1, location.y};
-	if ((target.x >= 0) && (victim = pawns[target.y][target.x]) && !allies(game, pawn->troop->owner, victim->troop->owner))
-		victims[victims_count++] = victim;
-
-	target = (struct point){location.x + 1, location.y};
-	if ((target.x < BATTLEFIELD_WIDTH) && (victim = pawns[target.y][target.x]) && !allies(game, pawn->troop->owner, victim->troop->owner))
-		victims[victims_count++] = victim;
-
-	target = (struct point){location.x, location.y - 1};
-	if ((target.y >= 0) && (victim = pawns[target.y][target.x]) && !allies(game, pawn->troop->owner, victim->troop->owner))
-		victims[victims_count++] = victim;
-
-	target = (struct point){location.x, location.y + 1};
-	if ((target.y < BATTLEFIELD_HEIGHT) && (victim = pawns[target.y][target.x]) && !allies(game, pawn->troop->owner, victim->troop->owner))
-		victims[victims_count++] = victim;
-
+	// assert(victims_count <= 8); // TODO make sure this is true
 	return victims_count;
 }
-*/
+
 
 /*static void victims_shoot_find(const struct pawn *restrict pawn, const struct pawn *pawns[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH], struct combat_victims *restrict victims)
 {
@@ -231,34 +215,50 @@ static double battle_state_rating(const struct game *restrict game, struct battl
 {
 	return 0.5;
 
-	/*
 	double rating = 0.0, rating_max = 0.0;
 
 	size_t i, j;
 
-	const struct pawn *pawns_moved[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH] = {0};
-
-	const struct pawn *victims[4];
+	const struct pawn *victims[8]; // TODO is this big enough?
 	unsigned victims_count;
 
-	// WARNING: We assume the locations, where the pawns are commanded to go, will be non-occupied.
+	struct position *positions = malloc(battle->pawns_count * sizeof(*positions));
+	if (!positions) return NAN;
+
+	// TODO optimize this
+
+	// WARNING: We assume the locations, where the pawns are commanded to go, will not be occupied. // TODO why?
 
 	// Estimate which pawn will occupy a given location after the move.
 	for(i = 0; i < battle->pawns_count; ++i)
 	{
 		const struct pawn *restrict pawn = battle->pawns + i;
-		struct point location;
 
 		if (!pawn->count) continue;
 
-		if (pawn->troop->owner == player) location = pawn->moves[pawn->moves_count - 1].location;
-		else location = pawn->moves[0].location; // TODO do better estimation here
-		pawns_moved[location.y][location.x] = pawn;
+		if (pawn->troop->owner == player)
+		{
+			switch (pawn->action)
+			{
+			case ACTION_FIGHT:
+				positions[i] = pawn->target.pawn->position;
+				break;
+
+			case ACTION_ASSAULT:
+				positions[i] = (struct position){pawn->target.field->tile.x, pawn->target.field->tile.y};
+				break;
+
+			default:
+				positions[i] = pawn->path.count ? *pawn->path.data : pawn->position;
+				break;
+			}
+		}
+		else positions[i] = pawn->position; // TODO do a better estimation here
 	}
 
-	// TODO the code below seems to have very high asymptotic complexity
+	// TODO don't run away from ranged units unless you're faster?
 
-	// TODO don't run away from range units unless you're faster
+	// TODO take ally pawns into account for: benefits and dangers for the following turns; damage effects from enemies
 
 	// Estimate how beneficial is the command given to each of the player's pawns.
 	for(i = 0; i < battle->players[player].pawns_count; ++i) // loop the pawns the player controls
@@ -267,63 +267,85 @@ static double battle_state_rating(const struct game *restrict game, struct battl
 
 		if (!pawn->count) continue;
 
+		// TODO max rating should be related to max damage
+
 		// TODO current round should have more weight than the following rounds
+
 		rating_max += 350.0 * 50.0;
 		if (pawn->action == ACTION_SHOOT)
 		{
-			// estimate shoot impact
 			// TODO this doesn't account for accuracy and damage spreading to nearby targets
-			const struct pawn *victim = battle->field[pawn->target.field.y][pawn->target.field.x].pawn;
-			rating += unit_importance(victim->troop->unit) * damage_expected(pawn, pawn->count, victim);
+
+			const struct pawn *victim;
+			struct tile tile = (struct tile){(size_t)(pawn->target.position.x + 0.5), (size_t)(pawn->target.position.y + 0.5)};
+			const struct battlefield *restrict field = battle_field(battle, tile);
+
+			for(j = 0; victim = field->pawns[j]; ++j)
+				if (position_eq(pawn->target.position, victim->position))
+					goto found;
+			// assert(0);
+found:
+
+			// estimate shoot impact
+			rating += unit_importance(victim->troop->unit, 0) * damage_expected_ranged(pawn, pawn->count, victim);
 		}
-		else if ((pawn->action == ACTION_ASSAULT) && battlefield_neighbors(pawn->moves[pawn->moves_count - 1].location, pawn->target.field))
+		else if (pawn->action == ACTION_ASSAULT) // TODO remove the comment && can_assault(*pawn->path.data, pawn->target.field))
 		{
+			const struct battlefield *restrict field = pawn->target.field;
+
 			// estimate assault impact
-			// TODO
+			rating += 30.0 * damage_expected_assault(pawn, pawn->count, field);
 		}
 		else
 		{
 			// estimate fight impact
-			victims_count = victims_fight_find(game, pawn, player, pawns_moved, victims);
+			victims_count = victims_fight_find(game, battle, pawn, positions, victims);
 			for(j = 0; j < victims_count; ++j)
-				rating += unit_importance(victims[j]->troop->unit) * damage_expected(pawn, (double)pawn->count / victims_count, victims[j]);
+				rating += unit_importance(victims[j]->troop->unit, 0) * damage_expected(pawn, (double)pawn->count / victims_count, victims[j]);
 		}
-
-		// TODO take ally pawns into account
 
 		// Estimate benefits and dangers for the following turns (moving, fighting, shooting, assault).
 		for(j = 0; j < battle->pawns_count; ++j) // loop through enemy pawns
 		{
-			const struct pawn *restrict other = battle->pawns + j;
 			const struct unit *restrict attacker = pawn->troop->unit;
-			int status;
+			const struct pawn *restrict other = battle->pawns + j;
 			double distance;
+
+			// TODO finish this
 
 			if (!pawn->count) continue;
 			if (allies(game, other->troop->owner, player)) continue;
 
 			rating_max += 3 * 350.0 * 50.0;
 
+			distance = battlefield_distance(positions[i], positions[j]);
+
 			// TODO take into account obstacles on the way and damage splitting to neighboring fields
-			if (attacker->ranged.damage && (round(battlefield_distance(pawn->moves[pawn->moves_count - 1].location, other->moves[0].location)) < attacker->ranged.range))
-				rating += unit_importance(other->troop->unit) * damage_expected_ranged(pawn, pawn->count, other);
+			if (attacker->ranged.weapon && (distance <= attacker->ranged.range))
+				rating += unit_importance(other->troop->unit, 0) * damage_expected_ranged(pawn, pawn->count, other);
 
-			status = path_distance(pawn->moves[pawn->moves_count - 1].location, other->moves[0].location, graph, obstacles, &distance);
-			if (status < 0) return NAN; // TODO
-			if (distance == INFINITY) continue; // TODO this information is available through reachable
-
+			// TODO check if other is reachable
 			// TODO use a better formula here
-			rating -= unit_importance(pawn->troop->unit) * damage_expected(other, other->count, pawn) * other->troop->unit->speed / distance;
-			rating += unit_importance(other->troop->unit) * damage_expected(pawn, pawn->count, other) * pawn->troop->unit->speed / distance;
-
-			// TODO this is supposed to make the computer prefer setting the action; is this the right way?
-			if ((pawn->action == ACTION_FIGHT) && (pawn->target.pawn == other))
-				rating += unit_importance(other->troop->unit) * damage_expected(pawn, pawn->count, other) * pawn->troop->unit->speed / distance;
-
-			// TODO assault evaluation
+			rating -= unit_importance(pawn->troop->unit, 0) * damage_expected(other, other->count, pawn) * other->troop->unit->speed / distance;
+			rating += unit_importance(other->troop->unit, 0) * damage_expected(pawn, pawn->count, other) * pawn->troop->unit->speed / distance;
 		}
 
-		// TODO walls close to the current position (if on the two diagonals, large bonus (gate blocking))
+		if (pawn->action == ACTION_SHOOT)
+		{
+			// TODO this is supposed to make the computer prefer shooting; is this the right way?
+			double distance = battlefield_distance(positions[i], positions[pawn->target.pawn - battle->pawns]);
+			rating += 2 * unit_importance(pawn->target.pawn->troop->unit, 0) * damage_expected_ranged(pawn, pawn->count, pawn->target.pawn) * pawn->troop->unit->speed / distance;
+		}
+		else if (pawn->action == ACTION_FIGHT)
+		{
+			// TODO this is supposed to make the computer prefer setting the action; is this the right way?
+			double distance = battlefield_distance(positions[i], positions[pawn->target.pawn - battle->pawns]);
+			rating += unit_importance(pawn->target.pawn->troop->unit, 0) * damage_expected(pawn, pawn->count, pawn->target.pawn) * pawn->troop->unit->speed / distance;
+		}
+
+		// TODO assault evaluation
+
+		// TODO ally walls close to the current position (if on the two diagonals, large bonus (gate blocking))
 	}
 
 	// Estimate how bad will the damage effects from enemies be.
@@ -336,17 +358,20 @@ static double battle_state_rating(const struct game *restrict game, struct battl
 
 		// TODO guess when a pawn will prefer shoot/assault or fighting specific target
 
-		victims_count = victims_fight_find(game, pawn, player, pawns_moved, victims);
+		victims_count = victims_fight_find(game, battle, pawn, positions, victims);
 		for(j = 0; j < victims_count; ++j)
 		{
-			if (victims[j]->troop->owner != player) continue;
-			rating -= unit_importance(victims[j]->troop->unit) * damage_expected(pawn, (double)pawn->count / victims_count, victims[j]);
+			// TODO subtracting from rating is probably a bad idea
+
+			if (victims[j]->troop->owner != player) continue; // skip pawns owned by other players
+			rating -= unit_importance(victims[j]->troop->unit, 0) * damage_expected(pawn, (double)pawn->count / victims_count, victims[j]);
 		}
 	}
 
+	free(positions);
+
 	// assert(rating_max);
 	return rating / rating_max;
-	*/
 }
 
 int computer_formation(const struct game *restrict game, struct battle *restrict battle, unsigned char player)
@@ -408,7 +433,7 @@ static void command_restore(struct pawn *restrict pawn, struct pawn_command *res
 	}
 }
 
-// Decide the behavior of the computer using simulated annealing.
+// Determine the behavior of the computer using simulated annealing.
 int computer_battle(const struct game *restrict game, struct battle *restrict battle, unsigned char player, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles)
 {
 	unsigned step;
@@ -519,7 +544,7 @@ unsigned calculate_battle(struct game *restrict game, struct region *restrict re
 	// TODO take siege and shooters into account
 	double strength[PLAYERS_LIMIT] = {0};
 	for(troop = region->troops; troop; troop = troop->_next)
-		strength[game->players[troop->owner].alliance] += unit_importance(troop->unit) * troop->count;
+		strength[game->players[troop->owner].alliance] += unit_importance(troop->unit, 0) * troop->count;
 
 	// Calculate total strength and find the strongest alliance.
 	double strength_total = 0.0;

@@ -213,12 +213,12 @@ path_find_next:
 
 			// Remove the position just reached from the queue of moves.
 			pawn->moves.count -= 1;
-			if (pawn->moves.count) memmove(pawn->moves.data, pawn->moves.data + 1, pawn->moves.count);
+			if (pawn->moves.count) memmove(pawn->moves.data, pawn->moves.data + 1, pawn->moves.count * sizeof(*pawn->moves.data));
 			else
 			{
 				// Remove the position just reached from the queue of paths.
 				pawn->path.count -= 1;
-				if (pawn->path.count) memmove(pawn->path.data, pawn->path.data + 1, pawn->path.count);
+				if (pawn->path.count) memmove(pawn->path.data, pawn->path.data + 1, pawn->path.count * sizeof(*pawn->path.data));
 
 				goto path_find_next;
 			}
