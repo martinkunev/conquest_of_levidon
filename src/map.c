@@ -120,18 +120,28 @@ void region_battle_cleanup(const struct game *restrict game, struct region *rest
 
 void region_turn_process(const struct game *restrict game, struct region *restrict region)
 {
+	// TODO improve the wording of this comment
+	// Region can change ownership if:
+	// * it is conquered by enemy troops
+	// * it is unguarded and the garrison's owner is an enemy of the region owner
+	// Region garrison can change ownership if:
+	// * it is assaulted successfully
+	// * a siege finishes successfully
+	// * it is unguarded, the region's owner is an enemy of the garrison owner and there are enemy troops in the region
+
 	struct troop *troop, *next;
 
-	bool garrison_guarded = false;
+	bool region_guarded = false, region_garrison_guarded = false;
 	unsigned invaders_count = 0;
 	unsigned char invaders_alliance;
 
 	// Collect information about the region.
 	for(troop = region->troops; troop; troop = troop->_next)
 	{
-		if (troop->move == LOCATION_GARRISON) garrison_guarded = true;
+		if (troop->move == LOCATION_GARRISON) region_garrison_guarded = true;
 		else if (troop->move == region) // make sure the troop is not retreating
 		{
+			region_guarded = true;
 			if (!allies(game, troop->owner, region->owner))
 			{
 				invaders_count += 1;
@@ -140,18 +150,20 @@ void region_turn_process(const struct game *restrict game, struct region *restri
 		}
 	}
 
+	// Liberated regions are re-conquered by the owner of the garrison.
+	// Invaded regions are conquered by a random invading troop.
 	if (invaders_count)
 	{
-		// Liberated regions are re-conquered by the owner of the garrison.
-		// Invaded regions are conquered by a random invading troop.
 		if (invaders_alliance == game->players[region->garrison.owner].alliance)
 			region->owner = region->garrison.owner;
 		else
 			region->owner = region_owner_choose(game, region, invaders_count, invaders_alliance);
 	}
+	else if (!region_guarded && !allies(game, region->owner, region->garrison.owner))
+		region->owner = region->garrison.owner;
 
-	// Unguarded garrisons are conquered by the owner of the region.
-	if (!garrison_guarded)
+	// Unguarded garrisons are conquered by enemy troops in the region.
+	if (!region_garrison_guarded && region_guarded && !allies(game, region->owner, region->garrison.owner))
 		region->garrison.owner = region->owner;
 
 	// Handle siege events.

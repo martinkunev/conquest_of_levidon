@@ -78,7 +78,7 @@ struct battlefield
 
 struct battle
 {
-	const struct region *region;
+	struct region *region;
 	int assault;
 	unsigned char defender;
 

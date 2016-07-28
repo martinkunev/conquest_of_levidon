@@ -440,10 +440,46 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 
 void battle_retreat(struct battle *restrict battle, unsigned char player)
 {
+	struct troop *restrict troop;
+	unsigned garrison_places;
+
+	if (battle->region->garrison.owner == player)
+	{
+		const struct garrison_info *restrict info = garrison_info(battle->region);
+
+		// Count the free places for troops in the garrison.
+		garrison_places = info->troops;
+		for(troop = battle->region->troops; troop; troop = troop->_next)
+			if (troop->location == LOCATION_GARRISON)
+				garrison_places -= 1;
+	}
+	else garrison_places = 0;
+
 	for(size_t i = 0; i < battle->players[player].pawns_count; ++i)
 	{
-		struct pawn *restrict pawn = battle->players[player].pawns[i];
-		pawn->troop->move = pawn->troop->location;
+		troop = battle->players[player].pawns[i]->troop;
+
+		if (troop->location == battle->region)
+		{
+			// If there is place for the troop in the garrison, move it there. Otherwise, kill it.
+			if (garrison_places)
+			{
+				troop->move = troop->location = LOCATION_GARRISON;
+				garrison_places -= 1;
+			}
+			else
+			{
+				troop_detach(&battle->region->troops, troop);
+				free(troop);
+			}
+		}
+		else if (troop->location == LOCATION_GARRISON)
+		{
+			// Kill troops that retreat from defending a garrison.
+			troop_detach(&battle->region->troops, troop);
+			free(troop);
+		}
+		else troop->move = troop->location;
 	}
 
 	battle->players[player].alive = 0;

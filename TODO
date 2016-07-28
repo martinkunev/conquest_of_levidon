@@ -48,11 +48,13 @@ battle mechanics
 
 	-- bugs --
 	F distance to obstacles during assault is not calculated properly
-	F pathfinding-related crash during assault (heap handling bug)
-	troops retreating in their own region should be killed
+	F region ownership not restored when sieging troops leave the region // this was intentional
+	F kill defender troops that retreat from an assault
+	F troops retreating in their own region should be killed if they can't go to the garrison
+	F troops cannot leave allied region (no action taken when they are told to move to another region)
+	F troops that retreated should not participate in other battles in the region they retreated to
 	all consecutive path targets in the queue disappear when the first one is finished
-	region ownership not restored when sieging troops leave the region
-	troops cannot leave allied region (no action taken when they are told to move to another region)
+	during assault troops can pass through walls
 
 TODO ? change direction of everything to counterclockwise; currently the y axis is in the opposite direction (and the cross product is negated)
 TODO ? rename image to sprite

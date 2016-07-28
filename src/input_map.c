@@ -117,12 +117,13 @@ static int input_region(int code, unsigned x, unsigned y, uint16_t modifiers, co
 		struct region *destination = game->regions + region_index;
 		if (destination == region) goto valid;
 
-		// A troop can go to a neighboring region only if the owner of the troop also owns the current region.
-		if (state->player != region->owner) return INPUT_IGNORE;
+		// A troop can only go to a neighboring region and only if it's not sieged in the garrison.
+		if (!allies(game, state->player, region->owner))
+			return INPUT_IGNORE;
 		for(index = 0; index < NEIGHBORS_LIMIT; ++index)
 			if (destination == region->neighbors[index])
 				goto valid;
-		return 0;
+		return INPUT_IGNORE;
 
 valid:
 		if (state->troop)

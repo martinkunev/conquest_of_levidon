@@ -240,6 +240,11 @@ static int play(struct game *restrict game)
 	{
 		struct resources expenses[PLAYERS_LIMIT] = {0};
 		unsigned char alive[PLAYERS_LIMIT] = {0};
+		struct
+		{
+			enum {BATTLE_OPEN = 1, BATTLE_ASSAULT} type;
+			unsigned char winner;
+		} battle_info[REGIONS_LIMIT] = {0};
 
 		// Ask each player to perform map actions.
 		for(player = 0; player < game->players_count; ++player)
@@ -324,10 +329,6 @@ static int play(struct game *restrict game)
 		// Settle conflicts by battles.
 		for(index = 0; index < game->regions_count; ++index)
 		{
-			int winner_alliance;
-
-			unsigned region_owner_old = game->regions[index].owner;
-
 			unsigned alliances_assault = 0, alliances_open = 0;
 			int manual_assault = 0, manual_open = 0;
 
@@ -350,20 +351,33 @@ static int play(struct game *restrict game)
 			}
 			if (alliances_open & (alliances_open - 1))
 			{
-				if (manual_open) winner_alliance = play_battle(game, region, 0);
-				else winner_alliance = calculate_battle(game, region);
+				int status = (manual_open ? play_battle(game, region, 0) : calculate_battle(game, region));
+				if (status < 0) return status;
 
-				if (winner_alliance < 0) return winner_alliance;
-				region_battle_cleanup(game, region, 0, winner_alliance);
+				battle_info[index].winner = status;
+				battle_info[index].type = BATTLE_OPEN;
 			}
 			else if (alliances_assault & (alliances_assault - 1))
 			{
-				if (manual_assault) winner_alliance = play_battle(game, region, 1);
-				else winner_alliance = calculate_battle(game, region);
+				int status = (manual_assault ? play_battle(game, region, 1) : calculate_battle(game, region));
+				if (status < 0) return status;
 
-				if (winner_alliance < 0) return winner_alliance;
-				region_battle_cleanup(game, region, 1, winner_alliance);
+				battle_info[index].winner = status;
+				battle_info[index].type = BATTLE_ASSAULT;
 			}
+			else battle_info[index].type = 0;
+		}
+
+		// Perform post-battle cleanup actions.
+		for(index = 0; index < game->regions_count; ++index)
+		{
+			unsigned region_owner_old;
+
+			region = game->regions + index;
+			region_owner_old = region->owner;
+
+			if (battle_info[index].type)
+				region_battle_cleanup(game, region, ((battle_info[index].type == BATTLE_OPEN) ? 0 : 1), battle_info[index].winner);
 
 			region_turn_process(game, region);
 
