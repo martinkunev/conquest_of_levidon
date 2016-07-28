@@ -114,7 +114,8 @@ static int move_blocked_obstacle(struct position start, struct position end, con
 }
 
 // WARNING: The move must be a non-zero vector (end != start).
-/*static int move_blocked_pawn(struct position start, struct position end, struct position pawn)
+// TODO do I need this function
+static int move_blocked_pawn(struct position start, struct position end, struct position pawn)
 {
 	// http://stackoverflow.com/a/1084899/515212
 
@@ -141,7 +142,7 @@ static int move_blocked_obstacle(struct position start, struct position end, con
 	if ((solution1 >= 0) && (solution1 <= 1)) return 1;
 
 	return 0;
-}*/
+}
 
 static inline void obstacle_insert(struct obstacles *obstacles, float left, float right, float top, float bottom)
 {

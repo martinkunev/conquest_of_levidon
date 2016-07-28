@@ -17,7 +17,7 @@ format: format.o ../src/format.o
 json: json.o ../src/json.o ../src/generic/array_json.o ../src/format.o
 	$(CC) $^ $(LDFLAGS) -o $@
 
-pathfinding: pathfinding.o ../src/battle.o ../src/movement.o
+pathfinding: pathfinding.o ../src/battle.o ../src/movement.o ../src/combat.o
 	$(CC) $^ $(LDFLAGS) -lm -o $@
 
 map: map.o ../src/map.o ../src/world.o ../src/resources.o ../src/json.o ../src/generic/array_json.o ../src/format.o

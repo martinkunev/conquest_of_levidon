@@ -28,6 +28,14 @@
 #define SIZE 256
 #define OFFSET 16
 
+#define bytes_t(n) struct \
+	{ \
+		size_t size; \
+		char data[n]; \
+	}
+#define bytes(value) {sizeof(value) - 1, value}
+#define bytes_define(variable, value) bytes_t(sizeof(value) - 1) variable = bytes(value)
+
 static void check_buffer_json(const unsigned char *restrict end, const unsigned char buffer[static restrict SIZE], const unsigned char *restrict result, size_t result_size, const unsigned char canary[static restrict SIZE])
 {
 	assert_ptr_equal(end, buffer + OFFSET + result_size);
