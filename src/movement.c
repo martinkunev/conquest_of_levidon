@@ -48,8 +48,6 @@ struct collision
 	unsigned fastest_count; // number of fastest pawns colliding with the target pawn
 };
 
-// TODO detect whether a pawn is on a battle field (used for closing the gates)
-
 int array_moves_expand(struct array_moves *restrict array, size_t count)
 {
 	if (array->capacity < count)
@@ -259,7 +257,7 @@ static int collisions_detect(const struct game *restrict game, const struct batt
 		if (allies(game, pawn->troop->owner, other->troop->owner))
 		{
 			if (position_eq(other->position, other->position_next)) // the pawn collides with a stationary pawn
-				continue; // stationary pawns do not affect which pawns are the fastest TODO change this comment
+				continue; // collision resolution doesn't affect stationary pawns
 
 			// Update statistics about fastest pawn with the data of the colliding pawn.
 			if (other->troop->unit->speed > collision->fastest_speed)
@@ -454,7 +452,9 @@ int movement_queue(struct pawn *restrict pawn, struct position target, struct ad
 	if (!in_battlefield(target.x, target.y))
 		return ERROR_INPUT;
 
-	// TODO verify that the target is reachable
+	// Check if the target is reachable.
+	if (isnan(path_distance(pawn, target, graph, obstacles)))
+		return ERROR_MISSING;
 
 	int status = array_moves_expand(&pawn->path, pawn->path.count + 1);
 	if (status < 0) return ERROR_MEMORY;

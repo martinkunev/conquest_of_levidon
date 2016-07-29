@@ -1,49 +1,49 @@
-H	battle AI
-H	computer doesn't attack regions
-H	levidon map
+T	battle AI
+	the ratings are too small (which makes the random too important)
+	the rating becomes significant only when the enemy is very close
+T	computer doesn't attack regions
+T	levidon map
+H	don't allow pawns to attack their own walls (currently only gates are not attacked)
+	separate constants for BLOCKAGE_WALL and BLOCKAGE_GATE
+H	don't allow attacking if the attacker cannot do damage to the defender (due to weapon and armor type)
+H	use a separate thread to calculate computer turns while the local player is choosing what to play
+H	better support for hotseat (show animations to each player, warn before changing current player and showing their map, etc.)
+H	region population
+	income should be calculated as a function of the population
+	army recruitment should reduce population
+	one should be able to tell population which resource to produce
+H	region-specific features (income, population, units, buildings, battlefield)
+H	error reporting on invalid map
+H	handle different screen resolutions better
+M	improve AI
 M	retreat can be abused for scouting (25 peasants can go and retreat for 1 food)
 	maybe make retreat take some time (1 or 2 rounds); that way only fast units will be able to retreat
 	maybe allow retreat only when the pawns are near the border of the battlefield?
 M	editor: position region neighbors properly
 M	make formation consistent with the new battle mechanics
-M	improve AI
 M	better food mechanics; food should not be accumulated indefinately
 M	do something when there is not enough food for all units (?kill some units)
 M	balance buildings and units
 M	assault towers
-M	region population; income should be calculated as a function of the population; army recruitment should reduce population
-M	region-specific features (income, population, units, buildings, battlefield)
-M	error reporting on invalid map
 M	map scrolling
-M	handle different screen resolutions better
 M	keyboard support in various places in the interface; mouse support in various places in the interface
-M	don't allow pawns to attack their own walls (currently only gates are not attacked)
-M	don't allow attacking if the attacker cannot do damage to the defender (due to weapon and armor type)
-M	use a separate thread to calculate computer turns while the local player is choosing what to play
-M	better support for hotseat (show animations to each player, warn before changing current player and showing their map, etc.)
-M	?deal damage to each pawn escaping from enemy pawns
+M	network game (using SCTP?)
+M	auto combat
 L	limited number of shots
 L	assault garrison destruction and repair
 L	armory, swordsman, crossbowman, heavy cavalry, horse archer
 L	assault moat
-L	network game (using SCTP?)
 L	sound
 L	water; naval battles
 L	roads
 L	religions, ethnicities, languages
 L	dynamic alliances
 L	seasons
-L	auto combat
 L	? buildings should not generate income on the day they are built
 L	? implement exit game while in battle
 
 battle mechanics
-	Q: What I want to fix about battle mechanics?
-	A: Players have relatively little control on their pawns (only before each turn) so they have to be quite smart on their own; they shouldn't get stuck or deadlock.
-
-	pawn_stop is not intuitive; if two pawns fight, one tries to escape and the other moves in a collision direction with it, the first doesn't escape
-	pawn following another pawn stops at a diagonal field
-	pawns don't understand how to sidestep other pawns to reach their destination
+	Players have relatively little control on their pawns (only before each round) so they have to be quite smart on their own; they shouldn't get stuck or deadlock.
 	pawns of the same player deadlock (seen with peasant and light cavalry)
 
 	-- bugs --
@@ -53,15 +53,15 @@ battle mechanics
 	F troops retreating in their own region should be killed if they can't go to the garrison
 	F troops cannot leave allied region (no action taken when they are told to move to another region)
 	F troops that retreated should not participate in other battles in the region they retreated to
-	all consecutive path targets in the queue disappear when the first one is finished
+	F all consecutive path targets in the queue disappear when the first one is finished
 	during assault troops can pass through walls
 
-TODO ? change direction of everything to counterclockwise; currently the y axis is in the opposite direction (and the cross product is negated)
-TODO ? rename image to sprite
-TODO ? redesign input functions (handling mouse movement is tedious; handling writing should be unified; can I unify the two input functions?)
-TODO ? make it simpler to check if two players are allies
-TODO ? dynamic battlefield size
-TODO ? separate constants for BLOCKAGE_WALL and BLOCKAGE_GATE
+? change direction of everything to counterclockwise; currently the y axis is in the opposite direction (and the cross product is negated)
+? rename image to sprite
+? redesign input functions (handling mouse movement is tedious; handling writing should be unified; can I unify the two input functions?)
+? make it simpler to check if two players are allies
+? dynamic battlefield size
+? deal damage to each pawn escaping from enemy pawns
 
 -- interface --
 
@@ -88,6 +88,7 @@ battle
 	support showing more pawn stats (not just health)
 	new pawn images
 	new wall and gate images; open gate image
+	? movement and shoot animation is faster when its duration is shorter
 	fight animation
 
 report

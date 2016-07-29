@@ -47,16 +47,12 @@ static inline int in_battlefield(double x, double y)
 
 struct obstacles *path_obstacles_alloc(const struct game *restrict game, const struct battle *restrict battle, unsigned char player);
 
-int path_visible(struct position origin, struct position target, const struct obstacles *restrict obstacles);
-
 struct adjacency_list *visibility_graph_build(const struct battle *restrict battle, const struct obstacles *restrict obstacles, unsigned vertices_reserved);
 void visibility_graph_free(struct adjacency_list *graph);
 
-// Calculates the distance between origin and target and stores it in distance. On error, returns negative error code.
-//int path_distance(struct position origin, struct position target, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles, double *restrict distance);
-
+int path_visible(struct position origin, struct position target, const struct obstacles *restrict obstacles);
 int path_find(struct pawn *restrict pawn, struct position destination, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles);
-
+double path_distance(struct pawn *restrict pawn, struct position destination, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles);
 int path_distances(const struct pawn *restrict pawn, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles, double reachable[static BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH]);
 
 unsigned path_moves_tangent(const struct pawn *restrict pawn, const struct pawn *restrict obstacle, double distance_covered, struct position moves[static restrict 2]);

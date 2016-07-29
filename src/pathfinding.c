@@ -58,8 +58,6 @@ struct adjacency_list
 	} list[];
 };
 
-// TODO maybe use pawn->path.data[pawn->path.count - 1] for start vertex
-
 static inline int sign(int number)
 {
 	return ((number > 0) - (number < 0));
@@ -304,10 +302,8 @@ struct obstacles *path_obstacles_alloc(const struct game *restrict game, const s
 // Checks whether a pawn can see and move directly from origin to target (there are no obstacles in-between).
 int path_visible(struct position origin, struct position target, const struct obstacles *restrict obstacles)
 {
-	size_t i;
-
 	// Check if there is an obstacle that blocks the path from origin to target.
-	for(i = 0; i < obstacles->count; ++i)
+	for(size_t i = 0; i < obstacles->count; ++i)
 		if (move_blocked_obstacle(origin, target, obstacles->obstacle + i))
 			return 0;
 
@@ -539,7 +535,8 @@ static struct path_node *path_traverse(struct adjacency_list *restrict graph, si
 
 	// Initialize traversal information.
 	traverse_info = malloc(graph->count * sizeof(*traverse_info));
-	if (!traverse_info) goto finally; // memory error
+	if (!traverse_info)
+		goto finally; // memory error
 	for(i = 0; i < vertex_origin; ++i)
 	{
 		traverse_info[i].distance = INFINITY;
@@ -580,41 +577,6 @@ finally:
 	return traverse_info;
 }
 
-// Calculates the distance between origin and target and stores it in distance. On error, returns negative error code.
-/*int path_distance(struct position origin, struct position target, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles, double *restrict distance)
-{
-	ssize_t vertex_target, vertex_origin;
-	struct path_node *traverse_info;
-	int status;
-
-	vertex_target = graph_insert(graph, obstacles, target);
-	if (vertex_target < 0) return vertex_target;
-
-	vertex_origin = graph_insert(graph, obstacles, origin);
-	if (vertex_origin < 0)
-	{
-		graph_remove(graph, vertex_target);
-		return vertex_origin;
-	}
-
-	// Look for a path from the pawn's final location to the target vertex.
-	traverse_info = path_traverse(graph, vertex_target);
-	if (!traverse_info)
-	{
-		status = ERROR_MEMORY;
-		goto finally;
-	}
-	*distance = traverse_info[vertex_target].distance;
-
-	free(traverse_info);
-	status = 0;
-
-finally:
-	graph_remove(graph, vertex_origin);
-	graph_remove(graph, vertex_target);
-	return status;
-}*/
-
 // Finds path from the pawn's current position to destination and stores it in pawn->moves.
 // On error, returns error code and pawn movement queue remains unchanged.
 int path_find(struct pawn *restrict pawn, struct position destination, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles)
@@ -636,7 +598,7 @@ int path_find(struct pawn *restrict pawn, struct position destination, struct ad
 		return vertex_origin;
 	}
 
-	// Look for a path from the pawn's final position to the target vertex.
+	// Look for a path from the pawn's position to the target vertex.
 	traverse_info = path_traverse(graph, vertex_target);
 	if (!traverse_info)
 	{
@@ -665,7 +627,7 @@ int path_find(struct pawn *restrict pawn, struct position destination, struct ad
 		moves_count += 1;
 	}
 
-	// Store the selected path points to the movement queue.
+	// Add the selected path points to the movement queue.
 	pawn->moves.count = 0;
 	array_moves_expand(&pawn->moves, moves_count);
 	while (node = node->path_link)
@@ -683,12 +645,41 @@ finally:
 	return status;
 }
 
+// Returns the shortest distance between the pawn and destination. On error, returns NAN.
+double path_distance(struct pawn *restrict pawn, struct position destination, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles)
+{
+	ssize_t vertex_target, vertex_origin;
+	struct path_node *traverse_info;
+	double result;
+
+	vertex_target = graph_insert(graph, obstacles, destination);
+	if (vertex_target < 0) return NAN;
+
+	vertex_origin = graph_insert(graph, obstacles, pawn->position);
+	if (vertex_origin < 0)
+	{
+		graph_remove(graph, vertex_target);
+		return NAN;
+	}
+
+	// Look for a path from the pawn's position to the target vertex.
+	traverse_info = path_traverse(graph, vertex_target);
+	result = traverse_info ? traverse_info[vertex_target].distance : NAN;
+
+finally:
+	free(traverse_info);
+	graph_remove(graph, vertex_origin);
+	graph_remove(graph, vertex_target);
+	return result;
+}
+
 int path_distances(const struct pawn *restrict pawn, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles, double reachable[static BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH])
 {
 	ssize_t vertex_origin;
 	struct path_node *traverse_info;
 	int status;
 
+	// TODO maybe use pawn->path.data[pawn->path.count - 1] for start vertex
 	vertex_origin = graph_insert(graph, obstacles, pawn->position);
 	if (vertex_origin < 0) return vertex_origin;
 
