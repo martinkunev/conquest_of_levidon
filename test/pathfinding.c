@@ -26,7 +26,7 @@
 
 static void test_obstacle_blocks(void **state)
 {
-	struct obstacle obstacle = {3, 7, 5, 4};
+	struct obstacle obstacle = {3, 7, 4, 5};
 
 	assert_false(move_blocked_obstacle((struct position){4, 1}, (struct position){4, 3}, &obstacle));
 	assert_false(move_blocked_obstacle((struct position){4, 7}, (struct position){4, 5}, &obstacle));

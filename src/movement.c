@@ -446,6 +446,8 @@ finally:
 
 int movement_queue(struct pawn *restrict pawn, struct position target, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles)
 {
+	double distance;
+
 	if (pawn->path.count == PATH_QUEUE_LIMIT)
 		return ERROR_INPUT;
 
@@ -453,7 +455,10 @@ int movement_queue(struct pawn *restrict pawn, struct position target, struct ad
 		return ERROR_INPUT;
 
 	// Check if the target is reachable.
-	if (isnan(path_distance(pawn, target, graph, obstacles)))
+	distance = path_distance(pawn, target, graph, obstacles);
+	if (isnan(distance))
+		return ERROR_MEMORY;
+	if (distance == INFINITY)
 		return ERROR_MISSING;
 
 	int status = array_moves_expand(&pawn->path, pawn->path.count + 1);

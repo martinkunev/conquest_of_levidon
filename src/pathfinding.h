@@ -17,7 +17,7 @@ struct obstacles
 	size_t count;
 	struct obstacle
 	{
-		unsigned left, right, top, bottom;
+		float left, right, top, bottom;
 	} obstacle[];
 };
 

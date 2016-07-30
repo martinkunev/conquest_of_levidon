@@ -443,6 +443,8 @@ void battle_retreat(struct battle *restrict battle, unsigned char player)
 	struct troop *restrict troop;
 	unsigned garrison_places;
 
+	// TODO currently attacker troops retreating from assault are killed; is this okay?
+
 	if (battle->region->garrison.owner == player)
 	{
 		const struct garrison_info *restrict info = garrison_info(battle->region);
