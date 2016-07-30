@@ -19,6 +19,7 @@ M	improve AI
 M	retreat can be abused for scouting (25 peasants can go and retreat for 1 food)
 	maybe make retreat take some time (1 or 2 rounds); that way only fast units will be able to retreat
 	maybe allow retreat only when the pawns are near the border of the battlefield?
+	currently attackers retreating from an assault are killed; is this okay?
 M	editor: position region neighbors properly
 M	make formation consistent with the new battle mechanics
 M	better food mechanics; food should not be accumulated indefinately
@@ -41,20 +42,6 @@ L	dynamic alliances
 L	seasons
 L	? buildings should not generate income on the day they are built
 L	? implement exit game while in battle
-
-battle mechanics
-	Players have relatively little control on their pawns (only before each round) so they have to be quite smart on their own; they shouldn't get stuck or deadlock.
-	pawns of the same player deadlock (seen with peasant and light cavalry)
-
-	-- bugs --
-	F distance to obstacles during assault is not calculated properly
-	F region ownership not restored when sieging troops leave the region // this was intentional
-	F kill defender troops that retreat from an assault
-	F troops retreating in their own region should be killed if they can't go to the garrison
-	F troops cannot leave allied region (no action taken when they are told to move to another region)
-	F troops that retreated should not participate in other battles in the region they retreated to
-	F all consecutive path targets in the queue disappear when the first one is finished
-	during assault troops can pass through walls
 
 ? change direction of everything to counterclockwise; currently the y axis is in the opposite direction (and the cross product is negated)
 ? rename image to sprite
@@ -90,6 +77,7 @@ battle
 	new wall and gate images; open gate image
 	? movement and shoot animation is faster when its duration is shorter
 	fight animation
+	tell all players if somebody is retreating
 
 report
 	display minimap

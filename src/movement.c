@@ -279,7 +279,7 @@ static int collisions_detect(const struct game *restrict game, const struct batt
 	return 0;
 }
 
-static inline long cross_product(double fx, double fy, double sx, double sy)
+static inline double cross_product(double fx, double fy, double sx, double sy)
 {
 	// TODO this is for right-handed coordinate system
 	return (fx * sy - sx * fy);
@@ -359,7 +359,7 @@ int movement_collisions_resolve(const struct game *restrict game, struct battle 
 		if (!collisions[i].pawns.count)
 			continue;
 
-		// TODO support resolving more complicated collisions
+		// TODO support resolving more complicated collisions (pawns should be smarter)
 
 		if ((collisions[i].fastest_count == 1) && (collisions[i].pawns.count == 1))
 		{
