@@ -1,5 +1,5 @@
 export CC=gcc
-export CFLAGS=-std=c99 -pthread @{CFLAGS} -isystem /usr/X11/include -D_BSD_SOURCE -D_DEFAULT_SOURCE -DPREFIX=\"@{PREFIX}\" -Werror -Wpedantic -Wstrict-aliasing -Wchar-subscripts -Wimplicit -Wsequence-point -Wwrite-strings -Wunused-variable -Wvla -Wno-pointer-sign -Wno-parentheses -Wno-unused-result -Wno-switch
+export CFLAGS=-std=c99 -pthread @{CFLAGS} -isystem /usr/X11/include -D_BSD_SOURCE -D_DEFAULT_SOURCE -DPREFIX=\"@{PREFIX}\" -Werror -Wpedantic -Wstrict-aliasing -Wchar-subscripts -Wimplicit -Wsequence-point -Wwrite-strings -Wunused-variable -Wvla -Wno-pointer-sign -Wno-parentheses -Wno-unused-result -Wno-switch -Wno-error=unused-command-line-argument -Wno-return-type -Wno-format-extra-args
 export LDFLAGS=-pthread -L/usr/X11/lib -lm -lpng -lGL -lX11 -lxcb -lX11-xcb
 
 all:
@@ -29,7 +29,7 @@ install:
 	install @{STRIP} src/conquest_of_levidon @{PREFIX}bin/
 	install -d @{PREFIX}share/conquest_of_levidon/img/ @{PREFIX}share/conquest_of_levidon/worlds/
 	install img/*.png @{PREFIX}share/conquest_of_levidon/img/
-	install worlds/* -t @{PREFIX}share/conquest_of_levidon/worlds/
+	install worlds/* @{PREFIX}share/conquest_of_levidon/worlds/
 	# TODO ?fonts
 
 uninstall:
