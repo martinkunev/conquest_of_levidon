@@ -2,6 +2,7 @@ T	battle AI
 	the ratings are too small (which makes the random too important)
 	the rating becomes significant only when the enemy is very close
 T	computer doesn't attack regions
+	which units to order should not be determined with unit_importance (units must be diverse; too many units consume too much food)
 T	levidon map
 H	don't allow pawns to attack their own walls (currently only gates are not attacked)
 	separate constants for BLOCKAGE_WALL and BLOCKAGE_GATE

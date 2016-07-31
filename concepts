@@ -71,6 +71,16 @@ http://en.wikipedia.org/wiki/List_of_medieval_weapons
 
 ----
 
+simple economy
+
+each region has a given population; part of it supports the city; the others can be ordered to collect resources
+wood, stone, iron and gold require special buildings to be produced
+there are buildings that allow producing resources more efficiently (e.g. irrigation)
+gold comes from taxes; the population that is not busy collecting resources does not require payment (and results in gold income)
+from the free population one can set the proportion that will collect each of the resources (food, stone, wood, iron); the income is not proportional to the number of people
+
+----
+
 ? windmill
 	+1 food
 ? watermill

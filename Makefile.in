@@ -14,6 +14,9 @@ conquest_of_levidon: force
 editor: force
 	make -C src editor
 
+units:
+	make -C src units
+
 check:
 	$(MAKE) -C test $@
 

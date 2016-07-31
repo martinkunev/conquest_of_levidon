@@ -8,8 +8,9 @@ conquest_of_levidon: $(O)
 editor: editor.o world.o map.o resources.o interface.o display_common.o input.o draw.o image.o format.o json.o generic/array_json.o
 	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $@
 
-units: units.o world.o map.o combat.o battle.o movement.o pathfinding.o resources.o computer.o format.o json.o generic/array_json.o
-	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $@
+units: CFLAGS:=$(CFLAGS) -DUNIT_IMPORTANCE
+units: world.o map.o combat.o battle.o movement.o pathfinding.o resources.o computer.o format.o json.o generic/array_json.o
+	$(CC) $(CFLAGS) $(LDFLAGS) $^ -lm -o $@
 
 
 
