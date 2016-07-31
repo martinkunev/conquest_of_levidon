@@ -67,8 +67,6 @@ int if_init(void)
 	connection = XGetXCBConnection(display);
 	if (!connection) goto error;
 
-	int visualID = 0;
-
 	XSetEventQueueOwner(display, XCBOwnsEventQueue);
 
 	// find XCB screen
@@ -84,24 +82,21 @@ int if_init(void)
 	}
 	screen = iterator.data;
 
-	// query framebuffer configurations
-	GLXFBConfig *fb_configs = 0;
-	int num_fb_configs = 0;
-	fb_configs = glXGetFBConfigs(display, screen_index, &num_fb_configs);
-	if (!fb_configs || num_fb_configs == 0) goto error;
-
-	// select first framebuffer config and query visualID
+	// Choose a framebuffer configuration.
+	const int attributes[] = {GLX_BUFFER_SIZE, 32, GLX_DEPTH_SIZE, 24, GLX_DOUBLEBUFFER, True, GLX_RENDER_TYPE, GLX_RGBA_BIT, None};
+    GLXFBConfig *fb_configs = 0;
+    int fb_configs_count = 0;
+    fb_configs = glXChooseFBConfig(display, screen_index, attributes, &fb_configs_count);
+    if (!fb_configs || (fb_configs_count == 0)) goto error;
 	GLXFBConfig fb_config = fb_configs[0];
-	glXGetFBConfigAttrib(display, fb_config, GLX_VISUAL_ID, &visualID);
-
-	// create OpenGL context
-	context = glXCreateNewContext(display, fb_config, GLX_RGBA_TYPE, 0, 1);
-	if (!context) goto error;
 
 	// create XID's for colormap and window
 	xcb_colormap_t colormap = xcb_generate_id(connection);
 	window = xcb_generate_id(connection);
 
+	// config and query visualID
+	int visualID = 0;
+	glXGetFBConfigAttrib(display, fb_config, GLX_VISUAL_ID, &visualID);
 	xcb_create_colormap(connection, XCB_COLORMAP_ALLOC_NONE, colormap, screen->root, visualID);
 
 	uint32_t eventmask = XCB_EVENT_MASK_EXPOSURE | XCB_EVENT_MASK_KEY_PRESS | XCB_EVENT_MASK_KEY_RELEASE | XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_BUTTON_RELEASE | XCB_EVENT_MASK_POINTER_MOTION;
@@ -111,23 +106,36 @@ int if_init(void)
 	// TODO set window parameters
 	xcb_create_window(connection, XCB_COPY_FROM_PARENT, window, screen->root, 100, 0, screen->width_in_pixels, screen->height_in_pixels, 0, XCB_WINDOW_CLASS_INPUT_OUTPUT, visualID, valuemask, valuelist);
 
-	// NOTE: window must be mapped before glXMakeContextCurrent
-	xcb_map_window(connection, window); 
+	// Make the window fullscreen.
+	{
+		XEvent event = {0};
+		event.type = ClientMessage;
+		event.xclient.window = window;
+		event.xclient.message_type = XInternAtom(display, WM_STATE, 0);
+		event.xclient.format = 32;
+		event.xclient.data.l[0] = 1; // 0 == unset; 1 == set; 2 == toggle
+		event.xclient.data.l[1] = XInternAtom(display, WM_STATE_FULLSCREEN, 0);
+
+		xcb_map_window(connection, window); // NOTE: window must be mapped before glXMakeContextCurrent
+		XSendEvent(display, DefaultRootWindow(display), 0, SubstructureRedirectMask | SubstructureNotifyMask, &event);
+		XFlush(display);
+	}
 
 	drawable = glXCreateWindow(display, fb_config, window, 0);
 
-	if (!window) // TODO this should be done earlier?
+	// create OpenGL context
+	context = glXCreateNewContext(display, fb_config, GLX_RGBA_TYPE, 0, 1);
+	if (!context)
 	{
 		xcb_destroy_window(connection, window);
-		glXDestroyContext(display, context);
 		goto error;
 	}
 
 	// make OpenGL context current
 	if (!glXMakeContextCurrent(display, drawable, drawable, context))
 	{
-		xcb_destroy_window(connection, window);
 		glXDestroyContext(display, context);
+		xcb_destroy_window(connection, window);
 		goto error;
 	}
 
@@ -189,21 +197,6 @@ error:
 // TODO ? call this after resize
 void if_display(void)
 {
-	// Make the window fullscreen.
-	{
-		XEvent event = {0};
-		event.type = ClientMessage;
-		event.xclient.window = window;
-		event.xclient.message_type = XInternAtom(display, WM_STATE, 0);
-		event.xclient.format = 32;
-		event.xclient.data.l[0] = 1; // 0 == unset; 1 == set; 2 == toggle
-		event.xclient.data.l[1] = XInternAtom(display, WM_STATE_FULLSCREEN, 0);
-
-		//XMapWindow(display, window);
-		XSendEvent(display, DefaultRootWindow(display), 0, SubstructureRedirectMask | SubstructureNotifyMask, &event);
-		XFlush(display);
-	}
-
 	SCREEN_WIDTH = screen->width_in_pixels;
 	SCREEN_HEIGHT = screen->height_in_pixels;
 
