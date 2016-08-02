@@ -64,7 +64,7 @@ struct battlefield
 	struct tile tile;
 	//enum {BLOCKAGE_NONE, BLOCKAGE_TERRAIN, BLOCKAGE_OBSTACLE, BLOCKAGE_TOWER} blockage;
 	enum {BLOCKAGE_NONE, BLOCKAGE_TERRAIN, BLOCKAGE_OBSTACLE} blockage;
-	unsigned char location; // blockage location
+	unsigned char blockage_location;
 
 	signed char owner; // for BLOCKAGE_OBSTACLE and BLOCKAGE_TOWER
 	unsigned strength; // for BLOCKAGE_OBSTACLE and BLOCKAGE_TOWER

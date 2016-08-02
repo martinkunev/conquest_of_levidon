@@ -269,7 +269,7 @@ static void battlefield_init_assault(const struct game *restrict game, struct ba
 	{ \
 		struct battlefield *restrict field = &battle->field[y][x]; \
 		field->blockage = BLOCKAGE_OBSTACLE; \
-		field->location = (p); \
+		field->blockage_location = (p); \
 		field->owner = (o); \
 		field->strength = (s); \
 		field->unit = (u); \
@@ -353,6 +353,7 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 			struct battlefield *field = &battle->field[y][x];
 			field->tile = (struct tile){x, y};
 			field->blockage = BLOCKAGE_NONE;
+			field->blockage_location = 0;
 			field->pawn = 0;
 		}
 	}

@@ -81,12 +81,12 @@ static void if_battlefield(unsigned char player, const struct game *game, const 
 				const struct image *image;
 
 				// TODO use separate images for palisade and fortress
-				if (field->owner == OWNER_NONE) image = &image_palisade[field->location];
+				if (field->owner == OWNER_NONE) image = &image_palisade[field->blockage_location];
 				else
 				{
-					if (field->location == (POSITION_LEFT | POSITION_RIGHT))
+					if (field->blockage_location == (POSITION_LEFT | POSITION_RIGHT))
 						image = &image_palisade_gate[0];
-					else // field->location == (POSITION_TOP | POSITION_BOTTOM)
+					else // field->blockage_location == (POSITION_TOP | POSITION_BOTTOM)
 						image = &image_palisade_gate[1];
 				}
 

@@ -18,6 +18,7 @@ H	region population
 M	region-specific features (income, population, units, buildings, battlefield)
 	population growth
 	army recruitment should reduce population
+	use BLOCKAGE_TERRAIN
 M	improve AI
 M	retreat can be abused for scouting (25 peasants can go and retreat for 1 food)
 	maybe make retreat take some time (1 or 2 rounds); that way only fast units will be able to retreat

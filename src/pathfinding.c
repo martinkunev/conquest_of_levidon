@@ -168,51 +168,37 @@ struct obstacles *path_obstacles_alloc(const struct game *restrict game, const s
 		for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
 		{
 			const struct battlefield *field = &battle->field[y][x];
-			if (!battlefield_passable(game, field, player))
+			unsigned char blockage_location = (battlefield_passable(game, field, player) ? 0 : field->blockage_location);
+
+			if (horizontal >= 0)
 			{
-				if (horizontal >= 0)
+				if (blockage_location != (blockage_location | POSITION_LEFT | POSITION_RIGHT))
 				{
-					if (field->location != (field->location | POSITION_LEFT | POSITION_RIGHT))
-					{
-						obstacles_count += 1;
-						horizontal = (field->location & POSITION_RIGHT) ? x : -1.0;
-					}
-				}
-				else
-				{
-					if (field->location & POSITION_RIGHT)
-						horizontal = x;
-					else if (field->location & POSITION_LEFT)
-						obstacles_count += 1;
-				}
-				if (vertical[x] >= 0)
-				{
-					if (field->location != (field->location | POSITION_TOP | POSITION_BOTTOM))
-					{
-						obstacles_count += 1;
-						vertical[x] = (field->location & POSITION_BOTTOM) ? y : -1.0;
-					}
-				}
-				else
-				{
-					if (field->location & POSITION_BOTTOM)
-						vertical[x] = y;
-					else if (field->location & POSITION_TOP)
-						obstacles_count += 1;
+					obstacles_count += 1;
+					horizontal = (blockage_location & POSITION_RIGHT) ? x : -1.0;
 				}
 			}
 			else
 			{
-				if (horizontal >= 0)
+				if (blockage_location & POSITION_RIGHT)
+					horizontal = x;
+				else if (blockage_location & POSITION_LEFT)
+					obstacles_count += 1;
+			}
+			if (vertical[x] >= 0)
+			{
+				if (blockage_location != (blockage_location | POSITION_TOP | POSITION_BOTTOM))
 				{
 					obstacles_count += 1;
-					horizontal = -1;
+					vertical[x] = (blockage_location & POSITION_BOTTOM) ? y : -1.0;
 				}
-				if (vertical[x] >= 0)
-				{
+			}
+			else
+			{
+				if (blockage_location & POSITION_BOTTOM)
+					vertical[x] = y;
+				else if (blockage_location & POSITION_TOP)
 					obstacles_count += 1;
-					vertical[x] = -1;
-				}
 			}
 		}
 
@@ -241,51 +227,37 @@ struct obstacles *path_obstacles_alloc(const struct game *restrict game, const s
 		for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
 		{
 			const struct battlefield *field = &battle->field[y][x];
-			if (!battlefield_passable(game, field, player))
+			unsigned char blockage_location = (battlefield_passable(game, field, player) ? 0 : field->blockage_location);
+
+			if (horizontal >= 0)
 			{
-				if (horizontal >= 0)
+				if (blockage_location != (blockage_location | POSITION_LEFT | POSITION_RIGHT))
 				{
-					if (field->location != (field->location | POSITION_LEFT | POSITION_RIGHT))
-					{
-						obstacle_insert(obstacles, horizontal, x + (1 - WALL_OFFSET) * ((field->location & POSITION_LEFT) != 0), y + WALL_OFFSET, y + (1 - WALL_OFFSET));
-						horizontal = (field->location & POSITION_RIGHT) ? (x + WALL_OFFSET) : -1.0;
-					}
-				}
-				else
-				{
-					if (field->location & POSITION_RIGHT)
-						horizontal = x + WALL_OFFSET * !(field->location & POSITION_LEFT);
-					else if (field->location & POSITION_LEFT)
-						obstacle_insert(obstacles, x, x + (1 - WALL_OFFSET), y + WALL_OFFSET, y + (1 - WALL_OFFSET));
-				}
-				if (vertical[x] >= 0)
-				{
-					if (field->location != (field->location | POSITION_TOP | POSITION_BOTTOM))
-					{
-						obstacle_insert(obstacles, x + WALL_OFFSET, x + (1 - WALL_OFFSET), vertical[x], y + (1 - WALL_OFFSET) * ((field->location & POSITION_TOP) != 0));
-						vertical[x] = (field->location & POSITION_BOTTOM) ? (y + WALL_OFFSET) : -1.0;
-					}
-				}
-				else
-				{
-					if (field->location & POSITION_BOTTOM)
-						vertical[x] = y + WALL_OFFSET * !(field->location & POSITION_TOP);
-					else if (field->location & POSITION_TOP)
-						obstacle_insert(obstacles, x + WALL_OFFSET, x + (1 - WALL_OFFSET), y, y + (1 - WALL_OFFSET));
+					obstacle_insert(obstacles, horizontal, x + (1 - WALL_OFFSET) * ((blockage_location & POSITION_LEFT) != 0), y + WALL_OFFSET, y + (1 - WALL_OFFSET));
+					horizontal = (blockage_location & POSITION_RIGHT) ? (x + WALL_OFFSET) : -1.0;
 				}
 			}
 			else
 			{
-				if (horizontal >= 0)
+				if (blockage_location & POSITION_RIGHT)
+					horizontal = x + WALL_OFFSET * !(blockage_location & POSITION_LEFT);
+				else if (blockage_location & POSITION_LEFT)
+					obstacle_insert(obstacles, x, x + (1 - WALL_OFFSET), y + WALL_OFFSET, y + (1 - WALL_OFFSET));
+			}
+			if (vertical[x] >= 0)
+			{
+				if (blockage_location != (blockage_location | POSITION_TOP | POSITION_BOTTOM))
 				{
-					obstacle_insert(obstacles, horizontal, x, y + WALL_OFFSET, y + (1 - WALL_OFFSET));
-					horizontal = -1;
+					obstacle_insert(obstacles, x + WALL_OFFSET, x + (1 - WALL_OFFSET), vertical[x], y + (1 - WALL_OFFSET) * ((blockage_location & POSITION_TOP) != 0));
+					vertical[x] = (blockage_location & POSITION_BOTTOM) ? (y + WALL_OFFSET) : -1.0;
 				}
-				if (vertical[x] >= 0)
-				{
-					obstacle_insert(obstacles, x + WALL_OFFSET, x + (1 - WALL_OFFSET), vertical[x], y);
-					vertical[x] = -1;
-				}
+			}
+			else
+			{
+				if (blockage_location & POSITION_BOTTOM)
+					vertical[x] = y + WALL_OFFSET * !(blockage_location & POSITION_TOP);
+				else if (blockage_location & POSITION_TOP)
+					obstacle_insert(obstacles, x + WALL_OFFSET, x + (1 - WALL_OFFSET), y, y + (1 - WALL_OFFSET));
 			}
 		}
 

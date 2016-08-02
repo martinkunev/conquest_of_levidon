@@ -155,10 +155,10 @@ static unsigned deaths(unsigned damage, unsigned troops, unsigned health)
 // Determine whether the target obstacle is close enough to be attacked.
 int can_assault(const struct position position, const struct battlefield *restrict field)
 {
-	float tile_left = ((field->location & POSITION_LEFT) ? field->tile.x : field->tile.x + WALL_OFFSET);
-	float tile_right = ((field->location & POSITION_RIGHT) ? field->tile.x + 1 : field->tile.x + 1 - WALL_OFFSET);
-	float tile_top = ((field->location & POSITION_TOP) ? field->tile.y : field->tile.y + WALL_OFFSET);
-	float tile_bottom = ((field->location & POSITION_BOTTOM) ? field->tile.y + 1 : field->tile.y + 1 - WALL_OFFSET);
+	float tile_left = ((field->blockage_location & POSITION_LEFT) ? field->tile.x : field->tile.x + WALL_OFFSET);
+	float tile_right = ((field->blockage_location & POSITION_RIGHT) ? field->tile.x + 1 : field->tile.x + 1 - WALL_OFFSET);
+	float tile_top = ((field->blockage_location & POSITION_TOP) ? field->tile.y : field->tile.y + WALL_OFFSET);
+	float tile_bottom = ((field->blockage_location & POSITION_BOTTOM) ? field->tile.y + 1 : field->tile.y + 1 - WALL_OFFSET);
 
 	float dx, dy;
 
