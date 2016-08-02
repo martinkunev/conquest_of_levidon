@@ -9,13 +9,15 @@ H	don't allow pawns to attack their own walls (currently only gates are not atta
 H	don't allow attacking if the attacker cannot do damage to the defender (due to weapon and armor type)
 H	use a separate thread to calculate computer turns while the local player is choosing what to play
 H	better support for hotseat (show animations to each player, warn before changing current player and showing their map, etc.)
-H	region population
-	income should be calculated as a function of the population
-	army recruitment should reduce population
-	one should be able to tell population which resource to produce
-H	region-specific features (income, population, units, buildings, battlefield)
 H	error reporting on invalid map
 H	handle different screen resolutions better
+H	region population
+	income should be calculated as a function of the population
+	one should be able to tell the population which resource to produce
+	better food mechanics; food should not be accumulated indefinately
+M	region-specific features (income, population, units, buildings, battlefield)
+	population growth
+	army recruitment should reduce population
 M	improve AI
 M	retreat can be abused for scouting (25 peasants can go and retreat for 1 food)
 	maybe make retreat take some time (1 or 2 rounds); that way only fast units will be able to retreat
@@ -23,14 +25,19 @@ M	retreat can be abused for scouting (25 peasants can go and retreat for 1 food)
 	currently attackers retreating from an assault are killed; is this okay?
 M	editor: position region neighbors properly
 M	make formation consistent with the new battle mechanics
-M	better food mechanics; food should not be accumulated indefinately
 M	do something when there is not enough food for all units (?kill some units)
-M	balance buildings and units
 M	assault towers
 M	map scrolling
 M	keyboard support in various places in the interface; mouse support in various places in the interface
 M	network game (using SCTP?)
-M	auto combat
+M	improve auto combat
+M	improve world loading/saving
+	support JSON comments
+	log (level error) the line on which parse error occurs
+	log (level error) when a compulsory field is not present or has the wrong type
+	log (level warning) when an optional field has the wrong type; assume the field is not present for the execution logic
+	refactor (simplify) the code using these ideas
+M	catapult, balista
 L	limited number of shots
 L	assault garrison destruction and repair
 L	armory, swordsman, crossbowman, heavy cavalry, horse archer
@@ -38,18 +45,24 @@ L	assault moat
 L	sound
 L	water; naval battles
 L	roads
+L	trade
 L	religions, ethnicities, languages
 L	dynamic alliances
 L	seasons
 L	? buildings should not generate income on the day they are built
 L	? implement exit game while in battle
 
-? change direction of everything to counterclockwise; currently the y axis is in the opposite direction (and the cross product is negated)
-? rename image to sprite
-? redesign input functions (handling mouse movement is tedious; handling writing should be unified; can I unify the two input functions?)
-? make it simpler to check if two players are allies
 ? dynamic battlefield size
 ? deal damage to each pawn escaping from enemy pawns
+
+refactoring
+	use 'struct point' only for drawing (draw.h) (fix point_eq calls)
+		remove struct region dependency on struct point by moving center and location_garrison into location
+	split BLOCKAGE_OBSTACLE into BLOCAKGE_GATE and BLOCKAGE_WALL; change combat_order_assault (there is a todo)
+	make it simpler to check if two players are allies
+	? rename image to sprite
+	? change direction of everything to counterclockwise; currently the y axis is in the opposite direction (and the cross product is negated)
+	? redesign input functions (handling mouse movement is tedious; handling writing should be unified; can I unify the two input functions?)
 
 -- interface --
 
@@ -75,10 +88,12 @@ battle
 	enemy on the gate not displayed during shooting in battle animation
 	support showing more pawn stats (not just health)
 	new pawn images
+	change image for pawn selection
 	new wall and gate images; open gate image
 	? movement and shoot animation is faster when its duration is shorter
 	fight animation
 	tell all players if somebody is retreating
+	think about displaying reachable locations for a pawn
 
 report
 	display minimap

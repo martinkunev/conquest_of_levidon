@@ -161,6 +161,8 @@ static int computer_map_orders_list(struct array_orders *restrict orders, const 
 	struct resources income = {0};
 	income_calculate(game, &income, player);
 
+	// TODO don't add to orders if the order is too bad (negative rating)
+
 	// Make a list of the orders available for the player.
 	for(i = 0; i < game->regions_count; ++i)
 	{

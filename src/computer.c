@@ -48,7 +48,7 @@ const double desire_buildings[] =
 double unit_importance(const struct unit *restrict unit, const struct garrison_info *restrict garrison)
 {
 	// TODO more sophisticated logic here
-	// TODO importance should depend on battle obstacles (e.g. the more they are, the more important is battering ram)
+	// TODO importance should depend on battle obstacles (e.g. the more they are, the more important is battering ram); if the battering ram is owned by the defender, it is not that important
 
 	double importance;
 
@@ -56,7 +56,7 @@ double unit_importance(const struct unit *restrict unit, const struct garrison_i
 	{
 		importance = unit->health / damage_boost[WEAPON_CLEAVING][unit->armor] + (unit->speed - 1) * 1.5;
 		importance += unit->melee.damage * damage_boost[unit->melee.weapon][ARMOR_LEATHER] * unit->melee.agility * 3;
-		importance += unit->melee.damage * damage_boost[unit->melee.weapon][garrison->armor_gate] * 5;
+		importance += unit->melee.damage * damage_boost[unit->melee.weapon][garrison->gate.armor] * 5;
 		importance += unit->ranged.damage * (unit->ranged.range - 1);
 	}
 	else
@@ -78,10 +78,15 @@ double unit_cost(const struct unit *restrict unit)
 
 int state_wanted(double rate, double rate_new, double temperature)
 {
+	// temperature is in [0, 1]
+
+	double probability_preserve = exp(rate_new - rate - temperature);
+	return probability_preserve < ((double)random() / RAND_MAX);
+
 	// e ^ ((rate_new - rate) / temperature)
 
-	double probability = exp((rate_new - rate) / temperature);
-	return probability > ((double)random() / RAND_MAX);
+	//double probability = exp((rate_new - rate) / temperature);
+	//return probability > ((double)random() / RAND_MAX);
 }
 
 #if defined(UNIT_IMPORTANCE)

@@ -1,22 +1,24 @@
 key goals of the game include:
 	it should be hard to conquer the world
-	it should not be very hard to defend what is under your control
-	there is no player order - all players play their turns independently of each other (both on the map and in battles); they don't see the actions of others before the end of their own turn
-	computer players have as much information as local (manual) players; no handicap is used to make computers look stronger
-	computers value unit strength and don't hardcode it; unit stats can change and computers will still play as adequately
-
-desired effects:
-	slow to make all regions produce powerful units
-	expensive to have huge armies
+	it is easier to defend than to attack
+	all players are equal with respect to game rules
+		all players play their turns independently of each other (both on the map and in battles); they don't see the actions of others before the end of their own turn
+	computer players have as much information as other players; no handicap is used to make computers appear stronger
+	computers evaluate unit strength and don't hardcode it; units can change and computers will still play as adequately
+	computers evaluate battlefield blockages and don't hardcode them; blockages can change and computers will still play as adequately
+	it takes a long time to make all regions produce a lot of income and powerful units
+	it's expensive to have huge armies
 	it's reasonable to develop some regions and not develop others
 
 future goals:
-	war should not be the core part of the gameplay; diplomacy, economy, trade, etc. should also play a part
+	war should not be the only part of the gameplay; diplomacy, economy, trade, etc. should also play a part
 
 ----
 
 medieval technologies site:
 http://www.engr.psu.edu/mtah/
+
+http://en.wikipedia.org/wiki/List_of_medieval_weapons
 
 building		cost		time	income	requirements
 farm			3G			2		2F
@@ -59,6 +61,14 @@ balista												9		wooden	sawmill, workshop, archery range
 catapult											7		wooden	sawmill, workshop, forge, archery range
 trebuchet											10
 
+battering ram - makes assault conceivable; useful because it can hardly be destroyed by shooters
+balista - makes troops inside garrison vulnerable (which often means they have to attack)
+ditch - slows down movement
+moat - makes battering ram mostly useless
+	TODO how to enter the garrison after the wall is destroyed? siege tower?
+
+shooters should be weaker against better garrison
+
 // longbow						2		1F		arrow			barracks, archery range, sawmill
 // javelin
 // mace
@@ -67,19 +77,17 @@ trebuchet											10
 // camel rider
 // elephant rider
 
-http://en.wikipedia.org/wiki/List_of_medieval_weapons
+units that attack while moving (quite rare in games)
 
 ----
 
-simple economy
-
-each region has a given population; part of it supports the city; the others can be ordered to collect resources
-wood, stone, iron and gold require special buildings to be produced
-there are buildings that allow producing resources more efficiently (e.g. irrigation)
-gold comes from taxes; the population that is not busy collecting resources does not require payment (and results in gold income)
-from the free population one can set the proportion that will collect each of the resources (food, stone, wood, iron); the income is not proportional to the number of people
-
-----
+simple economy (part of the TODO for population)
+	each region has a given population; part of it supports the city; the others can be ordered to collect resources
+	wood, stone, iron and gold require special buildings to be produced
+	there are buildings that allow producing resources more efficiently (e.g. irrigation)
+	gold comes from taxes; the population that is not busy collecting resources does not require payment (and results in gold income)
+	from the free population one can set the proportion that will collect each of the resources (food, stone, wood, iron); the income is not proportional to the number of people
+	food cannot be stocked indefinitely (it rots)
 
 ? windmill
 	+1 food
@@ -91,47 +99,23 @@ drift mine (requires: mine)
 	stone +2
 gold mine (requires mine)
 	+1 gold
-
 foundry
 
-
-
 region-specific characteristics
-	water (required for watermill, irrigation, moat, etc.)
 	wood (required for sawmill)
 	ore (required for mine)
 	gold (required for gold mine)
-
-gold comes from taxes (depending on the population)
-
-
-
+	climate (determines production of food and wood; determines water availability)
+		water is require for watermill, irrigation, moat, etc.
 
 technologies:
     conservatory
+	tillage; crop rotation
     drainage / sewage
-	tillage
-	crop rotation
-
-http://www.euratlas.net/history/europe/1/entity_15233.html
-
-----
+	academy / university
 
 trading
-
-constructions involved: marketplace, roads, port
-
-trading benefits are determined by population of the region and its neighbors
-roads increase the benefits from land neighbors
-port increases the benefits from sea neighbors (? whatever that means)
-
-----
-
-units that attack while moving (applicable in many games)
-
-----
-
-battering ram - makes assault conceivable; useful because it can hardly be destroyed by shooters
-balista - makes troops inside garrison vulnerable (which often means they have to attack)
-ditch - slows down movement
-moat - makes battering ram mostly useless
+	constructions involved: marketplace, roads, port
+	trading benefits are determined by population of the region and its neighbors
+	roads increase the benefits from land neighbors
+	port increases the benefits from sea neighbors (? whatever that means)

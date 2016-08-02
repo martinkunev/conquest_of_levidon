@@ -1,55 +1,8 @@
-// Each pawn is a circle with a fixed diameter. The battlefield has fixed size with scale such as to make pawn diameter equal to 1.
+// Each pawn is a circle with a fixed radius. The battlefield has fixed size with scale such as to make pawn diameter equal to 1.
 // Obstacles are rectangular areas that represent non-passable objects such as walls. The borders of obstacles are parallel to the borders of the battlefield.
 // All map objects (pawns and obstacles) are open (their limit points are not part of them), which means they can touch each other.
 
-
-building the path graph
-	When nodes need to be put around a pawn, the pawn is considered a regular octagon and nodes are put on each side.
-		// TODO moving pawns
-
-	when adding edges, each edge is checked for collision with pawns treated as obstacles
-
-? battlefield array (of squares with diameter 1) containing what is located on each field (pawns, walls, etc.)
-
-detour on collision between allies
-	create a heap that will store possible detour positions ordered by closeness to the original path
-	add one item for a position on each side of the pawn
-	pop element from the heap until not empty
-		if the movement is possible, exit the loop and perform it
-
-
-
-
 keep the gate open the whole round if something passes through it; that way good players may find a way to enter a fortress
-
-
-graph vertices near walls
-NE - diagonal field on bottom left; (0.25 - sqrt((0.5^2) / 2) + 1, 0.75 + sqrt(0.5^2 / 2) - 1) = (0.896, 0.104)
-NS - diagonal field on bottom left; (0.25 - sqrt((0.5^2) / 2) + 1, 1 + sqrt(0.5^2 / 2) - 1) = (0.896, 0.354)
-WE - diagonal field on bottom left; (0 - sqrt((0.5^2) / 2) + 1, 0.75 + sqrt(0.5^2 / 2) - 1) = (0.646, 0.104)
-
-----
-
-use 'struct point' only for drawing (draw.h) (fix point_eq calls)
-	remove struct region dependency on struct point by moving center and location_garrison into location
-
-rework formation to correspond to the new battle mechanics
-
-think about displaying reachable locations for a pawn
-
-change image for pawn selection
-
-when setting pawn action, verify that the pawn can reach the target
-
-put an upper limit to the size of array_moves
-
-split BLOCKAGE_OBSTACLE into BLOCAKGE_GATE and BLOCKAGE_WALL; change combat_order_assault (there is a todo)
-
-
-
-
-
-
 
 ----
 
@@ -79,7 +32,7 @@ input_menu.c		input for game menu
 input_map.c			input for map interface
 input_battle.c		input for battle interface
 input_report.c		input for game reports
-computer.c			generic AI functions
+computer.c			generic AI functions; entry point for units helper program
 computer_map.c		AI functions for map
 computer_battle.c	AI functions for battles
 

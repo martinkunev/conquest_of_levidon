@@ -50,7 +50,7 @@ double damage_expected(const struct pawn *restrict fighter, double troops_count,
 	enum weapon weapon = fighter->troop->unit->melee.weapon;
 	enum armor armor = victim->troop->unit->armor;
 	double damage = fighter->troop->unit->melee.damage * fighter->troop->unit->melee.agility;
-	return troops_count * damage * damage_boost[weapon][armor];
+	return troops_count * damage * damage_boost[weapon][armor] + victim->hurt;
 }
 double damage_expected_ranged(const struct pawn *restrict shooter, double troops_count, const struct pawn *restrict victim)
 {
@@ -58,14 +58,14 @@ double damage_expected_ranged(const struct pawn *restrict shooter, double troops
 	enum weapon weapon = shooter->troop->unit->ranged.weapon;
 	enum armor armor = victim->troop->unit->armor;
 	double damage = shooter->troop->unit->ranged.damage;
-	return troops_count * damage * damage_boost[weapon][armor];
+	return troops_count * damage * damage_boost[weapon][armor] + victim->hurt;
 }
 double damage_expected_assault(const struct pawn *restrict fighter, double troops_count, const struct battlefield *restrict field)
 {
 	enum weapon weapon = fighter->troop->unit->melee.weapon;
-	enum armor armor = field->armor;
+	enum armor armor = field->unit->armor;
 	double damage = fighter->troop->unit->melee.damage;
-	return troops_count * damage * damage_boost[weapon][armor];
+	return troops_count * damage * damage_boost[weapon][armor] + (field->unit->health - field->strength);
 }
 
 static void damage_deal(double damage, unsigned attacker_troops, struct pawn *restrict victim)
@@ -84,7 +84,7 @@ static void damage_deal(double damage, unsigned attacker_troops, struct pawn *re
 
 static void assault(const struct pawn *restrict fighter, struct battlefield *restrict target)
 {
-	enum armor armor = target->armor;
+	enum armor armor = target->unit->armor;
 	enum weapon weapon = fighter->troop->unit->melee.weapon;
 
 	unsigned damage_final = (unsigned)(fighter->troop->unit->melee.damage * fighter->count * damage_boost[weapon][armor] + 0.5);
