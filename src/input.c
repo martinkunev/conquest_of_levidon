@@ -99,10 +99,6 @@ wait:
 
 		switch (event->response_type & ~0x80)
 		{
-		case XCB_EXPOSE:
-			input_display(display, game, state);
-			continue;
-
 		case XCB_BUTTON_PRESS:
 			mouse = (xcb_button_release_event_t *)event;
 			code = -mouse->detail;
@@ -128,8 +124,11 @@ wait:
 			modifiers = motion->state;
 			break;
 
+		case XCB_EXPOSE:
+			input_display(display, game, state);
 		default:
-			continue; // TODO memory leak from event
+			free(event);
+			continue;
 		}
 
 		free(event);
@@ -182,7 +181,7 @@ int input_timer(void (*display)(const void *, const struct game *, double), cons
 
 	// TODO support capital letters with shift and caps lock
 
-	int code; // TODO this is oversimplification
+	int code = 0; // TODO this is oversimplification
 	unsigned x, y;
 	uint16_t modifiers;
 
@@ -223,7 +222,11 @@ int input_timer(void (*display)(const void *, const struct game *, double), cons
 		case XCB_KEY_PRESS:
 			keyboard = (xcb_key_press_event_t *)event;
 			code = keymap[(keyboard->detail - keycode_min) * keysyms_per_keycode];
-			if (is_modifier(code)) continue;
+			if (is_modifier(code))
+			{
+				free(event);
+				continue;
+			}
 			x = keyboard->event_x;
 			y = keyboard->event_y;
 			modifiers = keyboard->state;
@@ -239,6 +242,7 @@ int input_timer(void (*display)(const void *, const struct game *, double), cons
 
 		case XCB_EXPOSE:
 		default:
+			free(event);
 			continue;
 		}
 
