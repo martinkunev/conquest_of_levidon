@@ -29,6 +29,7 @@
 #define region_built(region, building) ((int)((region)->built & (1 << (building))))
 
 enum {UnitPeasant, UnitMilitia, UnitPikeman, UnitArcher, UnitLongbow, UnitLightCavalry, UnitBatteringRam};
+
 enum {BuildingFarm, BuildingIrrigation, BuildingSawmill, BuildingMine, BuildingBloomery, BuildingBarracks, BuildingArcheryRange, BuildingStables, BuildingWatchTower, BuildingPalisade, BuildingFortress, BuildingWorkshop, BuildingForge};
 
 struct building
@@ -93,16 +94,23 @@ struct garrison_info
 
 	unsigned troops;
 	unsigned provisions;
-	unsigned strength_wall, strength_gate;
-	enum armor armor_wall, armor_gate;
+	struct unit wall, gate;
 };
 
 static inline const struct garrison_info *garrison_info(const struct region *restrict region)
 {
 	static const struct garrison_info info[] =
 	{
-		[PALISADE] = {.index = PALISADE, .troops = 3, .provisions = 2, .strength_wall = 160, .armor_wall = ARMOR_WOODEN, .strength_gate = 80, .armor_gate = ARMOR_WOODEN},
-		[FORTRESS] = {.index = FORTRESS, .troops = 6, .provisions = 5, .strength_wall = 200, .armor_wall = ARMOR_STONE, .strength_gate = 120, .armor_gate = ARMOR_WOODEN},
+		[PALISADE] = {
+			.index = PALISADE, .troops = 3, .provisions = 2,
+			.wall = {.health = 160, .armor = ARMOR_WOODEN},
+			.gate = {.health = 80, .armor = ARMOR_WOODEN},
+		},
+		[FORTRESS] = {
+			.index = FORTRESS, .troops = 6, .provisions = 5,
+			.wall = {.health = 200, .armor = ARMOR_STONE},
+			.gate = {.health = 120, .armor = ARMOR_WOODEN},
+		},
 	};
 
 	if (region_built(region, BuildingFortress)) return info + FORTRESS;

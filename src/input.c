@@ -129,7 +129,7 @@ wait:
 			break;
 
 		default:
-			continue;
+			continue; // TODO memory leak from event
 		}
 
 		free(event);
