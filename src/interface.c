@@ -83,7 +83,7 @@ int if_init(void)
 	screen = iterator.data;
 
 	// Choose a framebuffer configuration.
-	const int attributes[] = {GLX_BUFFER_SIZE, 32, GLX_DEPTH_SIZE, 24, GLX_DOUBLEBUFFER, True, GLX_RENDER_TYPE, GLX_RGBA_BIT, None};
+	const int attributes[] = {GLX_BUFFER_SIZE, 32, GLX_DEPTH_SIZE, 24, GLX_RENDER_TYPE, GLX_RGBA_BIT, None};
     GLXFBConfig *fb_configs = 0;
     int fb_configs_count = 0;
     fb_configs = glXChooseFBConfig(display, screen_index, attributes, &fb_configs_count);

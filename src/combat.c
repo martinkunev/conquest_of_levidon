@@ -17,6 +17,7 @@
  * along with Conquest of Levidon.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <assert.h>
 #include <stdint.h>
 #include <stdlib.h>
 
@@ -95,7 +96,7 @@ static void assault(const struct pawn *restrict fighter, struct battlefield *res
 
 static void fight(const struct pawn *restrict fighter, struct pawn *restrict victims[], size_t victims_count)
 {
-	// assert(victims_count <= 8);
+	assert(victims_count <= 8);
 
 	size_t i;
 
@@ -213,7 +214,7 @@ void combat_melee(const struct game *restrict game, struct battle *restrict batt
 					victims[victims_count++] = victim;
 			}
 
-			// assert(victims_count <= 8); // TODO make sure this is true
+			assert(victims_count <= 8); // TODO make sure this is true
 
 			if (victims_count)
 				fight(fighter, victims, victims_count);

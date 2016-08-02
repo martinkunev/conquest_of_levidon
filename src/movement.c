@@ -17,6 +17,7 @@
  * along with Conquest of Levidon.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <assert.h>
 #include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -97,9 +98,10 @@ static void index_add(struct battle *restrict battle, int x, int y, struct pawn 
 
 	field = &battle->field[y][x];
 
+	// TODO improve the code below
 	for(i = 0; field->pawns[i]; ++i)
 	{
-		// assert(i < sizeof(field->pawns) / sizeof(*field->pawns) - 1);
+		assert(i < sizeof(field->pawns) / sizeof(*field->pawns) - 1);
 	}
 	field->pawns[i] = pawn;
 }
@@ -151,16 +153,12 @@ void battlefield_index_build(struct battle *restrict battle)
 // Calculates the expected position of each pawn at the next step.
 int movement_plan(struct battle *restrict battle, struct adjacency_list *restrict graph[static PLAYERS_LIMIT], struct obstacles *restrict obstacles[static PLAYERS_LIMIT])
 {
-	size_t i;
-
-	for(i = 0; i < battle->pawns_count; ++i)
+	for(size_t i = 0; i < battle->pawns_count; ++i)
 	{
 		struct pawn *pawn = battle->pawns + i;
 		struct position position = pawn->position;
 		double distance, distance_covered;
 		double progress;
-
-		// assert(pawn->position == pawn->position_next);
 
 		distance_covered = (double)pawn->troop->unit->speed / MOVEMENT_STEPS;
 

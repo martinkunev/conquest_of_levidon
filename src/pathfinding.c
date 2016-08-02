@@ -17,6 +17,7 @@
  * along with Conquest of Levidon.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <assert.h>
 #include <math.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -509,7 +510,7 @@ static struct path_node *path_traverse(struct adjacency_list *restrict graph, si
 	size_t i;
 	ssize_t vertex;
 
-	// assert(graph->count);
+	assert(graph->count);
 
 	size_t vertex_origin = graph->count - 1;
 
@@ -785,6 +786,6 @@ unsigned path_moves_tangent(const struct pawn *restrict pawn, const struct pawn 
 	if (fabs(temp + origin.y * y) < FLOAT_ERROR)
 		moves_count += pawn_move_set(moves + moves_count, pawn, distance_covered, x, -y, origin);
 
-	// assert(moves_count <= 2);
+	assert(moves_count <= 2);
 	return moves_count;
 }

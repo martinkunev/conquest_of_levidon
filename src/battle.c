@@ -17,6 +17,7 @@
  * along with Conquest of Levidon.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <assert.h>
 #include <math.h>
 #include <stdarg.h>
 #include <stddef.h>
@@ -169,15 +170,17 @@ static void battlefield_init_open(const struct game *restrict game, struct battl
 				continue; // skip troops attacking from the garrison
 			}
 			startup = NEIGHBOR_SELF;
+			goto found;
 		}
 		else for(j = 0; j < NEIGHBORS_LIMIT; ++j)
 		{
 			if (troop->location != battle->region->neighbors[j]) continue;
 			startup = j;
-			break;
+			goto found;
 		}
-		// else assert(0);
+		assert(0);
 
+found:
 		// If possible, set startup position for the pawn.
 		if (players[startup] < 0) players[startup] = owner;
 		else if (players[startup] != owner)
