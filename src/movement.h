@@ -51,6 +51,8 @@ void pawn_stay(struct pawn *restrict pawn);
 
 void battlefield_index_build(struct battle *restrict battle);
 
+struct position movement_position(const struct pawn *restrict pawn);
+
 int movement_plan(struct battle *restrict battle, struct adjacency_list *restrict graph[static PLAYERS_LIMIT], struct obstacles *restrict obstacles[static PLAYERS_LIMIT]);
 int movement_collisions_resolve(const struct game *restrict game, struct battle *restrict battle, struct adjacency_list *restrict graph[static PLAYERS_LIMIT], struct obstacles *restrict obstacles[static PLAYERS_LIMIT]);
 

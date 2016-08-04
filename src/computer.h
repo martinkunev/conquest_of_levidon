@@ -17,7 +17,8 @@
  * along with Conquest of Levidon.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-enum {ANNEALING_STEPS = 128, ANNEALING_TRIES = 16};
+//enum {ANNEALING_STEPS = 128, ANNEALING_TRIES = 16};
+enum {ANNEALING_STEPS = 16, ANNEALING_TRIES = 4};
 
 extern const double desire_buildings[];
 

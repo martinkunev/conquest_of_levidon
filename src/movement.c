@@ -150,6 +150,35 @@ void battlefield_index_build(struct battle *restrict battle)
 	}
 }
 
+// Calculate the position of the pawn in the next round.
+struct position movement_position(const struct pawn *restrict pawn)
+{
+	struct position position = pawn->position;
+	size_t move_current = 0;
+	double distance_covered = pawn->troop->unit->speed, distance;
+	double progress;
+
+	// Determine which is the move in progress and how much of the distance is covered.
+	while (1)
+	{
+		if (move_current == pawn->moves.count)
+			return position;
+
+		distance = battlefield_distance(position, pawn->moves.data[move_current]);
+		if (distance_covered < distance) // unfinished move
+			break;
+
+		distance_covered -= distance;
+		position = pawn->moves.data[move_current];
+		move_current += 1;
+	}
+
+	progress = distance_covered / distance;
+	position.x = position.x * (1 - progress) + pawn->moves.data[move_current].x * progress;
+	position.y = position.y * (1 - progress) + pawn->moves.data[move_current].y * progress;
+	return position;
+}
+
 // Calculates the expected position of each pawn at the next step.
 int movement_plan(struct battle *restrict battle, struct adjacency_list *restrict graph[static PLAYERS_LIMIT], struct obstacles *restrict obstacles[static PLAYERS_LIMIT])
 {
@@ -176,7 +205,7 @@ path_find_next:
 			// Determine the next destination.
 			if (pawn->path.count)
 				destination = pawn->path.data[0];
-			else if ((pawn->action == ACTION_FIGHT) && !position_eq(position, pawn->target.pawn->position)) // TODO implement can_fight
+			else if ((pawn->action == ACTION_FIGHT) && !can_fight(position, pawn->target.pawn))
 				destination = pawn->target.pawn->position;
 			else if ((pawn->action == ACTION_ASSAULT) && !can_assault(position, pawn->target.field))
 				destination = (struct position){pawn->target.field->tile.x, pawn->target.field->tile.y};
@@ -444,7 +473,7 @@ finally:
 
 int movement_queue(struct pawn *restrict pawn, struct position target, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles)
 {
-	double distance;
+	int status;
 
 	if (pawn->path.count == PATH_QUEUE_LIMIT)
 		return ERROR_INPUT;
@@ -452,15 +481,23 @@ int movement_queue(struct pawn *restrict pawn, struct position target, struct ad
 	if (!in_battlefield(target.x, target.y))
 		return ERROR_INPUT;
 
-	// Check if the target is reachable.
-	distance = path_distance(pawn, target, graph, obstacles);
-	if (isnan(distance))
-		return ERROR_MEMORY;
-	if (distance == INFINITY)
-		return ERROR_MISSING;
+	if (pawn->path.count)
+	{
+		// Check if the target is reachable.
+		double distance = path_distance(pawn, target, graph, obstacles);
+		if (isnan(distance))
+			return ERROR_MEMORY;
+		if (distance == INFINITY)
+			return ERROR_MISSING;
+	}
+	else if (status = path_find(pawn, target, graph, obstacles))
+	{
+		return status;
+	}
 
-	int status = array_moves_expand(&pawn->path, pawn->path.count + 1);
-	if (status < 0) return ERROR_MEMORY;
+	status = array_moves_expand(&pawn->path, pawn->path.count + 1);
+	if (status < 0)
+		return ERROR_MEMORY;
 	pawn->path.data[pawn->path.count++] = target;
 	return 0;
 }

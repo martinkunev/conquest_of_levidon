@@ -29,6 +29,7 @@ double damage_expected_ranged(const struct pawn *restrict shooter, double troops
 double damage_expected_assault(const struct pawn *restrict fighter, double troops_count, const struct battlefield *restrict field);
 
 int can_assault(const struct position position, const struct battlefield *restrict field);
+int can_fight(const struct position position, const struct pawn *restrict pawn);
 
 void combat_melee(const struct game *restrict game, struct battle *restrict battle);
 void combat_ranged(struct battle *battle, const struct obstacles *restrict obstacles);

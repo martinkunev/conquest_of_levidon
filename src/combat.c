@@ -174,6 +174,11 @@ int can_assault(const struct position position, const struct battlefield *restri
 	return (dx * dx + dy * dy <= DISTANCE_MELEE * DISTANCE_MELEE);
 }
 
+int can_fight(const struct position position, const struct pawn *restrict pawn)
+{
+	return (battlefield_distance(position, pawn->position) <= DISTANCE_MELEE);
+}
+
 void combat_melee(const struct game *restrict game, struct battle *restrict battle)
 {
 	size_t i, j;
@@ -199,7 +204,7 @@ void combat_melee(const struct game *restrict game, struct battle *restrict batt
 
 			// If the pawn has a specific fight target and is able to fight it, fight only that target.
 			// Otherwise, fight all enemy pawns nearby.
-			if ((fighter->action == ACTION_FIGHT) && (battlefield_distance(fighter->position, fighter->target.pawn->position) <= DISTANCE_MELEE))
+			if ((fighter->action == ACTION_FIGHT) && can_fight(fighter->position, fighter->target.pawn))
 			{
 				victims[victims_count++] = fighter->target.pawn;
 			}
@@ -210,7 +215,7 @@ void combat_melee(const struct game *restrict game, struct battle *restrict batt
 					continue;
 				if (game->players[victim->troop->owner].alliance == fighter_alliance)
 					continue;
-				if (battlefield_distance(fighter->position, victim->position) <= DISTANCE_MELEE)
+				if (can_fight(fighter->position, victim))
 					victims[victims_count++] = victim;
 			}
 
@@ -365,7 +370,7 @@ int combat_order_shoot(const struct game *restrict game, const struct battle *re
 
 		if (!pawn->count) continue;
 
-		if ((game->players[pawn->troop->owner].alliance != fighter_alliance) && battlefield_distance(shooter->position, pawn->position) <= DISTANCE_MELEE)
+		if ((game->players[pawn->troop->owner].alliance != fighter_alliance) && can_fight(shooter->position, pawn))
 			return 0;
 	}
 

@@ -4,6 +4,9 @@
 
 keep the gate open the whole round if something passes through it; that way good players may find a way to enter a fortress
 
+AI
+	I need to set position (path.data[0]), action and target
+
 ----
 
 format.c			string formatting library
@@ -11,7 +14,7 @@ hashmap.c			hash map data structure
 json.c				JSON parser/serializer
 image.c				image handing library for OpenGL
 
-main.c
+main.c				program flow; invokes input and output
 menu.c				game menu primitives
 map.c				map primitives
 resources.c			resource handling functions for the map
@@ -32,12 +35,11 @@ input_menu.c		input for game menu
 input_map.c			input for map interface
 input_battle.c		input for battle interface
 input_report.c		input for game reports
-computer.c			generic AI functions; entry point for units helper program
+computer.c			generic AI functions; entry point for units calculator helper program
 computer_map.c		AI functions for map
 computer_battle.c	AI functions for battles
 
 editor.c			world editor
-units.c				unit coefficient calculator
 
 ----
 
@@ -54,6 +56,7 @@ garrison_info		garrison information for map region
 pawn				battle pawn information and indicators						position, array_moves
 battlefield			battle field information and indicators 					position
 battle				global battle information									battlefield
+tile				coordinates of battlefield tile								// TODO
 
 position			battlefield position
 array_moves			battle pawn moves

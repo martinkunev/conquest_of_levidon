@@ -1,9 +1,14 @@
-T	battle AI
-	the ratings are too small (which makes the random too important)
-	the rating becomes significant only when the enemy is very close
 T	computer doesn't attack regions
 	which units to order should not be determined with unit_importance (units must be diverse; too many units consume too much food)
 T	levidon map
+T	find the crash at the end of the animation
+	*** stack smashing detected ***: /home/martin/dev/conquest_of_levidon/src/conquest_of_levidon terminate
+	#0  0x00007ffff692d0a7 in raise () from /lib64/libc.so.6
+	#1  0x00007ffff692e419 in abort () from /lib64/libc.so.6
+	#2  0x00007ffff696bd88 in __libc_message () from /lib64/libc.so.6
+	#3  0x00007ffff69f3e87 in __fortify_fail () from /lib64/libc.so.6
+	#4  0x00007ffff69f3e50 in __stack_chk_fail () from /lib64/libc.so.6
+	#5  0x000000000041b614 in input_animation (game=0x7fffffffe080, battle=0x7ffffffeea50, movements=0x8f7150) at input_battle.c:344
 H	don't allow pawns to attack their own walls (currently only gates are not attacked)
 	separate constants for BLOCKAGE_WALL and BLOCKAGE_GATE
 H	don't allow attacking if the attacker cannot do damage to the defender (due to weapon and armor type)
@@ -15,11 +20,12 @@ H	region population
 	income should be calculated as a function of the population
 	one should be able to tell the population which resource to produce
 	better food mechanics; food should not be accumulated indefinately
+H	improve auto combat
 M	region-specific features (income, population, units, buildings, battlefield)
 	population growth
 	army recruitment should reduce population
 	use BLOCKAGE_TERRAIN
-M	improve AI
+M	improve AI (formation AI, etc.)
 M	retreat can be abused for scouting (25 peasants can go and retreat for 1 food)
 	maybe make retreat take some time (1 or 2 rounds); that way only fast units will be able to retreat
 	maybe allow retreat only when the pawns are near the border of the battlefield?
@@ -31,7 +37,6 @@ M	assault towers
 M	map scrolling
 M	keyboard support in various places in the interface; mouse support in various places in the interface
 M	network game (using SCTP?)
-M	improve auto combat
 M	improve world loading/saving
 	support JSON comments
 	log (level error) the line on which parse error occurs
@@ -52,6 +57,17 @@ L	dynamic alliances
 L	seasons
 L	? buildings should not generate income on the day they are built
 L	? implement exit game while in battle
+
+bugs
+	battle AI
+		battle between human with peasant and computer with militia; rating is sometimes > 1
+		computers should prefer to set target even if there is just one pawn (so that they will follow it)
+		F computer doesn't always attack weaker pawn with a stronger one
+			due to distance limitations, there is sometimes just 1 neighboring state; the computer gets stuck in a local maximum
+		F the state that will allow shooters to shoot from a big distance is not added to neighbors if shoot.range is bigger enough than speed
+		F shooters don't shoot (combat_command_shoot is not invoked when one expects that it would be)
+			shooting is not prefered over other commands
+	F pawns should modify their path immediately after their target moves (if they have a target); this should be working?
 
 ? dynamic battlefield size
 ? deal damage to each pawn escaping from enemy pawns
@@ -95,6 +111,8 @@ battle
 	fight animation
 	tell all players if somebody is retreating
 	think about displaying reachable locations for a pawn
+	add battlefield animation indication when an enemy pawn makes a pawn stop (due to collision)
+	display calculated pawn moves (not a straight line)
 
 report
 	display minimap
