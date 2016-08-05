@@ -72,15 +72,7 @@ static unsigned battle_state_neighbors(const struct game *restrict game, const s
 	if (in_battlefield(target.x, target.y) && (reachable[target.y][target.x] <= distance_limit))
 		neighbors[neighbors_count++] = target;
 
-	target = (struct tile){(unsigned)position.x, (unsigned)(position.y + 1)};
-	if (in_battlefield(target.x, target.y) && (reachable[target.y][target.x] <= distance_limit))
-		neighbors[neighbors_count++] = target;
-
-	target = (struct tile){(unsigned)(position.x - M_SQRT2 / 2), (unsigned)(position.y + M_SQRT2 / 2)};
-	if (in_battlefield(target.x, target.y) && (reachable[target.y][target.x] <= distance_limit))
-		neighbors[neighbors_count++] = target;
-
-	target = (struct tile){(unsigned)(position.x - 1), (unsigned)position.y};
+	target = (struct tile){(unsigned)position.x, (unsigned)(position.y - 1)};
 	if (in_battlefield(target.x, target.y) && (reachable[target.y][target.x] <= distance_limit))
 		neighbors[neighbors_count++] = target;
 
@@ -88,11 +80,19 @@ static unsigned battle_state_neighbors(const struct game *restrict game, const s
 	if (in_battlefield(target.x, target.y) && (reachable[target.y][target.x] <= distance_limit))
 		neighbors[neighbors_count++] = target;
 
-	target = (struct tile){(unsigned)position.x, (unsigned)(position.y - 1)};
+	target = (struct tile){(unsigned)(position.x - 1), (unsigned)position.y};
 	if (in_battlefield(target.x, target.y) && (reachable[target.y][target.x] <= distance_limit))
 		neighbors[neighbors_count++] = target;
 
-	target = (struct tile){(unsigned)(position.x + M_SQRT2 / 2), (unsigned)(position.y - M_SQRT2 / 2)};
+	target = (struct tile){(unsigned)(position.x - M_SQRT2 / 2), (unsigned)(position.y + M_SQRT2 / 2)};
+	if (in_battlefield(target.x, target.y) && (reachable[target.y][target.x] <= distance_limit))
+		neighbors[neighbors_count++] = target;
+
+	target = (struct tile){(unsigned)position.x, (unsigned)(position.y + 1)};
+	if (in_battlefield(target.x, target.y) && (reachable[target.y][target.x] <= distance_limit))
+		neighbors[neighbors_count++] = target;
+
+	target = (struct tile){(unsigned)(position.x + M_SQRT2 / 2), (unsigned)(position.y + M_SQRT2 / 2)};
 	if (in_battlefield(target.x, target.y) && (reachable[target.y][target.x] <= distance_limit))
 		neighbors[neighbors_count++] = target;
 
@@ -128,9 +128,13 @@ static void battle_state_set(struct pawn *restrict pawn, struct tile neighbor, c
 		}
 	}
 
+	// TODO what should I do when I'm unable to set the state
+
+	pawn->action = 0;
 	pawn->path.count = 0;
 	if (!position_eq(pawn->position, destination))
-		movement_queue(pawn, destination, graph, obstacles);
+		if (movement_queue(pawn, destination, graph, obstacles) < 0)
+			return; // unable to set state
 
 	pawn->path.data[0] = movement_position(pawn);
 	pawn->moves.count = 0;
@@ -258,7 +262,7 @@ static double battle_state_rating(const struct game *restrict game, struct battl
 found:
 			// estimate shoot impact
 			rating += attack_rating(damage_expected_ranged(pawn, pawn->count, victim), victim->count, victim->troop->unit, info);
-			printf("shoot impact %f\n", attack_rating(damage_expected_ranged(pawn, pawn->count, victim), victim->count, victim->troop->unit, info));
+			printf("shoot impact %f (%f,%f)\n", attack_rating(damage_expected_ranged(pawn, pawn->count, victim), victim->count, victim->troop->unit, info), pawn->position.x, pawn->position.y);
 		}
 		else if (pawn->action == ACTION_ASSAULT) // TODO remove the comment && can_assault(*pawn->path.data, pawn->target.field))
 		{
@@ -275,7 +279,7 @@ found:
 			for(j = 0; j < victims_count; ++j)
 			{
 				fight_rating += attack_rating(damage_expected(pawn, (double)pawn->count / victims_count, victims[j]), victims[j]->count, victims[j]->troop->unit, info);
-				printf("fight impact %f\n", attack_rating(damage_expected(pawn, (double)pawn->count / victims_count, victims[j]), victims[j]->count, victims[j]->troop->unit, info));
+				printf("fight impact %f (%f,%f)\n", attack_rating(damage_expected(pawn, (double)pawn->count / victims_count, victims[j]), victims[j]->count, victims[j]->troop->unit, info), pawn->position.x, pawn->position.y);
 			}
 			if ((pawn->action != ACTION_FIGHT) || (pawn->target.pawn != victims[0]))
 				fight_rating *= FIGHT_ERROR;
@@ -306,21 +310,22 @@ found:
 			if (pawn->troop->unit->ranged.weapon)
 			{
 				double damage = damage_expected_ranged(pawn, pawn->count, other);
+				unsigned deaths = (unsigned)(damage / other->troop->unit->health);
 
 				attack_impact = attack_rating(damage, other_count, other->troop->unit, info);
 				rating += attack_impact / (distance / pawn->troop->unit->ranged.range + 1);
-				printf("shoot closeness impact %f\n", attack_impact / (distance / pawn->troop->unit->ranged.range + 1));
-				rating_max += attack_impact / (distance_min / pawn->troop->unit->ranged.range + 1);
+				printf("shoot closeness impact %f (%f,%f)\n", attack_impact / (distance / pawn->troop->unit->ranged.range + 1), other->position.x, other->position.y);
+				rating_max += attack_impact + attack_impact / (distance_min / pawn->troop->unit->ranged.range + 1);
 
-				other_count -= (unsigned)(damage / other->troop->unit->health); // take into account the enemy troops that will die from the shooting
+				other_count = ((other_count >= deaths) ? other_count - deaths : 0); // take into account the enemy troops that will die from the shooting
 			}
 			attack_impact = attack_rating(damage_expected(pawn, pawn->count, other), other_count, other->troop->unit, info);
 			if (!pawn->troop->unit->ranged.weapon)
 			{
 				rating += attack_impact / (distance / pawn->troop->unit->speed + 1);
-				printf("closeness impact %f\n", attack_impact / (distance / pawn->troop->unit->speed + 1));
+				printf("closeness impact %f (%f,%f)\n", attack_impact / (distance / pawn->troop->unit->speed + 1), other->position.x, other->position.y);
 			}
-			rating_max += attack_impact / (distance_min / pawn->troop->unit->speed + 1);
+			rating_max += attack_impact + attack_impact / (distance_min / pawn->troop->unit->speed + 1);
 
 			// Subtract rating for future possibility of being attacked.
 			if (other->troop->unit->ranged.weapon)
@@ -328,7 +333,7 @@ found:
 			else
 			{
 				rating -= attack_rating(damage_expected(other, other_count, pawn), pawn->count, pawn->troop->unit, info) / (distance / other->troop->unit->speed + 1);
-				printf("enemy closeness impact -%f\n", attack_rating(damage_expected(other, other_count, pawn), pawn->count, pawn->troop->unit, info) / (distance / other->troop->unit->speed + 1));
+				printf("enemy closeness impact -%f (%f,%f)\n", attack_rating(damage_expected(other, other_count, pawn), pawn->count, pawn->troop->unit, info) / (distance / other->troop->unit->speed + 1), other->position.x, other->position.y);
 			}
 		}
 
@@ -377,10 +382,8 @@ found:
 				continue; // skip pawns owned by other players
 
 			fight_rating -= attack_rating(damage_expected(pawn, (double)pawn->count / victims_count, victims[j]), victims[j]->count, victims[j]->troop->unit, info);
-			printf("enemy fight impact -%f\n", attack_rating(damage_expected(pawn, (double)pawn->count / victims_count, victims[j]), victims[j]->count, victims[j]->troop->unit, info));
 		}
-		if ((pawn->action != ACTION_FIGHT) || (pawn->target.pawn != victims[0]))
-			fight_rating *= FIGHT_ERROR;
+		printf("enemy fight impact %f (%f,%f)\n", fight_rating, pawn->position.x, pawn->position.y);
 		rating += fight_rating;
 
 		// Adjust rating for damage from shooting.
@@ -388,6 +391,11 @@ found:
 		if (pawn->troop->unit->ranged.weapon)
 			rating -= attack_rating(damage_expected_ranged(pawn, pawn->count, victims[j]), victims[j]->count, victims[j]->troop->unit, info);
 	}
+
+	if (battle->pawns[1].path.count)
+		printf("%f (%f,%f)\n", rating / rating_max, battle->pawns[1].path.data[0].x, battle->pawns[1].path.data[0].y);
+	else
+		printf("%f (%f,%f)\n", rating / rating_max, battle->pawns[1].position.x, battle->pawns[1].position.y);
 
 	free(positions);
 
@@ -518,7 +526,7 @@ int computer_battle(const struct game *restrict game, struct battle *restrict ba
 			else command_restore(pawn, &backup);
 		}
 
-		temperature *= 0.95;
+		temperature *= ANNEALING_COOLDOWN;
 	}
 
 	// Find the local maximum (best action) for each of the pawns.

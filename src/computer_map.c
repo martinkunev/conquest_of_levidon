@@ -522,7 +522,7 @@ static int computer_map_move(const struct game *restrict game, unsigned char pla
 			else map_state_set(troop, region, move_backup, strength, regions_info);
 		}
 
-		temperature *= 0.95;
+		temperature *= ANNEALING_COOLDOWN;
 	}
 
 	// Find the local maximum (best movement) for each of the troops.
