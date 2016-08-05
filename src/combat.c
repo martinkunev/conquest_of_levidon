@@ -356,14 +356,12 @@ int combat_order_assault(const struct game *restrict game, struct pawn *restrict
 
 int combat_order_shoot(const struct game *restrict game, const struct battle *restrict battle, const struct obstacles *restrict obstacles, struct pawn *restrict shooter, struct position target)
 {
-	size_t i;
-
 	// Only ranged units can shoot.
 	if (!shooter->troop->unit->ranged.weapon) return 0;
 
 	// Don't allow sooting if there is a neighbor enemy pawn.
 	// TODO loop only through the pawns in the area
-	for(i = 0; i < battle->pawns_count; ++i)
+	for(size_t i = 0; i < battle->pawns_count; ++i)
 	{
 		struct pawn *pawn = battle->pawns + i;
 		unsigned char fighter_alliance = game->players[shooter->troop->owner].alliance;

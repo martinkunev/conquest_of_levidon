@@ -330,7 +330,7 @@ int input_animation(const struct game *restrict game, const struct battle *restr
 		for(size_t j = 0; j <= MOVEMENT_STEPS; ++j)
 		{
 			struct position p = movements[i][j];
-			state.traversed[(size_t)(p.x + 0.5)][(size_t)(p.y + 0.5)] = 1; // TODO is it okay that I only take the closest tile?
+			state.traversed[(size_t)p.x][(size_t)p.y] = 1;
 
 			if (j && !position_eq(movements[i][j - 1], p) && (steps_active < j))
 				steps_active = j;

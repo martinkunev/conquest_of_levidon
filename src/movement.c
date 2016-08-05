@@ -151,6 +151,7 @@ void battlefield_index_build(struct battle *restrict battle)
 }
 
 // Calculate the position of the pawn in the next round.
+// TODO this function assumes that pawn->path.count == 1 and pawn->moves are calculated for that path
 struct position movement_position(const struct pawn *restrict pawn)
 {
 	struct position position = pawn->position;

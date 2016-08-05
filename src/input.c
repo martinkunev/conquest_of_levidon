@@ -175,15 +175,11 @@ static double timer_progress(const struct timeval *restrict start, double durati
 int input_timer(void (*display)(const void *, const struct game *, double), const struct game *restrict game, double duration, void *state)
 {
 	xcb_generic_event_t *event;
-	xcb_button_release_event_t *mouse;
 	xcb_key_press_event_t *keyboard;
-	xcb_motion_notify_event_t *motion;
 
 	// TODO support capital letters with shift and caps lock
 
 	int code = 0; // TODO this is oversimplification
-	unsigned x, y;
-	uint16_t modifiers;
 
 	struct timeval start; // start time of the animation
 	double progress; // progress of the animation as a fraction
@@ -211,33 +207,9 @@ int input_timer(void (*display)(const void *, const struct game *, double), cons
 
 		switch (event->response_type & ~0x80)
 		{
-		case XCB_BUTTON_PRESS:
-			mouse = (xcb_button_release_event_t *)event;
-			code = -mouse->detail;
-			x = mouse->event_x;
-			y = mouse->event_y;
-			modifiers = mouse->state;
-			break;
-
 		case XCB_KEY_PRESS:
 			keyboard = (xcb_key_press_event_t *)event;
 			code = keymap[(keyboard->detail - keycode_min) * keysyms_per_keycode];
-			if (is_modifier(code))
-			{
-				free(event);
-				continue;
-			}
-			x = keyboard->event_x;
-			y = keyboard->event_y;
-			modifiers = keyboard->state;
-			break;
-
-		case XCB_MOTION_NOTIFY:
-			motion = (xcb_motion_notify_event_t *)event;
-			code = EVENT_MOTION;
-			x = motion->event_x;
-			y = motion->event_y;
-			modifiers = motion->state;
 			break;
 
 		case XCB_EXPOSE:

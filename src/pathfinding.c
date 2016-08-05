@@ -392,12 +392,11 @@ struct adjacency_list *visibility_graph_build(const struct battle *restrict batt
 
 void visibility_graph_free(struct adjacency_list *graph)
 {
-	size_t i;
 	struct neighbor *item, *next;
 
 	if (!graph) return;
 
-	for(i = 0; i < graph->count; ++i)
+	for(size_t i = 0; i < graph->count; ++i)
 	{
 		item = graph->list[i].neighbors;
 		while (item)
