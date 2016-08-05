@@ -1,17 +1,12 @@
 key goals of the game include:
 	it should be hard to conquer the world
 	it is easier to defend than to attack
-	all players are equal with respect to game rules
-		all players play their turns independently of each other (both on the map and in battles); they don't see the actions of others before the end of their own turn
-	computer players have as much information as other players; no handicap is used to make computers appear stronger
-	computers evaluate unit strength and don't hardcode it; units can change and computers will still play as adequately
-	computers evaluate battlefield blockages and don't hardcode them; blockages can change and computers will still play as adequately
 	it takes a long time to make all regions produce a lot of income and powerful units
 	it's expensive to have huge armies
 	it's reasonable to develop some regions and not develop others
 
 future goals:
-	war should not be the only part of the gameplay; diplomacy, economy, trade, etc. should also play a part
+	war should not be the only aspect of the gameplay; diplomacy, economy, trade, etc. should also play a part
 
 ----
 
