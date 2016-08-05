@@ -356,7 +356,7 @@ found:
 				attack_impact = attack_rating(damage_expected_assault(pawn, pawn->count, field), 1, field->unit, info);
 				rating += attack_impact / (distance / pawn->troop->unit->speed + 1);
 
-				rating_max += attack_impact / (distance_min / pawn->troop->unit->speed + 1);
+				rating_max += attack_impact + attack_impact / (distance_min / pawn->troop->unit->speed + 1);
 
 				// TODO ally walls close to the current position (if on the two diagonals, large bonus (gate blocking))
 			}
