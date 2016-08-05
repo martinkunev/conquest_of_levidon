@@ -154,12 +154,12 @@ static unsigned deaths(unsigned damage, unsigned troops, unsigned health)
 }
 
 // Determine whether the target obstacle is close enough to be attacked.
-int can_assault(const struct position position, const struct battlefield *restrict field)
+int can_assault(const struct position position, const struct battlefield *restrict target)
 {
-	float tile_left = ((field->blockage_location & POSITION_LEFT) ? field->tile.x : field->tile.x + WALL_OFFSET);
-	float tile_right = ((field->blockage_location & POSITION_RIGHT) ? field->tile.x + 1 : field->tile.x + 1 - WALL_OFFSET);
-	float tile_top = ((field->blockage_location & POSITION_TOP) ? field->tile.y : field->tile.y + WALL_OFFSET);
-	float tile_bottom = ((field->blockage_location & POSITION_BOTTOM) ? field->tile.y + 1 : field->tile.y + 1 - WALL_OFFSET);
+	float tile_left = ((target->blockage_location & POSITION_LEFT) ? target->tile.x : target->tile.x + WALL_OFFSET);
+	float tile_right = ((target->blockage_location & POSITION_RIGHT) ? target->tile.x + 1 : target->tile.x + 1 - WALL_OFFSET);
+	float tile_top = ((target->blockage_location & POSITION_TOP) ? target->tile.y : target->tile.y + WALL_OFFSET);
+	float tile_bottom = ((target->blockage_location & POSITION_BOTTOM) ? target->tile.y + 1 : target->tile.y + 1 - WALL_OFFSET);
 
 	float dx, dy;
 
@@ -174,15 +174,30 @@ int can_assault(const struct position position, const struct battlefield *restri
 	return (dx * dx + dy * dy <= DISTANCE_MELEE * DISTANCE_MELEE);
 }
 
-int can_fight(const struct position position, const struct pawn *restrict pawn)
+int can_fight(const struct position position, const struct pawn *restrict target)
 {
-	return (battlefield_distance(position, pawn->position) <= DISTANCE_MELEE);
+	return (battlefield_distance(position, target->position) <= DISTANCE_MELEE);
+}
+
+static int can_shoot(const struct game *restrict game, const struct battle *battle, const struct pawn *pawn, const struct position target)
+{
+	// TODO loop only through the pawns in the area
+	unsigned char shooter_alliance = game->players[pawn->troop->owner].alliance;
+	for(size_t i = 0; i < battle->pawns_count; ++i)
+	{
+		struct pawn *other = battle->pawns + i;
+		if (!other->count)
+			continue;
+		if ((game->players[other->troop->owner].alliance != shooter_alliance) && can_fight(other->position, pawn))
+			return 0;
+	}
+
+	return 1;
 }
 
 void combat_melee(const struct game *restrict game, struct battle *restrict battle)
 {
-	size_t i, j;
-	for(i = 0; i < battle->pawns_count; ++i)
+	for(size_t i = 0; i < battle->pawns_count; ++i)
 	{
 		struct pawn *fighter = battle->pawns + i;
 		unsigned char fighter_alliance = game->players[fighter->troop->owner].alliance;
@@ -208,7 +223,7 @@ void combat_melee(const struct game *restrict game, struct battle *restrict batt
 			{
 				victims[victims_count++] = fighter->target.pawn;
 			}
-			else for(j = 0; j < battle->pawns_count; ++j)
+			else for(size_t j = 0; j < battle->pawns_count; ++j)
 			{
 				struct pawn *victim = battle->pawns + j;
 				if (!victim->count)
@@ -219,7 +234,7 @@ void combat_melee(const struct game *restrict game, struct battle *restrict batt
 					victims[victims_count++] = victim;
 			}
 
-			assert(victims_count <= 8); // TODO make sure this is true
+			assert(victims_count <= 8);
 
 			if (victims_count)
 				fight(fighter, victims, victims_count);
@@ -232,8 +247,7 @@ void combat_ranged(struct battle *restrict battle, const struct obstacles *restr
 	// Shooters deal damage in an area around the target.
 	// There is friendly fire.
 
-	size_t i, j;
-	for(i = 0; i < battle->pawns_count; ++i)
+	for(size_t i = 0; i < battle->pawns_count; ++i)
 	{
 		struct pawn *shooter = battle->pawns + i;
 
@@ -258,7 +272,7 @@ void combat_ranged(struct battle *restrict battle, const struct obstacles *restr
 
 		miss = distance / shooter->troop->unit->ranged.range;
 
-		for(j = 0; j < battle->pawns_count; ++j)
+		for(size_t j = 0; j < battle->pawns_count; ++j)
 		{
 			struct pawn *victim = battle->pawns + j;
 			double distance_victim = battlefield_distance(shooter->target.position, victim->position);
@@ -268,7 +282,7 @@ void combat_ranged(struct battle *restrict battle, const struct obstacles *restr
 	}
 }
 
-int battlefield_clean(struct battle *battle)
+int battlefield_clean(const struct game *restrict game, struct battle *restrict battle)
 {
 	size_t p;
 	size_t x, y;
@@ -315,12 +329,14 @@ int battlefield_clean(struct battle *battle)
 		if (!pawn->count) continue;
 
 		// Stop pawns from attacking dead pawns and destroyed obstacles.
+		if ((pawn->action == ACTION_SHOOT) && !can_shoot(game, battle, pawn, pawn->target.position))
+			pawn->action = 0;
 		if ((pawn->action == ACTION_FIGHT) && !pawn->target.pawn->count)
 			pawn->action = 0;
 		if ((pawn->action == ACTION_ASSAULT) && !pawn->target.field->blockage)
 			pawn->action = 0;
 
-		// TODO should I do something if the target pawn is no longer reachable?
+		// TODO what if the target pawn is no longer reachable?
 	}
 
 	return activity;
@@ -356,34 +372,23 @@ int combat_order_assault(const struct game *restrict game, struct pawn *restrict
 
 int combat_order_shoot(const struct game *restrict game, const struct battle *restrict battle, const struct obstacles *restrict obstacles, struct pawn *restrict shooter, struct position target)
 {
+	unsigned range;
+
 	// Only ranged units can shoot.
 	if (!shooter->troop->unit->ranged.weapon) return 0;
 
-	// Don't allow sooting if there is a neighbor enemy pawn.
-	// TODO loop only through the pawns in the area
-	for(size_t i = 0; i < battle->pawns_count; ++i)
-	{
-		struct pawn *pawn = battle->pawns + i;
-		unsigned char fighter_alliance = game->players[shooter->troop->owner].alliance;
-
-		if (!pawn->count) continue;
-
-		if ((game->players[pawn->troop->owner].alliance != fighter_alliance) && can_fight(shooter->position, pawn))
-			return 0;
-	}
+	// Don't allow sooting if there is an enemy pawn nearby.
+	if (!can_shoot(game, battle, shooter, target))
+		return 0;
 
 	// Check if the target is in shooting range.
-	{
-		unsigned range = shooter->troop->unit->ranged.range;
-
-		// If there is an obstacle between the pawn and its target, decrease shooting range by 1.
-		// TODO what if there is a tower on one of the fields
-		if (!path_visible(shooter->position, target, obstacles))
-			range -= 1;
-
-		if (battlefield_distance(shooter->position, target) > range)
-			return 0;
-	}
+	// If there is an obstacle between the pawn and its target, decrease shooting range by 1.
+	// TODO what if there is a tower on one of the fields
+	range = shooter->troop->unit->ranged.range;
+	if (!path_visible(shooter->position, target, obstacles))
+		range -= 1;
+	if (battlefield_distance(shooter->position, target) > range)
+		return 0;
 
 	pawn_stay(shooter);
 	shooter->action = ACTION_SHOOT;

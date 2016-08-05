@@ -229,12 +229,10 @@ void region_orders_process(struct region *restrict region)
 	// Update training time and check if there are trained units.
 	if (region->train[0] && (++region->train_progress == region->train[0]->time))
 	{
-		size_t i;
-
 		if (troop_spawn(region, &region->troops, region->train[0], region->train[0]->troops_count, region->owner) < 0) abort(); // TODO
 
 		region->train_progress = 0;
-		for(i = 1; i < TRAIN_QUEUE; ++i)
+		for(size_t i = 1; i < TRAIN_QUEUE; ++i)
 			region->train[i - 1] = region->train[i];
 		region->train[TRAIN_QUEUE - 1] = 0;
 	}
@@ -250,21 +248,19 @@ void region_orders_process(struct region *restrict region)
 
 void region_orders_cancel(struct region *restrict region)
 {
-	size_t i;
 	region->construct = -1;
 	region->build_progress = 0;
-	for(i = 0; i < TRAIN_QUEUE; ++i) region->train[i] = 0;
+	for(size_t i = 0; i < TRAIN_QUEUE; ++i)
+		region->train[i] = 0;
 	region->train_progress = 0;
 }
 
 // Determine which regions are visible for the current player.
 void map_visible(const struct game *restrict game, unsigned char player, unsigned char visible[REGIONS_LIMIT])
 {
-	size_t i, j;
-
 	memset(visible, 0, REGIONS_LIMIT);
 
-	for(i = 0; i < game->regions_count; ++i)
+	for(size_t i = 0; i < game->regions_count; ++i)
 	{
 		const struct region *restrict region = game->regions + i;
 
@@ -275,7 +271,7 @@ void map_visible(const struct game *restrict game, unsigned char player, unsigne
 			// Make the neighboring regions visible when a watch tower is built.
 			if (region_built(region, BuildingWatchTower))
 			{
-				for(j = 0; j < NEIGHBORS_LIMIT; ++j)
+				for(size_t j = 0; j < NEIGHBORS_LIMIT; ++j)
 				{
 					struct region *neighbor = region->neighbors[j];
 					if (neighbor) visible[neighbor->index] = 1;

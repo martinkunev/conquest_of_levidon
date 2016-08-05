@@ -1,14 +1,6 @@
 T	computer doesn't attack regions
 	which units to order should not be determined with unit_importance (units must be diverse; too many units consume too much food)
 T	levidon map
-F	find the crash at the end of the animation
-	*** stack smashing detected ***: /home/martin/dev/conquest_of_levidon/src/conquest_of_levidon terminate
-	#0  0x00007ffff692d0a7 in raise () from /lib64/libc.so.6
-	#1  0x00007ffff692e419 in abort () from /lib64/libc.so.6
-	#2  0x00007ffff696bd88 in __libc_message () from /lib64/libc.so.6
-	#3  0x00007ffff69f3e87 in __fortify_fail () from /lib64/libc.so.6
-	#4  0x00007ffff69f3e50 in __stack_chk_fail () from /lib64/libc.so.6
-	#5  0x000000000041b614 in input_animation (game=0x7fffffffe080, battle=0x7ffffffeea50, movements=0x8f7150) at input_battle.c:344
 H	don't allow pawns to attack their own walls (currently only gates are not attacked)
 	separate constants for BLOCKAGE_WALL and BLOCKAGE_GATE
 H	don't allow attacking if the attacker cannot do damage to the defender (due to weapon and armor type)
@@ -23,6 +15,7 @@ H	region population
 	better food mechanics; food should not be accumulated indefinately
 H	improve auto combat
 H	melee units should go closer to the shooter to prevent them from escaping far enough to shoot
+H	when a target is impossible, set target to the closest possible (e.g. if shooting range is not enough or a position is outside the battlefield)
 M	region-specific features (income, population, units, buildings, battlefield)
 	population growth
 	army recruitment should reduce population
@@ -63,13 +56,7 @@ L	? buildings should not generate income on the day they are built
 L	? implement exit game while in battle
 L	make palisade invisible when fortress is built
 
-bugs
-	F battle AI
-		battle between human with peasant and computer with militia; rating is sometimes > 1
-			because no rating_max is added for player action
-	F horses on the battlefield lead to buffer overflow? (probably the same bug as the crash above; unrelated to AI; some of the memory is zeroed after movement animation)
-		the crash is caused by setting state.traversed in input_animation() when one of the coordinates is rounded to 25
-	F shooter moves after shooting (because moves was set; I should unset it)
+? rename WEAPON_ARROW to WEAPON_PIERCING and change archer melee weapon to WEAPON_PIERCING
 
 ? dynamic battlefield size
 ? deal damage to each pawn escaping from enemy pawns

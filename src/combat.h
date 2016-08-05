@@ -33,7 +33,7 @@ int can_fight(const struct position position, const struct pawn *restrict pawn);
 
 void combat_melee(const struct game *restrict game, struct battle *restrict battle);
 void combat_ranged(struct battle *battle, const struct obstacles *restrict obstacles);
-int battlefield_clean(struct battle *battle);
+int battlefield_clean(const struct game *restrict game, struct battle *restrict battle);
 
 int combat_order_fight(const struct game *restrict game, const struct battle *restrict battle, const struct obstacles *restrict obstacles, struct pawn *restrict fighter, struct pawn *restrict victim);
 int combat_order_assault(const struct game *restrict game, struct pawn *restrict fighter, struct battlefield *restrict target);

@@ -104,6 +104,9 @@ static void battle_state_set(struct pawn *restrict pawn, struct tile neighbor, c
 	struct battlefield *restrict field = battle_field(battle, neighbor);
 	struct position destination = {neighbor.x, neighbor.y};
 
+	pawn_stay(pawn);
+	pawn->action = 0;
+
 	if (*field->pawns && !allies(game, field->pawns[0]->troop->owner, pawn->troop->owner))
 	{
 		// TODO what if there is more than one pawn at the field
@@ -129,9 +132,6 @@ static void battle_state_set(struct pawn *restrict pawn, struct tile neighbor, c
 	}
 
 	// TODO what should I do when I'm unable to set the state
-
-	pawn->action = 0;
-	pawn->path.count = 0;
 	if (!position_eq(pawn->position, destination))
 		if (movement_queue(pawn, destination, graph, obstacles) < 0)
 			return; // unable to set state
@@ -387,15 +387,25 @@ found:
 		rating += fight_rating;
 
 		// Adjust rating for damage from shooting.
-		// TODO check if the pawn will be able to shoot (will there be enemies in fighting distance)
-		if (pawn->troop->unit->ranged.weapon)
-			rating -= attack_rating(damage_expected_ranged(pawn, pawn->count, victims[j]), victims[j]->count, victims[j]->troop->unit, info);
+		for(j = 0; j < battle->pawns_count; ++j)
+		{
+			const struct pawn *restrict victim = battle->pawns + j;
+
+			if (!victim->count) continue;
+			if (victim->troop->owner != player) continue;
+
+			// TODO check if the pawn will be able to shoot (will there be enemies in fighting distance)
+			if (pawn->troop->unit->ranged.weapon)
+				rating -= attack_rating(damage_expected_ranged(pawn, pawn->count, victim), victim->count, victim->troop->unit, info);
+		}
 	}
 
+/*
 	if (battle->pawns[1].path.count)
 		printf("%f (%f,%f)\n", rating / rating_max, battle->pawns[1].path.data[0].x, battle->pawns[1].path.data[0].y);
 	else
 		printf("%f (%f,%f)\n", rating / rating_max, battle->pawns[1].position.x, battle->pawns[1].position.y);
+*/
 
 	free(positions);
 
