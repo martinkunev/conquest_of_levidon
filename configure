@@ -18,7 +18,7 @@ for (@ARGV)
 	}
 	else
 	{
-		print "Usage: $0 [OPTION ...]\n\t--prefix=<prefix>    \tspecify install location (default /usr/local)\n\t--debug              \tcompile for debugging";
+		print "Usage: $0 [OPTION ...]\n\t--prefix=<prefix>    \tspecify install location (default /usr/local)\n\t--debug              \tcompile for debugging\n";
 		exit;
 	}
 }
