@@ -73,7 +73,7 @@ double unit_importance(const struct unit *restrict unit, const struct garrison_i
 
 double unit_cost(const struct unit *restrict unit)
 {
-	return 125.0 * (unit->cost.food * 2.0 + unit->cost.wood * 2.0 + unit->cost.stone * 2.0 + unit->cost.gold * 2.5 + unit->cost.iron * 4.0);
+	return -125.0 * (unit->cost.food * 2.0 + unit->cost.wood * 2.0 + unit->cost.stone * 2.0 + unit->cost.gold * 2.5 + unit->cost.iron * 4.0);
 }
 
 int state_wanted(double rate, double rate_new, double temperature)

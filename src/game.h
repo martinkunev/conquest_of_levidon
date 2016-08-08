@@ -66,7 +66,7 @@ struct unit
 
 	uint32_t requires;
 	unsigned troops_count;
-	struct resources cost, expense;
+	struct resources cost, income; // cost - one-time payment for ordering; income - daily resources change
 	unsigned char time;
 
 	unsigned char speed;

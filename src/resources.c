@@ -26,15 +26,16 @@
 // Check whether there are enough resources available for a given requirement.
 int resource_enough(const struct resources *restrict total, const struct resources *restrict required)
 {
-	if (total->gold < required->gold) return 0;
-	if (total->food < required->food) return 0;
-	if (total->wood < required->wood) return 0;
-	if (total->iron < required->iron) return 0;
-	if (total->stone < required->stone) return 0;
+	if (total->gold + required->gold < 0) return 0;
+	if (total->food + required->food < 0) return 0;
+	if (total->wood + required->wood < 0) return 0;
+	if (total->iron + required->iron < 0) return 0;
+	if (total->stone + required->stone < 0) return 0;
 	return 1;
 }
 
 // Add resource change to the total amount of resources.
+// TODO rename to resources_spend?
 void resource_add(struct resources *restrict total, const struct resources *restrict change)
 {
 	total->gold += change->gold;
@@ -56,9 +57,10 @@ void resource_subtract(struct resources *restrict total, const struct resources 
 
 // Substract the spent resoures from the total amount.
 // If more than the total of a given resource is spent, set the total amount to 0.
+// TODO revise this
 void resource_spend(struct resources *restrict total, const struct resources *restrict spent)
 {
-	resource_subtract(total, spent);
+	resource_add(total, spent);
 	if (total->gold < 0) total->gold = 0;
 	if (total->food < 0) total->food = 0;
 	if (total->wood < 0) total->wood = 0;

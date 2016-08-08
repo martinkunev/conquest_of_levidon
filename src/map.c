@@ -73,9 +73,9 @@ void region_income(const struct region *restrict region, struct resources *restr
 	income->gold += 1;
 	income->food += 1;
 
-	for(i = 0; i < buildings_count; ++i)
+	for(i = 0; i < BUILDINGS_COUNT; ++i)
 		if (region->built & (1 << i))
-			resource_add(income, &buildings[i].income);
+			resource_add(income, &BUILDINGS[i].income);
 }
 
 // Chooses new region owner from the troops in the given alliance.
@@ -238,7 +238,7 @@ void region_orders_process(struct region *restrict region)
 	}
 
 	// Update construction time and check if the building is finished.
-	if ((region->construct >= 0) && (++region->build_progress == buildings[region->construct].time))
+	if ((region->construct >= 0) && (++region->build_progress == BUILDINGS[region->construct].time))
 	{
 		region->built |= (1 << region->construct);
 		region->construct = -1;

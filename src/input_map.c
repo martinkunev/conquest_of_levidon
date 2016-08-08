@@ -166,8 +166,8 @@ static int input_construct(int code, unsigned x, unsigned y, uint16_t modifiers,
 
 	// Find which building was clicked.
 	index = if_index(Building, (struct point){x, y});
-	if ((index < 0) || (index >= buildings_count)) goto reset; // no building clicked
-	if (!region_building_available(region, buildings[index])) goto reset; // building can not be constructed
+	if ((index < 0) || (index >= BUILDINGS_COUNT)) goto reset; // no building clicked
+	if (!region_building_available(region, BUILDINGS[index])) goto reset; // building can not be constructed
 
 	if (code == EVENT_MOUSE_LEFT)
 	{
@@ -181,17 +181,17 @@ static int input_construct(int code, unsigned x, unsigned y, uint16_t modifiers,
 				if (region->build_progress)
 					region->build_progress = 0;
 				else
-					resource_add(&game->players[state->player].treasury, &buildings[index].cost);
+					resource_subtract(&game->players[state->player].treasury, &BUILDINGS[index].cost);
 				region->construct = -1;
 			}
 		}
 		else if (!region_built(region, index))
 		{
 			// if (build_start(game, region, index)) ...;
-			if (!resource_enough(&game->players[state->player].treasury, &buildings[index].cost)) return INPUT_IGNORE;
+			if (!resource_enough(&game->players[state->player].treasury, &BUILDINGS[index].cost)) return INPUT_IGNORE;
 
 			region->construct = index;
-			resource_subtract(&game->players[state->player].treasury, &buildings[index].cost);
+			resource_add(&game->players[state->player].treasury, &BUILDINGS[index].cost);
 		}
 	}
 	else if (code == EVENT_MOTION)
@@ -237,7 +237,7 @@ static int input_train(int code, unsigned x, unsigned y, uint16_t modifiers, con
 			if (!region->train[index])
 			{
 				// Spend the money required for the units.
-				resource_subtract(&game->players[state->player].treasury, &UNITS[unit].cost);
+				resource_add(&game->players[state->player].treasury, &UNITS[unit].cost);
 
 				region->train[index] = UNITS + unit;
 				break;
@@ -285,7 +285,7 @@ static int input_dismiss(int code, unsigned x, unsigned y, uint16_t modifiers, c
 		// If the training has not yet started, return allocated resources.
 		// Else, reset training information.
 		if (index || !game->regions[state->region].train_progress)
-			resource_add(&game->players[state->player].treasury, &region->train[index]->cost);
+			resource_subtract(&game->players[state->player].treasury, &region->train[index]->cost);
 		else
 			game->regions[state->region].train_progress = 0;
 

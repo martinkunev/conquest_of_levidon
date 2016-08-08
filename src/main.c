@@ -279,10 +279,10 @@ static int play(struct game *restrict game)
 					else if (troop->move->owner != region->owner)
 					{
 						struct resources expense;
-						resource_multiply(&expense, &troop->unit->expense, 2);
+						resource_multiply(&expense, &troop->unit->income, 2);
 						resource_add(expenses + troop->owner, &expense);
 					}
-					else resource_add(expenses + troop->owner, &troop->unit->expense);
+					else resource_add(expenses + troop->owner, &troop->unit->income);
 				}
 			}
 			else
@@ -292,7 +292,7 @@ static int play(struct game *restrict game)
 				{
 					struct resources expense;
 					if (troop->move == LOCATION_GARRISON) continue;
-					resource_multiply(&expense, &troop->unit->expense, 2);
+					resource_multiply(&expense, &troop->unit->income, 2);
 					resource_add(expenses + troop->owner, &expense);
 				}
 			}

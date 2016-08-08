@@ -17,6 +17,7 @@
  * along with Conquest of Levidon.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <stdbool.h>
 #include <math.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -89,37 +90,36 @@ struct region_info
 	unsigned troops[TROOP_CLASS_SIZE];
 };
 
+// TODO use a single function for this and the income logic in main.c
 static void income_calculate(const struct game *restrict game, struct resources *restrict result, unsigned char player)
 {
-	size_t index;
-	for(index = 0; index < game->regions_count; ++index)
+	for(size_t index = 0; index < game->regions_count; ++index)
 	{
-		const struct region *restrict region = game->regions + index;
+		const struct region *region = game->regions + index;
 		const struct troop *restrict troop;
 
-		// Calculate region expenses.
-		if (region->owner == region->garrison.owner)
+		for(troop = region->troops; troop; troop = troop->_next)
 		{
-			// Troops expenses are covered by current region.
-			for(troop = region->troops; troop; troop = troop->_next)
+			const struct region *restrict destination;
+
+			if (troop->owner != player)
+				continue;
+
+			destination = ((troop->move == LOCATION_GARRISON) ? troop->location : troop->move);
+
+			if ((troop->owner == destination->owner) && (destination->owner == destination->garrison.owner))
 			{
-				if (troop->move == LOCATION_GARRISON) continue;
-				if (troop->owner == player)
-					resource_subtract(result, &troop->unit->expense);
+				// Troops expenses are covered by the move region.
+				if (troop->move == LOCATION_GARRISON)
+					continue;
+				resource_add(result, &troop->unit->income);
 			}
-		}
-		else
-		{
-			// Troops expenses are covered by another region. Double expenses.
-			for(troop = region->troops; troop; troop = troop->_next)
+			else
 			{
+				// Troop expenses are covered by another region. Double expenses.
 				struct resources expense;
-				if (troop->move == LOCATION_GARRISON) continue;
-				if (troop->owner == player)
-				{
-					resource_multiply(&expense, &troop->unit->expense, 2);
-					resource_subtract(result, &expense);
-				}
+				resource_multiply(&expense, &troop->unit->income, 2);
+				resource_add(result, &expense);
 			}
 		}
 
@@ -154,12 +154,14 @@ static int computer_map_orders_list(struct array_orders *restrict orders, const 
 {
 	size_t i, j;
 
-	// TODO make sure the rating is between 0 and 1
+	struct resources income = {0};
+	income_calculate(game, &income, player);
 
 	*orders = (struct array_orders){0};
 
-	struct resources income = {0};
-	income_calculate(game, &income, player);
+	// TODO make sure the rating is between 0 and 1
+
+	// TODO see which resources are scarce; make it more likely to build buildings if the resource they produce is scarce
 
 	// TODO don't add to orders if the order is too bad (negative rating)
 
@@ -167,25 +169,31 @@ static int computer_map_orders_list(struct array_orders *restrict orders, const 
 	for(i = 0; i < game->regions_count; ++i)
 	{
 		struct region *restrict region = game->regions + i;
+		unsigned neighbors_dangerous;
 
-		if ((region->owner != player) || (region->garrison.owner != player)) continue;
+		if ((region->owner != player) || (region->garrison.owner != player))
+			continue;
 
-		unsigned neighbors_dangerous = regions_info[i].neighbors_unknown + regions_info[i].neighbors_enemy;
+		neighbors_dangerous = regions_info[i].neighbors_unknown + regions_info[i].neighbors_enemy;
 
 		// Don't check if there are enough resources as the first performed order will invalidate the check.
 		// The check will be done before and if the order is executed.
 
 		if (region->construct < 0) // no construction in progress
 		{
-			for(j = 0; j < buildings_count; ++j)
+			for(j = 0; j < BUILDINGS_COUNT; ++j)
 			{
 				double building_value;
 
-				if (region_built(region, j)) continue;
-				if (!region_building_available(region, buildings[j])) continue;
+				if (region_built(region, j) || !region_building_available(region, BUILDINGS[j]))
+					continue;
 
-				if (array_orders_expand(orders, orders->count + 1) < 0)
-					goto error;
+
+
+
+
+
+
 
 				// TODO check what resources are lacking, etc.
 				switch (j)
@@ -219,8 +227,13 @@ static int computer_map_orders_list(struct array_orders *restrict orders, const 
 					building_value = desire_buildings[j] / (regions_info[i].neighbors_enemy + 1); // TODO this should be more complicated
 					break;
 				}
-				LOG_DEBUG("%.*s | %f", (int)buildings[j].name_length, buildings[j].name, building_value);
+				LOG_DEBUG("%.*s | %f", (int)BUILDINGS[j].name_length, BUILDINGS[j].name, building_value);
 
+				if (building_value < 0)
+					continue;
+
+				if (array_orders_expand(orders, orders->count + 1) < 0)
+					goto error;
 				orders->data[orders->count].priority = building_value;
 				orders->data[orders->count].region = region;
 				orders->data[orders->count].type = ORDER_BUILD;
@@ -241,7 +254,7 @@ static int computer_map_orders_list(struct array_orders *restrict orders, const 
 				// Calculate the value of training the troop.
 				// TODO improve these coefficients and the whole logic
 				double troop_value = (unit_importance(UNITS + j, 0) * (UNITS[j].troops_count / 25.0)) / sqrt(unit_cost(UNITS + j)); // TODO this can be > 1
-				if (!resource_enough(&income, &UNITS[j].expense)) troop_value /= 2.0;
+				if (!resource_enough(&income, &UNITS[j].income)) troop_value /= 2.0;
 				if (!neighbors_dangerous) troop_value /= 2.0;
 				switch (unit_class(UNITS + j))
 				{
@@ -295,13 +308,13 @@ static void computer_map_orders_execute(struct heap_orders *restrict orders, con
 		switch (order->type)
 		{
 		case ORDER_BUILD:
-			if (!resource_enough(&game->players[player].treasury, &buildings[order->target.building].cost))
+			if (!resource_enough(&game->players[player].treasury, &BUILDINGS[order->target.building].cost))
 				break;
 			if (order->region->construct >= 0)
 				break;
-			resource_subtract(&game->players[player].treasury, &buildings[order->target.building].cost);
+			resource_subtract(&game->players[player].treasury, &BUILDINGS[order->target.building].cost);
 			order->region->construct = order->target.building;
-			LOG_DEBUG("BUILD %.*s in %.*s | %f", (int)buildings[order->target.building].name_length, buildings[order->target.building].name, (int)order->region->name_length, order->region->name, order->priority);
+			LOG_DEBUG("BUILD %.*s in %.*s | %f", (int)BUILDINGS[order->target.building].name_length, BUILDINGS[order->target.building].name, (int)order->region->name_length, order->region->name, order->priority);
 			break;
 
 		case ORDER_TRAIN:

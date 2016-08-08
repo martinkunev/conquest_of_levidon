@@ -121,8 +121,8 @@ static inline const struct garrison_info *garrison_info(const struct region *res
 extern const struct unit UNITS[];
 extern const size_t UNITS_COUNT;
 
-extern const struct building buildings[];
-extern const size_t buildings_count;
+extern const struct building BUILDINGS[];
+extern const size_t BUILDINGS_COUNT;
 
 void troop_attach(struct troop **troops, struct troop *troop);
 void troop_detach(struct troop **troops, struct troop *troop);

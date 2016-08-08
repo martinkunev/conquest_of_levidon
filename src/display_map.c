@@ -201,9 +201,11 @@ static void show_resource(const struct image *restrict image, int treasury, int 
 	}
 	if (expense)
 	{
-		end = format_sint(buffer, -expense);
+		end = format_sint(buffer, expense);
 		x += draw_string(buffer, end - buffer, x, y, &font12, Enemy);
 	}
+
+	// TODO draw the string just once
 }
 
 static void tooltip_cost(const char *restrict name, size_t name_length, const struct resources *restrict cost, unsigned time)
@@ -220,7 +222,7 @@ static void tooltip_cost(const char *restrict name, size_t name_length, const st
 		image_draw(&image_gold, TOOLTIP_X + offset, TOOLTIP_Y);
 		offset += 16;
 
-		length = format_uint(buffer, cost->gold, 10) - (uint8_t *)buffer;
+		length = format_uint(buffer, -cost->gold, 10) - (uint8_t *)buffer;
 		draw_string(buffer, length, TOOLTIP_X + offset, TOOLTIP_Y, &font12, White);
 		offset += 40;
 	}
@@ -229,7 +231,7 @@ static void tooltip_cost(const char *restrict name, size_t name_length, const st
 		image_draw(&image_food, TOOLTIP_X + offset, TOOLTIP_Y);
 		offset += 16;
 
-		length = format_uint(buffer, cost->food, 10) - (uint8_t *)buffer;
+		length = format_uint(buffer, -cost->food, 10) - (uint8_t *)buffer;
 		draw_string(buffer, length, TOOLTIP_X + offset, TOOLTIP_Y, &font12, White);
 		offset += 40;
 	}
@@ -238,7 +240,7 @@ static void tooltip_cost(const char *restrict name, size_t name_length, const st
 		image_draw(&image_wood, TOOLTIP_X + offset, TOOLTIP_Y);
 		offset += 16;
 
-		length = format_uint(buffer, cost->wood, 10) - (uint8_t *)buffer;
+		length = format_uint(buffer, -cost->wood, 10) - (uint8_t *)buffer;
 		draw_string(buffer, length, TOOLTIP_X + offset, TOOLTIP_Y, &font12, White);
 		offset += 40;
 	}
@@ -247,7 +249,7 @@ static void tooltip_cost(const char *restrict name, size_t name_length, const st
 		image_draw(&image_stone, TOOLTIP_X + offset, TOOLTIP_Y);
 		offset += 16;
 
-		length = format_uint(buffer, cost->stone, 10) - (uint8_t *)buffer;
+		length = format_uint(buffer, -cost->stone, 10) - (uint8_t *)buffer;
 		draw_string(buffer, length, TOOLTIP_X + offset, TOOLTIP_Y, &font12, White);
 		offset += 40;
 	}
@@ -256,7 +258,7 @@ static void tooltip_cost(const char *restrict name, size_t name_length, const st
 		image_draw(&image_iron, TOOLTIP_X + offset, TOOLTIP_Y);
 		offset += 16;
 
-		length = format_uint(buffer, cost->iron, 10) - (uint8_t *)buffer;
+		length = format_uint(buffer, -cost->iron, 10) - (uint8_t *)buffer;
 		draw_string(buffer, length, TOOLTIP_X + offset, TOOLTIP_Y, &font12, White);
 		offset += 40;
 	}
@@ -362,7 +364,7 @@ static void if_map_region(const struct region *region, const struct state_map *s
 		// * the building is not built
 		// * building requirements are satisfied
 		// * there is no siege
-		for(i = 0; i < buildings_count; ++i)
+		for(i = 0; i < BUILDINGS_COUNT; ++i)
 		{
 			struct point position = if_position(Building, i);
 			if (region_built(region, i))
@@ -370,7 +372,7 @@ static void if_map_region(const struct region *region, const struct state_map *s
 				draw_rectangle(position.x - 1, position.y - 1, image_buildings[i].width + 2, image_buildings[i].height + 2, display_colors[Black]);
 				image_draw(image_buildings + i, position.x, position.y);
 			}
-			else if ((state->player == region->owner) && region_building_available(region, buildings[i]) && !siege)
+			else if ((state->player == region->owner) && region_building_available(region, BUILDINGS[i]) && !siege)
 			{
 				draw_rectangle(position.x - 1, position.y - 1, image_buildings[i].width + 2, image_buildings[i].height + 2, display_colors[Black]);
 				image_draw(image_buildings_gray + i, position.x, position.y);
@@ -442,6 +444,7 @@ static void if_map_region(const struct region *region, const struct state_map *s
 			if ((x >= offset) && (x < offset + TROOPS_VISIBLE))
 			{
 				struct point position = if_position(object, x - offset);
+				fill_rectangle(position.x, position.y, object_group[object].width, object_group[object].height, display_colors[Black]);
 				display_troop(troop->unit->index, position.x, position.y, Player + troop->owner, color_text, troop->count);
 				if (image_action) image_draw(image_action, position.x, position.y); // draw action indicator for the troop
 				if (troop == state->troop) draw_rectangle(position.x - 1, position.y - 1, object_group[object].width + 2, object_group[object].height + 2, display_colors[White]);
@@ -473,6 +476,7 @@ static void if_map_region(const struct region *region, const struct state_map *s
 					else if (troop->location != LOCATION_GARRISON) continue;
 
 					struct point position = if_position(TroopGarrison, i);
+					fill_rectangle(position.x, position.y, object_group[TroopGarrison].width, object_group[TroopGarrison].height, display_colors[Black]);
 					display_troop(troop->unit->index, position.x, position.y, Player + troop->owner, Black, troop->count);
 					if (troop == state->troop) draw_rectangle(position.x - 1, position.y - 1, object_group[TroopGarrison].width + 2, object_group[TroopGarrison].height + 2, display_colors[White]);
 
@@ -513,7 +517,7 @@ static void if_map_region(const struct region *region, const struct state_map *s
 		if (region->construct >= 0)
 		{
 			struct point position = if_position(Building, region->construct);
-			show_progress(region->build_progress, buildings[region->construct].time, position.x, position.y, object_group[Building].width, object_group[Building].height);
+			show_progress(region->build_progress, BUILDINGS[region->construct].time, position.x, position.y, object_group[Building].width, object_group[Building].height);
 			image_draw(&image_construction, position.x, position.y);
 		}
 
@@ -524,12 +528,12 @@ static void if_map_region(const struct region *region, const struct state_map *s
 		for(index = 0; index < TRAIN_QUEUE; ++index)
 		{
 			struct point position = if_position(Dismiss, index);
+			fill_rectangle(position.x, position.y, object_group[Dismiss].width, object_group[Dismiss].height, display_colors[Black]);
 			if (region->train[index])
 			{
 				display_troop(region->train[index]->index, position.x, position.y, Player, 0, 0);
 				show_progress((index ? 0 : region->train_progress), region->train[0]->time, position.x, position.y, object_group[Dismiss].width, object_group[Dismiss].height);
 			}
-			else fill_rectangle(position.x, position.y, object_group[Dismiss].width, object_group[Dismiss].height, display_colors[Black]);
 		}
 
 		// Display units available for training.
@@ -538,6 +542,7 @@ static void if_map_region(const struct region *region, const struct state_map *s
 			if (!region_unit_available(region, UNITS[index])) continue;
 
 			struct point position = if_position(Train, index);
+			fill_rectangle(position.x, position.y, object_group[Train].width, object_group[Train].height, display_colors[Black]);
 			display_troop(index, position.x, position.y, Player, 0, 0);
 		}
 	}
@@ -554,13 +559,13 @@ static void if_map_region(const struct region *region, const struct state_map *s
 	case HOVER_BUILDING:
 		if (region_built(region, state->hover.building))
 		{
-			const struct building *building = buildings + state->hover.building;
+			const struct building *building = BUILDINGS + state->hover.building;
 			const struct resources none = {0};
 			tooltip_cost(building->name, building->name_length, &none, 0);
 		}
 		else
 		{
-			const struct building *building = buildings + state->hover.building;
+			const struct building *building = BUILDINGS + state->hover.building;
 			tooltip_cost(building->name, building->name_length, &building->cost, building->time);
 		}
 		break;
@@ -624,10 +629,10 @@ void if_map(const void *argument, const struct game *game)
 			if (region->owner != region->garrison.owner) // Troops expenses are covered by another region. Double expenses.
 			{
 				struct resources expense;
-				resource_multiply(&expense, &troop->unit->expense, 2);
+				resource_multiply(&expense, &troop->unit->income, 2);
 				resource_add(&expenses, &expense);
 			}
-			else resource_add(&expenses, &troop->unit->expense);
+			else resource_add(&expenses, &troop->unit->income);
 		}
 	}
 
