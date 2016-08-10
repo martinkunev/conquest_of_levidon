@@ -32,7 +32,7 @@
 
 #define MAGIC_NUMBER_SIZE 8
 
-int image_load_png(struct image *restrict image, const char *restrict filename, int grayscale)
+int image_load_png(struct image *restrict image, const char *restrict filename, void (*modify)(const struct image *restrict, png_byte **))
 {
 	int img;
 	struct stat info;
@@ -144,26 +144,8 @@ int image_load_png(struct image *restrict image, const char *restrict filename, 
 	png_destroy_read_struct(&png_ptr, &info_ptr, &end_ptr);
 	close(img);
 
-	// TODO implement this better
-	if (grayscale)
-	{
-		size_t x, y;
-		unsigned n;
-		for(y = 0; y < image->height; ++y)
-		{
-			for(x = 0; x < image->width; ++x)
-			{
-				unsigned p0 = rows[y][x * 4];
-				unsigned p1 = rows[y][x * 4 + 1];
-				unsigned p2 = rows[y][x * 4 + 2];
-
-				n = sqrt((p0 * p0 + p1 * p1 + p2 * p2) / 3);
-				rows[y][x * 4] = n;
-				rows[y][x * 4 + 1] = n;
-				rows[y][x * 4 + 2] = n;
-			}
-		}
-	}
+	if (modify)
+		modify(image, rows);
 
 	// Generate the OpenGL texture object.
 	glGenTextures(1, &image->texture);
@@ -177,10 +159,67 @@ int image_load_png(struct image *restrict image, const char *restrict filename, 
 	return 0;
 }
 
+void image_grayscale(const struct image *restrict image, png_byte **rows)
+{
+	for(size_t y = 0; y < image->height; ++y)
+	{
+		for(size_t x = 0; x < image->width; ++x)
+		{
+			unsigned p0 = rows[y][x * 4];
+			unsigned p1 = rows[y][x * 4 + 1];
+			unsigned p2 = rows[y][x * 4 + 2];
+
+			unsigned n = sqrt((p0 * p0 + p1 * p1 + p2 * p2) / 3);
+			rows[y][x * 4] = n;
+			rows[y][x * 4 + 1] = n;
+			rows[y][x * 4 + 2] = n;
+		}
+	}
+}
+
+void image_mask(const struct image *restrict image, png_byte **rows)
+{
+	for(size_t y = 0; y < image->height; ++y)
+	{
+		for(size_t x = 0; x < image->width; ++x)
+		{
+			if ((rows[y][x * 4] != 255) || (rows[y][x * 4 + 1] != 255) || (rows[y][x * 4 + 2] != 255))
+			{
+				rows[y][x * 4 + 3] = 0;
+			}
+		}
+	}
+}
+
 void image_draw(const struct image *restrict image, unsigned x, unsigned y)
 {
 	glColor4ub(255, 255, 255, 255); // TODO why is this necessary
 	glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+	glBindTexture(GL_TEXTURE_2D, image->texture);
+
+	glEnable(GL_TEXTURE_2D);
+	glBegin(GL_QUADS);
+
+	glTexCoord2d(1, 0);
+	glVertex2f(x + image->width, y + image->height);
+
+	glTexCoord2d(0, 0);
+	glVertex2f(x, y + image->height);
+
+	glTexCoord2d(0, 1);
+	glVertex2f(x, y);
+
+	glTexCoord2d(1, 1);
+	glVertex2f(x + image->width, y);
+
+	glEnd();
+	glDisable(GL_TEXTURE_2D);
+}
+
+void image_draw_mask(const struct image *restrict image, unsigned x, unsigned y, const unsigned char color[static 4])
+{
+	glColor4ub(color[0], color[1], color[2], color[3]);
+	glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	glBindTexture(GL_TEXTURE_2D, image->texture);
 
 	glEnable(GL_TEXTURE_2D);

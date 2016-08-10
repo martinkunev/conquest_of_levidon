@@ -44,9 +44,9 @@ struct image image_garrisons[2]; // TODO this must be big enough for all garriso
 struct image image_map_village, image_map_garrison[2]; // TODO this must be big enough for all garrison types
 struct image image_gold, image_food, image_wood, image_stone, image_iron, image_time;
 struct image image_scroll_left, image_scroll_right;
-struct image image_units[7]; // TODO the array must be enough to hold units_count units
-struct image image_buildings[13]; // TODO the array must be big enough to hold buildings_count elements
-struct image image_buildings_gray[13]; // TODO the array must be big enough to hold buildings_count elements
+struct image image_units[7], image_units_mask[7]; // TODO the array must be enough to hold units_count units
+struct image image_buildings[13]; // TODO the array must be big enough to hold BUILDINGS_COUNT elements
+struct image image_buildings_gray[13]; // TODO the array must be big enough to hold BUILDINGS_COUNT elements
 struct image image_palisade[16], image_palisade_gate[2], image_fortress[16], image_fortress_gate[2];
 
 void if_load_images(void)
@@ -85,13 +85,23 @@ void if_load_images(void)
 	image_load_png(&image_iron, PREFIX_IMG "iron.png", 0);
 	image_load_png(&image_time, PREFIX_IMG "time.png", 0);
 
-	image_load_png(&image_units[UnitPeasant], PREFIX_IMG "peasant.png", 0);
+	//image_load_png(&image_units[UnitPeasant], PREFIX_IMG "peasant.png", 0);
+	image_load_png(&image_units[UnitPeasant], PREFIX_IMG "peasant_.png", 0);
 	image_load_png(&image_units[UnitMilitia], PREFIX_IMG "militia.png", 0);
 	image_load_png(&image_units[UnitPikeman], PREFIX_IMG "pikeman.png", 0);
 	image_load_png(&image_units[UnitArcher], PREFIX_IMG "archer.png", 0);
 	image_load_png(&image_units[UnitLongbow], PREFIX_IMG "longbow.png", 0);
 	image_load_png(&image_units[UnitLightCavalry], PREFIX_IMG "light_cavalry.png", 0);
 	image_load_png(&image_units[UnitBatteringRam], PREFIX_IMG "battering_ram.png", 0);
+
+	//image_load_png(&image_units_mask[UnitPeasant], PREFIX_IMG "peasant.png", image_mask);
+	image_load_png(&image_units_mask[UnitPeasant], PREFIX_IMG "peasant_.png", image_mask);
+	image_load_png(&image_units_mask[UnitMilitia], PREFIX_IMG "militia.png", image_mask);
+	image_load_png(&image_units_mask[UnitPikeman], PREFIX_IMG "pikeman.png", image_mask);
+	image_load_png(&image_units_mask[UnitArcher], PREFIX_IMG "archer.png", image_mask);
+	image_load_png(&image_units_mask[UnitLongbow], PREFIX_IMG "longbow.png", image_mask);
+	image_load_png(&image_units_mask[UnitLightCavalry], PREFIX_IMG "light_cavalry.png", image_mask);
+	image_load_png(&image_units_mask[UnitBatteringRam], PREFIX_IMG "battering_ram.png", image_mask);
 
 	image_load_png(&image_buildings[0], PREFIX_IMG "farm.png", 0);
 	image_load_png(&image_buildings[1], PREFIX_IMG "irrigation.png", 0);
@@ -107,19 +117,19 @@ void if_load_images(void)
 	image_load_png(&image_buildings[11], PREFIX_IMG "workshop.png", 0);
 	image_load_png(&image_buildings[12], PREFIX_IMG "forge.png", 0);
 
-	image_load_png(&image_buildings_gray[0], PREFIX_IMG "farm.png", 1);
-	image_load_png(&image_buildings_gray[1], PREFIX_IMG "irrigation.png", 1);
-	image_load_png(&image_buildings_gray[2], PREFIX_IMG "sawmill.png", 1);
-	image_load_png(&image_buildings_gray[3], PREFIX_IMG "mine.png", 1);
-	image_load_png(&image_buildings_gray[4], PREFIX_IMG "bloomery.png", 1);
-	image_load_png(&image_buildings_gray[5], PREFIX_IMG "barracks.png", 1);
-	image_load_png(&image_buildings_gray[6], PREFIX_IMG "archery_range.png", 1);
-	image_load_png(&image_buildings_gray[7], PREFIX_IMG "stables.png", 1);
-	image_load_png(&image_buildings_gray[8], PREFIX_IMG "watch_tower.png", 1);
-	image_load_png(&image_buildings_gray[9], PREFIX_IMG "palisade.png", 1);
-	image_load_png(&image_buildings_gray[10], PREFIX_IMG "fortress.png", 1);
-	image_load_png(&image_buildings_gray[11], PREFIX_IMG "workshop.png", 1);
-	image_load_png(&image_buildings_gray[12], PREFIX_IMG "forge.png", 1);
+	image_load_png(&image_buildings_gray[0], PREFIX_IMG "farm.png", image_grayscale);
+	image_load_png(&image_buildings_gray[1], PREFIX_IMG "irrigation.png", image_grayscale);
+	image_load_png(&image_buildings_gray[2], PREFIX_IMG "sawmill.png", image_grayscale);
+	image_load_png(&image_buildings_gray[3], PREFIX_IMG "mine.png", image_grayscale);
+	image_load_png(&image_buildings_gray[4], PREFIX_IMG "bloomery.png", image_grayscale);
+	image_load_png(&image_buildings_gray[5], PREFIX_IMG "barracks.png", image_grayscale);
+	image_load_png(&image_buildings_gray[6], PREFIX_IMG "archery_range.png", image_grayscale);
+	image_load_png(&image_buildings_gray[7], PREFIX_IMG "stables.png", image_grayscale);
+	image_load_png(&image_buildings_gray[8], PREFIX_IMG "watch_tower.png", image_grayscale);
+	image_load_png(&image_buildings_gray[9], PREFIX_IMG "palisade.png", image_grayscale);
+	image_load_png(&image_buildings_gray[10], PREFIX_IMG "fortress.png", image_grayscale);
+	image_load_png(&image_buildings_gray[11], PREFIX_IMG "workshop.png", image_grayscale);
+	image_load_png(&image_buildings_gray[12], PREFIX_IMG "forge.png", image_grayscale);
 
 	image_load_png(&image_terrain[0], PREFIX_IMG "terrain_grass.png", 0);
 
@@ -149,8 +159,8 @@ void if_load_images(void)
 
 void display_troop(size_t unit, unsigned x, unsigned y, enum color player, enum color text, unsigned count)
 {
-	fill_rectangle(x, y, FIELD_SIZE, FIELD_SIZE, display_colors[player]);
 	image_draw(&image_units[unit], x, y);
+	image_draw_mask(&image_units_mask[unit], x, y, display_colors[player]);
 
 	if (count)
 	{

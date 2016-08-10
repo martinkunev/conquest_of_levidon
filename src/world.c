@@ -58,7 +58,7 @@ const struct unit UNITS[] =
 	[UnitArcher] = {
 		.index = UnitArcher, NAME("Archer"), .speed = 4, .health = 4, .armor = ARMOR_NONE,
 		.cost = {.gold = -1, .wood = -1}, .income = {.food = -1}, .time = 1, .troops_count = 25, .requires = (1 << BuildingArcheryRange),
-		.melee = {.weapon = WEAPON_CLUB, .damage = 0.75, .agility = 1.0},
+		.melee = {.weapon = WEAPON_CLUB, .damage = 0.75, .agility = 0.75},
 		.ranged = {.weapon = WEAPON_ARROW, .damage = 1.0, .range = 5},
 	},
 	[UnitLongbow] = {

@@ -932,9 +932,9 @@ int main(int argc, char *argv[])
 
 	image_load_png(&image_world, argv[1], 0);
 	image_load_png(&image_garrison, PREFIX_IMG "map_fortress.png", 0);
-	image_load_png(&image_garrison_gray, PREFIX_IMG "map_fortress.png", 1);
+	image_load_png(&image_garrison_gray, PREFIX_IMG "map_fortress.png", image_grayscale);
 	image_load_png(&image_village, PREFIX_IMG "map_village.png", 0);
-	image_load_png(&image_village_gray, PREFIX_IMG "map_village.png", 1);
+	image_load_png(&image_village_gray, PREFIX_IMG "map_village.png", image_grayscale);
 
 	if_storage_init(image_world.width, image_world.height);
 

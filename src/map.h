@@ -87,7 +87,7 @@ struct region
 	unsigned char build_progress;
 };
 
-enum {PALISADE, FORTRESS};
+enum {PALISADE, FORTRESS, /* dummy */ GARRISONS_COUNT};
 struct garrison_info
 {
 	size_t index;
