@@ -38,9 +38,9 @@ const double desire_buildings[] =
 	[BuildingBarracks] = 0.8,
 	[BuildingArcheryRange] = 0.75,
 	[BuildingStables] = 0.4,
-	[BuildingWatchTower] = 0.5,
-	[BuildingPalisade] = 0.6,
-	[BuildingFortress] = 0.4,
+	[BuildingWatchTower] = 0.1,
+	[BuildingPalisade] = 0.3,
+	[BuildingFortress] = 0.2,
 	[BuildingWorkshop] = 0.3,
 	[BuildingForge] = 0.5,
 };
@@ -71,9 +71,15 @@ double unit_importance(const struct unit *restrict unit, const struct garrison_i
 	return importance;
 }
 
-double unit_cost(const struct unit *restrict unit)
+/*double unit_cost(const struct unit *restrict unit)
 {
 	return -125.0 * (unit->cost.food * 2.0 + unit->cost.wood * 2.0 + unit->cost.stone * 2.0 + unit->cost.gold * 2.5 + unit->cost.iron * 4.0);
+}*/
+
+double unit_usefulness(const struct unit *restrict unit)
+{
+	double cost = unit->cost.food * 2.0 + unit->cost.wood * 2.0 + unit->cost.stone * 2.0 + unit->cost.gold * 2.5 + unit->cost.iron * 4.0;
+	return (unit_importance(unit, 0) * unit->troops_count / sqrt(cost));
 }
 
 int state_wanted(double rate, double rate_new, double temperature)
