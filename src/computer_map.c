@@ -323,15 +323,11 @@ static double troop_value(const struct region_info *restrict region_info, const 
 	return value;
 }
 
-static int computer_map_orders_list(struct array_orders *restrict orders, const struct game *restrict game, unsigned char player, unsigned char regions_visible[static REGIONS_LIMIT], const struct region_info *restrict regions_info)
+static int computer_map_orders_list(struct array_orders *restrict orders, const struct game *restrict game, unsigned char player, unsigned char regions_visible[static REGIONS_LIMIT], const struct region_info *restrict regions_info, const struct resources *restrict income)
 {
 	size_t i, j;
 
-	bool income_shortage;
-	struct resources income = {0};
-
-	income_calculate(game, &income, player);
-	income_shortage = ((income.gold < 0) || (income.food < 0) || (income.wood < 0) || (income.iron < 0) || (income.stone < 0));
+	bool income_shortage = ((income->gold < 0) || (income->food < 0) || (income->wood < 0) || (income->iron < 0) || (income->stone < 0));
 
 	// Make a list of the orders available for the player.
 	*orders = (struct array_orders){0};
@@ -372,7 +368,7 @@ static int computer_map_orders_list(struct array_orders *restrict orders, const 
 				if (region_built(region, j) || !region_building_available(region, BUILDINGS[j]))
 					continue;
 
-				priority = building_value(regions_info + i, &troops_info, &income, income_shortage, j);
+				priority = building_value(regions_info + i, &troops_info, income, income_shortage, j);
 				LOG_DEBUG("%.*s | %f", (int)BUILDINGS[j].name_length, BUILDINGS[j].name, priority);
 				if (priority < 0) // TODO is this necessary?
 					continue;
@@ -397,7 +393,7 @@ static int computer_map_orders_list(struct array_orders *restrict orders, const 
 
 				if (!region_unit_available(region, UNITS[j])) continue;
 
-				priority = troop_value(regions_info + i, &troops_info, &income, income_shortage, j);
+				priority = troop_value(regions_info + i, &troops_info, income, income_shortage, j);
 				LOG_DEBUG("%.*s | %f", (int)UNITS[j].name_length, UNITS[j].name, priority);
 				if (priority < 0) // TODO is this necessary?
 					continue;
@@ -420,7 +416,7 @@ error:
 	return ERROR_MEMORY;
 }
 
-static void computer_map_orders_execute(struct heap_orders *restrict orders, const struct game *restrict game, unsigned char player)
+static void computer_map_orders_execute(struct heap_orders *restrict orders, const struct game *restrict game, unsigned char player, const struct resources *restrict income)
 {
 	// Perform map orders until all actions are complete or until the priority becomes too low.
 	// Skip orders for which there are not enough resources.
@@ -433,27 +429,30 @@ static void computer_map_orders_execute(struct heap_orders *restrict orders, con
 		if (order->priority < MAP_COMMAND_PRIORITY_THRESHOLD)
 			break;
 
-		// TODO skip if the condition below is true
-		//if (!resource_enough(..., ...))
-
 		switch (order->type)
 		{
 		case ORDER_BUILD:
-			if (!resource_enough(&game->players[player].treasury, &BUILDINGS[order->target.building].cost))
-				break;
 			if (order->region->construct >= 0)
 				break;
-			resource_subtract(&game->players[player].treasury, &BUILDINGS[order->target.building].cost);
+			if (!resource_enough(&game->players[player].treasury, &BUILDINGS[order->target.building].cost))
+				break;
+			if (!resource_enough(income, &BUILDINGS[order->target.building].income))
+				break;
+
+			resource_add(&game->players[player].treasury, &BUILDINGS[order->target.building].cost);
 			order->region->construct = order->target.building;
 			LOG_DEBUG("BUILD %.*s in %.*s | %f", (int)BUILDINGS[order->target.building].name_length, BUILDINGS[order->target.building].name, (int)order->region->name_length, order->region->name, order->priority);
 			break;
 
 		case ORDER_TRAIN:
-			if (!resource_enough(&game->players[player].treasury, &UNITS[order->target.unit].cost))
-				break;
 			if (order->region->train[0])
 				break;
-			resource_subtract(&game->players[player].treasury, &UNITS[order->target.unit].cost);
+			if (!resource_enough(&game->players[player].treasury, &UNITS[order->target.unit].cost))
+				break;
+			if (!resource_enough(income, &UNITS[order->target.unit].income))
+				break;
+
+			resource_add(&game->players[player].treasury, &UNITS[order->target.unit].cost);
 			order->region->train[0] = UNITS + order->target.unit;
 			LOG_DEBUG("TRAIN %.*s in %.*s | %f", (int)UNITS[order->target.unit].name_length, UNITS[order->target.unit].name, (int)order->region->name_length, order->region->name, order->priority);
 			break;
@@ -464,8 +463,6 @@ static void computer_map_orders_execute(struct heap_orders *restrict orders, con
 static unsigned map_state_neighbors(struct region *restrict region, const struct troop *restrict troop, struct region *restrict neighbors[static 1 + NEIGHBORS_LIMIT])
 {
 	unsigned neighbors_count = 0;
-
-	size_t i;
 
 	const struct garrison_info *restrict garrison = garrison_info(region);
 	if (garrison && (troop->owner == region->garrison.owner) && (troop->move != LOCATION_GARRISON))
@@ -487,7 +484,7 @@ static unsigned map_state_neighbors(struct region *restrict region, const struct
 
 	// A troop can go to a neighboring region only if the owner of the troop also owns the current region.
 	if (troop->owner == region->owner)
-		for(i = 0; i < NEIGHBORS_LIMIT; ++i)
+		for(size_t i = 0; i < NEIGHBORS_LIMIT; ++i)
 			if (region->neighbors[i] && (troop->move != region->neighbors[i]))
 				neighbors[neighbors_count++] = region;
 
@@ -514,6 +511,7 @@ static double map_state_rating(const struct game *restrict game, unsigned char p
 
 	// TODO better handling for allies
 
+	// TODO use expenses as a parameter for determining rating
 	// TODO increase rating for troops in the garrison (due to reduced expenses)
 
 	// Sum the ratings for each region.
@@ -782,12 +780,15 @@ static struct region_info *regions_info_collect(const struct game *restrict game
 
 int computer_map(const struct game *restrict game, unsigned char player)
 {
+	struct resources income = {0};
 	unsigned char regions_visible[REGIONS_LIMIT];
 	struct region_info *restrict regions_info;
 	struct array_orders orders;
 	int status;
 
 	// TODO support cancelling buildings and trainings
+
+	income_calculate(game, &income, player);
 
 	// Determine which regions are visible to the player.
 	map_visible(game, player, regions_visible);
@@ -796,7 +797,7 @@ int computer_map(const struct game *restrict game, unsigned char player)
 	regions_info = regions_info_collect(game, player, regions_visible);
 	if (!regions_info) return ERROR_MEMORY;
 
-	status = computer_map_orders_list(&orders, game, player, regions_visible, regions_info);
+	status = computer_map_orders_list(&orders, game, player, regions_visible, regions_info, &income);
 	if (status < 0) goto finally;
 	if (!orders.count) goto finally; // nothing to do
 
@@ -815,7 +816,7 @@ int computer_map(const struct game *restrict game, unsigned char player)
 	heap_orders_heapify(&orders_queue);
 
 	// Choose greedily which orders to execute.
-	computer_map_orders_execute(&orders_queue, game, player);
+	computer_map_orders_execute(&orders_queue, game, player, &income);
 
 	free(orders_queue.data);
 	array_orders_term(&orders);
