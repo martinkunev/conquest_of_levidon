@@ -99,14 +99,14 @@ static int pawn_command(const struct game *restrict game, struct battle *restric
 	{
 		if (allies(game, pawn->troop->owner, target_pawn->troop->owner))
 			return movement_queue(pawn, target, graph, obstacles);
-		else if (!pawn->path.count && combat_order_shoot(game, battle, obstacles, pawn, target_pawn->position))
+		else if (!pawn->path.count && combat_shoot(game, battle, obstacles, pawn, target_pawn->position))
 			return 0;
-		else if (combat_order_fight(game, battle, obstacles, pawn, target_pawn))
+		else if (combat_fight(game, battle, obstacles, pawn, target_pawn))
 			return 0;
 		else
 			return ERROR_MISSING; // none of the commands can be executed
 	}
-	else if (combat_order_assault(game, pawn, target_field))
+	else if (combat_assault(game, pawn, target_field))
 	{
 		return 0;
 	}
@@ -155,7 +155,7 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 		// if SHIFT is pressed, don't overwrite the current command
 		if (modifiers & XCB_MOD_MASK_CONTROL)
 		{
-			if (combat_order_shoot(game, battle, state->obstacles, pawn, position))
+			if (combat_shoot(game, battle, state->obstacles, pawn, position))
 				return 0;
 			return INPUT_IGNORE;
 		}

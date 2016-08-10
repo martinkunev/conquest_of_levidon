@@ -342,7 +342,7 @@ int battlefield_clean(const struct game *restrict game, struct battle *restrict 
 	return activity;
 }
 
-int combat_order_fight(const struct game *restrict game, const struct battle *restrict battle, const struct obstacles *restrict obstacles, struct pawn *restrict fighter, struct pawn *restrict victim)
+int combat_fight(const struct game *restrict game, const struct battle *restrict battle, const struct obstacles *restrict obstacles, struct pawn *restrict fighter, struct pawn *restrict victim)
 {
 	// TODO verify that the target is reachable
 	// TODO what if one of the pawns is on a tower
@@ -356,7 +356,7 @@ int combat_order_fight(const struct game *restrict game, const struct battle *re
 	return 1;
 }
 
-int combat_order_assault(const struct game *restrict game, struct pawn *restrict fighter, struct battlefield *restrict target)
+int combat_assault(const struct game *restrict game, struct pawn *restrict fighter, struct battlefield *restrict target)
 {
 	// TODO verify that the target is reachable
 	// TODO what if the fighter attacks a tower with pawn on it
@@ -370,7 +370,7 @@ int combat_order_assault(const struct game *restrict game, struct pawn *restrict
 	return 1;
 }
 
-int combat_order_shoot(const struct game *restrict game, const struct battle *restrict battle, const struct obstacles *restrict obstacles, struct pawn *restrict shooter, struct position target)
+int combat_shoot(const struct game *restrict game, const struct battle *restrict battle, const struct obstacles *restrict obstacles, struct pawn *restrict shooter, struct position target)
 {
 	unsigned range;
 

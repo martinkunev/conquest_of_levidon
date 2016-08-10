@@ -35,8 +35,8 @@ void combat_melee(const struct game *restrict game, struct battle *restrict batt
 void combat_ranged(struct battle *battle, const struct obstacles *restrict obstacles);
 int battlefield_clean(const struct game *restrict game, struct battle *restrict battle);
 
-int combat_order_fight(const struct game *restrict game, const struct battle *restrict battle, const struct obstacles *restrict obstacles, struct pawn *restrict fighter, struct pawn *restrict victim);
-int combat_order_assault(const struct game *restrict game, struct pawn *restrict fighter, struct battlefield *restrict target);
-int combat_order_shoot(const struct game *restrict game, const struct battle *restrict battle, const struct obstacles *restrict obstacles, struct pawn *restrict shooter, struct position target);
+int combat_fight(const struct game *restrict game, const struct battle *restrict battle, const struct obstacles *restrict obstacles, struct pawn *restrict fighter, struct pawn *restrict victim);
+int combat_assault(const struct game *restrict game, struct pawn *restrict fighter, struct battlefield *restrict target);
+int combat_shoot(const struct game *restrict game, const struct battle *restrict battle, const struct obstacles *restrict obstacles, struct pawn *restrict shooter, struct position target);
 
 extern const double damage_boost[7][6];

@@ -112,13 +112,13 @@ static void battle_state_set(struct pawn *restrict pawn, struct tile neighbor, c
 		// TODO what if there is more than one pawn at the field
 		// TODO shooters are biased - they prefer shooting over fighting; they should choose the better option instead
 
-		if (combat_order_shoot(game, battle, obstacles, pawn, field->pawns[0]->position))
+		if (combat_shoot(game, battle, obstacles, pawn, field->pawns[0]->position))
 			return;
-		else if (combat_order_shoot(game, battle, obstacles, pawn, destination))
+		else if (combat_shoot(game, battle, obstacles, pawn, destination))
 			return;
 		else if (battlefield_distance(pawn->position, field->pawns[0]->position) <= pawn->troop->unit->speed + DISTANCE_MELEE)
 		{
-			if (combat_order_fight(game, battle, obstacles, pawn, *field->pawns))
+			if (combat_fight(game, battle, obstacles, pawn, *field->pawns))
 				return;
 		}
 	}
@@ -126,7 +126,7 @@ static void battle_state_set(struct pawn *restrict pawn, struct tile neighbor, c
 	{
 		if (battlefield_distance(pawn->position, destination) <= pawn->troop->unit->speed + DISTANCE_MELEE)
 		{
-			if (combat_order_assault(game, pawn, field))
+			if (combat_assault(game, pawn, field))
 				return;
 		}
 	}
