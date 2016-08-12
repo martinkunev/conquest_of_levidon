@@ -1,0 +1,49 @@
+map AI
+	collect information for each region
+		how important is it
+		how much danger there is of it being attacked
+
+	resources buildings should be built in regions with low danger // and big population
+	garrison should be built in regions with high danger and high importance
+	watch tower should be built where that will reveal new information
+	army buildings should be built in reagions with low danger
+		distribute buildings between regions; paths: Archery range, Stables, Blacksmith, Workshop
+
+	the most necessary troops should be built close to where they will be needed
+
+	troop production is distributed between regions; unless there is a very high need of troops, it's not necessary to have 2 regions, in the same area, producing the same troops
+
+
+	building types
+		BuildingWatchTower
+		BuildingFarm, BuildingIrrigation, BuildingSawmill, BuildingMine, BuildingBloomery
+		BuildingPalisade, BuildingFortress
+		BuildingBarracks, BuildingArcheryRange, BuildingForge, BuildingStables, BuildingWorkshop
+
+	unit features
+		ranged attack
+		assault
+		fast
+
+	troop movement
+		each region states what troops it needs
+		troop-training regions train the required troops
+
+
+
+
+
+
+	attacking
+		if the attacker wins, rating is increased, based on troops lost and region usefulness
+		if the attacker loses, rating is descreased, based on troops lost
+	defending
+		rating is increased if the regions in danger are well defended; once the defense is satisfactory, the rating doesn't increase a lot if more troops are added
+
+	each region determines what troops it needs
+	troop orders are evaluated based on how easy that order can satisfy a region's need
+
+----
+
+regions and garrisons are constant on each turn; rating_max for each region and for each region garrison is 1
+rating is also given for each surviving troop

@@ -492,13 +492,7 @@ static int input_garrison(int code, unsigned x, unsigned y, uint16_t modifiers, 
 
 		if (state->player == region->garrison.owner)
 		{
-			// Count the troops in the garrison.
-			unsigned count = 0;
-			for(troop = region->troops; troop; troop = troop->_next)
-				if ((troop->move == LOCATION_GARRISON) && (troop->owner == state->player))
-					count += 1;
-
-			if (count < garrison->troops) // if there is place for one more troop
+			if (!region_garrison_full(region, garrison))
 			{
 				// Move the selected troop to the garrison.
 				state->troop->move = LOCATION_GARRISON;

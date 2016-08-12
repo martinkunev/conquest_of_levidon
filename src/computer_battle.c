@@ -197,6 +197,8 @@ static double battle_state_rating(const struct game *restrict game, struct battl
 
 	double rating = 0.0, rating_max = 0.0;
 
+	// TODO verify that rating_max does not depend on the current state
+
 	positions = malloc(battle->pawns_count * sizeof(*positions));
 	if (!positions) return NAN;
 
@@ -475,7 +477,6 @@ static void command_restore(struct pawn *restrict pawn, struct pawn_command *res
 // Determine the behavior of the computer using simulated annealing.
 int computer_battle(const struct game *restrict game, struct battle *restrict battle, unsigned char player, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles)
 {
-	unsigned step;
 	double rating, rating_new;
 	double temperature = 1.0;
 
@@ -510,7 +511,7 @@ int computer_battle(const struct game *restrict game, struct battle *restrict ba
 
 	// Choose suitable commands for the pawns of the player.
 	rating = battle_state_rating(game, battle, player, graph, obstacles);
-	for(step = 0; step < ANNEALING_STEPS; ++step)
+	for(unsigned step = 0; step < ANNEALING_STEPS; ++step)
 	{
 		for(unsigned try = 0; try < ANNEALING_TRIES; ++try)
 		{

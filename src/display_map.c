@@ -280,7 +280,7 @@ static void if_map_troops(unsigned x, unsigned y, unsigned count_self, unsigned 
 
 	// assert(TROOPS_BAR_HEIGHT == image_map_village.height);
 
-	if (count_self = (count_self + 5) / 10)
+	if (count_self = count_round(count_self))
 	{
 		if (count_self > TROOPS_BAR_HEIGHT)
 		{
@@ -293,7 +293,7 @@ static void if_map_troops(unsigned x, unsigned y, unsigned count_self, unsigned 
 		x += TROOPS_BAR_WIDTH + 1;
 	}
 
-	if (count_ally = (count_ally + 5) / 10)
+	if (count_ally = count_round(count_ally))
 	{
 		if (count_ally > TROOPS_BAR_HEIGHT)
 		{
@@ -306,7 +306,7 @@ static void if_map_troops(unsigned x, unsigned y, unsigned count_self, unsigned 
 		x += TROOPS_BAR_WIDTH + 1;
 	}
 
-	if (count_enemy = (count_enemy + 5) / 10)
+	if (count_enemy = count_round(count_enemy))
 	{
 		if (count_enemy > TROOPS_BAR_HEIGHT)
 		{

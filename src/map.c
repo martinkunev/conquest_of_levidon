@@ -281,3 +281,12 @@ void map_visible(const struct game *restrict game, unsigned char player, unsigne
 		else if (allies(game, player, region->garrison.owner)) visible[i] = 1;
 	}
 }
+
+int region_garrison_full(const struct region *restrict region, const struct garrison_info *restrict garrison)
+{
+	unsigned count = 0;
+	for(const struct troop *troop = region->troops; troop; troop = troop->_next)
+		if ((troop->move == LOCATION_GARRISON) && (troop->owner == region->garrison.owner))
+			count += 1;
+	return (count == garrison->troops);
+}

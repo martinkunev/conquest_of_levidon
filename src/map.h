@@ -28,6 +28,9 @@
 
 #define region_built(region, building) ((int)((region)->built & (1 << (building))))
 
+#define COUNT_ROUND_PRECISION 10
+#define count_round(count) (((count) + (COUNT_ROUND_PRECISION / 2)) / COUNT_ROUND_PRECISION)
+
 enum {UnitPeasant, UnitMilitia, UnitPikeman, UnitArcher, UnitLongbow, UnitLightCavalry, UnitBatteringRam};
 
 enum {BuildingFarm, BuildingIrrigation, BuildingSawmill, BuildingMine, BuildingBloomery, BuildingBarracks, BuildingArcheryRange, BuildingStables, BuildingWatchTower, BuildingPalisade, BuildingFortress, BuildingWorkshop, BuildingForge};
@@ -141,3 +144,5 @@ void region_orders_cancel(struct region *restrict region);
 int polygons_border(const struct polygon *restrict a, const struct polygon *restrict b, struct point *restrict first, struct point *restrict second);
 
 void map_visible(const struct game *restrict game, unsigned char player, unsigned char visible[REGIONS_LIMIT]);
+
+int region_garrison_full(const struct region *restrict region, const struct garrison_info *restrict garrison);

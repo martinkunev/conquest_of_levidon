@@ -24,6 +24,7 @@ enum {ANNEALING_STEPS = 64, ANNEALING_TRIES = 8};
 extern const double desire_buildings[];
 
 double unit_importance(const struct unit *restrict unit, const struct garrison_info *restrict garrison);
-double unit_usefulness(const struct unit *restrict unit);
+double unit_cost_significance(const struct resources *restrict cost);
+double unit_usefulness(const struct unit *restrict unit, unsigned troops_count);
 
 int state_wanted(double rate, double rate_new, double temperature);

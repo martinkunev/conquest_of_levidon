@@ -71,28 +71,25 @@ double unit_importance(const struct unit *restrict unit, const struct garrison_i
 	return importance;
 }
 
-/*double unit_cost(const struct unit *restrict unit)
+double unit_cost_significance(const struct resources *restrict cost)
 {
-	return -125.0 * (unit->cost.food * 2.0 + unit->cost.wood * 2.0 + unit->cost.stone * 2.0 + unit->cost.gold * 2.5 + unit->cost.iron * 4.0);
-}*/
+	// TODO more sophisticated logic here
+	double value = - (1.0 + cost->food * 2.0 + cost->wood * 2.0 + cost->stone * 2.0 + cost->gold * 2.5 + cost->iron * 4.0);
+	return sqrt(value);
+}
 
-double unit_usefulness(const struct unit *restrict unit)
+double unit_usefulness(const struct unit *restrict unit, unsigned troops_count)
 {
-	double cost = unit->cost.food * 2.0 + unit->cost.wood * 2.0 + unit->cost.stone * 2.0 + unit->cost.gold * 2.5 + unit->cost.iron * 4.0;
-	return (unit_importance(unit, 0) * unit->troops_count / sqrt(cost));
+	return (unit_importance(unit, 0) * troops_count / unit_cost_significance(&unit->cost));
 }
 
 int state_wanted(double rate, double rate_new, double temperature)
 {
 	// temperature is in [0, 1]
+	// When the temperature is 0, only states with higher rate can be accepted.
 
 	double probability_preserve = exp(rate_new - rate - temperature);
 	return probability_preserve < ((double)random() / RAND_MAX);
-
-	// e ^ ((rate_new - rate) / temperature)
-
-	//double probability = exp((rate_new - rate) / temperature);
-	//return probability > ((double)random() / RAND_MAX);
 }
 
 #if defined(UNIT_IMPORTANCE)
@@ -100,11 +97,11 @@ int state_wanted(double rate, double rate_new, double temperature)
 
 int main(void)
 {
-	printf("%16s %12s %8s %20s\n", "name", "importance", "count", "total importance");
+	printf("%16s %8s %12s %20s %20s\n", "name", "count", "importance", "total importance", "usefulness");
 	for(size_t i = 0; i < UNITS_COUNT; ++i)
 	{
 		double importance = unit_importance(UNITS + i, 0);
-		printf("%16.*s %12f %8u %20f\n", (int)UNITS[i].name_length, UNITS[i].name, importance, (unsigned)UNITS[i].troops_count, importance * UNITS[i].troops_count);
+		printf("%16.*s %8u %12f %20f %20f\n", (int)UNITS[i].name_length, UNITS[i].name, (unsigned)UNITS[i].troops_count, importance, importance * UNITS[i].troops_count, unit_usefulness(UNITS + i, UNITS[i].troops_count));
 	}
 	return 0;
 }

@@ -82,8 +82,8 @@ const size_t UNITS_COUNT = sizeof(UNITS) / sizeof(*UNITS);
 
 const struct building BUILDINGS[] =
 {
-	[BuildingFarm] = {NAME("Farm"), .cost = {.gold = -3}, .income = {.food = 2}, .time = 2},
-	[BuildingIrrigation] = {NAME("Irrigation"), .cost = {.gold = -5}, .income = {.food = 2}, .time = 4, .requires = (1 << BuildingFarm)},
+	[BuildingFarm] = {NAME("Farm"), .cost = {.gold = -3}, .income = {.food = 3}, .time = 2},
+	[BuildingIrrigation] = {NAME("Irrigation"), .cost = {.gold = -5}, .income = {.food = 3}, .time = 4, .requires = (1 << BuildingFarm)},
 	[BuildingSawmill] = {NAME("Sawmill"), .cost = {.gold = -4}, .income = {.wood = 3}, .time = 3},
 	[BuildingMine] = {NAME("Mine"), .cost = {.gold = -4, .wood = -4}, .income = {.stone = 3}, .time = 4},
 	[BuildingBloomery] = {NAME("Bloomery"), .cost = {.gold = -8, .stone = -10}, .income = {.iron = 1, .stone = -1}, .time = 5, .requires = (1 << BuildingMine)},
