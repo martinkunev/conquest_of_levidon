@@ -178,8 +178,8 @@ static double building_value(const struct region_info *restrict region_info, con
 	switch (index)
 	{
 	case BuildingWatchTower:
-		value = (region_info->neighbors_unknown ? (region_info->neighbors_unknown / region_info->neighbors) : desire_buildings[index]);
-		value *= region_info->importance;
+		value = (region_info->neighbors_unknown ? ((double)region_info->neighbors_unknown / region_info->neighbors) : desire_buildings[index]);
+		value *= region_info->importance / 1000.0;
 		break;
 
 	case BuildingFarm:
@@ -225,7 +225,8 @@ static double building_value(const struct region_info *restrict region_info, con
 
 			assert(index < sizeof(units) / sizeof(*units));
 			class = unit_class(units[index]);
-			value = unit_usefulness(units[index], units[index]->troops_count);
+			//value = unit_importance(units[index], 0) * units[index]->troops_count / expense_significance(&units[index]->cost);
+			value = desire_buildings[index];
 
 			if (class & UNIT_RANGED)
 			{
@@ -264,7 +265,7 @@ static double troop_value(const struct region_info *restrict region_info, const 
 	unsigned neighbors_dangerous = region_info->neighbors_unknown + region_info->neighbors_enemy;
 
 	class = unit_class(UNITS + index);
-	value = unit_usefulness(UNITS + index, UNITS[index].troops_count);
+	value = unit_importance(UNITS + index, 0) * UNITS[index].troops_count / expense_significance(&UNITS[index].cost);
 
 	if (class & UNIT_RANGED)
 	{
@@ -311,6 +312,8 @@ static int computer_map_orders_list(struct array_orders *restrict orders, const 
 
 	// TODO make sure the rating is between 0 and 1 // TODO why?
 
+	printf(">>> start <<<\n");
+
 	for(i = 0; i < game->regions_count; ++i)
 	{
 		struct region *restrict region = game->regions + i;
@@ -334,7 +337,7 @@ static int computer_map_orders_list(struct array_orders *restrict orders, const 
 					continue;
 
 				priority = building_value(regions_info + i, income, income_shortage, j);
-				LOG_DEBUG("%.*s | %f", (int)BUILDINGS[j].name_length, BUILDINGS[j].name, priority);
+				LOG_DEBUG("%.*s | %.*s | %f", (int)region->name_length, region->name, (int)BUILDINGS[j].name_length, BUILDINGS[j].name, priority);
 				if (priority < 0) // TODO is this necessary?
 					continue;
 
@@ -359,7 +362,7 @@ static int computer_map_orders_list(struct array_orders *restrict orders, const 
 				if (!region_unit_available(region, UNITS[j])) continue;
 
 				priority = troop_value(regions_info + i, income, income_shortage, j);
-				LOG_DEBUG("%.*s | %f", (int)UNITS[j].name_length, UNITS[j].name, priority);
+				//LOG_DEBUG("%.*s | %.*s | %f", (int)region->name_length, region->name, (int)UNITS[j].name_length, UNITS[j].name, priority);
 				if (priority < 0) // TODO is this necessary?
 					continue;
 
@@ -381,6 +384,7 @@ error:
 	return ERROR_MEMORY;
 }
 
+// Executes orders from the heap greedily until order priority becomes too low.
 static void computer_map_orders_execute(struct heap_orders *restrict orders, const struct game *restrict game, unsigned char player, const struct resources *restrict income)
 {
 	// Perform map orders until all actions are complete or until the priority becomes too low.
@@ -419,7 +423,7 @@ static void computer_map_orders_execute(struct heap_orders *restrict orders, con
 
 			resource_add(&game->players[player].treasury, &UNITS[order->target.unit].cost);
 			order->region->train[0] = UNITS + order->target.unit;
-			LOG_DEBUG("TRAIN %.*s in %.*s | %f", (int)UNITS[order->target.unit].name_length, UNITS[order->target.unit].name, (int)order->region->name_length, order->region->name, order->priority);
+			//LOG_DEBUG("TRAIN %.*s in %.*s | %f", (int)UNITS[order->target.unit].name_length, UNITS[order->target.unit].name, (int)order->region->name_length, order->region->name, order->priority);
 			break;
 		}
 	}
@@ -447,24 +451,40 @@ static unsigned map_state_neighbors(struct region *restrict region, const struct
 	if (troop->owner == region->owner)
 		for(size_t i = 0; i < NEIGHBORS_LIMIT; ++i)
 			if (region->neighbors[i] && (troop->move != region->neighbors[i]))
-				neighbors[neighbors_count++] = region;
+				neighbors[neighbors_count++] = region->neighbors[i];
 
 	return neighbors_count;
 }
 
-static void map_state_set(struct troop *restrict troop, struct region *restrict region, struct region *restrict move, double strength, struct region_info regions_info[static restrict REGIONS_LIMIT])
+static void regions_info_strength_self(const struct region *restrict region, struct region_info *restrict region_info, unsigned char player)
 {
-	if (troop->move == LOCATION_GARRISON)
-		regions_info[region->index].strength_garrison.self -= strength;
-	else
-		regions_info[troop->move->index].strength.self -= strength;
+	region_info->strength.self = 0;
+	region_info->strength_garrison.self = 0;
+
+	// Initializes the strength of the troops in the region according to their owner.
+	for(const struct troop *restrict troop = region->troops; troop; troop = troop->_next)
+	{
+		if (troop->owner != player) continue;
+
+		double strength = unit_importance(troop->unit, 0) * troop->count; // TODO is this okay?
+		if (troop->location != LOCATION_GARRISON) // TODO should I use troop->move instead
+			region_info->strength.self += strength;
+		else
+			region_info->strength_garrison.self += strength;
+	}
+}
+
+static void map_state_set(struct troop *restrict troop, struct region *restrict region, struct region *restrict move, struct region_info regions_info[static restrict REGIONS_LIMIT])
+{
+	size_t index;
+
+	index = ((troop->move == LOCATION_GARRISON) ? region->index : troop->move->index);
+	regions_info_strength_self(region, regions_info + index, troop->owner);
 
 	troop->move = move;
 
-	if (troop->move == LOCATION_GARRISON)
-		regions_info[region->index].strength_garrison.self += strength;
-	else
-		regions_info[troop->move->index].strength.self += strength;
+	index = ((troop->move == LOCATION_GARRISON) ? region->index : troop->move->index);
+	regions_info_strength_self(region, regions_info + index, troop->owner);
 }
 
 static double garrigon_strength(const struct garrison_info *restrict info)
@@ -565,7 +585,7 @@ static double map_state_rating(const struct game *restrict game, unsigned char p
 			if (troop->move == LOCATION_GARRISON)
 				rating += troop_importance * survivors[i].region_garrison;
 			else
-				rating += troop_importance * survivors[i].region / unit_cost_significance(&troop->unit->income);
+				rating += troop_importance * survivors[i].region / expense_significance(&troop->unit->income);
 			rating_max += troop_importance;
 		}
 	}
@@ -602,7 +622,6 @@ static int computer_map_move(const struct game *restrict game, unsigned char pla
 	struct region *region;
 	struct troop *troop;
 
-	double strength;
 	struct region *move_backup;
 
 	struct region *neighbors[1 + NEIGHBORS_LIMIT];
@@ -631,15 +650,14 @@ static int computer_map_move(const struct game *restrict game, unsigned char pla
 			if (!neighbors_count) continue;
 
 			// Remember current troop movement command and set a new one.
-			strength = unit_importance(troop->unit, 0) * troop->count; // TODO is this okay?
 			move_backup = troop->move;
-			map_state_set(troop, region, neighbors[random() % neighbors_count], strength, regions_info);
+			map_state_set(troop, region, neighbors[random() % neighbors_count], regions_info);
 
 			// Calculate the rating of the new set of commands.
 			// Revert the new command if it is unacceptably worse than the current one.
 			rating_new = map_state_rating(game, player, regions_info, regions_visible);
 			if (state_wanted(rating, rating_new, temperature)) rating = rating_new;
-			else map_state_set(troop, region, move_backup, strength, regions_info);
+			else map_state_set(troop, region, move_backup, regions_info);
 		}
 
 		temperature *= ANNEALING_COOLDOWN;
@@ -652,18 +670,17 @@ static int computer_map_move(const struct game *restrict game, unsigned char pla
 		troop = troops.data[i].troop;
 
 		neighbors_count = map_state_neighbors(region, troop, neighbors);
-		strength = unit_importance(troop->unit, 0) * troop->count; // TODO is this okay?
 		for(j = 0; j < neighbors_count; ++j)
 		{
 			// Remember current troop movement command and set a new one.
 			move_backup = troop->move;
-			map_state_set(troop, region, neighbors[j], strength, regions_info);
+			map_state_set(troop, region, neighbors[j], regions_info);
 
 			// Calculate the rating of the new set of commands.
 			// Revert the new command if it is worse than the current one.
 			rating_new = map_state_rating(game, player, regions_info, regions_visible);
 			if (rating_new > rating) rating = rating_new;
-			else map_state_set(troop, region, move_backup, strength, regions_info);
+			else map_state_set(troop, region, move_backup, regions_info);
 		}
 	}
 
@@ -695,7 +712,7 @@ static struct region_info *regions_info_collect(const struct game *restrict game
 		int enemy_visible;
 		unsigned troops_hidden = 0;
 
-		regions_info[i] = (struct region_info){.importance = 200.0}; // TODO estimate region importance (using income, etc.); currently it is designed to be good compared to unit_usefulness
+		regions_info[i] = (struct region_info){.importance = 1000.0}; // TODO estimate region importance (using income, etc.); currently it is designed to be good compared to unit_usefulness
 
 		if (!regions_visible[i]) continue;
 

@@ -35,16 +35,25 @@ const double desire_buildings[] =
 	[BuildingSawmill] = 1.0,
 	[BuildingMine] = 0.8,
 	[BuildingBloomery] = 0.5,
-	[BuildingBarracks] = 0.8,
+	[BuildingBarracks] = 0.75,
 	[BuildingArcheryRange] = 0.75,
 	[BuildingStables] = 0.4,
 	[BuildingWatchTower] = 0.1,
 	[BuildingPalisade] = 0.3,
 	[BuildingFortress] = 0.2,
-	[BuildingWorkshop] = 0.3,
-	[BuildingForge] = 0.5,
+	[BuildingWorkshop] = 0.4,
+	[BuildingForge] = 0.4,
 };
 
+// Returns how significant is an expense.
+double expense_significance(const struct resources *restrict expense)
+{
+	// TODO more sophisticated logic here
+	double value = - (1.0 + expense->food * 2.0 + expense->wood * 2.0 + expense->stone * 2.0 + expense->gold * 2.5 + expense->iron * 4.0);
+	return sqrt(value);
+}
+
+// Returns how valuable is the unit by its skills.
 double unit_importance(const struct unit *restrict unit, const struct garrison_info *restrict garrison)
 {
 	// TODO more sophisticated logic here
@@ -71,18 +80,6 @@ double unit_importance(const struct unit *restrict unit, const struct garrison_i
 	return importance;
 }
 
-double unit_cost_significance(const struct resources *restrict cost)
-{
-	// TODO more sophisticated logic here
-	double value = - (1.0 + cost->food * 2.0 + cost->wood * 2.0 + cost->stone * 2.0 + cost->gold * 2.5 + cost->iron * 4.0);
-	return sqrt(value);
-}
-
-double unit_usefulness(const struct unit *restrict unit, unsigned troops_count)
-{
-	return (unit_importance(unit, 0) * troops_count / unit_cost_significance(&unit->cost));
-}
-
 int state_wanted(double rate, double rate_new, double temperature)
 {
 	// temperature is in [0, 1]
@@ -101,7 +98,7 @@ int main(void)
 	for(size_t i = 0; i < UNITS_COUNT; ++i)
 	{
 		double importance = unit_importance(UNITS + i, 0);
-		printf("%16.*s %8u %12f %20f %20f\n", (int)UNITS[i].name_length, UNITS[i].name, (unsigned)UNITS[i].troops_count, importance, importance * UNITS[i].troops_count, unit_usefulness(UNITS + i, UNITS[i].troops_count));
+		printf("%16.*s %8u %12f %20f %20f\n", (int)UNITS[i].name_length, UNITS[i].name, (unsigned)UNITS[i].troops_count, importance, importance * UNITS[i].troops_count, unit_importance(UNITS + i, 0) * UNITS[i].troops_count / expense_significance(&UNITS[i].cost));
 	}
 	return 0;
 }

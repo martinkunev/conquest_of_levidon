@@ -261,6 +261,8 @@ static int play(struct game *restrict game)
 			case Computer:
 				status = computer_map(game, player);
 				if (status < 0) return status;
+		status = input_map(game, player);
+		if (status < 0) return status;
 				break;
 			}
 

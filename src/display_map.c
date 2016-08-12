@@ -453,9 +453,9 @@ static void if_map_region(const struct region *region, const struct state_map *s
 
 		// Display scroll buttons.
 		if (state->self_offset) image_draw(&image_scroll_left, PANEL_X, object_group[TroopSelf].top);
-		if ((self_count - state->self_offset) > TROOPS_VISIBLE) image_draw(&image_scroll_right, object_group[TroopSelf].span_x + object_group[TroopSelf].padding, object_group[TroopSelf].top);
+		if ((self_count - state->self_offset) > TROOPS_VISIBLE) image_draw(&image_scroll_right, object_group[TroopSelf].right + 1, object_group[TroopSelf].top);
 		if (state->other_offset) image_draw(&image_scroll_left, PANEL_X, object_group[TroopOther].top);
-		if ((other_count - state->other_offset) > TROOPS_VISIBLE) image_draw(&image_scroll_right, object_group[TroopOther].span_x + object_group[TroopOther].padding, object_group[TroopOther].top);
+		if ((other_count - state->other_offset) > TROOPS_VISIBLE) image_draw(&image_scroll_right, object_group[TroopOther].right + 1, object_group[TroopOther].top);
 
 		// Display garrison and garrison troops.
 		const struct garrison_info *restrict garrison = garrison_info(region);
