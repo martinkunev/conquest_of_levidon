@@ -83,6 +83,7 @@ custom mouse pointer
 improve player colors
 player names and flag patterns
 support different resolutions
+display a mirror image of enemy troops
 
 button input bottom and right coordinates should be exclusive (... - 1)
 

@@ -462,10 +462,9 @@ void if_battle(const void *argument, const struct game *game)
 	}*/
 
 #if defined(DEBUG)
-	size_t x, y;
-	for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
+	/*for(size_t y = 0; y < BATTLEFIELD_HEIGHT; ++y)
 	{
-		for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
+		for(size_t x = 0; x < BATTLEFIELD_WIDTH; ++x)
 		{
 			char buffer[6], *end = buffer;
 			end = format_uint(end, x, 10);
@@ -473,6 +472,6 @@ void if_battle(const void *argument, const struct game *game)
 			end = format_uint(end, y, 10);
 			draw_string(buffer, end - buffer, BATTLE_X + x * object_group[Battlefield].width, BATTLE_Y + y * object_group[Battlefield].height, &font9, White);
 		}
-	}
+	}*/
 #endif
 }

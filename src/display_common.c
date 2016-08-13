@@ -85,8 +85,7 @@ void if_load_images(void)
 	image_load_png(&image_iron, PREFIX_IMG "iron.png", 0);
 	image_load_png(&image_time, PREFIX_IMG "time.png", 0);
 
-	//image_load_png(&image_units[UnitPeasant], PREFIX_IMG "peasant.png", 0);
-	image_load_png(&image_units[UnitPeasant], PREFIX_IMG "peasant_.png", 0);
+	image_load_png(&image_units[UnitPeasant], PREFIX_IMG "peasant.png", 0);
 	image_load_png(&image_units[UnitMilitia], PREFIX_IMG "militia.png", 0);
 	image_load_png(&image_units[UnitPikeman], PREFIX_IMG "pikeman.png", 0);
 	image_load_png(&image_units[UnitArcher], PREFIX_IMG "archer.png", 0);
@@ -94,8 +93,7 @@ void if_load_images(void)
 	image_load_png(&image_units[UnitLightCavalry], PREFIX_IMG "light_cavalry.png", 0);
 	image_load_png(&image_units[UnitBatteringRam], PREFIX_IMG "battering_ram.png", 0);
 
-	//image_load_png(&image_units_mask[UnitPeasant], PREFIX_IMG "peasant.png", image_mask);
-	image_load_png(&image_units_mask[UnitPeasant], PREFIX_IMG "peasant_.png", image_mask);
+	image_load_png(&image_units_mask[UnitPeasant], PREFIX_IMG "peasant.png", image_mask);
 	image_load_png(&image_units_mask[UnitMilitia], PREFIX_IMG "militia.png", image_mask);
 	image_load_png(&image_units_mask[UnitPikeman], PREFIX_IMG "pikeman.png", image_mask);
 	image_load_png(&image_units_mask[UnitArcher], PREFIX_IMG "archer.png", image_mask);
