@@ -203,7 +203,7 @@ static int region_init(struct game *restrict game, struct region *restrict regio
 				count = entry->array.data[1];
 				if ((json_type(count) != JSON_INTEGER) || (count->integer <= 0)) return -1;
 				owner = entry->array.data[2];
-				if ((json_type(owner) != JSON_INTEGER) || (owner->integer <= 0) || (owner->integer >= game->players_count)) return -1;
+				if ((json_type(owner) != JSON_INTEGER) || (owner->integer < 0) || (owner->integer >= game->players_count)) return -1;
 
 				unit = unit_find(&name->string);
 				if (!unit) return -1;
@@ -230,7 +230,7 @@ static int region_init(struct game *restrict game, struct region *restrict regio
 			count = entry->array.data[1];
 			if ((json_type(count) != JSON_INTEGER) || (count->integer <= 0)) return -1;
 			owner = entry->array.data[2];
-			if ((json_type(owner) != JSON_INTEGER) || (owner->integer <= 0) || (owner->integer >= game->players_count)) return -1;
+			if ((json_type(owner) != JSON_INTEGER) || (owner->integer < 0) || (owner->integer >= game->players_count)) return -1;
 
 			unit = unit_find(&name->string);
 			if (!unit) return -1;

@@ -67,7 +67,7 @@ struct battlefield
 	unsigned char blockage_location;
 
 	signed char owner; // for BLOCKAGE_OBSTACLE and BLOCKAGE_TOWER
-	unsigned strength; // for BLOCKAGE_OBSTACLE and BLOCKAGE_TOWER
+	unsigned strength; // for BLOCKAGE_OBSTACLE and BLOCKAGE_TOWER // TODO rename to health or store hurt instead (like for pawns)
 	const struct unit *unit; // for BLOCKAGE_OBSTACLE and BLOCKAGE_TOWER
 	struct pawn *pawn; // during formation and for BLOCKAGE_TOWER TODO don't use this for formation?
 

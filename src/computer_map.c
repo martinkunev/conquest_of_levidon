@@ -119,7 +119,7 @@ static void income_calculate(const struct game *restrict game, struct resources 
 			if (troop->owner != player)
 				continue;
 
-			destination = ((troop->move == LOCATION_GARRISON) ? troop->location : troop->move);
+			destination = ((troop->move == LOCATION_GARRISON) ? region : troop->move);
 
 			if ((troop->owner == destination->owner) && (destination->owner == destination->garrison.owner))
 			{
@@ -548,8 +548,8 @@ static double map_state_rating(const struct game *restrict game, unsigned char p
 				rating_region += ((strength_garrison >= strength_garrison_enemy) ? 1.0 : strength_garrison / strength_garrison_enemy);
 				rating_max_region += 1.0;
 
-				if (strength_garrison >= strength_garrison_enemy)
-					survivors[i].region_garrison = strength_garrison - strength_garrison_enemy;
+				if (strength_garrison && (strength_garrison >= strength_garrison_enemy))
+					survivors[i].region_garrison = (strength_garrison - strength_garrison_enemy) / strength_garrison;
 			}
 
 			// rating for region ownership
@@ -557,8 +557,8 @@ static double map_state_rating(const struct game *restrict game, unsigned char p
 			rating_region += ((strength >= strength_enemy) ? 1.0 : strength / strength_enemy);
 			rating_max_region += 1.0;
 
-			if (strength >= strength_enemy)
-				survivors[i].region = strength - strength_enemy;
+			if (strength && (strength >= strength_enemy))
+				survivors[i].region = (strength - strength_enemy) / strength;
 		}
 
 		rating += rating_region * regions_info[i].importance;
@@ -585,7 +585,7 @@ static double map_state_rating(const struct game *restrict game, unsigned char p
 			if (troop->move == LOCATION_GARRISON)
 				rating += troop_importance * survivors[i].region_garrison;
 			else
-				rating += troop_importance * survivors[i].region / expense_significance(&troop->unit->income);
+				rating += troop_importance * survivors[troop->move->index].region / expense_significance(&troop->unit->income);
 			rating_max += troop_importance;
 		}
 	}
@@ -798,9 +798,9 @@ static struct region_info *regions_info_collect(const struct game *restrict game
 				continue;
 
 			if (regions_info[i].strength.self || (regions_info[i].strength_garrison.self && (region->owner == player)))
-				regions_info[j].nearby = true;
+				regions_info[neighbor->index].nearby = true;
 
-			regions_info[i].strength_enemy_neighbors += regions_info[j].strength_enemy;
+			regions_info[i].strength_enemy_neighbors += regions_info[neighbor->index].strength_enemy;
 		}
 	}
 
