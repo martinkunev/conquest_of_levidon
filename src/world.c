@@ -27,6 +27,7 @@
 
 #include "errors.h"
 #include "json.h"
+#include "log.h"
 #include "draw.h"
 #include "game.h"
 #include "map.h"
@@ -443,7 +444,11 @@ static int world_populate(const union json *restrict json, struct game *restrict
 		if (json_type(item) != JSON_OBJECT) goto error;
 
 		game->regions[index].index = index;
-		if (region_init(game, game->regions + index, region->key_data, region->key_size, &item->object) < 0) goto error;
+		if (region_init(game, game->regions + index, region->key_data, region->key_size, &item->object) < 0)
+		{
+			LOG_ERROR("Failed initializing %.*s", (int)region->key_size, region->key_data);
+			goto error;
+		}
 
 		// TODO very ugly way to store a hashmap with region indices; fix this
 		union json *field = value_get_try(&item->object, "location", JSON_ARRAY);
@@ -661,6 +666,7 @@ int world_save(const struct game *restrict game, const unsigned char *restrict f
 			return ERROR_WRITE;
 		}
 	}
+	write(file, "\n", 1); // TODO this can fail
 
 	close(file);
 	free(buffer);
