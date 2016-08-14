@@ -366,10 +366,10 @@ struct adjacency_list *visibility_graph_build(const struct battle *restrict batt
 	for(i = 0; i < obstacles->count; ++i)
 	{
 		const struct obstacle *restrict obstacle = obstacles->obstacle + i;
-		graph_vertex_add(graph, obstacle->left - PAWN_RADIUS, obstacle->bottom - PAWN_RADIUS, occupied);
-		graph_vertex_add(graph, obstacle->right + PAWN_RADIUS, obstacle->bottom - PAWN_RADIUS, occupied);
-		graph_vertex_add(graph, obstacle->right + PAWN_RADIUS, obstacle->top + PAWN_RADIUS, occupied);
-		graph_vertex_add(graph, obstacle->left - PAWN_RADIUS, obstacle->top + PAWN_RADIUS, occupied);
+		graph_vertex_add(graph, obstacle->left - PAWN_RADIUS, obstacle->bottom + PAWN_RADIUS, occupied);
+		graph_vertex_add(graph, obstacle->right + PAWN_RADIUS, obstacle->bottom + PAWN_RADIUS, occupied);
+		graph_vertex_add(graph, obstacle->right + PAWN_RADIUS, obstacle->top - PAWN_RADIUS, occupied);
+		graph_vertex_add(graph, obstacle->left - PAWN_RADIUS, obstacle->top - PAWN_RADIUS, occupied);
 	}
 
 	// Free the unused part of the adjacency graph buffer.
@@ -678,12 +678,11 @@ int path_distances(const struct pawn *restrict pawn, struct adjacency_list *rest
 	{
 		for(size_t x = 0; x < BATTLEFIELD_WIDTH; ++x)
 		{
+			struct position target = {x + 0.5, y + 0.5};
 			reachable[y][x] = INFINITY;
 			for(size_t i = 0; i < graph->count; ++i)
 			{
-				struct position target = {x + 0.5, y + 0.5};
 				double distance = traverse_info[i].distance;
-
 				if ((distance < INFINITY) && path_visible(graph->list[i].position, target, obstacles))
 				{
 					distance += battlefield_distance(graph->list[i].position, target);

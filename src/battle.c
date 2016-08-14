@@ -132,7 +132,7 @@ int battlefield_passable(const struct game *restrict game, const struct battlefi
 		return 1;
 
 	if (field->blockage == BLOCKAGE_OBSTACLE)
-		if (allies(game, player, field->owner) || field->pawns[0])
+		if (allies(game, player, field->owner) || field->pawns[0]) // TODO the second part can be true for non-gates
 			return 1;
 
 	return 0;

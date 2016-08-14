@@ -80,8 +80,12 @@ static struct pawn *pawn_find(struct battlefield *restrict field, struct positio
 {
 	struct pawn **pawns = field->pawns;
 	for(size_t i = 0; (i < BATTLEFIELD_PAWNS_LIMIT) && pawns[i]; i += 1)
+	{
+		if (!pawns[i]->count)
+			continue;
 		if (battlefield_distance(pawns[i]->position, position) < PAWN_RADIUS)
 			return pawns[i];
+	}
 	return 0;
 }
 

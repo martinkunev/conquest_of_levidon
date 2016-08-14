@@ -5,6 +5,8 @@ T	AI improvements
 	in battle, AI is too slow when there are many pawns
 	in battle, pawns move randomly when there are too many pawns
 	treating each troop separately when finding local maximum in AI will have bad results
+	when shooters attack a melee troop and there is nowhere to run, the melee should attack back
+	enemy should stay inside garrison when there are archers
 H	support dismissing troops (add a flag in struct troop)
 H	don't allow pawns to attack their own walls (currently only gates are not attacked)
 	separate constants for BLOCKAGE_WALL and BLOCKAGE_GATE
@@ -62,6 +64,11 @@ L	? buildings should not generate income on the day they are built
 L	? implement exit game while in battle
 L	make palisade invisible when fortress is built
 
+bugs
+	fast units cannot always catch up with slow units even when they are close enough (seen with light cavalry and peasant)
+	battering ram is not moving while assault target is set
+	troops can pass through nearby garrison walls (because battlefield_passable() thinks the wall is an open gate when there is a pawn nearby (since walls are thin))
+
 ? rename WEAPON_ARROW to WEAPON_PIERCING and change archer melee weapon to WEAPON_PIERCING
 
 ? dynamic battlefield size
@@ -96,20 +103,19 @@ menu
 	display minimap
 
 battle
+	display calculated pawn moves (not a straight line)
 	when two pawns from different alliances are next to each other, display red line between them (to show that they are fighting)
 	fight animation (display which units are fighting)
 	hide mouse pointer during animation
 	display round number
 	enemy on the gate not displayed during shooting in battle animation
 	support showing more pawn stats (not just health)
-	new pawn images
 	change image for pawn selection
 	new wall and gate images; open gate image
 	? movement and shoot animation is faster when its duration is shorter
 	tell all players if somebody is retreating
 	think about displaying reachable locations for a pawn
 	add battlefield animation indication when an enemy pawn makes a pawn stop (due to collision)
-	display calculated pawn moves (not a straight line)
 
 report
 	display minimap
