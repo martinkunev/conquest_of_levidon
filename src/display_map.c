@@ -493,7 +493,7 @@ static void if_map_region(const struct region *region, const struct state_map *s
 				for(troop = region->troops; troop; troop = troop->_next)
 					if (troop->location == LOCATION_GARRISON)
 						count += troop->count;
-				count = ((count + 5) / 10) * 10;
+				count = count_round(count) * COUNT_ROUND_PRECISION;
 
 				end = format_bytes(buffer, S("about "));
 				end = format_uint(end, count, 10);

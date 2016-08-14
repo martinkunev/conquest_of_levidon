@@ -83,6 +83,7 @@ simple economy (part of the TODO for population)
 	gold comes from taxes; the population that is not busy collecting resources does not require payment (and results in gold income)
 	from the free population one can set the proportion that will collect each of the resources (food, stone, wood, iron); the income is not proportional to the number of people
 	food cannot be stocked indefinitely (it rots)
+	each controlled region requires gold to be governed and each building requires more gold; as a result regions with low population can cost gold
 
 ? windmill
 	+1 food

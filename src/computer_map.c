@@ -37,7 +37,7 @@
 
 #define SPEED_FAST 7
 
-#define RANGED_PROPORTION (1 / 3)
+#define RANGED_PROPORTION (1.0 / 3.0)
 
 struct region_troop
 {
@@ -518,6 +518,8 @@ static double map_state_rating(const struct game *restrict game, unsigned char p
 
 		if (!regions_visible[i])
 			continue;
+
+		// TODO take into account that neutral player cannot attack
 
 		if (regions_info[i].nearby)
 		{
