@@ -18,7 +18,7 @@
  */
 
 extern struct font font9, font12, font24;
-extern unsigned SCREEN_WIDTH, SCREEN_HEIGHT;
+extern unsigned WINDOW_WIDTH, WINDOW_HEIGHT;
 
 struct game;
 

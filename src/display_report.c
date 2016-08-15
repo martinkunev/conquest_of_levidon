@@ -82,7 +82,7 @@ void if_report_battle(const void *argument, const struct game *game_)
 	else end = format_bytes(end, S("Open battle in "));
 	end = format_bytes(end, battle->region->name, battle->region->name_length);
 	box = string_box(title, end - title, &font24);
-	draw_string(title, end - title, (SCREEN_WIDTH - box.width) / 2, TITLE_Y, &font24, White);
+	draw_string(title, end - title, (WINDOW_WIDTH - box.width) / 2, TITLE_Y, &font24, White);
 
 	draw_string(S("Before the battle"), REPORT_BEFORE_X, LABEL_Y, &font12, White);
 	draw_string(S("After the battle"), REPORT_AFTER_X, LABEL_Y, &font12, White);
@@ -130,7 +130,7 @@ void if_report_map(const void *argument, const struct game *game)
 
 	// Display report title.
 	box = string_box(REPORT_MAP_TITLE, &font24);
-	draw_string(REPORT_MAP_TITLE, (SCREEN_WIDTH - box.width) / 2, TITLE_Y, &font24, White);
+	draw_string(REPORT_MAP_TITLE, (WINDOW_WIDTH - box.width) / 2, TITLE_Y, &font24, White);
 	// TODO display turn number (year, month)
 
 	// Display table headings.

@@ -52,9 +52,9 @@ int input_report_battle(const struct game *restrict game, const struct battle *r
 	struct area areas[] = {
 		{
 			.left = 0,
-			.right = SCREEN_WIDTH - 1,
+			.right = WINDOW_WIDTH - 1,
 			.top = 0,
-			.bottom = SCREEN_HEIGHT - 1,
+			.bottom = WINDOW_HEIGHT - 1,
 			.callback = input_report,
 		},
 		{
@@ -78,9 +78,9 @@ int input_report_map(const struct game *restrict game)
 	struct area areas[] = {
 		{
 			.left = 0,
-			.right = SCREEN_WIDTH - 1,
+			.right = WINDOW_WIDTH - 1,
 			.top = 0,
-			.bottom = SCREEN_HEIGHT - 1,
+			.bottom = WINDOW_HEIGHT - 1,
 			.callback = input_report,
 		},
 		{

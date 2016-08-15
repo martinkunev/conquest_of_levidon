@@ -48,7 +48,7 @@ void if_load(const void *argument, const struct game *game)
 	struct point position;
 
 	struct box box = string_box(S(TITLE), &font24);
-	draw_string(S(TITLE), (SCREEN_WIDTH - box.width) / 2, TITLE_Y, &font24, White);
+	draw_string(S(TITLE), (WINDOW_WIDTH - box.width) / 2, TITLE_Y, &font24, White);
 
 	// TODO ? separate functions for loaded and !loaded
 
@@ -133,7 +133,7 @@ void if_save(const void *argument, const struct game *game)
 	struct point position;
 
 	struct box box = string_box(S(TITLE_SAVE), &font24);
-	draw_string(S(TITLE_SAVE), (SCREEN_WIDTH - box.width) / 2, TITLE_Y, &font24, White);
+	draw_string(S(TITLE_SAVE), (WINDOW_WIDTH - box.width) / 2, TITLE_Y, &font24, White);
 
 	// Display world directories tabs.
 	position = if_position(WorldTabs, 0);

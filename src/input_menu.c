@@ -37,7 +37,7 @@
 
 // TODO handle long filenames properly
 
-extern unsigned SCREEN_WIDTH, SCREEN_HEIGHT;
+extern unsigned WINDOW_WIDTH, WINDOW_HEIGHT;
 
 static int tab_select(struct state *restrict state, size_t index)
 {
@@ -318,9 +318,9 @@ int input_load(struct game *restrict game)
 	struct area areas[] = {
 		{
 			.left = 0,
-			.right = SCREEN_WIDTH - 1,
+			.right = WINDOW_WIDTH - 1,
 			.top = 0,
-			.bottom = SCREEN_HEIGHT - 1,
+			.bottom = WINDOW_HEIGHT - 1,
 			.callback = input_none
 		},
 		{
@@ -356,9 +356,9 @@ int input_load(struct game *restrict game)
 	struct area areas_setup[] = {
 		{
 			.left = 0,
-			.right = SCREEN_WIDTH - 1,
+			.right = WINDOW_WIDTH - 1,
 			.top = 0,
-			.bottom = SCREEN_HEIGHT - 1,
+			.bottom = WINDOW_HEIGHT - 1,
 			.callback = input_setup
 		},
 		{
@@ -430,9 +430,9 @@ int input_save(const struct game *restrict game)
 	struct area areas[] = {
 		{
 			.left = 0,
-			.right = SCREEN_WIDTH - 1,
+			.right = WINDOW_WIDTH - 1,
 			.top = 0,
-			.bottom = SCREEN_HEIGHT - 1,
+			.bottom = WINDOW_HEIGHT - 1,
 			.callback = input_none
 		},
 		{
@@ -458,9 +458,9 @@ int input_save(const struct game *restrict game)
 		},
 		{
 			.left = 0,
-			.right = SCREEN_WIDTH - 1,
+			.right = WINDOW_WIDTH - 1,
 			.top = 0,
-			.bottom = SCREEN_HEIGHT - 1,
+			.bottom = WINDOW_HEIGHT - 1,
 			.callback = input_menu
 		},
 		{

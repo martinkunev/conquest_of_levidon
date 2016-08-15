@@ -41,7 +41,7 @@
 
 extern struct battle *battle;
 
-extern unsigned SCREEN_WIDTH, SCREEN_HEIGHT;
+extern unsigned WINDOW_WIDTH, WINDOW_HEIGHT;
 
 static int input_round(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
 {
@@ -245,9 +245,9 @@ int input_formation(const struct game *restrict game, struct battle *restrict ba
 	struct area areas[] = {
 		{
 			.left = 0,
-			.right = SCREEN_WIDTH - 1,
+			.right = WINDOW_WIDTH - 1,
 			.top = 0,
-			.bottom = SCREEN_HEIGHT - 1,
+			.bottom = WINDOW_HEIGHT - 1,
 			.callback = input_round
 		},
 		{
@@ -283,9 +283,9 @@ int input_battle(const struct game *restrict game, struct battle *restrict battl
 	struct area areas[] = {
 		{
 			.left = 0,
-			.right = SCREEN_WIDTH - 1,
+			.right = WINDOW_WIDTH - 1,
 			.top = 0,
-			.bottom = SCREEN_HEIGHT - 1,
+			.bottom = WINDOW_HEIGHT - 1,
 			.callback = input_round
 		},
 		{

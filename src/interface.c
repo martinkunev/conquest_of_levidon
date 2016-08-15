@@ -21,6 +21,7 @@
 #include <GL/glx.h>
 #include <GL/glext.h>
 
+#include "log.h"
 #include "draw.h"
 #include "interface.h"
 
@@ -44,9 +45,9 @@
 #define WM_STATE "_NET_WM_STATE"
 #define WM_STATE_FULLSCREEN "_NET_WM_STATE_FULLSCREEN"
 
+static xcb_screen_t *screen;
 static xcb_window_t window;
 static GLXContext context;
-static xcb_screen_t *screen;
 
 Display *display;
 GLXDrawable drawable;
@@ -57,7 +58,7 @@ int keycode_min, keycode_max;
 
 struct font font9, font12, font24;
 
-unsigned SCREEN_WIDTH, SCREEN_HEIGHT;
+unsigned WINDOW_WIDTH, WINDOW_HEIGHT;
 
 int if_init(void)
 {
@@ -103,11 +104,14 @@ int if_init(void)
 	uint32_t valuelist[] = {eventmask, colormap, 0};
 	uint32_t valuemask = XCB_CW_EVENT_MASK | XCB_CW_COLORMAP;
 
-	// TODO set window parameters
-	xcb_create_window(connection, XCB_COPY_FROM_PARENT, window, screen->root, 100, 0, screen->width_in_pixels, screen->height_in_pixels, 0, XCB_WINDOW_CLASS_INPUT_OUTPUT, visualID, valuemask, valuelist);
-
-	// Make the window fullscreen.
+	// Create the window and make it fullscreen.
 	{
+		// TODO set window parameters
+		XWindowAttributes attributes;
+		XGetWindowAttributes(display, screen->root, &attributes);
+		WINDOW_WIDTH = attributes.width;
+		WINDOW_HEIGHT = attributes.height;
+
 		XEvent event = {0};
 		event.type = ClientMessage;
 		event.xclient.window = window;
@@ -116,6 +120,7 @@ int if_init(void)
 		event.xclient.data.l[0] = 1; // 0 == unset; 1 == set; 2 == toggle
 		event.xclient.data.l[1] = XInternAtom(display, WM_STATE_FULLSCREEN, 0);
 
+		xcb_create_window(connection, XCB_COPY_FROM_PARENT, window, screen->root, 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, 0, XCB_WINDOW_CLASS_INPUT_OUTPUT, visualID, valuemask, valuelist);
 		xcb_map_window(connection, window); // NOTE: window must be mapped before glXMakeContextCurrent
 		XSendEvent(display, DefaultRootWindow(display), 0, SubstructureRedirectMask | SubstructureNotifyMask, &event);
 		XFlush(display);
@@ -141,25 +146,28 @@ int if_init(void)
 
 	// TODO use DPI-based font size
 	// https://wiki.archlinux.org/index.php/X_Logical_Font_Description
-	if (font_init(&font9, "-misc-dejavu sans-bold-r-normal--9-0-0-0-p-0-ascii-0") < 0)
+	if ((font_init(&font9, "-*-dejavu sans-bold-r-normal--9-*-*-*-p-0-ascii-0") < 0) && (font_init(&font9, "-*-*-bold-r-normal--9-*-*-*-p-0-ascii-0") < 0))
 	{
 		xcb_destroy_window(connection, window);
 		glXDestroyContext(display, context);
+		LOG_ERROR("Cannot load font with size 9");
 		goto error;
 	}
-	if (font_init(&font12, "-misc-dejavu sans-bold-r-normal--12-0-0-0-p-0-ascii-0") < 0)
+	if ((font_init(&font12, "-*-dejavu sans-bold-r-normal--12-*-*-*-p-0-ascii-0") < 0) && (font_init(&font12, "-*-*-bold-r-normal--12-*-*-*-p-0-ascii-0") < 0))
 	{
 		font_term(&font9);
 		xcb_destroy_window(connection, window);
 		glXDestroyContext(display, context);
+		LOG_ERROR("Cannot load font with size 12");
 		goto error;
 	}
-	if (font_init(&font24, "-misc-dejavu sans-bold-r-normal--24-0-0-0-p-0-ascii-0") < 0)
+	if ((font_init(&font24, "-*-dejavu sans-bold-r-normal--24-*-*-*-p-0-ascii-0") < 0) && (font_init(&font24, "-*-*-bold-r-normal--24-*-*-*-p-0-ascii-0") < 0))
 	{
 		font_term(&font9);
 		font_term(&font12);
 		xcb_destroy_window(connection, window);
 		glXDestroyContext(display, context);
+		LOG_ERROR("Cannot load font with size 24");
 		goto error;
 	}
 
@@ -197,14 +205,11 @@ error:
 // TODO ? call this after resize
 void if_display(void)
 {
-	SCREEN_WIDTH = screen->width_in_pixels;
-	SCREEN_HEIGHT = screen->height_in_pixels;
-
-	glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+	glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
 
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	glOrtho(0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 0, 1);
+	glOrtho(0, WINDOW_WIDTH, WINDOW_HEIGHT, 0, 0, 1);
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();

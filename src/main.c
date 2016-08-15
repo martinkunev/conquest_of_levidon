@@ -458,7 +458,8 @@ int main(int argc, char *argv[])
 
 	menu_init();
 
-	if_init();
+	if (if_init() < 0)
+		return 1;
 	if_load_images();
 
 	if_display();

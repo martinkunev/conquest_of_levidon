@@ -180,11 +180,11 @@ static void if_switch_screen(void)
 {
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-	glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+	glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
 
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	glOrtho(0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 0, 1);
+	glOrtho(0, WINDOW_WIDTH, WINDOW_HEIGHT, 0, 0, 1);
 }
 
 static void if_storage_region(const struct polygon *restrict location, int index)
@@ -833,14 +833,14 @@ static void if_points(const void *argument, const struct game *game)
 
 static int input_regions(const struct game *restrict game, struct state *restrict state)
 {
-	extern unsigned SCREEN_WIDTH, SCREEN_HEIGHT;
+	extern unsigned WINDOW_WIDTH, WINDOW_HEIGHT;
 
 	struct area areas[] = {
 		{
 			.left = 0,
-			.right = SCREEN_WIDTH - 1,
+			.right = WINDOW_WIDTH - 1,
 			.top = 0,
-			.bottom = SCREEN_HEIGHT - 1,
+			.bottom = WINDOW_HEIGHT - 1,
 			.callback = input_region
 		},
 		{
@@ -871,14 +871,14 @@ static int input_regions(const struct game *restrict game, struct state *restric
 
 static int input_points(const struct game *restrict game, struct state *restrict state)
 {
-	extern unsigned SCREEN_WIDTH, SCREEN_HEIGHT;
+	extern unsigned WINDOW_WIDTH, WINDOW_HEIGHT;
 
 	struct area areas[] = {
 		{
 			.left = 0,
-			.right = SCREEN_WIDTH - 1,
+			.right = WINDOW_WIDTH - 1,
 			.top = 0,
-			.bottom = SCREEN_HEIGHT - 1,
+			.bottom = WINDOW_HEIGHT - 1,
 			.callback = input_point
 		},
 		{
