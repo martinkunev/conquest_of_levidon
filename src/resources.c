@@ -69,7 +69,7 @@ void resource_spend(struct resources *restrict total, const struct resources *re
 }
 
 // Multiply resource by factor and store the result in total.
-void resource_multiply(struct resources *restrict total, const struct resources *restrict resource, unsigned factor)
+void resource_multiply(struct resources *total, const struct resources *resource, unsigned factor)
 {
 	total->gold = resource->gold * factor;
 	total->food = resource->food * factor;

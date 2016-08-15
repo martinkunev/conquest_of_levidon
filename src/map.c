@@ -68,12 +68,10 @@ int troop_spawn(struct region *restrict region, struct troop **restrict troops, 
 
 void region_income(const struct region *restrict region, struct resources *restrict income)
 {
-	size_t i;
-
 	income->gold += 1;
 	income->food += 1;
 
-	for(i = 0; i < BUILDINGS_COUNT; ++i)
+	for(size_t i = 0; i < BUILDINGS_COUNT; ++i)
 		if (region->built & (1 << i))
 			resource_add(income, &BUILDINGS[i].income);
 }
