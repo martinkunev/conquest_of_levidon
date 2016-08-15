@@ -49,7 +49,7 @@ const double desire_buildings[] =
 double expense_significance(const struct resources *restrict expense)
 {
 	// TODO more sophisticated logic here
-	double value = - (1.0 + expense->food * 2.0 + expense->wood * 2.0 + expense->stone * 2.0 + expense->gold * 2.5 + expense->iron * 4.0);
+	double value = - (1.0 + expense->food * 1.5 + expense->wood * 2.0 + expense->stone * 2.0 + expense->gold * 2.5 + expense->iron * 4.0);
 	return sqrt(value);
 }
 
@@ -63,14 +63,14 @@ double unit_importance(const struct unit *restrict unit, const struct garrison_i
 
 	if (garrison)
 	{
-		importance = unit->health / damage_boost[WEAPON_CLEAVING][unit->armor] + (unit->speed - 1) * 1.5;
+		importance = unit->health / damage_boost[WEAPON_CLEAVING][unit->armor] + (unit->speed - 2) * 2;
 		importance += unit->melee.damage * damage_boost[unit->melee.weapon][ARMOR_LEATHER] * unit->melee.agility * 3;
 		importance += unit->melee.damage * damage_boost[unit->melee.weapon][garrison->gate.armor] * 5;
 		importance += unit->ranged.damage * (unit->ranged.range - 1);
 	}
 	else
 	{
-		importance = unit->health / damage_boost[WEAPON_CLEAVING][unit->armor] + unit->speed * 1.5;
+		importance = unit->health / damage_boost[WEAPON_CLEAVING][unit->armor] + (unit->speed - 2) * 2;
 		importance += unit->melee.damage * damage_boost[unit->melee.weapon][ARMOR_LEATHER] * unit->melee.agility * 3;
 		importance += unit->melee.damage * damage_boost[unit->melee.weapon][ARMOR_WOODEN] * 2;
 		importance += unit->melee.damage * damage_boost[unit->melee.weapon][ARMOR_STONE] * 2;
@@ -94,11 +94,11 @@ int state_wanted(double rate, double rate_new, double temperature)
 
 int main(void)
 {
-	printf("%16s %8s %12s %20s %20s\n", "name", "count", "importance", "total importance", "usefulness");
+	printf("%16s %8s %12s %16s %16s %16s\n", "name", "count", "importance", "total importance", "usefulness", "rating");
 	for(size_t i = 0; i < UNITS_COUNT; ++i)
 	{
 		double importance = unit_importance(UNITS + i, 0);
-		printf("%16.*s %8u %12f %20f %20f\n", (int)UNITS[i].name_length, UNITS[i].name, (unsigned)UNITS[i].troops_count, importance, importance * UNITS[i].troops_count, unit_importance(UNITS + i, 0) * UNITS[i].troops_count / expense_significance(&UNITS[i].cost));
+		printf("%16.*s %8u %12f %16f %16f %16f\n", (int)UNITS[i].name_length, UNITS[i].name, (unsigned)UNITS[i].troops_count, importance, importance * UNITS[i].troops_count, importance * UNITS[i].troops_count / expense_significance(&UNITS[i].cost), importance * UNITS[i].troops_count / expense_significance(&UNITS[i].income));
 	}
 	return 0;
 }
