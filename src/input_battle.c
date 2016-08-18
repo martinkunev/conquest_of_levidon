@@ -47,7 +47,7 @@ static int input_round(int code, unsigned x, unsigned y, uint16_t modifiers, con
 {
 	// TODO battle must be passed as argument
 
-	struct state_battle *state = argument; // TODO sometimes this is state_formation
+	struct state_battle *state = argument; // TODO sometimes this is state_formation and then this is UB
 
 	switch (code)
 	{
@@ -240,8 +240,6 @@ reachable:
 
 int input_formation(const struct game *restrict game, struct battle *restrict battle, unsigned char player)
 {
-	if_set(battle); // TODO remove this
-
 	struct area areas[] = {
 		{
 			.left = 0,
@@ -272,6 +270,8 @@ int input_formation(const struct game *restrict game, struct battle *restrict ba
 
 	state.pawn = 0;
 	//state.hover = POINT_NONE;
+
+	if_set(battle); // TODO remove this
 
 	return input_local(areas, sizeof(areas) / sizeof(*areas), if_formation, game, &state);
 }

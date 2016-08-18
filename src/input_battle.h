@@ -24,11 +24,11 @@ struct state_battle
 	// TODO support this
 	//struct point hover; // position of the hovered field
 
+	struct pawn *pawn; // selected pawn
+	struct battlefield *field; // selected field
+
 	const struct obstacles *obstacles; // obstacles on the battlefield
 	struct adjacency_list *graph; // graph used for pathfinding
-
-	struct battlefield *field; // selected field
-	struct pawn *pawn; // selected pawn
 
 	double reachable[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH];
 };
