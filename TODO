@@ -1,17 +1,20 @@
 T	AI improvements
-	computer attacks with incredibly small army
-	treating each troop separately when finding local maximum in AI will have bad results
-	computer makes bad orders (peasants until the food is over; no unit buildings)
-	computer cannot recover well from having negative food income
+	F computer attacks with incredibly small army
 	computers tend to accumulate huge armies in a single region
-	computer tends to escape from invading troops (instead of defending)
+	treating each troop separately when finding local maximum in AI will have bad results
 	when two troops are ordered at the same turn, there may not be enough income for the second one
+	computer doesn't attack when it should
+	computer keeps the army away from dangerous regions (instead of the other way around)
+	computer doesn't merge troops
+	computer cannot recover well from having negative food income
+
+	? take into account that a conquered region will not pose danger
 
 	in battle, AI is too slow when there are many pawns
 	in battle, pawns move randomly when there are too many pawns
 	when shooters attack a melee pawn and there is nowhere to run, the melee should attack back
 	enemy should stay inside garrison when there are shooters
-
+	shooters don't shoot when they can
 H	support dismissing troops (add a flag in struct troop)
 H	don't allow pawns to attack their own walls (currently only gates are not attacked)
 	separate constants for BLOCKAGE_WALL and BLOCKAGE_GATE
@@ -72,11 +75,12 @@ L	? implement exit game while in battle
 L	make palisade invisible when fortress is built
 
 bugs
-	battering ram is not moving while assault target is set
+	battering ram is not moving when assault target is set
 	troops can pass through nearby garrison walls (because battlefield_passable() thinks the wall is an open gate when there is a pawn nearby (since walls are thin))
-	one can build palisade if there is a garrison
+	F one can build palisade if there is a fortress
 	troops bar not visualized correctly when it goes out of the screen
 	fast units cannot always catch up with slow units even when they are close enough (seen with light cavalry and peasant)
+	merging troop bars is visible to other players
 
 ? rename WEAPON_ARROW to WEAPON_PIERCING and change archer melee weapon to WEAPON_PIERCING
 
@@ -110,6 +114,7 @@ images
 menu
 	directory tabs images
 	display minimap
+	no name editing after a world has been selected
 
 battle
 	display calculated pawn moves (not a straight line)
@@ -143,3 +148,6 @@ map
 	improve boxes for field and garrison troops (it's not obvious one can place units there until there are units)
 	one should be able to tell all troops to go on assault
 	show income/expenses adjusted for troop movement (troops moved to garrison, attacking troops, etc.)
+	display the approximate number of troops in an enemy region
+	troop bar for just battering ram is not displayed on the map (because it's just 1 troop)
+	troop movement animation

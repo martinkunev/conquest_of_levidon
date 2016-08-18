@@ -106,7 +106,6 @@ int if_init(void)
 
 	// Create the window and make it fullscreen.
 	{
-		// TODO set window parameters
 		XWindowAttributes attributes;
 		XGetWindowAttributes(display, screen->root, &attributes);
 		WINDOW_WIDTH = attributes.width;
@@ -120,6 +119,7 @@ int if_init(void)
 		event.xclient.data.l[0] = 1; // 0 == unset; 1 == set; 2 == toggle
 		event.xclient.data.l[1] = XInternAtom(display, WM_STATE_FULLSCREEN, 0);
 
+		// TODO set window parameters
 		xcb_create_window(connection, XCB_COPY_FROM_PARENT, window, screen->root, 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, 0, XCB_WINDOW_CLASS_INPUT_OUTPUT, visualID, valuemask, valuelist);
 		xcb_map_window(connection, window); // NOTE: window must be mapped before glXMakeContextCurrent
 		XSendEvent(display, DefaultRootWindow(display), 0, SubstructureRedirectMask | SubstructureNotifyMask, &event);

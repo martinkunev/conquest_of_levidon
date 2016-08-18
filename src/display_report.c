@@ -120,13 +120,12 @@ void if_report_battle(const void *argument, const struct game *game_)
 void if_report_map(const void *argument, const struct game *game)
 {
 	struct box box;
-	size_t player;
 	unsigned offset = 0;
 
 	unsigned regions_owned[PLAYERS_LIMIT] = {0};
 
-	for(player = 0; player < game->regions_count; ++player)
-		regions_owned[game->regions[player].owner] += 1;
+	for(size_t index = 0; index < game->regions_count; ++index)
+		regions_owned[game->regions[index].owner] += 1;
 
 	// Display report title.
 	box = string_box(REPORT_MAP_TITLE, &font24);
@@ -142,7 +141,7 @@ void if_report_map(const void *argument, const struct game *game)
 	draw_string(S("iron"), REPORT_IRON_X, LABEL_Y, &font12, White);
 	draw_string(S("stone"), REPORT_STONE_X, LABEL_Y, &font12, White);
 
-	for(player = 0; player < game->players_count; ++player)
+	for(size_t player = 0; player < game->players_count; ++player)
 	{
 		unsigned char buffer[FORMAT_BUFFER_INT], *end;
 
