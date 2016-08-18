@@ -77,3 +77,13 @@ void resource_multiply(struct resources *total, const struct resources *resource
 	total->iron = resource->iron * factor;
 	total->stone = resource->stone * factor;
 }
+
+int resources_adverse(const struct resources *restrict total, const struct resources *restrict change)
+{
+	if ((total->gold < 0) && (change->gold < 0)) return 1;
+	if ((total->food < 0) && (change->food < 0)) return 1;
+	if ((total->wood < 0) && (change->wood < 0)) return 1;
+	if ((total->iron < 0) && (change->iron < 0)) return 1;
+	if ((total->stone < 0) && (change->stone < 0)) return 1;
+	return 0;
+}

@@ -23,4 +23,6 @@ void resource_subtract(struct resources *restrict total, const struct resources 
 void resource_spend(struct resources *restrict total, const struct resources *restrict spent);
 void resource_multiply(struct resources *total, const struct resources *resource, unsigned factor);
 
+int resources_adverse(const struct resources *restrict total, const struct resources *restrict change);
+
 // TODO think how to prevent overflow
