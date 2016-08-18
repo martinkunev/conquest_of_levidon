@@ -280,6 +280,9 @@ static void if_map_troops(unsigned x, unsigned y, unsigned count_self, unsigned 
 
 	// assert(TROOPS_BAR_HEIGHT == image_map_village.height);
 
+	// Make sure the troops bar doesn't get out of the screen.
+	if (y < TROOPS_BAR_HEIGHT + 2) y = TROOPS_BAR_HEIGHT + 2;
+
 	if (count_self = count_round(count_self))
 	{
 		if (count_self > TROOPS_BAR_HEIGHT)
@@ -367,7 +370,7 @@ static void if_map_region(const struct region *region, const struct state_map *s
 		for(i = 0; i < BUILDINGS_COUNT; ++i)
 		{
 			struct point position = if_position(Building, i);
-			if (region_built(region, i))
+			if (region_built(region, i) && !(region->built & BUILDINGS[i].conflicts))
 			{
 				draw_rectangle(position.x - 1, position.y - 1, image_buildings[i].width + 2, image_buildings[i].height + 2, display_colors[Black]);
 				image_draw(image_buildings + i, position.x, position.y);
@@ -440,7 +443,7 @@ static void if_map_region(const struct region *region, const struct state_map *s
 				color_text = White;
 			}
 
-			// Draw troops which are visible on the screen.
+			// If the troop is visible on the screen, draw it.
 			if ((x >= offset) && (x < offset + TROOPS_VISIBLE))
 			{
 				struct point position = if_position(object, x - offset);
@@ -485,7 +488,7 @@ static void if_map_region(const struct region *region, const struct state_map *s
 			}
 			else
 			{
-				// Display an estimation of the number of troops in the garrison.
+				// Display an estimate of the number of troops in the garrison.
 
 				char buffer[32], *end; // TODO make sure this is enough
 
@@ -510,6 +513,24 @@ static void if_map_region(const struct region *region, const struct state_map *s
 					image_draw(&image_food, object_group[TroopGarrison].right + 9, object_group[TroopGarrison].bottom - (i + 1) * image_food.height);
 			}
 		}
+	}
+	else
+	{
+		// Display an estimate of the number of troops in the region.
+
+		char buffer[32], *end; // TODO make sure this is enough
+
+		unsigned count = 0;
+		for(troop = region->troops; troop; troop = troop->_next)
+			if (troop->location != LOCATION_GARRISON)
+				count += troop->count;
+		count = count_round(count) * COUNT_ROUND_PRECISION;
+
+		end = format_bytes(buffer, S("about "));
+		end = format_uint(end, count, 10);
+		end = format_bytes(end, S(" troops"));
+
+		draw_string(buffer, end - buffer, object_group[TroopSelf].left, object_group[TroopSelf].top, &font12, Black);
 	}
 
 	if ((state->player == region->owner) && !siege)
