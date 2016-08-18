@@ -261,8 +261,6 @@ static int play(struct game *restrict game)
 			case Computer:
 				status = computer_map(game, player);
 				if (status < 0) return status;
-		status = input_map(game, player);
-		if (status < 0) return status;
 				break;
 			}
 
@@ -353,7 +351,7 @@ static int play(struct game *restrict game)
 			}
 			if (alliances_open & (alliances_open - 1))
 			{
-				int status = (manual_open ? play_battle(game, region, 0) : calculate_battle(game, region));
+				int status = (manual_open ? play_battle(game, region, 0) : calculate_battle(game, region, 0));
 				if (status < 0) return status;
 
 				battle_info[index].winner = status;
@@ -361,7 +359,7 @@ static int play(struct game *restrict game)
 			}
 			else if (alliances_assault & (alliances_assault - 1))
 			{
-				int status = (manual_assault ? play_battle(game, region, 1) : calculate_battle(game, region));
+				int status = (manual_assault ? play_battle(game, region, 1) : calculate_battle(game, region, 1));
 				if (status < 0) return status;
 
 				battle_info[index].winner = status;

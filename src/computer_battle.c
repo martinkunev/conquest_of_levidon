@@ -573,27 +573,30 @@ search:
 finally:
 	array_moves_term(&backup.path);
 	free(reachable);
-
 	return status;
 }
 
-unsigned calculate_battle(struct game *restrict game, struct region *restrict region)
+unsigned calculate_battle(struct game *restrict game, struct region *restrict region, int assault)
 {
 	struct troop *restrict troop;
 	unsigned winner_alliance = 0;
 
-	// TODO make this work better for assault
+	// TODO make this work better for assault (improve unit importance - vanguard attack units are weaker; shooters are maybe stronger...)
 
 	// Calculate the strength of each alliance participating in the battle.
-	// TODO take siege and shooters into account
 	double strength[PLAYERS_LIMIT] = {0};
 	for(troop = region->troops; troop; troop = troop->_next)
-		strength[game->players[troop->owner].alliance] += unit_importance(troop->unit, 0) * troop->count;
+	{
+		if (assault && !allies(game, troop->owner, region->garrison.owner))
+			strength[game->players[troop->owner].alliance] += unit_importance(troop->unit, garrison_info(region)) * troop->count;
+		else
+			strength[game->players[troop->owner].alliance] += unit_importance(troop->unit, 0) * troop->count;
+	}
 
 	// Calculate total strength and find the strongest alliance.
 	double strength_total = 0.0;
 	unsigned alliances_count = 0;
-	for(size_t i = 1; i < PLAYERS_LIMIT; ++i)
+	for(size_t i = 0; i < PLAYERS_LIMIT; ++i)
 	{
 		if (!strength[i]) continue;
 
@@ -605,7 +608,8 @@ unsigned calculate_battle(struct game *restrict game, struct region *restrict re
 
 	// Adjust troops count.
 	// TODO use a real formula here (with some randomness)
-	double count_factor = 1 - (strength_total - strength[winner_alliance]) / (alliances_count * strength[winner_alliance]);
+	double count_factor = 1 - (strength_total - strength[winner_alliance]) / ((alliances_count - 1) * strength[winner_alliance]);
+	assert(count_factor <= 1);
 	for(troop = region->troops; troop; troop = troop->_next)
 	{
 		if (game->players[troop->owner].alliance == winner_alliance)
