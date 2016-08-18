@@ -58,7 +58,7 @@
 #define glRenderbufferStorage(...) glRenderbufferStorageEXT(__VA_ARGS__)
 #define glFramebufferRenderbuffer(...) glFramebufferRenderbufferEXT(__VA_ARGS__)
 
-#define ARROW_LENGTH 60
+#define ARROW_LENGTH 50
 
 static GLuint map_framebuffer;
 
@@ -372,7 +372,7 @@ static void if_map_region(const struct region *region, const struct state_map *s
 				draw_rectangle(position.x - 1, position.y - 1, image_buildings[i].width + 2, image_buildings[i].height + 2, display_colors[Black]);
 				image_draw(image_buildings + i, position.x, position.y);
 			}
-			else if ((state->player == region->owner) && region_building_available(region, BUILDINGS[i]) && !siege)
+			else if ((state->player == region->owner) && region_building_available(region, BUILDINGS + i) && !siege)
 			{
 				draw_rectangle(position.x - 1, position.y - 1, image_buildings[i].width + 2, image_buildings[i].height + 2, display_colors[Black]);
 				image_draw(image_buildings_gray + i, position.x, position.y);

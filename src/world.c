@@ -83,16 +83,16 @@ const size_t UNITS_COUNT = sizeof(UNITS) / sizeof(*UNITS);
 
 const struct building BUILDINGS[] =
 {
-	[BuildingFarm] = {NAME("Farm"), .cost = {.gold = -6}, .income = {.food = 6}, .time = 2},
-	[BuildingIrrigation] = {NAME("Irrigation"), .cost = {.gold = -10}, .income = {.food = 6}, .time = 4, .requires = (1 << BuildingFarm)},
-	[BuildingSawmill] = {NAME("Sawmill"), .cost = {.gold = -8}, .income = {.wood = 6}, .time = 3},
-	[BuildingMine] = {NAME("Mine"), .cost = {.gold = -8, .wood = -8}, .income = {.stone = 6}, .time = 4},
+	[BuildingFarm] = {NAME("Farm"), .cost = {.gold = -6}, .income = {.food = 5}, .time = 2},
+	[BuildingIrrigation] = {NAME("Irrigation"), .cost = {.gold = -10}, .income = {.food = 5}, .time = 4, .requires = (1 << BuildingFarm)},
+	[BuildingSawmill] = {NAME("Sawmill"), .cost = {.gold = -8}, .income = {.wood = 5}, .time = 3},
+	[BuildingMine] = {NAME("Mine"), .cost = {.gold = -8, .wood = -8}, .income = {.stone = 5}, .time = 4},
 	[BuildingBloomery] = {NAME("Bloomery"), .cost = {.gold = -16, .stone = -20}, .income = {.iron = 2, .stone = -2}, .time = 5, .requires = (1 << BuildingMine)},
 	[BuildingBarracks] = {NAME("Barracks"), .cost = {.gold = -10, .wood = -10, .stone = -5}, .time = 4},
 	[BuildingArcheryRange] = {NAME("Archery range"), .cost = {.gold = -6, .wood = -8}, .time = 2},
 	[BuildingStables] = {NAME("Stables"), .cost = {.gold = -12, .food = -20, .wood = -30}, .income = {.food = -5}, .time = 6, .requires = (1 << BuildingFarm)},
 	[BuildingWatchTower] = {NAME("Watch tower"), .cost = {.gold = -6, .wood = -10}, .time = 2},
-	[BuildingPalisade] = {NAME("Palisade"), .cost = {.gold = -20, .wood = -40}, .time = 4},
+	[BuildingPalisade] = {NAME("Palisade"), .cost = {.gold = -20, .wood = -40}, .time = 4, .conflicts = (1 << BuildingFortress)},
 	[BuildingFortress] = {NAME("Fortress"), .cost = {.gold = -40, .stone = -40}, .time = 8, .requires = (1 << BuildingPalisade)},
 	[BuildingWorkshop] = {NAME("Workshop"), .cost = {.gold = -20, .wood = -20, .stone = -10}, .time = 5, .requires = (1 << BuildingSawmill)},
 	[BuildingForge] = {NAME("Forge"), .cost = {.gold = -12, .wood = -20, .stone = -10, .iron = -4}, .time = 4, .requires = (1 << BuildingBarracks)},

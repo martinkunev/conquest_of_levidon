@@ -23,9 +23,6 @@
 
 // TODO don't use struct point here
 
-#define region_unit_available(region, unit) (!((unit).requires & ~(region)->built))
-#define region_building_available(region, building) (!((building).requires & ~(region)->built))
-
 #define region_built(region, building) ((int)((region)->built & (1 << (building))))
 
 #define COUNT_ROUND_PRECISION 10
@@ -42,7 +39,7 @@ struct building
 
 	struct resources cost, income;
 	unsigned char time;
-	uint32_t requires;
+	uint32_t requires, conflicts;
 };
 
 struct troop
@@ -126,6 +123,13 @@ extern const size_t UNITS_COUNT;
 
 extern const struct building BUILDINGS[];
 extern const size_t BUILDINGS_COUNT;
+
+#define region_unit_available(region, unit) (!((unit).requires & ~(region)->built))
+
+static inline int region_building_available(const struct region *restrict region, const struct building *restrict building)
+{
+	return ((region->built & (building->requires | building->conflicts)) == building->requires);
+}
 
 void troop_attach(struct troop **troops, struct troop *troop);
 void troop_detach(struct troop **troops, struct troop *troop);

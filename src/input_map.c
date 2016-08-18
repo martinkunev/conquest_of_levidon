@@ -154,20 +154,20 @@ static int input_construct(int code, unsigned x, unsigned y, uint16_t modifiers,
 {
 	struct state_map *state = argument;
 
-	ssize_t index;
+	ssize_t building;
 	struct region *region;
 
 	if (code >= 0) return INPUT_NOTME; // ignore keyboard events
 
-	if (state->region == REGION_NONE) return INPUT_IGNORE; // no region selected
+	if (state->region == REGION_NONE) return INPUT_NOTME; // no region selected
 	region = game->regions + state->region;
-	if (state->player != region->owner) goto reset; // player does not control the region
-	if (region->owner != region->garrison.owner) goto reset; // the garrison is under siege
+	if (state->player != region->owner) return INPUT_NOTME; // player does not control the region
+	if (region->owner != region->garrison.owner) return INPUT_NOTME; // the garrison is under siege
 
 	// Find which building was clicked.
-	index = if_index(Building, (struct point){x, y});
-	if ((index < 0) || (index >= BUILDINGS_COUNT)) goto reset; // no building clicked
-	if (!region_building_available(region, BUILDINGS[index])) goto reset; // building can not be constructed
+	building = if_index(Building, (struct point){x, y});
+	if ((building < 0) || (building >= BUILDINGS_COUNT)) return INPUT_NOTME; // no building clicked
+	if (!region_building_available(region, BUILDINGS + building)) return INPUT_NOTME; // building can not be constructed
 
 	if (code == EVENT_MOUSE_LEFT)
 	{
@@ -175,36 +175,34 @@ static int input_construct(int code, unsigned x, unsigned y, uint16_t modifiers,
 		{
 			// If the building clicked is the one under construction, cancel the construction.
 			// If the construction has not yet started, return allocated resources.
-			if (region->construct == index)
+			if (region->construct == building)
 			{
-				// build_cancel(game, region, index);
+				// build_cancel(game, region, building);
 				if (region->build_progress)
 					region->build_progress = 0;
 				else
-					resource_subtract(&game->players[state->player].treasury, &BUILDINGS[index].cost);
+					resource_subtract(&game->players[state->player].treasury, &BUILDINGS[building].cost);
 				region->construct = -1;
 			}
 		}
-		else if (!region_built(region, index))
+		else if (!region_built(region, building))
 		{
-			// if (build_start(game, region, index)) ...;
-			if (!resource_enough(&game->players[state->player].treasury, &BUILDINGS[index].cost)) return INPUT_IGNORE;
+			// if (build_start(game, region, building)) ...;
+			if (!resource_enough(&game->players[state->player].treasury, &BUILDINGS[building].cost)) return INPUT_IGNORE;
 
-			region->construct = index;
-			resource_add(&game->players[state->player].treasury, &BUILDINGS[index].cost);
+			region->construct = building;
+			resource_add(&game->players[state->player].treasury, &BUILDINGS[building].cost);
 		}
 	}
 	else if (code == EVENT_MOTION)
 	{
+		if ((state->hover_object == HOVER_BUILDING) && (state->hover.building == building))
+			return INPUT_IGNORE;
 		state->hover_object = HOVER_BUILDING;
-		state->hover.building = index;
+		state->hover.building = building;
 	}
 	else return INPUT_IGNORE;
 
-	return 0;
-
-reset:
-	state->hover_object = HOVER_NONE;
 	return 0;
 }
 
@@ -217,23 +215,21 @@ static int input_train(int code, unsigned x, unsigned y, uint16_t modifiers, con
 
 	if (code >= 0) return INPUT_NOTME; // ignore keyboard events
 
-	if (state->region == REGION_NONE) goto reset; // no region selected
+	if (state->region == REGION_NONE) return INPUT_NOTME; // no region selected
 	region = game->regions + state->region;
-	if (state->player != region->owner) goto reset; // player does not control the region
-	if (region->owner != region->garrison.owner) goto reset; // the garrison is under siege
+	if (state->player != region->owner) return INPUT_NOTME; // player does not control the region
+	if (region->owner != region->garrison.owner) return INPUT_NOTME; // the garrison is under siege
 
 	// Find which unit was clicked.
 	unit = if_index(Train, (struct point){x, y});
-	if ((unit < 0) || (unit >= UNITS_COUNT)) goto reset; // no unit clicked
-	if (!region_unit_available(region, UNITS[unit])) goto reset; // unit can not be trained
+	if ((unit < 0) || (unit >= UNITS_COUNT)) return INPUT_NOTME; // no unit clicked
+	if (!region_unit_available(region, UNITS[unit])) return INPUT_NOTME; // unit can not be trained
 
 	if (code == EVENT_MOUSE_LEFT)
 	{
-		size_t index;
+		if (!resource_enough(&game->players[state->player].treasury, &UNITS[unit].cost)) return INPUT_IGNORE;
 
-		if (!resource_enough(&game->players[state->player].treasury, &UNITS[unit].cost)) return 0;
-
-		for(index = 0; index < TRAIN_QUEUE; ++index)
+		for(size_t index = 0; index < TRAIN_QUEUE; ++index)
 			if (!region->train[index])
 			{
 				// Spend the money required for the units.
@@ -245,15 +241,13 @@ static int input_train(int code, unsigned x, unsigned y, uint16_t modifiers, con
 	}
 	else if (code == EVENT_MOTION)
 	{
+		if ((state->hover_object == HOVER_UNIT) && (state->hover.unit == unit))
+			return INPUT_IGNORE;
 		state->hover_object = HOVER_UNIT;
 		state->hover.unit = unit;
 	}
 	else return INPUT_IGNORE;
 
-	return 0;
-
-reset:
-	state->hover_object = HOVER_NONE;
 	return 0;
 }
 
@@ -302,7 +296,7 @@ static int input_scroll_self(int code, unsigned x, unsigned y, uint16_t modifier
 {
 	struct state_map *state = argument;
 
-	if (code != -1) return INPUT_NOTME; // handle only left mouse clicks
+	if (code != EVENT_MOUSE_LEFT) return INPUT_NOTME; // handle only left mouse clicks
 
 	if (state->region == REGION_NONE) return INPUT_IGNORE; // no region selected
 
@@ -333,7 +327,7 @@ static int input_scroll_ally(int code, unsigned x, unsigned y, uint16_t modifier
 {
 	struct state_map *state = argument;
 
-	if (code != -1) return INPUT_NOTME; // handle only left mouse clicks
+	if (code != EVENT_MOUSE_LEFT) return INPUT_NOTME; // handle only left mouse clicks
 
 	if (state->region == REGION_NONE) return INPUT_IGNORE; // no region selected
 
