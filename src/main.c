@@ -261,6 +261,10 @@ static int play(struct game *restrict game)
 			case Computer:
 				status = computer_map(game, player);
 				if (status < 0) return status;
+#if defined(DEBUG)
+				status = input_map(game, player);
+				if (status < 0) return status;
+#endif
 				break;
 			}
 
@@ -422,6 +426,9 @@ static int play(struct game *restrict game)
 				resource_add(&game->players[region->owner].treasury, &income);
 			}
 		}
+
+		for(index = 0; index < game->regions_count; ++index)
+			region_troops_merge(game->regions + index);
 
 		// Perform player-specific actions.
 		alliances = 0;

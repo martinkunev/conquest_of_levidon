@@ -39,7 +39,7 @@
 
 #define S(s) (s), sizeof(s) - 1
 
-const struct unit UNITS[] =
+const struct unit UNITS[UNITS_COUNT] =
 {
 	[UnitPeasant] = {
 		.index = UnitPeasant, NAME("Peasant"), .speed = 4, .health = 4, .armor = ARMOR_NONE,
@@ -79,7 +79,6 @@ const struct unit UNITS[] =
 		.melee = {.weapon = WEAPON_BLUNT, .damage = 50.0, .agility = 0.25},
 	},
 };
-const size_t UNITS_COUNT = sizeof(UNITS) / sizeof(*UNITS);
 
 const struct building BUILDINGS[] =
 {

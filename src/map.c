@@ -288,3 +288,54 @@ int region_garrison_full(const struct region *restrict region, const struct garr
 			count += 1;
 	return (count == garrison->troops);
 }
+
+void region_troops_merge(struct region *restrict region)
+{
+	bool player_done[PLAYERS_LIMIT] = {0};
+	bool more;
+
+	do
+	{
+		struct troop *restrict troop_units[UNITS_COUNT] = {0};
+		unsigned char player = PLAYERS_LIMIT;
+
+		more = false;
+
+		for(struct troop *restrict troop = region->troops; troop; troop = troop->_next)
+		{
+			size_t index;
+
+			if (player_done[troop->owner])
+				continue;
+			more = true;
+
+			if (player == PLAYERS_LIMIT)
+				player = troop->owner;
+			else if (troop->owner != player)
+				continue;
+
+			index = troop->unit - UNITS;
+			if (troop->count >= troop->unit->troops_count)
+				continue;
+			if (!troop_units[index]) troop_units[index] = troop;
+			else
+			{
+				unsigned count_total = troop_units[index]->count + troop->count;
+				if (count_total > troop->unit->troops_count)
+				{
+					// Cannot merge the troops. Transfer count to the current troop.
+					troop->count = troop->unit->troops_count;
+					troop_units[index]->count = count_total - troop->unit->troops_count;
+				}
+				else
+				{
+					troop->count = count_total;
+					troop_detach(&region->troops, troop_units[index]);
+					free(troop_units[index]);
+				}
+			}
+		}
+
+		player_done[player] = true;
+	} while (more);
+}

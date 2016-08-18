@@ -118,8 +118,8 @@ static inline const struct garrison_info *garrison_info(const struct region *res
 	else return 0;
 }
 
-extern const struct unit UNITS[];
-extern const size_t UNITS_COUNT;
+#define UNITS_COUNT 7
+extern const struct unit UNITS[UNITS_COUNT];
 
 extern const struct building BUILDINGS[];
 extern const size_t BUILDINGS_COUNT;
@@ -150,3 +150,4 @@ int polygons_border(const struct polygon *restrict a, const struct polygon *rest
 void map_visible(const struct game *restrict game, unsigned char player, unsigned char visible[REGIONS_LIMIT]);
 
 int region_garrison_full(const struct region *restrict region, const struct garrison_info *restrict garrison);
+void region_troops_merge(struct region *restrict region);
