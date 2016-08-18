@@ -395,37 +395,12 @@ static int input_troop(int code, unsigned x, unsigned y, uint16_t modifiers, con
 		if (!state->troop) return 0; // no troop selected
 
 		// If the selected troop is in the garrison, move it out.
-		// Else, transfer units between troops.
 		if ((state->troop->move == LOCATION_GARRISON) && (state->troop->owner == region->garrison.owner))
 		{
 			state->troop->move = region;
 			state->troop = 0;
 		}
-		else
-		{
-			if (!troop) goto reset; // no troop clicked
-			if (troop == state->troop) return 0; // the clicked and the selected troop are the same
-			if (troop->unit != state->troop->unit) return 0; // the clicked and the selected units are different
-
-			// Transfer units from the selected to the clicked troop.
-			unsigned transfer_count = (troop->unit->troops_count - troop->count);
-			if (state->troop->count > transfer_count)
-			{
-				state->troop->count -= transfer_count;
-				troop->count += transfer_count;
-			}
-			else
-			{
-				troop->count += state->troop->count;
-
-				// Remove the selected troop because all units were transfered to the clicked troop.
-				troop = state->troop;
-				troop_detach(&region->troops, troop);
-				free(troop);
-
-				goto reset;
-			}
-		}
+		else return INPUT_IGNORE;
 	}
 	else return INPUT_IGNORE;
 
