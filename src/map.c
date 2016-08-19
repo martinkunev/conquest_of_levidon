@@ -118,7 +118,6 @@ void region_battle_cleanup(const struct game *restrict game, struct region *rest
 
 void region_turn_process(const struct game *restrict game, struct region *restrict region)
 {
-	// TODO improve the wording of this comment
 	// Region can change ownership if:
 	// * it is conquered by enemy troops
 	// * it is unguarded and the garrison's owner is an enemy of the region owner
@@ -291,27 +290,30 @@ int region_garrison_full(const struct region *restrict region, const struct garr
 
 void region_troops_merge(struct region *restrict region)
 {
-	bool player_done[PLAYERS_LIMIT] = {0};
+	bool processed_players[PLAYERS_LIMIT] = {false}, processed_garrison = false;
 	bool more;
 
 	do
 	{
+		bool *processing = 0;
 		struct troop *restrict troop_units[UNITS_COUNT] = {0};
-		unsigned char player = PLAYERS_LIMIT;
 
 		more = false;
 
+		// Find troop that has not been processed and merge the troops from the same player.
 		for(struct troop *restrict troop = region->troops; troop; troop = troop->_next)
 		{
 			size_t index;
 
-			if (player_done[troop->owner])
+			bool *current = ((troop->location == LOCATION_GARRISON) ? &processed_garrison : &processed_players[troop->owner]);
+
+			if (*current)
 				continue;
 			more = true;
 
-			if (player == PLAYERS_LIMIT)
-				player = troop->owner;
-			else if (troop->owner != player)
+			if (!processing)
+				processing = current;
+			else if (current != processing)
 				continue;
 
 			index = troop->unit - UNITS;
@@ -332,10 +334,11 @@ void region_troops_merge(struct region *restrict region)
 					troop->count = count_total;
 					troop_detach(&region->troops, troop_units[index]);
 					free(troop_units[index]);
+					troop_units[index] = 0;
 				}
 			}
 		}
 
-		player_done[player] = true;
+		*processing = true;
 	} while (more);
 }
