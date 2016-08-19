@@ -62,13 +62,13 @@ enum {POSITION_RIGHT = 0x1, POSITION_TOP = 0x2, POSITION_LEFT = 0x4, POSITION_BO
 struct battlefield
 {
 	struct tile tile;
-	//enum {BLOCKAGE_NONE, BLOCKAGE_TERRAIN, BLOCKAGE_OBSTACLE, BLOCKAGE_TOWER} blockage;
-	enum {BLOCKAGE_NONE, BLOCKAGE_TERRAIN, BLOCKAGE_OBSTACLE} blockage;
+	enum {BLOCKAGE_NONE, BLOCKAGE_TERRAIN, BLOCKAGE_WALL, BLOCKAGE_GATE} blockage;
+	//enum {BLOCKAGE_NONE, BLOCKAGE_TERRAIN, BLOCKAGE_WALL, BLOCKAGE_GATE, BLOCKAGE_TOWER} blockage;
 	unsigned char blockage_location;
 
-	signed char owner; // for BLOCKAGE_OBSTACLE and BLOCKAGE_TOWER
-	unsigned strength; // for BLOCKAGE_OBSTACLE and BLOCKAGE_TOWER // TODO rename to health or store hurt instead (like for pawns)
-	const struct unit *unit; // for BLOCKAGE_OBSTACLE and BLOCKAGE_TOWER
+	signed char owner; // for BLOCKAGE_GATE and BLOCKAGE_TOWER
+	unsigned strength; // for BLOCKAGE_WALL, BLOCKAGE_GATE and BLOCKAGE_TOWER // TODO rename to health or store hurt instead (like for pawns)
+	const struct unit *unit; // for BLOCKAGE_WALL, BLOCKAGE_GATE and BLOCKAGE_TOWER
 	struct pawn *pawn; // during formation and for BLOCKAGE_TOWER TODO don't use this for formation?
 
 	// TODO for BLOCKAGE_TOWER there should be specified a field for descending
@@ -110,7 +110,7 @@ size_t formation_reachable_open(const struct game *restrict game, const struct b
 size_t formation_reachable_assault(const struct game *restrict game, const struct battle *restrict battle, const struct pawn *restrict pawn, struct tile reachable[REACHABLE_LIMIT]);
 
 // Returns whether a pawn owned by the given player can pass through the field.
-int battlefield_passable(const struct game *restrict game, const struct battlefield *restrict field, unsigned player);
+int battlefield_passable(const struct battlefield *restrict field, unsigned player);
 
 int battlefield_init(const struct game *restrict game, struct battle *restrict battle, struct region *restrict region, int assault);
 void battlefield_term(const struct game *restrict game, struct battle *restrict battle);

@@ -194,7 +194,7 @@ int movement_plan(struct battle *restrict battle, struct adjacency_list *restric
 
 		// Delete moves if they represent fighting target (the target may have moved).
 		// TODO optimization: only do this if the target moved
-		if (!pawn->path.count && (pawn->action == ACTION_FIGHT))
+		if (!pawn->path.count && ((pawn->action == ACTION_FIGHT) || (pawn->action == ACTION_ASSAULT)))
 			pawn->moves.count = 0;
 
 		// Make sure there are precalculated moves for the pawn.

@@ -1,9 +1,11 @@
 -- bugs --
 H	battering ram is not moving when assault target is set
-H	troops can pass through nearby garrison walls (because battlefield_passable() thinks the wall is an open gate when there is a pawn nearby (since walls are thin))
+	the destination is inside an obstacle and path_find fails
 H	F troops bar not visualized correctly when it goes out of the screen
-M	fast units cannot always catch up with slow units even when they are close enough (seen with light cavalry and peasant)
+H	computer doesn't move the pawns during an assault
 H	two horses blocked during battle (neither attacks an archer)
+	when they start moving, they collide again
+M	fast units cannot always catch up with slow units even when they are close enough (seen with light cavalry and peasant)
 
 -- features --
 H	AI improvements
@@ -20,9 +22,6 @@ H	AI improvements
 	shooters don't always shoot when they can
 	// how to debug: display calculated rating after making a change in input_map
 H	support dismissing troops (add a flag in struct troop)
-H	don't allow pawns to attack their own walls (currently only gates are not attacked)
-	separate constants for BLOCKAGE_WALL and BLOCKAGE_GATE
-H	battle: don't allow attacking if the attacker cannot do damage to the defender (due to weapon and armor type)
 H	use a separate thread to calculate computer turns while the local player is choosing what to play
 	add indicator (e.g. lighted bulb) for the players who have completed their turn
 H	better support for hotseat (show animations to each player, warn before changing current player and showing their map, choose player names, etc.)
@@ -40,6 +39,7 @@ H	balance battles
 	most of the pawn->count usually get killed at the same time (the round when the pawn dies)
 H	when a target is impossible, set target to the closest possible (e.g. if shooting range is not enough or a position is outside the battlefield)
 H	when a region is invaded, garrison troops should have the option to fight
+M	battle: don't allow attacking if the attacker cannot do damage to the defender (due to weapon and armor type)
 M	? melee units should go closer to the shooter to prevent them from escaping far enough to shoot
 M	region-specific features (income, population, units, buildings, battlefield)
 	population growth
@@ -91,7 +91,6 @@ L	make palisade invisible when fortress is built
 refactoring
 	use 'struct point' only for drawing (draw.h) (fix point_eq calls)
 		remove struct region dependency on struct point by moving center and location_garrison into location
-	split BLOCKAGE_OBSTACLE into BLOCAKGE_GATE and BLOCKAGE_WALL; change combat_order_assault (there is a todo)
 	make it simpler to check if two players are allies
 	? rename image to sprite
 	? change direction of everything to counterclockwise; currently the y axis is in the opposite direction (and the cross product is negated)
@@ -125,9 +124,10 @@ H	display calculated pawn moves (not a straight line)
 H	when two pawns from different alliances are next to each other, display red line between them (to show that they are fighting)
 H	fight animation (display which units are fighting)
 H	display round number and number of rounds until retreat
-H	F enemy on the gate not displayed during shooting in battle animation
 H	new wall and gate images; open gate image
 H	tell all players if somebody is retreating
+H	show gate strength if if there is a pawn on top of it
+H	display open gate when there is a pawn on top of the gate
 M	hide mouse pointer during animation
 M	support showing more pawn stats (not just health)
 M	change image for pawn selection

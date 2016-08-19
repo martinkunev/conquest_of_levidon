@@ -126,15 +126,13 @@ size_t formation_reachable_assault(const struct game *restrict game, const struc
 	return reachable_count;
 }
 
-int battlefield_passable(const struct game *restrict game, const struct battlefield *restrict field, unsigned player)
+// Returns whether a pawn owned by the given player can pass through the field.
+int battlefield_passable(const struct battlefield *restrict field, unsigned player)
 {
 	if (!field->blockage)
 		return 1;
-
-	if (field->blockage == BLOCKAGE_OBSTACLE)
-		if (allies(game, player, field->owner) || field->pawns[0]) // TODO the second part can be true for non-gates
-			return 1;
-
+	if ((field->blockage == BLOCKAGE_GATE) && (field->owner == player))
+		return 1;
 	return 0;
 }
 
@@ -268,29 +266,30 @@ static void battlefield_init_assault(const struct game *restrict game, struct ba
 	// O     O
 	// ##O.O##
 
-#define OBSTACLE(x, y, p, o, s, u) do \
+#define OBSTACLE(x, y, p, b) do \
 	{ \
 		struct battlefield *restrict field = &battle->field[y][x]; \
-		field->blockage = BLOCKAGE_OBSTACLE; \
+		unsigned blockage = (b); \
+		field->blockage = blockage; \
 		field->blockage_location = (p); \
-		field->owner = (o); \
-		field->strength = (s); \
-		field->unit = (u); \
+		field->owner = battle->region->garrison.owner; \
+		field->strength = ((blockage == BLOCKAGE_WALL) ? garrison->wall.health : garrison->gate.health); \
+		field->unit = ((blockage == BLOCKAGE_WALL) ? &garrison->wall : &garrison->gate); \
 	} while (0)
 
-	OBSTACLE(9, 0, POSITION_TOP | POSITION_BOTTOM, OWNER_NONE, garrison->wall.health, &garrison->wall);
-	OBSTACLE(9, 1, POSITION_TOP | POSITION_BOTTOM, battle->region->garrison.owner, garrison->gate.health, &garrison->gate);
-	OBSTACLE(9, 2, POSITION_TOP | POSITION_BOTTOM, OWNER_NONE, garrison->wall.health, &garrison->wall);
-	OBSTACLE(9, 3, POSITION_TOP | POSITION_RIGHT, OWNER_NONE, garrison->wall.health, &garrison->wall);
-	OBSTACLE(10, 3, POSITION_LEFT | POSITION_RIGHT, OWNER_NONE, garrison->wall.health, &garrison->wall);
-	OBSTACLE(11, 3, POSITION_LEFT | POSITION_RIGHT, OWNER_NONE, garrison->wall.health, &garrison->wall);
-	OBSTACLE(12, 3, POSITION_LEFT | POSITION_RIGHT, battle->region->garrison.owner, garrison->gate.health, &garrison->gate);
-	OBSTACLE(13, 3, POSITION_LEFT | POSITION_RIGHT, OWNER_NONE, garrison->wall.health, &garrison->wall);
-	OBSTACLE(14, 3, POSITION_LEFT | POSITION_RIGHT, OWNER_NONE, garrison->wall.health, &garrison->wall);
-	OBSTACLE(15, 3, POSITION_TOP | POSITION_LEFT, OWNER_NONE, garrison->wall.health, &garrison->wall);
-	OBSTACLE(15, 2, POSITION_TOP | POSITION_BOTTOM, OWNER_NONE, garrison->wall.health, &garrison->wall);
-	OBSTACLE(15, 1, POSITION_TOP | POSITION_BOTTOM, battle->region->garrison.owner, garrison->gate.health, &garrison->gate);
-	OBSTACLE(15, 0, POSITION_TOP | POSITION_BOTTOM, OWNER_NONE, garrison->wall.health, &garrison->wall);
+	OBSTACLE(9, 0, POSITION_TOP | POSITION_BOTTOM, BLOCKAGE_WALL);
+	OBSTACLE(9, 1, POSITION_TOP | POSITION_BOTTOM, BLOCKAGE_GATE);
+	OBSTACLE(9, 2, POSITION_TOP | POSITION_BOTTOM, BLOCKAGE_WALL);
+	OBSTACLE(9, 3, POSITION_TOP | POSITION_RIGHT, BLOCKAGE_WALL);
+	OBSTACLE(10, 3, POSITION_LEFT | POSITION_RIGHT, BLOCKAGE_WALL);
+	OBSTACLE(11, 3, POSITION_LEFT | POSITION_RIGHT, BLOCKAGE_WALL);
+	OBSTACLE(12, 3, POSITION_LEFT | POSITION_RIGHT, BLOCKAGE_GATE);
+	OBSTACLE(13, 3, POSITION_LEFT | POSITION_RIGHT, BLOCKAGE_WALL);
+	OBSTACLE(14, 3, POSITION_LEFT | POSITION_RIGHT, BLOCKAGE_WALL);
+	OBSTACLE(15, 3, POSITION_TOP | POSITION_LEFT, BLOCKAGE_WALL);
+	OBSTACLE(15, 2, POSITION_TOP | POSITION_BOTTOM, BLOCKAGE_WALL);
+	OBSTACLE(15, 1, POSITION_TOP | POSITION_BOTTOM, BLOCKAGE_GATE);
+	OBSTACLE(15, 0, POSITION_TOP | POSITION_BOTTOM, BLOCKAGE_WALL);
 
 #undef OBSTACLE
 

@@ -110,7 +110,7 @@ static int pawn_command(const struct game *restrict game, struct battle *restric
 		else
 			return ERROR_MISSING; // none of the commands can be executed
 	}
-	else if (combat_assault(game, pawn, target_field))
+	else if (!allies(game, pawn->troop->owner, target_field->owner) && combat_assault(game, pawn, target_field))
 	{
 		return 0;
 	}

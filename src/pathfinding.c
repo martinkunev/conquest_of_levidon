@@ -169,7 +169,7 @@ struct obstacles *path_obstacles_alloc(const struct game *restrict game, const s
 		for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
 		{
 			const struct battlefield *field = &battle->field[y][x];
-			unsigned char blockage_location = (battlefield_passable(game, field, player) ? 0 : field->blockage_location);
+			unsigned char blockage_location = (battlefield_passable(field, player) ? 0 : field->blockage_location);
 
 			if (horizontal >= 0)
 			{
@@ -228,7 +228,7 @@ struct obstacles *path_obstacles_alloc(const struct game *restrict game, const s
 		for(x = 0; x < BATTLEFIELD_WIDTH; ++x)
 		{
 			const struct battlefield *field = &battle->field[y][x];
-			unsigned char blockage_location = (battlefield_passable(game, field, player) ? 0 : field->blockage_location);
+			unsigned char blockage_location = (battlefield_passable(field, player) ? 0 : field->blockage_location);
 
 			if (horizontal >= 0)
 			{

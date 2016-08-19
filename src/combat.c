@@ -294,7 +294,7 @@ int battlefield_clean(const struct game *restrict game, struct battle *restrict 
 		for(x = 0; x < BATTLEFIELD_HEIGHT; ++x)
 		{
 			struct battlefield *restrict field = &battle->field[y][x];
-			if ((field->blockage == BLOCKAGE_OBSTACLE) && !field->strength)
+			if (((field->blockage == BLOCKAGE_WALL) || (field->blockage == BLOCKAGE_GATE)) && !field->strength)
 			{
 				activity = 1;
 				field->blockage = BLOCKAGE_NONE;
@@ -361,7 +361,7 @@ int combat_assault(const struct game *restrict game, struct pawn *restrict fight
 	// TODO verify that the target is reachable
 	// TODO what if the fighter attacks a tower with pawn on it
 
-	if ((target->blockage != BLOCKAGE_OBSTACLE) || allies(game, fighter->troop->owner, target->owner)) // TODO the allies check works only for gates
+	if ((target->blockage != BLOCKAGE_WALL) && (target->blockage != BLOCKAGE_GATE))
 		return 0;
 
 	fighter->action = ACTION_ASSAULT;
