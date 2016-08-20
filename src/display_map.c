@@ -472,11 +472,9 @@ static void if_map_region(const struct region *region, const struct state_map *s
 				i = 0;
 				for(troop = region->troops; troop; troop = troop->_next)
 				{
-					if (troop->owner == state->player)
-					{
-						if (troop->move != LOCATION_GARRISON) continue;
-					}
-					else if (troop->location != LOCATION_GARRISON) continue;
+					const struct region *restrict location = ((troop->owner == state->player) ? troop->move : troop->location);
+					if ((location != LOCATION_GARRISON) || (troop->owner != region->garrison.owner))
+						continue;
 
 					struct point position = if_position(TroopGarrison, i);
 					fill_rectangle(position.x, position.y, object_group[TroopGarrison].width, object_group[TroopGarrison].height, display_colors[Black]);

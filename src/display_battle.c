@@ -17,6 +17,7 @@
  * along with Conquest of Levidon.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <assert.h>
 #include <stdlib.h>
 #include <unistd.h>
 
@@ -81,9 +82,12 @@ static void if_battlefield(unsigned char player, const struct game *game, const 
 				const struct image *image;
 
 				// TODO use separate images for palisade and fortress
-				if (field->owner == OWNER_NONE) image = &image_palisade[field->blockage_location];
+				// TODO support BLOCKAGE_TERRAIN
+				if (field->blockage == BLOCKAGE_WALL) image = &image_palisade[field->blockage_location];
 				else
 				{
+					assert(field->blockage == BLOCKAGE_GATE);
+
 					if (field->blockage_location == (POSITION_LEFT | POSITION_RIGHT))
 						image = &image_palisade_gate[0];
 					else // field->blockage_location == (POSITION_TOP | POSITION_BOTTOM)
@@ -106,8 +110,6 @@ void if_animation(const void *argument, const struct game *game, double progress
 	size_t step = (unsigned)(progress * MOVEMENT_STEPS);
 	progress = progress * MOVEMENT_STEPS - step;
 
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
 	if_battlefield(PLAYER_NEUTRAL, game, battle, state->traversed); // TODO change first argument
 
 	// pawns
@@ -123,9 +125,6 @@ void if_animation(const void *argument, const struct game *game, double progress
 
 		display_troop(pawn->troop->unit->index, BATTLEFIELD_X(x), BATTLEFIELD_Y(y), Player + pawn->troop->owner, 0, 0);
 	}
-
-	glFlush();
-	glXSwapBuffers(display, drawable);
 }
 
 void if_animation_shoot(const void *argument, const struct game *game, double progress)
@@ -133,8 +132,6 @@ void if_animation_shoot(const void *argument, const struct game *game, double pr
 	const struct state_animation *state = argument;
 
 	size_t p;
-
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	if_battlefield(PLAYER_NEUTRAL, game, battle, state->traversed); // TODO change first argument
 
@@ -178,9 +175,6 @@ void if_animation_shoot(const void *argument, const struct game *game, double pr
 		y = origin.y * (1.0 - progress) + target.y * progress;
 		image_draw(image, BATTLEFIELD_X(x), BATTLEFIELD_Y(y));
 	}
-
-	glFlush();
-	glXSwapBuffers(display, drawable);
 }
 
 // TODO rewrite this
@@ -404,7 +398,7 @@ void if_battle(const void *argument, const struct game *game)
 	}
 	else if (state->field)
 	{
-		if (state->field->blockage == BLOCKAGE_OBSTACLE)
+		if ((state->field->blockage == BLOCKAGE_WALL) || (state->field->blockage == BLOCKAGE_GATE))
 			show_strength(state->field, CTRL_X, CTRL_Y + CTRL_MARGIN);
 	}
 	else for(size_t i = 0; i < battle->players[state->player].pawns_count; ++i)

@@ -165,6 +165,8 @@ static int play_battle(struct game *restrict game, struct region *restrict regio
 		// Invariant: Before and after each step there are no overlapping pawns.
 		for(step = 0; step < MOVEMENT_STEPS; ++step)
 		{
+			// TODO open a gate if a pawn passes through it; close it at the end of the round
+
 			// Remember the position of each pawn because it is necessary for the movement animation.
 			for(i = 0; i < battle.pawns_count; ++i)
 				movements[i][step] = battle.pawns[i].position;

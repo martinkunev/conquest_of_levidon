@@ -85,20 +85,19 @@ int if_init(void)
 
 	// Choose a framebuffer configuration.
 	const int attributes[] = {GLX_BUFFER_SIZE, 32, GLX_DEPTH_SIZE, 24, GLX_RENDER_TYPE, GLX_RGBA_BIT, None};
-    GLXFBConfig *fb_configs = 0;
-    int fb_configs_count = 0;
-    fb_configs = glXChooseFBConfig(display, screen_index, attributes, &fb_configs_count);
-    if (!fb_configs || (fb_configs_count == 0)) goto error;
+	int fb_configs_count = 0;
+	GLXFBConfig *fb_configs = glXChooseFBConfig(display, screen_index, attributes, &fb_configs_count);
+	if (!fb_configs || (fb_configs_count == 0)) goto error;
 	GLXFBConfig fb_config = fb_configs[0];
 
 	// create XID's for colormap and window
 	xcb_colormap_t colormap = xcb_generate_id(connection);
 	window = xcb_generate_id(connection);
 
-	// config and query visualID
-	int visualID = 0;
-	glXGetFBConfigAttrib(display, fb_config, GLX_VISUAL_ID, &visualID);
-	xcb_create_colormap(connection, XCB_COLORMAP_ALLOC_NONE, colormap, screen->root, visualID);
+	// config and query visual_id
+	int visual_id = 0;
+	glXGetFBConfigAttrib(display, fb_config, GLX_VISUAL_ID, &visual_id);
+	xcb_create_colormap(connection, XCB_COLORMAP_ALLOC_NONE, colormap, screen->root, visual_id);
 
 	uint32_t eventmask = XCB_EVENT_MASK_EXPOSURE | XCB_EVENT_MASK_KEY_PRESS | XCB_EVENT_MASK_KEY_RELEASE | XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_BUTTON_RELEASE | XCB_EVENT_MASK_POINTER_MOTION;
 	uint32_t valuelist[] = {eventmask, colormap, 0};
@@ -120,7 +119,8 @@ int if_init(void)
 		event.xclient.data.l[1] = XInternAtom(display, WM_STATE_FULLSCREEN, 0);
 
 		// TODO set window parameters
-		xcb_create_window(connection, XCB_COPY_FROM_PARENT, window, screen->root, 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, 0, XCB_WINDOW_CLASS_INPUT_OUTPUT, visualID, valuemask, valuelist);
+		// TODO set window title, border, etc.
+		xcb_create_window(connection, XCB_COPY_FROM_PARENT, window, screen->root, 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, 0, XCB_WINDOW_CLASS_INPUT_OUTPUT, visual_id, valuemask, valuelist);
 		xcb_map_window(connection, window); // NOTE: window must be mapped before glXMakeContextCurrent
 		XSendEvent(display, DefaultRootWindow(display), 0, SubstructureRedirectMask | SubstructureNotifyMask, &event);
 		XFlush(display);
@@ -128,15 +128,13 @@ int if_init(void)
 
 	drawable = glXCreateWindow(display, fb_config, window, 0);
 
-	// create OpenGL context
+	// Create OpenGL context and make it current.
 	context = glXCreateNewContext(display, fb_config, GLX_RGBA_TYPE, 0, 1);
 	if (!context)
 	{
 		xcb_destroy_window(connection, window);
 		goto error;
 	}
-
-	// make OpenGL context current
 	if (!glXMakeContextCurrent(display, drawable, drawable, context))
 	{
 		glXDestroyContext(display, context);
@@ -190,8 +188,6 @@ int if_init(void)
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	// TODO set window title, border, etc.
-
 	glClearColor(0.0, 0.0, 0.0, 0.0);
 
 	return 0;
@@ -220,7 +216,7 @@ void input_display(void (*if_display)(const void *, const struct game *), const 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	if_display(state, game);
 	glFlush();
-	glXSwapBuffers(display, drawable);
+	//glXSwapBuffers(display, drawable);
 }
 
 void input_display_timer(void (*if_display)(const void *, const struct game *, double), const struct game *restrict game, double progress, void *state)
@@ -228,7 +224,7 @@ void input_display_timer(void (*if_display)(const void *, const struct game *, d
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	if_display(state, game, progress);
 	glFlush();
-	glXSwapBuffers(display, drawable);
+	//glXSwapBuffers(display, drawable);
 }
 
 void if_term(void)

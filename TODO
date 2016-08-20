@@ -5,6 +5,7 @@ H	F troops bar not visualized correctly when it goes out of the screen
 H	computer doesn't move the pawns during an assault
 H	two horses blocked during battle (neither attacks an archer)
 	when they start moving, they collide again
+H	computer assaults allied garrison
 M	fast units cannot always catch up with slow units even when they are close enough (seen with light cavalry and peasant)
 
 -- features --
@@ -108,6 +109,9 @@ M	flag patterns
 M	show troops count, health, etc. only when alt is pressed
 
 button input bottom and right coordinates should be exclusive (... - 1)
+
+use stencil buffer when troops images don't fit into their rectangle (and will be on top of other images)
+	https://open.gl/depthstencils
 
 images
 H	fortress*.png, fortress_gate*.png
