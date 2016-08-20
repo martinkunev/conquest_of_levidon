@@ -84,7 +84,7 @@ int if_init(void)
 	screen = iterator.data;
 
 	// Choose a framebuffer configuration.
-	const int attributes[] = {GLX_BUFFER_SIZE, 32, GLX_DEPTH_SIZE, 24, GLX_RENDER_TYPE, GLX_RGBA_BIT, None};
+	const int attributes[] = {GLX_BUFFER_SIZE, 32, GLX_DEPTH_SIZE, 24, GLX_RENDER_TYPE, GLX_RGBA_BIT, GLX_DOUBLEBUFFER, True, None};
 	int fb_configs_count = 0;
 	GLXFBConfig *fb_configs = glXChooseFBConfig(display, screen_index, attributes, &fb_configs_count);
 	if (!fb_configs || (fb_configs_count == 0)) goto error;
@@ -216,7 +216,7 @@ void input_display(void (*if_display)(const void *, const struct game *), const 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	if_display(state, game);
 	glFlush();
-	//glXSwapBuffers(display, drawable);
+	glXSwapBuffers(display, drawable);
 }
 
 void input_display_timer(void (*if_display)(const void *, const struct game *, double), const struct game *restrict game, double progress, void *state)
@@ -224,7 +224,8 @@ void input_display_timer(void (*if_display)(const void *, const struct game *, d
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	if_display(state, game, progress);
 	glFlush();
-	//glXSwapBuffers(display, drawable);
+	glXSwapBuffers(display, drawable);
+	glFinish();
 }
 
 void if_term(void)

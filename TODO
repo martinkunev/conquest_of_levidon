@@ -1,14 +1,11 @@
 -- bugs --
 H	battering ram is not moving when assault target is set
 	the destination is inside an obstacle and path_find fails
-H	F troops bar not visualized correctly when it goes out of the screen
-H	computer doesn't move the pawns during an assault
+	// make assault command possible only when the troop is close enough to an obstacle
 H	two horses blocked during battle (neither attacks an archer)
-	when they start moving, they collide again
-H	computer assaults allied garrison
+	// when they start moving, they collide again
 M	if_init fails (in glXMakeContextCurrent) when used with ssh forwarding
 M	fast units cannot always catch up with slow units even when they are close enough (seen with light cavalry and peasant)
-L	troops of dead players remain alive (maybe they should become neutral)
 
 http://stackoverflow.com/questions/6543924/is-double-buffering-needed-any-more#6544453
 
@@ -20,9 +17,12 @@ H	AI improvements
 	computer doesn't attack when it should
 	computer keeps the army away from dangerous regions (instead of the other way around)
 	computer cannot recover well from having negative food income
+	computer assaults allied garrison
 	in battle, AI is too slow when there are many pawns
 	in battle, pawns move randomly when there are too many pawns
 	when shooters attack a melee pawn and there is nowhere to run, the melee should attack back
+	computer doesn't move the pawns during an assault
+		// probably tries to attack unreachable pawns or the rating doesn't make the pawns approach the obstacles
 	enemy should stay inside garrison when there are shooters
 	shooters don't always shoot when they can
 	// how to debug: display calculated rating after making a change in input_map
@@ -31,7 +31,6 @@ H	use a separate thread to calculate computer turns while the local player is ch
 	add indicator (e.g. lighted bulb) for the players who have completed their turn
 H	better support for hotseat (show animations to each player, warn before changing current player and showing their map, choose player names, etc.)
 	before battle tell which local players are in the battle (or maybe alliances)
-	display region name during battle
 H	error reporting on invalid map
 	fix crash on invalid map (while freeing resources)
 H	handle different screen resolutions better
@@ -44,19 +43,30 @@ H	balance battles
 	most of the pawn->count usually get killed at the same time (the round when the pawn dies)
 H	when a target is impossible, set target to the closest possible (e.g. if shooting range is not enough or a position is outside the battlefield)
 H	when a region is invaded, garrison troops should have the option to fight
-M	battle: don't allow attacking if the attacker cannot do damage to the defender (due to weapon and armor type)
-M	? melee units should go closer to the shooter to prevent them from escaping far enough to shoot
 M	region-specific features (income, population, units, buildings, battlefield)
+	use BLOCKAGE_TERRAIN
 	population growth
 	army recruitment should reduce population
-	use BLOCKAGE_TERRAIN
-M	improve AI (formation AI, etc.)
-M	make formation consistent with the new battle mechanics
-M	do something when there is not enough food for all units (?kill some units)
+	population loyalty; revolts and civil wars
 M	assault towers
+M	catapult, balista
+M	add ACTION_GUARD in battle
+	the pawn is told an area which to guard; if an enemy goes into that area, the pawn sets ACTION_FIGHT on that enemy (this may happen in the middle between rounds)
 M	map scrolling
-M	keyboard support in various places in the interface; mouse support in various places in the interface
 M	network game (using SCTP?)
+M	pawn morale
+	low morale can make a pawn skip a round or retreat
+M	water and ships
+	shipyard - building producing transport ships; each ship has a fixed capacity (number of troop stacks) and a fixed speed (distance it sails in one turn)
+	troops can set move destination to boarding the ship; at the same turn, the ship can start moving
+	the ship can move freely in the water and can moor; if it moors, it cannot move after that the same turn; if the ship is set to moor, the troops will land in the corresponding region
+	a moored ship is one that moored or was just produced at the shipyard; troops can board moored ships
+	ships are displayed as a single ship on the map; when one clicks, one can see all the ships and the troops in each ship
+	// troops on board of ships are stored in troop stacks - one troop stack for each ship
+M	sound
+M	improve AI (formation AI, predicting troops in unknown regions, etc.)
+M	do something when there is not enough food for all troops (?kill some troops)
+M	keyboard support in various places in the interface; mouse support in various places in the interface
 M	improve world loading/saving
 	support JSON comments
 	support comma after last item
@@ -64,9 +74,10 @@ M	improve world loading/saving
 	log (level error) when a compulsory field is not present or has the wrong type
 	log (level warning) when an optional field has the wrong type; assume the field is not present for the execution logic
 	refactor (simplify) the code using these ideas
-M	catapult, balista
-M	add ACTION_GUARD in battle
-	the pawn is told an area which to guard; if an enemy goes into that area, the pawn sets ACTION_FIGHT on that enemy (this may happen in the middle between rounds)
+M	? melee units should go closer to the shooter to prevent them from escaping far enough to shoot
+M	make formation consistent with the new battle mechanics
+L	fast ships, big ships, battle ships; naval battles; ships participating in assault
+L	battle: don't allow attacking if the attacker cannot do damage to the defender (due to weapon and armor type)
 L	editor: position region neighbors properly
 L	retreat can be abused for scouting (25 peasants can go and retreat for 1 food)
 	maybe make retreat take some time (1 or 2 rounds); that way only fast units will be able to retreat
@@ -74,11 +85,10 @@ L	retreat can be abused for scouting (25 peasants can go and retreat for 1 food)
 	currently attackers retreating from an assault are killed; is this okay?
 L	support splitting troops
 L	limited number of shots
-L	assault garrison destruction and repair
+L	building destruction and repair
+	buildings get damaged after an open battle; garrisons get damaged after an assault
 L	armory, swordsman, crossbowman, heavy cavalry, horse archer
 L	assault moat
-L	sound
-L	water; naval battles
 L	roads
 L	trade
 L	religions, ethnicities, languages
@@ -86,7 +96,8 @@ L	dynamic alliances
 L	seasons
 L	? buildings should not generate income on the day they are built
 L	? implement exit game while in battle
-L	make palisade invisible when fortress is built
+L	troops of dead players in allied regions remain alive
+	they should either die, join the player or become neutral
 
 ? rename WEAPON_ARROW to WEAPON_PIERCING and change archer melee weapon to WEAPON_PIERCING
 
@@ -96,23 +107,23 @@ L	make palisade invisible when fortress is built
 refactoring
 	use 'struct point' only for drawing (draw.h) (fix point_eq calls)
 		remove struct region dependency on struct point by moving center and location_garrison into location
-	make it simpler to check if two players are allies
 	? rename image to sprite
 	? change direction of everything to counterclockwise; currently the y axis is in the opposite direction (and the cross product is negated)
 	? redesign input functions (handling mouse movement is tedious; handling writing should be unified; can I unify the two input functions?)
 	? unify ACTION_FIGHT and ACTION_ASSAULT
+	store region troops in stacks (like troops on ships); one special stack for garrison
+	rename open battle to field battle (the same name can be applied at other places)
 
 -- interface --
 
-H	screen refresh works awful (e.g. during an animation)
+H	F screen refresh works awful (e.g. during an animation)
 M	display a mirror image of enemy troops
 	? display an ellipse with the owner below the troop (instead of changing some pixels in the sprite)
 M	custom mouse pointer
 M	improve player colors
 M	flag patterns
 M	show troops count, health, etc. only when alt is pressed
-
-button input bottom and right coordinates should be exclusive (... - 1)
+M	button input bottom and right coordinates should be exclusive (... - 1)
 
 use stencil buffer when troops images don't fit into their rectangle (and will be on top of other images)
 	https://open.gl/depthstencils
@@ -128,14 +139,15 @@ M	no name editing after a world has been selected
 L	directory tabs images
 
 battle
+H	display region name during battle
 H	display calculated pawn moves (not a straight line)
 H	when two pawns from different alliances are next to each other, display red line between them (to show that they are fighting)
 H	fight animation (display which units are fighting)
 H	display round number and number of rounds until retreat
 H	new wall and gate images; open gate image
+	display open gate when there is a pawn on top of the gate
 H	tell all players if somebody is retreating
-H	show gate strength if if there is a pawn on top of it
-H	display open gate when there is a pawn on top of the gate
+H	show gate strength even if there is a pawn on top of it
 M	hide mouse pointer during animation
 M	support showing more pawn stats (not just health)
 M	change image for pawn selection
@@ -149,11 +161,12 @@ H	in battle report, display which players retreated (maybe show white flag)
 M	group players by alliances and show indicator for the alliance
 
 map
-H	display current month and year
 H	improve boxes for field and garrison troops (it's not obvious one can place units there until there are units)
 H	show income/expenses adjusted for troop movement (troops moved to garrison, attacking troops, etc.)
 H	troop bar for just battering ram is not displayed on the map (because it's just 1 troop)
-H	troop movement animation
+H	place the flag properly
+M	troop movement animation
+M	display current month and year
 M	one should be able to tell all troops to go on assault
 M	village image (will be displayed to the left of troops bar)
 M	more tooltips
