@@ -17,9 +17,9 @@
  * along with Conquest of Levidon.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-enum {ANNEALING_STEPS = 64, ANNEALING_TRIES = 8};
+enum {ANNEALING_STEPS = 256};
 
-#define ANNEALING_COOLDOWN 0.95
+#define ANNEALING_COOLDOWN 0.98
 
 extern const double desire_buildings[];
 

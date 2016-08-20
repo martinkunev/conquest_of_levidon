@@ -32,26 +32,26 @@
 
 const double desire_buildings[] =
 {
-	[BuildingFarm] = 0.9,
+	[BuildingFarm] = 1.0,
 	[BuildingIrrigation] = 0.5,
 	[BuildingSawmill] = 1.0,
 	[BuildingMine] = 0.8,
-	[BuildingBloomery] = 0.5,
-	[BuildingBarracks] = 0.75,
-	[BuildingArcheryRange] = 0.75,
-	[BuildingStables] = 0.4,
+	[BuildingBloomery] = 0.6,
 	[BuildingWatchTower] = 0.1,
 	[BuildingPalisade] = 0.3,
 	[BuildingFortress] = 0.2,
+/*	[BuildingBarracks] = 0.75,
+	[BuildingArcheryRange] = 0.75,
+	[BuildingStables] = 0.4,
 	[BuildingWorkshop] = 0.4,
-	[BuildingForge] = 0.4,
+	[BuildingForge] = 0.4,*/
 };
 
 // Returns how significant is an expense.
 double expense_significance(const struct resources *restrict expense)
 {
 	// TODO more sophisticated logic here
-	double value = - (1.0 + expense->food * 1.5 + expense->wood * 2.0 + expense->stone * 2.0 + expense->gold * 2.5 + expense->iron * 4.0);
+	double value = 1.0 - (expense->food * 1.0 + expense->wood * 1.5 + expense->stone * 1.5 + expense->gold * 1.5 + expense->iron * 2.0);
 	return sqrt(value);
 }
 

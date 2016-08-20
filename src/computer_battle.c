@@ -116,20 +116,22 @@ static void battle_state_set(struct pawn *restrict pawn, struct tile neighbor, c
 			return;
 		else if (combat_shoot(game, battle, obstacles, pawn, destination))
 			return;
-		else if (battlefield_distance(pawn->position, field->pawns[0]->position) <= pawn->troop->unit->speed + DISTANCE_MELEE)
+		else if (battlefield_distance(pawn->position, field->pawns[0]->position) <= pawn->troop->unit->speed + DISTANCE_MELEE) // TODO why is this check necessary
 		{
 			if (combat_fight(game, battle, obstacles, pawn, *field->pawns))
 				return;
 		}
 	}
-	else if (field->blockage == BLOCKAGE_OBSTACLE)
+	else if ((field->blockage == BLOCKAGE_WALL) || (field->blockage == BLOCKAGE_GATE))
 	{
-		if (battlefield_distance(pawn->position, destination) <= pawn->troop->unit->speed + DISTANCE_MELEE)
+		if (battlefield_distance(pawn->position, destination) <= pawn->troop->unit->speed + DISTANCE_MELEE) // TODO why is this check necessary
 		{
 			if (combat_assault(game, pawn, field))
 				return;
 		}
 	}
+
+	// TODO what if the destination is unreachable due to wall
 
 	// TODO what should I do when I'm unable to set the state
 	if (!position_eq(pawn->position, destination))
@@ -347,7 +349,7 @@ found:
 				const struct battlefield *restrict field = &battle->field[y][x];
 				struct position field_position;
 
-				if (field->blockage != BLOCKAGE_OBSTACLE)
+				if ((field->blockage != BLOCKAGE_WALL) && (field->blockage != BLOCKAGE_GATE))
 					continue;
 
 				field_position = (struct position){x + 0.5, y + 0.5};
@@ -513,29 +515,26 @@ int computer_battle(const struct game *restrict game, struct battle *restrict ba
 	rating = battle_state_rating(game, battle, player, graph, obstacles);
 	for(unsigned step = 0; step < ANNEALING_STEPS; ++step)
 	{
-		for(unsigned try = 0; try < ANNEALING_TRIES; ++try)
+		i = random() % pawns_count;
+		pawn = battle->players[player].pawns[i];
+
+		neighbors_count = battle_state_neighbors(game, battle, pawn, reachable[i], neighbors);
+		if (!neighbors_count) continue;
+
+		// Remember current pawn command and set a new one.
+		status = command_remember(&backup, pawn);
+		if (status < 0) goto finally;
+		battle_state_set(pawn, neighbors[random() % neighbors_count], game, battle, graph, obstacles);
+
+		// Calculate the rating of the new set of commands.
+		// Restore the original command if the new one is unacceptably worse.
+		rating_new = battle_state_rating(game, battle, player, graph, obstacles);
+		if (state_wanted(rating, rating_new, temperature))
 		{
-			i = random() % pawns_count;
-			pawn = battle->players[player].pawns[i];
-
-			neighbors_count = battle_state_neighbors(game, battle, pawn, reachable[i], neighbors);
-			if (!neighbors_count) continue;
-
-			// Remember current pawn command and set a new one.
-			status = command_remember(&backup, pawn);
-			if (status < 0) goto finally;
-			battle_state_set(pawn, neighbors[random() % neighbors_count], game, battle, graph, obstacles);
-
-			// Calculate the rating of the new set of commands.
-			// Restore the original command if the new one is unacceptably worse.
-			rating_new = battle_state_rating(game, battle, player, graph, obstacles);
-			if (state_wanted(rating, rating_new, temperature))
-			{
-				rating = rating_new;
-				printf("rating=%f\n", rating);
-			}
-			else command_restore(pawn, &backup);
+			rating = rating_new;
+			printf("rating=%f\n", rating);
 		}
+		else command_restore(pawn, &backup);
 
 		temperature *= ANNEALING_COOLDOWN;
 	}
