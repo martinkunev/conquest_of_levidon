@@ -306,15 +306,20 @@ void region_troops_merge(struct region *restrict region)
 			size_t index;
 
 			bool *current = ((troop->location == LOCATION_GARRISON) ? &processed_garrison : &processed_players[troop->owner]);
-
 			if (*current)
 				continue;
-			more = true;
 
 			if (!processing)
+			{
 				processing = current;
+				*processing = true; // TODO this should be done in the end
+			}
 			else if (current != processing)
+			{
+				if (!*current)
+					more = true; // current troop is not processed yet
 				continue;
+			}
 
 			index = troop->unit - UNITS;
 			if (troop->count >= troop->unit->troops_count)
@@ -338,7 +343,5 @@ void region_troops_merge(struct region *restrict region)
 				}
 			}
 		}
-
-		*processing = true;
 	} while (more);
 }

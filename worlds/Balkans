@@ -10,7 +10,7 @@
 	"regions": {
 		"Peloponnese": {
 			"owner": 2,
-			"built": ["Palisade"],
+			"built": [],
 			"neighbors": [null, "Attica", null, null, null, null, null, null],
 			"location": [
 				[309, 580],
@@ -31,7 +31,7 @@
 		},
 		"Attica": {
 			"owner": 2,
-			"built": ["Mine", "Watch tower"],
+			"built": ["Farm", "Barracks"],
 			"neighbors": [null, null, "Thessaly", "Epirus", null, null, "Peloponnese", null],
 			"location": [
 				[367, 586],
@@ -53,8 +53,8 @@
 		},
 		"Thessaly": {
 			"owner": 2,
-			"garrison": {"troops": [["Peasant", 20, 1]]},
-			"built": ["Farm", "Irrigation", "Sawmill", "Mine", "Bloomery", "Barracks", "Archery range", "Stables", "Watch tower", "Fortress", "Workshop", "Forge"],
+			"garrison": {"troops": [["Militia", 25, 1]]},
+			"built": ["Palisade", "Farm", "Barracks", "Archery Range"],
 			"neighbors": [null, "Thrace", "Macedonia", null, "Epirus", null, "Attica", null],
 			"location": [
 				[392, 463],
@@ -78,8 +78,8 @@
 		},
 		"Epirus": {
 			"owner": 2,
-			"troops": [["Militia", 25, 2], ["Archer", 20, 2]],
-			"built": ["Watch tower"],
+			"troops": [["Militia", 25, 2], ["Archer", 25, 2]],
+			"built": ["Sawmill"],
 			"neighbors": ["Thessaly", "Macedonia", "Dyrrachium", null, null, null, null, "Attica"],
 			"location": [
 				[262, 544],
@@ -94,7 +94,7 @@
 		},
 		"Dyrrachium": {
 			"owner": 2,
-			"built": [],
+			"built": ["Fortress", "Barracks"],
 			"neighbors": ["Macedonia", "Dardania", null, "Doclea", null, null, "Epirus", null],
 			"location": [
 				[207, 377],
@@ -109,8 +109,8 @@
 		},
 		"Macedonia": {
 			"owner": 1,
-			"built": [],
-			"neighbors": ["Thrace", "Serdika", "Dardania", null, "Dyrrachium", "Epirus", "Thessaly", null],
+			"built": ["Farm", "Sawmill"],
+			"neighbors": ["Thrace", "Serdica", "Dardania", null, "Dyrrachium", "Epirus", "Thessaly", null],
 			"location": [
 				[305, 439],
 				[382, 434],
@@ -124,8 +124,8 @@
 		},
 		"Thrace": {
 			"owner": 2,
-			"built": ["Farm"],
-			"neighbors": ["Byzantium", "Zagore", null, "Serdika", "Macedonia", "Thessaly", null, null],
+			"built": ["Farm", "Irrigation"],
+			"neighbors": ["Byzantium", "Zagore", null, "Serdica", "Macedonia", "Thessaly", null, null],
 			"location": [
 				[382, 434],
 				[392, 439],
@@ -140,7 +140,7 @@
 		},
 		"Byzantium": {
 			"owner": 2,
-			"built": ["Sawmill", "Farm", "Barracks", "Forge", "Watch tower"],
+			"built": ["Fortress", "Sawmill", "Farm", "Barracks", "Forge", "Watch tower"],
 			"neighbors": [null, null, null, "Zagore", "Thrace", null, null, null],
 			"location": [
 				[516, 391],
@@ -158,8 +158,8 @@
 		},
 		"Zagore": {
 			"owner": 2,
-			"built": [],
-			"neighbors": [null, "Dobruja", "Moesia", null, "Serdika", "Thrace", null, "Byzantium"],
+			"built": ["Watch tower"],
+			"neighbors": [null, "Dobruja", "Moesia", null, "Serdica", "Thrace", null, "Byzantium"],
 			"location": [
 				[516, 391],
 				[576, 376],
@@ -174,7 +174,7 @@
 		},
 		"Dobruja": {
 			"owner": 1,
-			"built": [],
+			"built": ["Farm", "Watch tower"],
 			"neighbors": [null, null, null, null, "Wallachia", "Moesia", "Zagore", null],
 			"location": [
 				[581, 284],
@@ -195,8 +195,8 @@
 		},
 		"Moesia": {
 			"owner": 1,
-			"built": [],
-			"neighbors": [null, "Dobruja", "Wallachia", "Dacia", null, "Serdika", "Zagore", null],
+			"built": ["Fortress"],
+			"neighbors": [null, "Dobruja", "Wallachia", "Dacia", null, "Serdica", "Zagore", null],
 			"location": [
 				[433, 314],
 				[545, 306],
@@ -209,9 +209,9 @@
 			"location_garrison": [486,289],
 			"center": [475, 282]
 		},
-		"Serdika": {
+		"Serdica": {
 			"owner": 1,
-			"built": ["Sawmill"],
+			"built": ["Palisade", "Farm", "Barracks"],
 			"neighbors": ["Zagore", "Moesia", "Dacia", null, "Dardania", null, "Macedonia", "Thrace"],
 			"location": [
 				[433, 314],
@@ -230,7 +230,7 @@
 		"Dardania": {
 			"owner": 1,
 			"built": [],
-			"neighbors": ["Serdika", "Dacia", "Banat", "Rascia", "Doclea", "Dyrrachium", "Macedonia", null],
+			"neighbors": ["Serdica", "Dacia", "Banat", "Rascia", "Doclea", "Dyrrachium", "Macedonia", null],
 			"location": [
 				[331, 349],
 				[327, 262],
@@ -251,7 +251,7 @@
 		"Doclea": {
 			"owner": 5,
 			"built": [],
-			"troops": [["Battering Ram", 1, 2]],
+			"troops": [],
 			"neighbors": ["Dardania", "Rascia", null, "Dalmatia", null, null, null, "Dyrrachium"],
 			"location": [
 				[185, 360],
@@ -266,7 +266,7 @@
 		},
 		"Rascia": {
 			"owner": 5,
-			"built": [],
+			"built": ["Palisade"],
 			"neighbors": [null, null, "Banat", "Pannonia", "Dalmatia", "Doclea", null, "Dardania"],
 			"location": [
 				[236, 309],
@@ -283,7 +283,7 @@
 		},
 		"Dalmatia": {
 			"owner": 4,
-			"built": ["Archery range"],
+			"built": ["Farm"],
 			"neighbors": ["Rascia", null, "Pannonia", null, null, null, null, "Doclea"],
 			"location": [
 				[136, 321],
@@ -300,7 +300,7 @@
 		},
 		"Pannonia": {
 			"owner": 3,
-			"built": [],
+			"built": ["Farm"],
 			"neighbors": ["Banat", null, null, null, null, null, "Dalmatia", "Rascia"],
 			"location": [
 				[187, 224],
@@ -315,7 +315,7 @@
 		},
 		"Banat": {
 			"owner": 3,
-			"built": [],
+			"built": ["Farm"],
 			"neighbors": ["Dacia", null, null, null, "Pannonia", null, "Rascia", "Dardania"],
 			"location": [
 				[215, 183],
@@ -334,7 +334,7 @@
 		"Dacia": {
 			"owner": 1,
 			"built": [],
-			"neighbors": ["Wallachia", null, null, null, "Banat", "Dardania", "Serdika", "Moesia"],
+			"neighbors": ["Wallachia", null, null, null, "Banat", "Dardania", "Serdica", "Moesia"],
 			"location": [
 				[333, 202],
 				[346, 213],
@@ -354,7 +354,7 @@
 		},
 		"Wallachia": {
 			"owner": 1,
-			"built": [],
+			"built": ["Sawmill"],
 			"neighbors": ["Dobruja", null, null, null, "Dacia", null, "Moesia", null],
 			"location": [
 				[418, 262],

@@ -6,7 +6,10 @@ H	computer doesn't move the pawns during an assault
 H	two horses blocked during battle (neither attacks an archer)
 	when they start moving, they collide again
 H	computer assaults allied garrison
+M	if_init fails (in glXMakeContextCurrent) when used with ssh forwarding
 M	fast units cannot always catch up with slow units even when they are close enough (seen with light cavalry and peasant)
+
+http://stackoverflow.com/questions/6543924/is-double-buffering-needed-any-more#6544453
 
 -- features --
 H	AI improvements

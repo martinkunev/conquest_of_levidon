@@ -74,6 +74,8 @@ shooters should be weaker against better garrison
 
 units that attack while moving (quite rare in games)
 
+retraining (restores count to unit->troops_count)
+
 ----
 
 simple economy (part of the TODO for population)
@@ -111,7 +113,7 @@ technologies:
 	academy / university
 
 trading
-	constructions involved: marketplace, roads, port
+	constructions involved: marketplace, trading post, roads, port
 	trading benefits are determined by population of the region and its neighbors
 	roads increase the benefits from land neighbors
 	port increases the benefits from sea neighbors (? whatever that means)

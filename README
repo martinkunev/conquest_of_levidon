@@ -42,7 +42,7 @@ As expected, "make uninstall" will not delete such directories (in case you need
 
 The game is still under development. For details about future plans, see the TODO document.
 Due to my lack of painting skills, current in-game images are very ugly. I'll be happy if you want to help with that.
-The AI implementation is currently pretty weak (can be beaten easily by a player knowing the mechanics of the game).
+The AI implementation is currently only rudimentary (can be beaten easily by a player knowing the mechanics of the game).
 
 There is an editor that can be used for creating worlds. It is just a helper utility and not a fully functioning editor (you still have to set players and region owners by editing the JSON). Some world elements like buildings and troops can only be added via JSON.
 
