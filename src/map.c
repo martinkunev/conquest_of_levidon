@@ -303,16 +303,15 @@ void region_troops_merge(struct region *restrict region)
 		// Find troop that has not been processed and merge the troops from the same player.
 		for(struct troop *restrict troop = region->troops; troop; troop = troop->_next)
 		{
-			size_t index;
-
 			bool *current = ((troop->location == LOCATION_GARRISON) ? &processed_garrison : &processed_players[troop->owner]);
-			if (*current)
-				continue;
+			size_t index;
 
 			if (!processing)
 			{
+				if (*current)
+					continue;
 				processing = current;
-				*processing = true; // TODO this should be done in the end
+				*processing = true;
 			}
 			else if (current != processing)
 			{
