@@ -215,7 +215,7 @@ void input_display(void (*if_display)(const void *, const struct game *), const 
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	if_display(state, game);
-	glFlush();
+	//glFlush();
 	glXSwapBuffers(display, drawable);
 }
 
@@ -223,7 +223,7 @@ void input_display_timer(void (*if_display)(const void *, const struct game *, d
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	if_display(state, game, progress);
-	glFlush();
+	//glFlush();
 	glXSwapBuffers(display, drawable);
 	glFinish();
 }

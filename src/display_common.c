@@ -36,7 +36,7 @@
 #define S(s) (s), sizeof(s) - 1
 
 struct image image_flag, image_flag_small;
-struct image image_selected, image_panel, image_construction, image_movement, image_assault;
+struct image image_selected, image_panel, image_construction, image_movement, image_assault, image_dismiss;
 struct image image_pawn_fight, image_pawn_assault, image_pawn_shoot;
 struct image image_shoot_right, image_shoot_up, image_shoot_left, image_shoot_down; // TODO more directions?
 struct image image_terrain[1];
@@ -58,6 +58,7 @@ void if_load_images(void)
 	image_load_png(&image_construction, PREFIX_IMG "construction.png", 0);
 	image_load_png(&image_movement, PREFIX_IMG "movement.png", 0);
 	image_load_png(&image_assault, PREFIX_IMG "assault.png", 0);
+	image_load_png(&image_dismiss, PREFIX_IMG "dismiss.png", 0);
 
 	image_load_png(&image_pawn_fight, PREFIX_IMG "pawn_fight.png", 0);
 	image_load_png(&image_pawn_assault, PREFIX_IMG "pawn_assault.png", 0);

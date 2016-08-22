@@ -9,15 +9,18 @@ M	fast units cannot always catch up with slow units even when they are close eno
 
 http://stackoverflow.com/questions/6543924/is-double-buffering-needed-any-more#6544453
 
+flickering
+	https://groups.google.com/forum/#!topic/android-developers/om5Utez9PgA
+
 -- features --
 H	AI improvements
-	computer attacks with incredibly small army
-	computers tend to accumulate huge armies in a single region
-	treating each troop separately when finding local maximum in AI will have bad results
-	computer doesn't attack when it should
-	computer keeps the army away from dangerous regions (instead of the other way around)
+	F computer map movement is weak
+	computer map orders are weak
 	computer cannot recover well from having negative food income
-	computer assaults allied garrison
+		// solution: dismiss troops
+	////
+	treating each troop separately when finding local maximum in AI will have bad results
+	////
 	in battle, AI is too slow when there are many pawns
 	in battle, pawns move randomly when there are too many pawns
 	when shooters attack a melee pawn and there is nowhere to run, the melee should attack back
@@ -25,8 +28,6 @@ H	AI improvements
 		// probably tries to attack unreachable pawns or the rating doesn't make the pawns approach the obstacles
 	enemy should stay inside garrison when there are shooters
 	shooters don't always shoot when they can
-	// how to debug: display calculated rating after making a change in input_map
-H	support dismissing troops (add a flag in struct troop)
 H	use a separate thread to calculate computer turns while the local player is choosing what to play
 	add indicator (e.g. lighted bulb) for the players who have completed their turn
 H	better support for hotseat (show animations to each player, warn before changing current player and showing their map, choose player names, etc.)
@@ -105,6 +106,7 @@ L	troops of dead players in allied regions remain alive
 ? deal damage to each pawn escaping from enemy pawns
 
 refactoring
+	iterator for troops in a given stack (garrison / owned by player, dismissed, etc.)
 	use 'struct point' only for drawing (draw.h) (fix point_eq calls)
 		remove struct region dependency on struct point by moving center and location_garrison into location
 	? rename image to sprite
@@ -113,10 +115,10 @@ refactoring
 	? unify ACTION_FIGHT and ACTION_ASSAULT
 	store region troops in stacks (like troops on ships); one special stack for garrison
 	rename open battle to field battle (the same name can be applied at other places)
+	revise user/computer battle input functions: combat_fight, combat_shoot, combat_assault, movement_queue; it should be clear what they do and how they interact
 
 -- interface --
 
-H	F screen refresh works awful (e.g. during an animation)
 M	display a mirror image of enemy troops
 	? display an ellipse with the owner below the troop (instead of changing some pixels in the sprite)
 M	custom mouse pointer

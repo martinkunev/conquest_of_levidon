@@ -163,13 +163,13 @@ wait:
 	}
 }
 
-static double timer_progress(const struct timeval *restrict start, double duration)
+static double timer_progress(const struct timespec *restrict start, double duration)
 {
-	struct timeval now;
+	struct timespec now;
 	unsigned long time_difference;
-	gettimeofday(&now, 0);
-	time_difference = (now.tv_sec * 1000000 + now.tv_usec - start->tv_sec * 1000000 - start->tv_usec);
-	return time_difference / (duration * 1000000.0);
+	clock_gettime(CLOCK_MONOTONIC, &now);
+	time_difference = (now.tv_sec * 1000000000l + now.tv_nsec - start->tv_sec * 1000000000l - start->tv_nsec);
+	return time_difference / (duration * 1000000000.0);
 }
 
 int input_timer(void (*display)(const void *, const struct game *, double), const struct game *restrict game, double duration, void *state)
@@ -181,18 +181,17 @@ int input_timer(void (*display)(const void *, const struct game *, double), cons
 
 	int code = 0; // TODO this is oversimplification
 
-	struct timeval start; // start time of the animation
-	double progress; // progress of the animation as a fraction
+	struct timespec start; // start time of the animation
 
 	// Ignore all the queued events.
 	while (event = xcb_poll_for_event(connection))
 		free(event);
 
-	gettimeofday(&start, 0);
+	clock_gettime(CLOCK_MONOTONIC, &start);
 
 	do
 	{
-		progress = timer_progress(&start, duration);
+		double progress = timer_progress(&start, duration);
 		if (progress > 1.0)
 			break;
 
@@ -201,21 +200,21 @@ int input_timer(void (*display)(const void *, const struct game *, double), cons
 		event = xcb_poll_for_event(connection);
 		if (!event)
 		{
-			usleep(1000);
+			usleep(10000);
 			continue;
 		}
 
 		switch (event->response_type & ~0x80)
 		{
-		case XCB_KEY_PRESS:
-			keyboard = (xcb_key_press_event_t *)event;
-			code = keymap[(keyboard->detail - keycode_min) * keysyms_per_keycode];
-			break;
-
 		case XCB_EXPOSE:
 		default:
 			free(event);
 			continue;
+
+		case XCB_KEY_PRESS:
+			keyboard = (xcb_key_press_event_t *)event;
+			code = keymap[(keyboard->detail - keycode_min) * keysyms_per_keycode];
+			break;
 		}
 
 		free(event);
