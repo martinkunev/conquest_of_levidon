@@ -34,6 +34,14 @@
 #include "display_common.h"
 #include "display_map.h"
 
+/*
+#include <stdio.h>
+#include "computer_map.h"
+double rate(const struct game *restrict game, unsigned char player, struct region_info *restrict regions_info, const struct context *restrict context);
+static struct context context;
+static struct region_info *regions_info;
+*/
+
 static int input_turn(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
 {
 	struct state_map *state = argument;
@@ -47,6 +55,14 @@ static int input_turn(int code, unsigned x, unsigned y, uint16_t modifiers, cons
 			return 0;
 		}
 	default:
+		return INPUT_IGNORE;
+
+	case XK_Delete:
+		if (state->troop && (state->troop->move != LOCATION_GARRISON))
+		{
+			state->troop->dismiss = !state->troop->dismiss;
+			return 0;
+		}
 		return INPUT_IGNORE;
 
 	case XK_Escape:
@@ -128,6 +144,9 @@ static int input_region(int code, unsigned x, unsigned y, uint16_t modifiers, co
 valid:
 		if (state->troop)
 		{
+			if (state->troop->dismiss)
+				return INPUT_IGNORE;
+
 			// Set the move destination of the selected troop.
 			troop = state->troop;
 			if (state->player == troop->owner)
@@ -140,10 +159,12 @@ valid:
 			{
 				if (troop->owner != state->player) continue;
 				if (troop->move == LOCATION_GARRISON) continue;
+				if (troop->dismiss) continue;
 				troop->move = destination;
 			}
 		}
 
+//printf("rating=%f\n", rate(game, state->player, regions_info, &context));
 		return 0;
 	}
 
@@ -392,13 +413,14 @@ static int input_troop(int code, unsigned x, unsigned y, uint16_t modifiers, con
 	}
 	else if (code == EVENT_MOUSE_RIGHT)
 	{
-		if (!state->troop) return 0; // no troop selected
+		if (!state->troop) return INPUT_IGNORE; // no troop selected
 
 		// If the selected troop is in the garrison, move it out.
 		if ((state->troop->move == LOCATION_GARRISON) && (state->troop->owner == region->garrison.owner))
 		{
 			state->troop->move = region;
 			state->troop = 0;
+//printf("rating=%f\n", rate(game, state->player, regions_info, &context));
 		}
 		else return INPUT_IGNORE;
 	}
@@ -456,8 +478,9 @@ static int input_garrison(int code, unsigned x, unsigned y, uint16_t modifiers, 
 	}
 	else if (code == EVENT_MOUSE_RIGHT)
 	{
-		if (!state->troop) return 0; // no troop selected
-		if (state->troop->move == LOCATION_GARRISON) return 0; // troop already in the garrison
+		if (!state->troop) return INPUT_IGNORE; // no troop selected
+		if (state->troop->move == LOCATION_GARRISON) return INPUT_IGNORE; // troop already in the garrison
+		if (state->troop->dismiss) return INPUT_IGNORE;
 
 		if (state->player == region->garrison.owner)
 		{
@@ -472,6 +495,7 @@ static int input_garrison(int code, unsigned x, unsigned y, uint16_t modifiers, 
 		{
 			state->troop->move = LOCATION_GARRISON;
 		}
+//printf("rating=%f\n", rate(game, state->player, regions_info, &context));
 	}
 	else return INPUT_IGNORE;
 
@@ -577,6 +601,12 @@ int input_map(const struct game *restrict game, unsigned char player)
 	state.hover_object = HOVER_NONE;
 
 	map_visible(game, player, state.regions_visible);
+
+	/*
+	struct region_info *regions_info_collect(const struct game *restrict game, unsigned char player, struct context *restrict context);
+	regions_info = regions_info_collect(game, player, &context);
+	printf("rating=%f\n", rate(game, state.player, regions_info, &context));
+	*/
 
 	return input_local(areas, sizeof(areas) / sizeof(*areas), if_map, game, &state);
 }

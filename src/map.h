@@ -49,6 +49,8 @@ struct troop
 	unsigned count;
 	unsigned char owner;
 
+	unsigned char dismiss;
+
 	struct region *location, *move;
 };
 

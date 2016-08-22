@@ -275,6 +275,18 @@ static int play(struct game *restrict game)
 		{
 			region = game->regions + index;
 
+			// TODO improve the code below
+
+			for(troop = region->troops; troop; troop = next)
+			{
+				next = troop->_next;
+				if (troop->dismiss)
+				{
+					troop_detach(&region->troops, troop);
+					free(troop);
+				}
+			}
+
 			// Calculate region expenses.
 			if (region->owner == region->garrison.owner)
 			{

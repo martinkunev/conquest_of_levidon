@@ -390,7 +390,11 @@ static void if_map_region(const struct region *region, const struct state_map *s
 
 			if (troop->owner == state->player)
 			{
-				if (troop->move == LOCATION_GARRISON)
+				if (troop->dismiss)
+				{
+					image_action = &image_dismiss;
+				}
+				else if (troop->move == LOCATION_GARRISON)
 				{
 					if (troop->owner == region->garrison.owner)
 						continue; // troop is in garrison

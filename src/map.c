@@ -57,6 +57,8 @@ int troop_spawn(struct region *restrict region, struct troop **restrict troops, 
 	troop->count = count;
 	troop->owner = owner;
 
+	troop->dismiss = 0;
+
 	troop->_prev = 0;
 	troop->_next = *troops;
 	if (*troops) (*troops)->_prev = troop;
