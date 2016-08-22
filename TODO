@@ -9,6 +9,9 @@ M	fast units cannot always catch up with slow units even when they are close eno
 
 http://stackoverflow.com/questions/6543924/is-double-buffering-needed-any-more#6544453
 
+flickering
+	https://groups.google.com/forum/#!topic/android-developers/om5Utez9PgA
+
 -- features --
 H	AI improvements
 	computer attacks with incredibly small army
@@ -105,6 +108,7 @@ L	troops of dead players in allied regions remain alive
 ? deal damage to each pawn escaping from enemy pawns
 
 refactoring
+	iterator for troops in a given stack (garrison / owned by player ..., etc.)
 	use 'struct point' only for drawing (draw.h) (fix point_eq calls)
 		remove struct region dependency on struct point by moving center and location_garrison into location
 	? rename image to sprite
