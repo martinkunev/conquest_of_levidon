@@ -390,6 +390,11 @@ static int world_populate(const union json *restrict json, struct game *restrict
 		item = node->array.data[index];
 		if (json_type(item) != JSON_OBJECT) goto error;
 
+		field = value_get_try(&item->object, "name", JSON_STRING);
+		if (!field || (field->string.size > NAME_LIMIT)) goto error;
+		memcpy(game->players[index].name, field->string.data, field->string.size);
+		game->players[index].name_length = field->string.size;
+
 		field = value_get_try(&item->object, "alliance", JSON_INTEGER);
 		if (!field || (field->integer >= PLAYERS_LIMIT)) goto error;
 		game->players[index].alliance = field->integer;
@@ -545,6 +550,7 @@ static union json *world_store(const struct game *restrict game)
 	{
 		union json *player = json_object();
 
+		player = json_object_insert(player, S("name"), json_string(game->players[i].name, game->players[i].name_length));
 		player = json_object_insert(player, S("alliance"), json_integer(game->players[i].alliance));
 		player = json_object_insert(player, S("gold"), json_integer(game->players[i].treasury.gold));
 		player = json_object_insert(player, S("food"), json_integer(game->players[i].treasury.food));

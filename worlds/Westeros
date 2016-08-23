@@ -1,14 +1,14 @@
 {
 	"players": [
-		{"alliance": 0, "gold": 0, "food": 0, "wood": 0, "iron": 0, "stone": 0},
-		{"alliance": 1, "gold": 6, "food": 2, "wood": 4, "iron": 1, "stone": 2},
-		{"alliance": 1, "gold": 6, "food": 2, "wood": 4, "iron": 1, "stone": 2},
-		{"alliance": 2, "gold": 6, "food": 2, "wood": 4, "iron": 1, "stone": 2},
-		{"alliance": 3, "gold": 6, "food": 2, "wood": 4, "iron": 1, "stone": 2},
-		{"alliance": 4, "gold": 6, "food": 2, "wood": 4, "iron": 1, "stone": 2},
-		{"alliance": 1, "gold": 6, "food": 2, "wood": 4, "iron": 1, "stone": 2},
-		{"alliance": 4, "gold": 6, "food": 2, "wood": 4, "iron": 1, "stone": 2},
-		{"alliance": 4, "gold": 6, "food": 2, "wood": 4, "iron": 1, "stone": 2}
+		{"alliance": 0, "gold": 0, "food": 0, "wood": 0, "iron": 0, "stone": 0, "name": ""},
+		{"alliance": 1, "gold": 6, "food": 2, "wood": 4, "iron": 1, "stone": 2, "name": "Tyrell"},
+		{"alliance": 1, "gold": 6, "food": 2, "wood": 4, "iron": 1, "stone": 2, "name": "Lannister"},
+		{"alliance": 2, "gold": 6, "food": 2, "wood": 4, "iron": 1, "stone": 2, "name": "Baratheon"},
+		{"alliance": 3, "gold": 6, "food": 2, "wood": 4, "iron": 1, "stone": 2, "name": "Martell"},
+		{"alliance": 4, "gold": 6, "food": 2, "wood": 4, "iron": 1, "stone": 2, "name": "Arynn"},
+		{"alliance": 1, "gold": 6, "food": 2, "wood": 4, "iron": 1, "stone": 2, "name": "King's landing"},
+		{"alliance": 4, "gold": 6, "food": 2, "wood": 4, "iron": 1, "stone": 2, "name": "Tully"},
+		{"alliance": 4, "gold": 6, "food": 2, "wood": 4, "iron": 1, "stone": 2, "name": "Stark"}
 	],
 	"regions": {
 		"Dorne": {

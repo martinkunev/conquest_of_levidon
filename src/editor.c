@@ -901,6 +901,7 @@ static int world_init(struct game *restrict game)
 	game->players[0].type = Neutral;
 	game->players[0].treasury = (struct resources){0};
 	game->players[0].alliance = 0;
+	game->players[0].name_length = 0;
 
 	game->regions_count = 0;
 	game->regions = malloc(1 * sizeof(*game->regions));

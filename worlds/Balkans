@@ -1,11 +1,11 @@
 {
 	"players": [
-		{"alliance": 0, "gold": 0, "food": 0, "wood": 0, "iron": 0, "stone": 0},
-		{"alliance": 1, "gold": 6, "food": 2, "wood": 4, "iron": 1, "stone": 2},
-		{"alliance": 2, "gold": 6, "food": 2, "wood": 4, "iron": 1, "stone": 2},
-		{"alliance": 3, "gold": 6, "food": 2, "wood": 4, "iron": 1, "stone": 2},
-		{"alliance": 4, "gold": 6, "food": 2, "wood": 4, "iron": 1, "stone": 2},
-		{"alliance": 4, "gold": 6, "food": 2, "wood": 4, "iron": 1, "stone": 2}
+		{"alliance": 0, "gold": 0, "food": 0, "wood": 0, "iron": 0, "stone": 0, "name": ""},
+		{"alliance": 1, "gold": 6, "food": 2, "wood": 4, "iron": 1, "stone": 2, "name": "Bulgaria"},
+		{"alliance": 2, "gold": 6, "food": 2, "wood": 4, "iron": 1, "stone": 2, "name": "Roman Empire"},
+		{"alliance": 3, "gold": 6, "food": 2, "wood": 4, "iron": 1, "stone": 2, "name": "Hungary"},
+		{"alliance": 4, "gold": 6, "food": 2, "wood": 4, "iron": 1, "stone": 2, "name": "Croatia"},
+		{"alliance": 4, "gold": 6, "food": 2, "wood": 4, "iron": 1, "stone": 2, "name": "Serbia"}
 	],
 	"regions": {
 		"Peloponnese": {

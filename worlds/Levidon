@@ -1,5 +1,14 @@
 {
-	"players": [{"gold":0,"stone":0,"iron":0,"wood":0,"alliance":0,"food":0},{"gold":10,"stone":6,"iron":0,"wood":6,"alliance":1,"food":6},{"gold":10,"stone":3,"iron":0,"wood":5,"alliance":2,"food":6},{"gold":2,"stone":0,"iron":0,"wood":2,"alliance":3,"food":2},{"gold":5,"stone":5,"iron":2,"wood":5,"alliance":4,"food":2},{"gold":10,"stone":0,"iron":0,"wood":8,"alliance":5,"food":6},{"gold":1,"stone":0,"iron":0,"wood":1,"alliance":3,"food":1},{"gold":1,"stone":0,"iron":0,"wood":1,"alliance":3,"food":1}],
+	"players": [
+		{"gold":0,"stone":0,"iron":0,"wood":0,"alliance":0,"food":0,"name":""},
+		{"gold":10,"stone":6,"iron":0,"wood":6,"alliance":1,"food":6,"name":"G"},
+		{"gold":10,"stone":3,"iron":0,"wood":5,"alliance":2,"food":6,"name":"Potam"},
+		{"gold":2,"stone":0,"iron":0,"wood":2,"alliance":3,"food":2,"name":"Sand"},
+		{"gold":5,"stone":5,"iron":2,"wood":5,"alliance":4,"food":2,"name":"Mathhims"},
+		{"gold":10,"stone":0,"iron":0,"wood":8,"alliance":5,"food":6,"name":"Nicorin"},
+		{"gold":1,"stone":0,"iron":0,"wood":1,"alliance":3,"food":1,"name":"Sand"},
+		{"gold":1,"stone":0,"iron":0,"wood":1,"alliance":3,"food":1,"name":"Sand"}
+	],
 	"regions": {
 		"33":{"troops":[],"neighbors":["32","Mathhim",null,null,null,null,null,null],"train_progress":0,"train":[],"location_garrison":[154,25],"owner":4,"center":[111,38],"location":[[254,46],[277,32],[238,4],[184,4],[73,18],[86,46],[116,71],[143,39],[166,41],[169,18],[192,18],[220,34]],"built":["Mine", "Bloomery"]},
 		"34":{"troops":[["Battering Ram", 1, 4]],"neighbors":["Uyali","Mathhim",null,null,null,null,null,null],"train_progress":0,"train":[],"location_garrison":[106,194],"owner":4,"center":[141,183],"location":[[201,208],[167,184],[168,165],[129,139],[108,122],[70,164],[58,193],[39,214],[59,241],[78,238],[90,249],[104,238],[128,247]],"built":["Palisade", "Sawmill", "Barracks", "Stables"]},

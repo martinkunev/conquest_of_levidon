@@ -44,6 +44,9 @@ struct player
 	enum {Neutral, Local, Computer} type;
 	struct resources treasury;
 	unsigned char alliance;
+
+	char name[NAME_LIMIT];
+	size_t name_length;
 };
 
 struct game
