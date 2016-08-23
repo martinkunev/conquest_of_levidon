@@ -102,7 +102,7 @@ void if_storage_init(const struct game *game, int width, int height)
 	for(i = 0; i < regions_count; ++i)
 	{
 		unsigned char color[4] = {255, i / 256, i % 256, 255};
-		fill_polygon(game->regions[i].location, 0, 0, color);
+		fill_polygon(game->regions[i].location, 0, 0, color, 1.0);
 	}
 
 	glFlush();
@@ -640,7 +640,7 @@ void if_map(const void *argument, const struct game *game)
 
 		// Fill each region with the color of its owner (or the color indicating unexplored).
 		enum color color = (state->regions_visible[i] ? (Player + region->owner) : Unexplored);
-		fill_polygon(region->location, MAP_X, MAP_Y, display_colors[color]);
+		fill_polygon(region->location, MAP_X, MAP_Y, display_colors[color], 1.0);
 
 		// Remember income and expenses.
 		if (region->owner == state->player) region_income(region, &income);
@@ -661,7 +661,7 @@ void if_map(const void *argument, const struct game *game)
 
 	// Draw region borders.
 	for(i = 0; i < game->regions_count; ++i)
-		draw_polygon(game->regions[i].location, MAP_X, MAP_Y, display_colors[Black]);
+		draw_polygon(game->regions[i].location, MAP_X, MAP_Y, display_colors[Black], 1.0);
 
 	for(i = 0; i < game->regions_count; ++i)
 	{

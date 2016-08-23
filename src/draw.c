@@ -159,7 +159,7 @@ void draw_rectangle(unsigned x, unsigned y, unsigned width, unsigned height, con
 	glEnd();
 }
 
-void draw_polygon(const struct polygon *restrict polygon, int offset_x, int offset_y, const unsigned char color[static 4])
+void draw_polygon(const struct polygon *restrict polygon, int offset_x, int offset_y, const unsigned char color[static 4], double scale)
 {
 	size_t i;
 
@@ -167,12 +167,12 @@ void draw_polygon(const struct polygon *restrict polygon, int offset_x, int offs
 
 	glBegin(GL_LINE_STRIP);
 	for(i = 0; i < polygon->vertices_count; ++i)
-		glVertex2f(offset_x + polygon->points[i].x, offset_y + polygon->points[i].y);
+		glVertex2f(offset_x + (unsigned)(polygon->points[i].x * scale + 0.5), offset_y + (unsigned)(polygon->points[i].y * scale + 0.5));
 	glEnd();
 }
 
 // Display a region as a polygon, using ear clipping.
-void fill_polygon(const struct polygon *restrict polygon, int offset_x, int offset_y, const unsigned char color[static 4])
+void fill_polygon(const struct polygon *restrict polygon, int offset_x, int offset_y, const unsigned char color[static 4], double scale)
 {
 	// assert(polygon->vertices_count > 2);
 
@@ -181,7 +181,8 @@ void fill_polygon(const struct polygon *restrict polygon, int offset_x, int offs
 
 	// Initialize cyclic linked list with the polygon's vertices.
 	struct polygon_draw *draw = malloc(vertices_left * sizeof(*draw));
-	if (!draw) return; // TODO
+	if (!draw)
+		return; // TODO
 	draw[0].point = polygon->points;
 	draw[0].prev = draw + vertices_left - 1;
 	for(i = 1; i < vertices_left; ++i)
@@ -220,9 +221,9 @@ void fill_polygon(const struct polygon *restrict polygon, int offset_x, int offs
 		}
 
 		glBegin(GL_POLYGON);
-		glVertex2f(offset_x + vertex->prev->point->x, offset_y + vertex->prev->point->y);
-		glVertex2f(offset_x + vertex->point->x, offset_y + vertex->point->y);
-		glVertex2f(offset_x + vertex->next->point->x, offset_y + vertex->next->point->y);
+		glVertex2f(offset_x + (unsigned)(vertex->prev->point->x * scale + 0.5), offset_y + (unsigned)(vertex->prev->point->y * scale + 0.5));
+		glVertex2f(offset_x + (unsigned)(vertex->point->x * scale + 0.5), offset_y + (unsigned)(vertex->point->y * scale + 0.5));
+		glVertex2f(offset_x + (unsigned)(vertex->next->point->x * scale + 0.5), offset_y + (unsigned)(vertex->next->point->y * scale + 0.5));
 		glEnd();
 
 		// clip the triangle from the polygon
@@ -237,9 +238,9 @@ void fill_polygon(const struct polygon *restrict polygon, int offset_x, int offs
 	}
 
 	glBegin(GL_POLYGON);
-	glVertex2f(offset_x + vertex->prev->point->x, offset_y + vertex->prev->point->y);
-	glVertex2f(offset_x + vertex->point->x, offset_y + vertex->point->y);
-	glVertex2f(offset_x + vertex->next->point->x, offset_y + vertex->next->point->y);
+	glVertex2f(offset_x + (unsigned)(vertex->prev->point->x * scale + 0.5), offset_y + (unsigned)(vertex->prev->point->y * scale + 0.5));
+	glVertex2f(offset_x + (unsigned)(vertex->point->x * scale + 0.5), offset_y + (unsigned)(vertex->point->y * scale + 0.5));
+	glVertex2f(offset_x + (unsigned)(vertex->next->point->x * scale + 0.5), offset_y + (unsigned)(vertex->next->point->y * scale + 0.5));
 	glEnd();
 
 	free(draw);

@@ -169,6 +169,22 @@ void display_troop(size_t unit, unsigned x, unsigned y, enum color player, enum 
 	}
 }
 
+void display_minimap(const struct game *restrict game, unsigned x, unsigned y)
+{
+	size_t i;
+
+	// Fill each region with the color of its owner.
+	for(i = 0; i < game->regions_count; ++i)
+	{
+		const struct region *restrict region = game->regions + i;
+		fill_polygon(region->location, x, y, display_colors[Player + region->owner], 0.25);
+	}
+
+	// Draw region borders.
+	for(i = 0; i < game->regions_count; ++i)
+		draw_polygon(game->regions[i].location, x, y, display_colors[Black], 0.25);
+}
+
 void show_flag(unsigned x, unsigned y, unsigned player)
 {
 	fill_rectangle(x + 4, y + 4, 24, 12, display_colors[Player + player]);

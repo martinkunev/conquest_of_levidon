@@ -158,6 +158,7 @@ static inline int if_index(enum object object, struct point position)
 void if_load_images(void);
 
 void display_troop(size_t unit, unsigned x, unsigned y, enum color player, enum color text, unsigned count);
+void display_minimap(const struct game *restrict game, unsigned x, unsigned y);
 
 void show_flag(unsigned x, unsigned y, unsigned player);
 void show_flag_small(unsigned x, unsigned y, unsigned player);

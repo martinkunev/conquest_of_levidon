@@ -85,6 +85,9 @@ void if_load(const void *argument, const struct game *game)
 		}
 	}
 
+	if (state->loaded)
+		display_minimap(game, object_group[Worlds].left, object_group[Worlds].top);
+
 	if (state->name_size)
 		draw_string(state->name, state->name_size, object_group[Worlds].left, object_group[Worlds].bottom + MARGIN, &font12, White);
 	draw_cursor(state->name, state->name_position, object_group[Worlds].left, object_group[Worlds].bottom + MARGIN, &font12, White);

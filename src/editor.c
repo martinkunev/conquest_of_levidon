@@ -191,7 +191,7 @@ static void if_storage_region(const struct polygon *restrict location, int index
 {
 	unsigned char color[4];
 	if_index_color(color, index);
-	fill_polygon(location, 0, 0, color);
+	fill_polygon(location, 0, 0, color, 1.0);
 }
 
 static void if_storage_point(unsigned x, unsigned y, int index)
@@ -725,11 +725,11 @@ static void if_regions(const void *restrict argument, const struct game *restric
 
 	// Fill regions with colors.
 	for(i = 0; i < game->regions_count; ++i)
-		fill_polygon(game->regions[i].location, EDITOR_X, EDITOR_Y, display_colors[Player + state->colors[i]]);
+		fill_polygon(game->regions[i].location, EDITOR_X, EDITOR_Y, display_colors[Player + state->colors[i]], 1.0);
 
 	// Draw region borders.
 	for(i = 0; i < game->regions_count; ++i)
-		draw_polygon(game->regions[i].location, EDITOR_X, EDITOR_Y, display_colors[Black]);
+		draw_polygon(game->regions[i].location, EDITOR_X, EDITOR_Y, display_colors[Black], 1.0);
 
 	// Draw region garrison and center.
 	for(i = 0; i < game->regions_count; ++i)
