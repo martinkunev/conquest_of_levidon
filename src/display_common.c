@@ -48,6 +48,7 @@ struct image image_units[7], image_units_mask[7]; // TODO the array must be enou
 struct image image_buildings[13]; // TODO the array must be big enough to hold BUILDINGS_COUNT elements
 struct image image_buildings_gray[13]; // TODO the array must be big enough to hold BUILDINGS_COUNT elements
 struct image image_palisade[16], image_palisade_gate[2], image_fortress[16], image_fortress_gate[2];
+struct image image_economy;
 
 void if_load_images(void)
 {
@@ -154,6 +155,8 @@ void if_load_images(void)
 	image_load_png(&image_fortress_gate[0], PREFIX_IMG "fortress_gate0.png", 0);
 	image_load_png(&image_palisade_gate[1], PREFIX_IMG "palisade_gate1.png", 0);
 	image_load_png(&image_fortress_gate[1], PREFIX_IMG "fortress_gate1.png", 0);
+
+	image_load_png(&image_economy, PREFIX_IMG "economy.png", 0);
 }
 
 void display_troop(size_t unit, unsigned x, unsigned y, enum color player, enum color text, unsigned count)

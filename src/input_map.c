@@ -33,18 +33,65 @@
 #include "input_menu.h"
 #include "display_common.h"
 #include "display_map.h"
+#include "image.h"
 
-/*
+///////////////////////
+/*#include <stdbool.h>
 #include <stdio.h>
-#include "computer_map.h"
+struct troop_info
+{
+    unsigned ranged;
+    unsigned assault;
+    unsigned fast;
+    unsigned vanguard;
+    unsigned total;
+};
+struct region_info
+{
+    double importance;
+    unsigned neighbors;
+    unsigned neighbors_neutral, neighbors_enemy;
+    unsigned neighbors_unknown;
+
+    struct
+    {
+        double self, ally;
+    } strength;
+    struct
+    {
+        double self, ally;
+    } strength_garrison; // garrison or assault strength
+    double strength_enemy;
+    double strength_enemy_neighbors;
+
+    const struct garrison_info *restrict garrison;
+    unsigned garrisons_enemy;
+
+    struct troop_info troops;
+
+    struct troop_info troops_needed;
+
+    bool nearby; // whether the player can reach the region in one turn
+};
+struct context
+{
+    double importance_expected;
+    unsigned count_expected;
+    unsigned char regions_visible[REGIONS_LIMIT];
+};
+struct region_info *regions_info_collect(const struct game *restrict game, unsigned char player, struct context *restrict context);
+double tvalue(const struct game *restrict game, unsigned char player, struct region_info *restrict regions_info, const struct context *restrict context, const struct region *restrict region, size_t unit);
+double bvalue(const struct game *restrict game, unsigned char player, struct region_info *restrict regions_info, const struct context *restrict context, const struct region *restrict region, size_t building);
 double rate(const struct game *restrict game, unsigned char player, struct region_info *restrict regions_info, const struct context *restrict context);
 static struct context context;
-static struct region_info *regions_info;
-*/
+static struct region_info *regions_info;*/
+/////////////////////
 
 static int input_turn(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
 {
 	struct state_map *state = argument;
+	if (state->economy)
+		return INPUT_IGNORE;
 
 	switch (code)
 	{
@@ -120,6 +167,8 @@ static int input_region(int code, unsigned x, unsigned y, uint16_t modifiers, co
 			}
 		}
 
+		state->economy = 0;
+
 		return 0;
 	}
 	else if (code == EVENT_MOUSE_RIGHT)
@@ -174,6 +223,8 @@ valid:
 static int input_construct(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
 {
 	struct state_map *state = argument;
+	if (state->economy)
+		return INPUT_IGNORE;
 
 	ssize_t building;
 	struct region *region;
@@ -213,6 +264,8 @@ static int input_construct(int code, unsigned x, unsigned y, uint16_t modifiers,
 
 			region->construct = building;
 			resource_add(&game->players[state->player].treasury, &BUILDINGS[building].cost);
+
+//printf("build %.*s: %f\n", (int)BUILDINGS[building].name_length, BUILDINGS[building].name, bvalue(game, state->player, regions_info, &context, region, building));
 		}
 	}
 	else if (code == EVENT_MOTION)
@@ -230,6 +283,8 @@ static int input_construct(int code, unsigned x, unsigned y, uint16_t modifiers,
 static int input_train(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
 {
 	struct state_map *state = argument;
+	if (state->economy)
+		return INPUT_IGNORE;
 
 	ssize_t unit;
 	struct region *region;
@@ -257,6 +312,7 @@ static int input_train(int code, unsigned x, unsigned y, uint16_t modifiers, con
 				resource_add(&game->players[state->player].treasury, &UNITS[unit].cost);
 
 				region->train[index] = UNITS + unit;
+//printf("train %.*s: %f\n", (int)UNITS[unit].name_length, UNITS[unit].name, tvalue(game, state->player, regions_info, &context, region, unit));
 				break;
 			}
 	}
@@ -275,6 +331,8 @@ static int input_train(int code, unsigned x, unsigned y, uint16_t modifiers, con
 static int input_dismiss(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
 {
 	struct state_map *state = argument;
+	if (state->economy)
+		return INPUT_IGNORE;
 
 	ssize_t index;
 	struct region *region;
@@ -316,6 +374,8 @@ static int input_dismiss(int code, unsigned x, unsigned y, uint16_t modifiers, c
 static int input_scroll_self(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
 {
 	struct state_map *state = argument;
+	if (state->economy)
+		return INPUT_IGNORE;
 
 	if (code != EVENT_MOUSE_LEFT) return INPUT_NOTME; // handle only left mouse clicks
 
@@ -347,6 +407,8 @@ static int input_scroll_self(int code, unsigned x, unsigned y, uint16_t modifier
 static int input_scroll_ally(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
 {
 	struct state_map *state = argument;
+	if (state->economy)
+		return INPUT_IGNORE;
 
 	if (code != EVENT_MOUSE_LEFT) return INPUT_NOTME; // handle only left mouse clicks
 
@@ -382,6 +444,8 @@ static int input_troop(int code, unsigned x, unsigned y, uint16_t modifiers, con
 	ssize_t offset;
 
 	struct state_map *state = argument;
+	if (state->economy)
+		return INPUT_IGNORE;
 
 	if (code == EVENT_MOTION) return INPUT_NOTME;
 	if (code >= 0) return INPUT_NOTME; // ignore keyboard events
@@ -442,6 +506,8 @@ static int input_garrison(int code, unsigned x, unsigned y, uint16_t modifiers, 
 	ssize_t offset;
 
 	struct state_map *state = argument;
+	if (state->economy)
+		return INPUT_IGNORE;
 
 	if (code == EVENT_MOTION) return INPUT_NOTME;
 	if (code >= 0) return INPUT_NOTME; // ignore keyboard events
@@ -504,6 +570,65 @@ static int input_garrison(int code, unsigned x, unsigned y, uint16_t modifiers, 
 reset:
 	// Make sure no troop is selected.
 	state->troop = 0;
+	return 0;
+}
+
+static int input_economy(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
+{
+	struct region *restrict region;
+
+	struct state_map *state = argument;
+
+	if (!state->region)
+		return INPUT_IGNORE;
+	region = game->regions + state->region;
+	if ((state->player != region->owner) || (region->owner != region->garrison.owner))
+		return INPUT_IGNORE;
+
+	if (code != EVENT_MOUSE_LEFT)
+		return INPUT_IGNORE;
+
+	state->economy = !state->economy;
+
+	return 0;
+}
+
+static int input_workers(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
+{
+	ssize_t index;
+
+	struct state_map *state = argument;
+
+	if (!state->economy)
+		return INPUT_IGNORE;
+
+	if ((code != EVENT_SCROLL_UP) && (code != EVENT_SCROLL_DOWN))
+		return INPUT_IGNORE;
+
+	// Find which troop was clicked.
+	index = if_index(Workers, (struct point){x, y});
+	if (index < 0) return INPUT_IGNORE; // no index clicked
+
+	struct region *restrict region = game->regions + state->region;
+	unsigned *resources[] = {
+		&region->workers.food,
+		&region->workers.wood,
+		&region->workers.iron,
+		&region->workers.stone,
+	};
+
+	if (code == EVENT_SCROLL_UP)
+	{
+		unsigned unused = 100 - (*resources[0] + *resources[1] + *resources[2] + *resources[3]);
+		if (unused)
+			*resources[index] += 1;
+	}
+	else // code == EVENT_SCROLL_DOWN
+	{
+		if (*resources[index])
+			*resources[index] -= 1;
+	}
+
 	return 0;
 }
 
@@ -589,6 +714,20 @@ int input_map(const struct game *restrict game, unsigned char player)
 			.bottom = object_group[Building].bottom,
 			.callback = input_construct,
 		},
+		{
+			.left = ECONOMY_X,
+			.right = ECONOMY_X + image_economy.width - 1,
+			.top = ECONOMY_Y,
+			.bottom = ECONOMY_X + image_economy.height - 1,
+			.callback = input_economy,
+		},
+		{
+			.left = object_group[Workers].left,
+			.right = object_group[Workers].right,
+			.top = object_group[Workers].top,
+			.bottom = object_group[Workers].bottom,
+			.callback = input_workers,
+		},
 	};
 
 	struct state_map state;
@@ -602,11 +741,10 @@ int input_map(const struct game *restrict game, unsigned char player)
 
 	map_visible(game, player, state.regions_visible);
 
-	/*
-	struct region_info *regions_info_collect(const struct game *restrict game, unsigned char player, struct context *restrict context);
-	regions_info = regions_info_collect(game, player, &context);
-	printf("rating=%f\n", rate(game, state.player, regions_info, &context));
-	*/
+	state.economy = 0;
+
+//regions_info = regions_info_collect(game, player, &context);
+//printf("rating=%f\n", rate(game, state.player, regions_info, &context));
 
 	return input_local(areas, sizeof(areas) / sizeof(*areas), if_map, game, &state);
 }

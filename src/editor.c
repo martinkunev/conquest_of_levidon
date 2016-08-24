@@ -297,6 +297,9 @@ static void region_init(struct game *restrict game, struct region *restrict regi
 	region->train_progress = 0;
 	for(i = 0; i < TRAIN_QUEUE; ++i)
 		region->train[i] = 0;
+
+	region->population = 10000;
+
 	region->troops = 0;
 	region->garrison.owner = 0;
 	region->garrison.siege = 0;

@@ -34,6 +34,17 @@
 #define MAP_X 256
 #define MAP_Y 0
 
+#define ECONOMY_X 226
+#define ECONOMY_Y 10
+#define POPULATION_X 4
+#define POPULATION_Y 52
+#define WORKERS_X 10
+#define WORKERS_Y 96
+#define PROFIT_PADDING 4
+#define PROFIT_Y 230
+#define SAVINGS_X 10
+#define SAVINGS_Y 270
+
 #define BATTLE_X 8
 #define BATTLE_Y 8
 
@@ -93,7 +104,7 @@
 #define BATTLEFIELD_WIDTH 25
 #define BATTLEFIELD_HEIGHT 25
 
-enum object {Worlds, WorldTabs, Players, Building, Train, Dismiss, TroopSelf, TroopOther, TroopGarrison, Battlefield};
+enum object {Worlds, WorldTabs, Players, Building, Train, Dismiss, TroopSelf, TroopOther, TroopGarrison, Battlefield, Workers};
 
 // rows, columns, left, top, width, height, padding
 #define OBJECT_GROUP(r, c, l, t, w, h, p) \
@@ -133,6 +144,7 @@ static const struct object_group
 	[TroopOther] = OBJECT_GROUP(1, TROOPS_VISIBLE, PANEL_X + SCROLL + 1, PANEL_Y + 36 + 48 + 2 + 2, 32, 32, 1),
 	[TroopGarrison] = OBJECT_GROUP(1, TROOPS_GARRISON, GARRISON_X + 9, GARRISON_Y + GARRISON_MARGIN, 32, 32, 1),
 	[Battlefield] = OBJECT_GROUP(BATTLEFIELD_HEIGHT, BATTLEFIELD_WIDTH, BATTLE_X, BATTLE_Y, FIELD_SIZE, FIELD_SIZE, 0),
+	[Workers] = OBJECT_GROUP(1, 4, WORKERS_X, WORKERS_Y, 50, 102, 12),
 };
 #undef OBJECT_GROUP
 

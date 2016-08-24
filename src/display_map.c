@@ -353,225 +353,281 @@ static void if_map_region(const struct region *region, const struct state_map *s
 
 	if (game->players[region->owner].type != Neutral) show_flag(PANEL_X, PANEL_Y, region->owner);
 
-	if (allies(game, region->owner, state->player) || allies(game, region->garrison.owner, state->player))
+	if (!state->economy)
 	{
-		enum object object;
-		size_t offset;
-		size_t x;
-
-		unsigned char self_count = 0, other_count = 0;
-
-		// Display building information.
-		// Construct button is displayed if the following conditions are satisfied:
-		// * current player owns the region
-		// * the building is not built
-		// * building requirements are satisfied
-		// * there is no siege
-		for(i = 0; i < BUILDINGS_COUNT; ++i)
+		if (allies(game, region->owner, state->player) || allies(game, region->garrison.owner, state->player))
 		{
-			struct point position = if_position(Building, i);
-			if (region_built(region, i) && !(region->built & BUILDINGS[i].conflicts))
-			{
-				draw_rectangle(position.x - 1, position.y - 1, image_buildings[i].width + 2, image_buildings[i].height + 2, display_colors[Black]);
-				image_draw(image_buildings + i, position.x, position.y);
-			}
-			else if ((state->player == region->owner) && region_building_available(region, BUILDINGS + i) && !siege)
-			{
-				draw_rectangle(position.x - 1, position.y - 1, image_buildings[i].width + 2, image_buildings[i].height + 2, display_colors[Black]);
-				image_draw(image_buildings_gray + i, position.x, position.y);
-			}
-		}
+			enum object object;
+			size_t offset;
+			size_t x;
 
-		// Display troops in the region.
-		for(troop = region->troops; troop; troop = troop->_next)
-		{
-			enum color color_text;
-			const struct image *restrict image_action = 0;
+			unsigned char self_count = 0, other_count = 0;
 
-			if (troop->owner == state->player)
+			// Display building information.
+			// Construct button is displayed if the following conditions are satisfied:
+			// * current player owns the region
+			// * the building is not built
+			// * building requirements are satisfied
+			// * there is no siege
+			for(i = 0; i < BUILDINGS_COUNT; ++i)
 			{
-				if (troop->dismiss)
+				struct point position = if_position(Building, i);
+				if (region_built(region, i) && !(region->built & BUILDINGS[i].conflicts))
 				{
-					image_action = &image_dismiss;
+					draw_rectangle(position.x - 1, position.y - 1, image_buildings[i].width + 2, image_buildings[i].height + 2, display_colors[Black]);
+					image_draw(image_buildings + i, position.x, position.y);
 				}
-				else if (troop->move == LOCATION_GARRISON)
+				else if ((state->player == region->owner) && region_building_available(region, BUILDINGS + i) && !siege)
 				{
-					if (troop->owner == region->garrison.owner)
-						continue; // troop is in garrison
-					image_action = &image_assault;
+					draw_rectangle(position.x - 1, position.y - 1, image_buildings[i].width + 2, image_buildings[i].height + 2, display_colors[Black]);
+					image_draw(image_buildings_gray + i, position.x, position.y);
 				}
-				else if (troop->move != region)
-				{
-					image_action = &image_movement;
+			}
 
-					// Display troop destination if necessary.
-					if (!state->troop || (troop == state->troop))
+			// Display troops in the region.
+			for(troop = region->troops; troop; troop = troop->_next)
+			{
+				enum color color_text;
+				const struct image *restrict image_action = 0;
+
+				if (troop->owner == state->player)
+				{
+					if (troop->dismiss)
 					{
-						struct point p0, p1;
-						if (polygons_border(region->location, troop->move->location, &p0, &p1)) // TODO this is slow; don't do it every time
+						image_action = &image_dismiss;
+					}
+					else if (troop->move == LOCATION_GARRISON)
+					{
+						if (troop->owner == region->garrison.owner)
+							continue; // troop is in garrison
+						image_action = &image_assault;
+					}
+					else if (troop->move != region)
+					{
+						image_action = &image_movement;
+
+						// Display troop destination if necessary.
+						if (!state->troop || (troop == state->troop))
 						{
-							display_troop_destination(p0, p1);
-						}
-						else
-						{
-							// TODO do something better
-							write(2, S("Neighboring regions have no common border\n")); // world bug
+							struct point p0, p1;
+							if (polygons_border(region->location, troop->move->location, &p0, &p1)) // TODO this is slow; don't do it every time
+							{
+								display_troop_destination(p0, p1);
+							}
+							else
+							{
+								// TODO do something better
+								write(2, S("Neighboring regions have no common border\n")); // world bug
+							}
 						}
 					}
+
+					if (!self_count) fill_rectangle(PANEL_X, object_group[TroopSelf].top - 2, PANEL_WIDTH, 2 + object_group[TroopSelf].height + 12 + 2, display_colors[Self]);
+					x = self_count++;
+					object = TroopSelf;
+					offset = state->self_offset;
+					color_text = Black;
 				}
-
-				if (!self_count) fill_rectangle(PANEL_X, object_group[TroopSelf].top - 2, PANEL_WIDTH, 2 + object_group[TroopSelf].height + 12 + 2, display_colors[Self]);
-				x = self_count++;
-				object = TroopSelf;
-				offset = state->self_offset;
-				color_text = Black;
-			}
-			else if (allies(game, troop->owner, state->player))
-			{
-				if (troop->location == LOCATION_GARRISON) continue;
-
-				if (!other_count) fill_rectangle(PANEL_X, object_group[TroopOther].top - 2, PANEL_WIDTH, 2 + object_group[TroopOther].height + 12 + 2, display_colors[Ally]);
-				x = other_count++;
-				object = TroopOther;
-				offset = state->other_offset;
-				color_text = White;
-			}
-			else
-			{
-				if (troop->location == LOCATION_GARRISON) continue;
-
-				if (!other_count) fill_rectangle(PANEL_X, object_group[TroopOther].top - 2, PANEL_WIDTH, 2 + object_group[TroopOther].height + 12 + 2, display_colors[Enemy]);
-				x = other_count++;
-				object = TroopOther;
-				offset = state->other_offset;
-				color_text = White;
-			}
-
-			// If the troop is visible on the screen, draw it.
-			if ((x >= offset) && (x < offset + TROOPS_VISIBLE))
-			{
-				struct point position = if_position(object, x - offset);
-				fill_rectangle(position.x, position.y, object_group[object].width, object_group[object].height, display_colors[Black]);
-				display_troop(troop->unit->index, position.x, position.y, Player + troop->owner, color_text, troop->count);
-				if (image_action) image_draw(image_action, position.x, position.y); // draw action indicator for the troop
-				if (troop == state->troop) draw_rectangle(position.x - 1, position.y - 1, object_group[object].width + 2, object_group[object].height + 2, display_colors[White]);
-			}
-		}
-
-		// Display scroll buttons.
-		if (state->self_offset) image_draw(&image_scroll_left, PANEL_X, object_group[TroopSelf].top);
-		if ((self_count - state->self_offset) > TROOPS_VISIBLE) image_draw(&image_scroll_right, object_group[TroopSelf].right + 1, object_group[TroopSelf].top);
-		if (state->other_offset) image_draw(&image_scroll_left, PANEL_X, object_group[TroopOther].top);
-		if ((other_count - state->other_offset) > TROOPS_VISIBLE) image_draw(&image_scroll_right, object_group[TroopOther].right + 1, object_group[TroopOther].top);
-
-		// Display garrison and garrison troops.
-		const struct garrison_info *restrict garrison = garrison_info(region);
-		if (garrison)
-		{
-			image_draw(&image_garrisons[garrison->index], GARRISON_X, GARRISON_Y);
-			if (game->players[region->garrison.owner].type != Neutral) show_flag(GARRISON_X, GARRISON_Y - GARRISON_MARGIN, region->garrison.owner);
-
-			if (allies(game, region->garrison.owner, state->player))
-			{
-				i = 0;
-				for(troop = region->troops; troop; troop = troop->_next)
+				else if (allies(game, troop->owner, state->player))
 				{
-					const struct region *restrict location = ((troop->owner == state->player) ? troop->move : troop->location);
-					if ((location != LOCATION_GARRISON) || (troop->owner != region->garrison.owner))
-						continue;
+					if (troop->location == LOCATION_GARRISON) continue;
 
-					struct point position = if_position(TroopGarrison, i);
-					fill_rectangle(position.x, position.y, object_group[TroopGarrison].width, object_group[TroopGarrison].height, display_colors[Black]);
-					display_troop(troop->unit->index, position.x, position.y, Player + troop->owner, Black, troop->count);
-					if (troop == state->troop) draw_rectangle(position.x - 1, position.y - 1, object_group[TroopGarrison].width + 2, object_group[TroopGarrison].height + 2, display_colors[White]);
+					if (!other_count) fill_rectangle(PANEL_X, object_group[TroopOther].top - 2, PANEL_WIDTH, 2 + object_group[TroopOther].height + 12 + 2, display_colors[Ally]);
+					x = other_count++;
+					object = TroopOther;
+					offset = state->other_offset;
+					color_text = White;
+				}
+				else
+				{
+					if (troop->location == LOCATION_GARRISON) continue;
 
-					i += 1;
+					if (!other_count) fill_rectangle(PANEL_X, object_group[TroopOther].top - 2, PANEL_WIDTH, 2 + object_group[TroopOther].height + 12 + 2, display_colors[Enemy]);
+					x = other_count++;
+					object = TroopOther;
+					offset = state->other_offset;
+					color_text = White;
+				}
+
+				// If the troop is visible on the screen, draw it.
+				if ((x >= offset) && (x < offset + TROOPS_VISIBLE))
+				{
+					struct point position = if_position(object, x - offset);
+					fill_rectangle(position.x, position.y, object_group[object].width, object_group[object].height, display_colors[Black]);
+					display_troop(troop->unit->index, position.x, position.y, Player + troop->owner, color_text, troop->count);
+					if (image_action) image_draw(image_action, position.x, position.y); // draw action indicator for the troop
+					if (troop == state->troop) draw_rectangle(position.x - 1, position.y - 1, object_group[object].width + 2, object_group[object].height + 2, display_colors[White]);
 				}
 			}
-			else
+
+			// Display scroll buttons.
+			if (state->self_offset) image_draw(&image_scroll_left, PANEL_X, object_group[TroopSelf].top);
+			if ((self_count - state->self_offset) > TROOPS_VISIBLE) image_draw(&image_scroll_right, object_group[TroopSelf].right + 1, object_group[TroopSelf].top);
+			if (state->other_offset) image_draw(&image_scroll_left, PANEL_X, object_group[TroopOther].top);
+			if ((other_count - state->other_offset) > TROOPS_VISIBLE) image_draw(&image_scroll_right, object_group[TroopOther].right + 1, object_group[TroopOther].top);
+
+			// Display garrison and garrison troops.
+			const struct garrison_info *restrict garrison = garrison_info(region);
+			if (garrison)
 			{
-				// Display an estimate of the number of troops in the garrison.
+				image_draw(&image_garrisons[garrison->index], GARRISON_X, GARRISON_Y);
+				if (game->players[region->garrison.owner].type != Neutral) show_flag(GARRISON_X, GARRISON_Y - GARRISON_MARGIN, region->garrison.owner);
 
-				char buffer[32], *end; // TODO make sure this is enough
+				if (allies(game, region->garrison.owner, state->player))
+				{
+					i = 0;
+					for(troop = region->troops; troop; troop = troop->_next)
+					{
+						const struct region *restrict location = ((troop->owner == state->player) ? troop->move : troop->location);
+						if ((location != LOCATION_GARRISON) || (troop->owner != region->garrison.owner))
+							continue;
 
-				unsigned count = 0;
-				for(troop = region->troops; troop; troop = troop->_next)
-					if (troop->location == LOCATION_GARRISON)
-						count += troop->count;
-				count = count_round(count) * COUNT_ROUND_PRECISION;
+						struct point position = if_position(TroopGarrison, i);
+						fill_rectangle(position.x, position.y, object_group[TroopGarrison].width, object_group[TroopGarrison].height, display_colors[Black]);
+						display_troop(troop->unit->index, position.x, position.y, Player + troop->owner, Black, troop->count);
+						if (troop == state->troop) draw_rectangle(position.x - 1, position.y - 1, object_group[TroopGarrison].width + 2, object_group[TroopGarrison].height + 2, display_colors[White]);
 
-				end = format_bytes(buffer, S("about "));
-				end = format_uint(end, count, 10);
-				end = format_bytes(end, S(" troops"));
+						i += 1;
+					}
+				}
+				else
+				{
+					// Display an estimate of the number of troops in the garrison.
 
-				draw_string(buffer, end - buffer, object_group[TroopGarrison].left, object_group[TroopGarrison].top, &font12, Black);
-			}
+					char buffer[32], *end; // TODO make sure this is enough
 
-			// If the garrison is under siege, display the remaining provisions.
-			if (siege)
-			{
-				unsigned provisions = garrison->provisions - region->garrison.siege;
-				for(i = 0; i < provisions; ++i)
-					image_draw(&image_food, object_group[TroopGarrison].right + 9, object_group[TroopGarrison].bottom - (i + 1) * image_food.height);
+					unsigned count = 0;
+					for(troop = region->troops; troop; troop = troop->_next)
+						if (troop->location == LOCATION_GARRISON)
+							count += troop->count;
+					count = count_round(count) * COUNT_ROUND_PRECISION;
+
+					end = format_bytes(buffer, S("about "));
+					end = format_uint(end, count, 10);
+					end = format_bytes(end, S(" troops"));
+
+					draw_string(buffer, end - buffer, object_group[TroopGarrison].left, object_group[TroopGarrison].top, &font12, Black);
+				}
+
+				// If the garrison is under siege, display the remaining provisions.
+				if (siege)
+				{
+					unsigned provisions = garrison->provisions - region->garrison.siege;
+					for(i = 0; i < provisions; ++i)
+						image_draw(&image_food, object_group[TroopGarrison].right + 9, object_group[TroopGarrison].bottom - (i + 1) * image_food.height);
+				}
 			}
 		}
-	}
-	else
-	{
-		// Display an estimate of the number of troops in the region.
+		else
+		{
+			// Display an estimate of the number of troops in the region.
 
-		char buffer[32], *end; // TODO make sure this is enough
+			char buffer[32], *end; // TODO make sure this is enough
 
-		unsigned count = 0;
-		for(troop = region->troops; troop; troop = troop->_next)
-			if (troop->location != LOCATION_GARRISON)
-				count += troop->count;
-		count = count_round(count) * COUNT_ROUND_PRECISION;
+			unsigned count = 0;
+			for(troop = region->troops; troop; troop = troop->_next)
+				if (troop->location != LOCATION_GARRISON)
+					count += troop->count;
+			count = count_round(count) * COUNT_ROUND_PRECISION;
 
-		end = format_bytes(buffer, S("about "));
-		end = format_uint(end, count, 10);
-		end = format_bytes(end, S(" troops"));
+			end = format_bytes(buffer, S("about "));
+			end = format_uint(end, count, 10);
+			end = format_bytes(end, S(" troops"));
 
-		draw_string(buffer, end - buffer, object_group[TroopSelf].left, object_group[TroopSelf].top, &font12, Black);
+			draw_string(buffer, end - buffer, object_group[TroopSelf].left, object_group[TroopSelf].top, &font12, Black);
+		}
 	}
 
 	if ((state->player == region->owner) && !siege)
 	{
-		if (region->construct >= 0)
+		image_draw(&image_economy, ECONOMY_X, ECONOMY_Y);
+
+		if (state->economy)
 		{
-			struct point position = if_position(Building, region->construct);
-			show_progress(region->build_progress, BUILDINGS[region->construct].time, position.x, position.y, object_group[Building].width, object_group[Building].height);
-			image_draw(&image_construction, position.x, position.y);
+			char buffer[32], *end; // TODO make sure this is enough
+			struct point position;
+			unsigned offset;
+			unsigned unused = 100 - (region->workers.food + region->workers.wood + region->workers.iron + region->workers.stone);
+
+			end = format_bytes(buffer, S("population: "));
+			end = format_uint(end, region->population, 10);
+			draw_string(buffer, end - buffer, POPULATION_X, POPULATION_Y, &font12, Black);
+
+			// TODO calculate the amount of each resource
+
+			position = if_position(Workers, 0);
+			offset = 100 - (unused + region->workers.food);
+			fill_rectangle(position.x, position.y + offset, object_group[Workers].width, object_group[Workers].height - offset, display_colors[Black]);
+			fill_rectangle(position.x + 1, object_group[Workers].bottom - 1 - region->workers.food, object_group[Workers].width - 2, region->workers.food, display_colors[Self]);
+			end = format_uint(buffer, region->workers.food, 10); // TODO divide this by 100
+			draw_string(buffer, end - buffer, position.x, object_group[Workers].bottom + PROFIT_PADDING, &font12, Black);
+			image_draw(&image_food, position.x + (object_group[Workers].width - image_food.width) / 2, PROFIT_Y);
+
+			position = if_position(Workers, 1);
+			offset = 100 - (unused + region->workers.wood);
+			fill_rectangle(position.x, position.y + offset, object_group[Workers].width, object_group[Workers].height - offset, display_colors[Black]);
+			fill_rectangle(position.x + 1, object_group[Workers].bottom - 1 - region->workers.wood, object_group[Workers].width - 2, region->workers.wood, display_colors[Self]);
+			end = format_uint(buffer, region->workers.wood, 10); // TODO divide this by 100
+			draw_string(buffer, end - buffer, position.x, object_group[Workers].bottom + PROFIT_PADDING, &font12, Black);
+			image_draw(&image_wood, position.x + (object_group[Workers].width - image_wood.width) / 2, PROFIT_Y);
+
+			position = if_position(Workers, 2);
+			offset = 100 - (unused + region->workers.iron);
+			fill_rectangle(position.x, position.y + offset, object_group[Workers].width, object_group[Workers].height - offset, display_colors[Black]);
+			fill_rectangle(position.x + 1, object_group[Workers].bottom - 1 - region->workers.iron, object_group[Workers].width - 2, region->workers.iron, display_colors[Self]);
+			end = format_uint(buffer, region->workers.iron, 10); // TODO divide this by 100
+			draw_string(buffer, end - buffer, position.x, object_group[Workers].bottom + PROFIT_PADDING, &font12, Black);
+			image_draw(&image_iron, position.x + (object_group[Workers].width - image_iron.width) / 2, PROFIT_Y);
+
+			position = if_position(Workers, 3);
+			offset = 100 - (unused + region->workers.stone);
+			fill_rectangle(position.x, position.y + offset, object_group[Workers].width, object_group[Workers].height - offset, display_colors[Black]);
+			fill_rectangle(position.x + 1, object_group[Workers].bottom - 1 - region->workers.stone, object_group[Workers].width - 2, region->workers.stone, display_colors[Self]);
+			end = format_uint(buffer, region->workers.stone, 10); // TODO divide this by 100
+			draw_string(buffer, end - buffer, position.x, object_group[Workers].bottom + PROFIT_PADDING, &font12, Black);
+			image_draw(&image_stone, position.x + (object_group[Workers].width - image_stone.width) / 2, PROFIT_Y);
+
+			draw_string(S("tax savings:"), SAVINGS_X, SAVINGS_Y, &font12, Black);
+			image_draw(&image_gold, SAVINGS_X + 100, SAVINGS_Y); // TODO remove this 100
 		}
-
-		draw_string(S("train:"), PANEL_X + 2, object_group[Dismiss].top + (object_group[Dismiss].height - font12.height) / 2, &font12, Black);
-
-		// Display train queue.
-		size_t index;
-		for(index = 0; index < TRAIN_QUEUE; ++index)
+		else
 		{
-			struct point position = if_position(Dismiss, index);
-			fill_rectangle(position.x, position.y, object_group[Dismiss].width, object_group[Dismiss].height, display_colors[Black]);
-			if (region->train[index])
+			if (region->construct >= 0)
 			{
-				display_troop(region->train[index]->index, position.x, position.y, Player, 0, 0);
-				show_progress((index ? 0 : region->train_progress), region->train[0]->time, position.x, position.y, object_group[Dismiss].width, object_group[Dismiss].height);
+				struct point position = if_position(Building, region->construct);
+				show_progress(region->build_progress, BUILDINGS[region->construct].time, position.x, position.y, object_group[Building].width, object_group[Building].height);
+				image_draw(&image_construction, position.x, position.y);
 			}
-		}
 
-		// Display units available for training.
-		for(index = 0; index < UNITS_COUNT; ++index)
-		{
-			if (!region_unit_available(region, UNITS[index])) continue;
+			draw_string(S("train:"), PANEL_X + 2, object_group[Dismiss].top + (object_group[Dismiss].height - font12.height) / 2, &font12, Black);
 
-			struct point position = if_position(Train, index);
-			fill_rectangle(position.x, position.y, object_group[Train].width, object_group[Train].height, display_colors[Black]);
-			display_troop(index, position.x, position.y, Player, 0, 0);
+			// Display train queue.
+			size_t index;
+			for(index = 0; index < TRAIN_QUEUE; ++index)
+			{
+				struct point position = if_position(Dismiss, index);
+				fill_rectangle(position.x, position.y, object_group[Dismiss].width, object_group[Dismiss].height, display_colors[Black]);
+				if (region->train[index])
+				{
+					display_troop(region->train[index]->index, position.x, position.y, Player, 0, 0);
+					show_progress((index ? 0 : region->train_progress), region->train[0]->time, position.x, position.y, object_group[Dismiss].width, object_group[Dismiss].height);
+				}
+			}
+
+			// Display units available for training.
+			for(index = 0; index < UNITS_COUNT; ++index)
+			{
+				if (!region_unit_available(region, UNITS[index])) continue;
+
+				struct point position = if_position(Train, index);
+				fill_rectangle(position.x, position.y, object_group[Train].width, object_group[Train].height, display_colors[Black]);
+				display_troop(index, position.x, position.y, Player, 0, 0);
+			}
 		}
 	}
 
 	// Display tooltip for the hovered object.
-	switch (state->hover_object)
+	if (!state->economy) switch (state->hover_object)
 	{
 	case HOVER_UNIT:
 		{

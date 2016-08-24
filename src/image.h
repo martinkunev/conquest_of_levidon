@@ -47,3 +47,4 @@ extern struct image image_scroll_left, image_scroll_right;
 extern struct image image_units[7], image_units_mask[7];
 extern struct image image_buildings[13], image_buildings_gray[13];
 extern struct image image_palisade[16], image_palisade_gate[2], image_fortress[16], image_fortress_gate[2];
+extern struct image image_economy;

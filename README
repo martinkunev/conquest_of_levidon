@@ -5,7 +5,7 @@ Each player controls one or more regions. Regions generate income for their owne
 There are several play worlds with different set of regions and different alliances. To win, a player has to defeat all enemies. The game supports computer players and hotseat multiplayer. The number of players is limited to 16.
 
 -- Install --
-The game is tested on Linux and MacOS X, but without or very few Makefile, changes it should be able to run on any UNIX-like operating system with X window system.
+The game is tested on Linux and MacOS X, but without or with very few Makefile changes, it should be able to run on any UNIX-like operating system with X window system.
 
 Required packages (I may have missed some):
 	Gentoo

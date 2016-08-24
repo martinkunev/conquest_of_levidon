@@ -179,6 +179,39 @@ static int region_init(struct game *restrict game, struct region *restrict regio
 	if (!item) return -1;
 	region->owner = item->integer;
 
+	item = value_get_try(data, "population", JSON_INTEGER);
+	if (!item || (item->integer < 1)) return -1;
+	region->population = item->integer;
+
+	if (item = value_get_try(data, "workers", JSON_OBJECT))
+	{
+		field = value_get_try(&item->object, "food", JSON_INTEGER);
+		if (!field || (field->integer < 0)) return -1;
+		region->workers.food = field->integer;
+
+		field = value_get_try(&item->object, "wood", JSON_INTEGER);
+		if (!field || (field->integer < 0)) return -1;
+		region->workers.wood = field->integer;
+
+		field = value_get_try(&item->object, "iron", JSON_INTEGER);
+		if (!field || (field->integer < 0)) return -1;
+		region->workers.iron = field->integer;
+
+		field = value_get_try(&item->object, "strone", JSON_INTEGER);
+		if (!field || (field->integer < 0)) return -1;
+		region->workers.stone = field->integer;
+
+		if ((region->workers.food + region->workers.wood + region->workers.iron + region->workers.stone) > 100)
+			return -1;
+	}
+	else
+	{
+		region->workers.food = 20;
+		region->workers.wood = 20;
+		region->workers.iron = 20;
+		region->workers.stone = 20;
+	}
+
 	region->garrison.owner = region->owner;
 	region->garrison.siege = 0;
 
@@ -428,8 +461,6 @@ static int world_populate(const union json *restrict json, struct game *restrict
 		}
 	}
 
-	//game->players[...].input_formation = input_formation_none;
-
 	node = value_get_try(&json->object, "regions", JSON_OBJECT);
 	if (!node || (node->object.count < 1) || (node->object.count > REGIONS_LIMIT)) goto error;
 
@@ -586,6 +617,14 @@ static union json *world_store(const struct game *restrict game)
 		region = json_object_insert(region, S("center"), world_save_point(game->regions[i].center));
 
 		region = json_object_insert(region, S("owner"), json_integer(game->regions[i].owner));
+
+		region = json_object_insert(region, S("population"), json_integer(game->regions[i].population));
+		union json *workers = json_object();
+		workers = json_object_insert(workers, S("food"), json_integer(game->regions[i].workers.food));
+		workers = json_object_insert(workers, S("wood"), json_integer(game->regions[i].workers.wood));
+		workers = json_object_insert(workers, S("iron"), json_integer(game->regions[i].workers.iron));
+		workers = json_object_insert(workers, S("stone"), json_integer(game->regions[i].workers.stone));
+		region = json_object_insert(region, S("workers"), workers);
 
 		union json *train = json_array();
 		for(j = 0; j < TRAIN_QUEUE; ++j)

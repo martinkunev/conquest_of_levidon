@@ -28,6 +28,8 @@ enum
 
 #define EVENT_MOUSE_LEFT -1
 #define EVENT_MOUSE_RIGHT -3
+#define EVENT_SCROLL_UP -4
+#define EVENT_SCROLL_DOWN -5
 #define EVENT_MOTION -127
 
 struct area

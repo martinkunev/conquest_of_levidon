@@ -40,6 +40,8 @@ struct state_map
 	unsigned self_count, other_count;
 
 	unsigned char regions_visible[REGIONS_LIMIT];
+
+	int economy; // whether to display region economy
 };
 
 int input_map(const struct game *restrict game, unsigned char player);

@@ -16,6 +16,7 @@ flickering
 -- features --
 H	AI improvements
 	computer map orders are weak
+		computer doesn't want to train good units because there are not enough resources; then an income building is constructed and the computer trains worse units
 	computer cannot recover well from having negative food income
 		// solution: dismiss troops
 	////

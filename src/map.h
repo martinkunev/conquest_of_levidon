@@ -71,6 +71,16 @@ struct region
 	unsigned char train_progress;
 	const struct unit *train[TRAIN_QUEUE];
 
+	unsigned population;
+	struct
+	{
+		// Values are in hundreths (when used, they are multiplied by 0.01).
+		unsigned food;
+		unsigned wood;
+		unsigned iron;
+		unsigned stone;
+	} workers;
+
 	struct troop *troops;
 
 	struct
