@@ -181,11 +181,12 @@ struct position movement_position(const struct pawn *restrict pawn)
 }
 
 // Calculates the expected position of each pawn at the next step.
-int movement_plan(struct battle *restrict battle, struct adjacency_list *restrict graph[static PLAYERS_LIMIT], struct obstacles *restrict obstacles[static PLAYERS_LIMIT])
+int movement_plan(const struct game *restrict game, struct battle *restrict battle, struct adjacency_list *restrict graph[static PLAYERS_LIMIT], struct obstacles *restrict obstacles[static PLAYERS_LIMIT])
 {
 	for(size_t i = 0; i < battle->pawns_count; ++i)
 	{
 		struct pawn *pawn = battle->pawns + i;
+		unsigned char alliance = game->players[pawn->troop->owner].alliance;
 		struct position position = pawn->position;
 		double distance, distance_covered;
 		double progress;
@@ -216,7 +217,7 @@ path_find_next:
 				continue; // nothing to do for this pawn
 			}
 
-			switch (path_find(pawn, destination, graph[pawn->troop->owner], obstacles[pawn->troop->owner]))
+			switch (path_find(pawn, destination, graph[alliance], obstacles[alliance]))
 			{
 			case ERROR_MEMORY:
 				return ERROR_MEMORY;

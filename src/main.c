@@ -191,7 +191,7 @@ static int play_battle(struct game *restrict game, struct region *restrict regio
 				movements[i][step] = battle.pawns[i].position;
 
 			// Plan the movement of each pawn.
-			if (movement_plan(&battle, graph, obstacles) < 0)
+			if (movement_plan(game, &battle, graph, obstacles) < 0)
 				abort(); // TODO
 
 			// Detect collisions caused by moving pawns and resolve them by modifying pawn movement.
