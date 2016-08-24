@@ -70,7 +70,7 @@ int input_report_battle(const struct game *restrict game, const struct battle *r
 	state.game = game;
 	state.battle = battle;
 
-	return input_local(areas, sizeof(areas) / sizeof(*areas), if_report_battle, 0, &state);
+	return input_local(areas, sizeof(areas) / sizeof(*areas), if_report_battle, game, &state);
 }
 
 int input_report_map(const struct game *restrict game)
@@ -93,4 +93,52 @@ int input_report_map(const struct game *restrict game)
 	};
 
 	return input_local(areas, sizeof(areas) / sizeof(*areas), if_report_map, game, 0);
+}
+
+int input_prepare_player(const struct game *restrict game, unsigned char player)
+{
+	struct area areas[] = {
+		{
+			.left = 0,
+			.right = WINDOW_WIDTH - 1,
+			.top = 0,
+			.bottom = WINDOW_HEIGHT - 1,
+			.callback = input_report,
+		},
+		{
+			.left = BUTTON_EXIT_X,
+			.right = BUTTON_EXIT_X + BUTTON_WIDTH,
+			.top = BUTTON_EXIT_Y,
+			.bottom = BUTTON_EXIT_Y + BUTTON_HEIGHT,
+			.callback = input_finish,
+		},
+	};
+
+	struct state_report state;
+	state.game = game;
+	state.player = player;
+
+	return input_local(areas, sizeof(areas) / sizeof(*areas), if_prepare_player, game, &state);
+}
+
+int input_prepare_battle(struct state_report *restrict state)
+{
+	struct area areas[] = {
+		{
+			.left = 0,
+			.right = WINDOW_WIDTH - 1,
+			.top = 0,
+			.bottom = WINDOW_HEIGHT - 1,
+			.callback = input_report,
+		},
+		{
+			.left = BUTTON_EXIT_X,
+			.right = BUTTON_EXIT_X + BUTTON_WIDTH,
+			.top = BUTTON_EXIT_Y,
+			.bottom = BUTTON_EXIT_Y + BUTTON_HEIGHT,
+			.callback = input_finish,
+		},
+	};
+
+	return input_local(areas, sizeof(areas) / sizeof(*areas), if_prepare_battle, 0, state);
 }

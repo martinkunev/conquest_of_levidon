@@ -17,5 +17,8 @@
  * along with Conquest of Levidon.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-void if_report_battle(const void *argument, const struct game *game);
-void if_report_map(const void *argument, const struct game *game);
+void if_report_battle(const void *, const struct game *);
+void if_report_map(const void *, const struct game *);
+
+void if_prepare_player(const void *, const struct game *);
+void if_prepare_battle(const void *, const struct game *);

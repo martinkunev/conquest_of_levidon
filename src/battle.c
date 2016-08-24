@@ -489,24 +489,20 @@ void battle_retreat(struct battle *restrict battle, unsigned char player)
 int battle_end(const struct game *restrict game, struct battle *restrict battle)
 {
 	int end = 1;
-
 	signed char winner = -1;
-	unsigned char alliance;
 
-	struct pawn *pawn;
-
-	size_t i, j;
-	for(i = 0; i < game->players_count; ++i)
+	for(size_t i = 0; i < game->players_count; ++i)
 	{
+		unsigned char alliance;
+
 		if (!battle->players[i].alive) continue;
 
 		alliance = game->players[i].alliance;
 
 		battle->players[i].alive = 0;
-		for(j = 0; j < battle->players[i].pawns_count; ++j)
+		for(size_t j = 0; j < battle->players[i].pawns_count; ++j)
 		{
-			pawn = battle->players[i].pawns[j];
-			if (pawn->count)
+			if (battle->players[i].pawns[j]->count)
 			{
 				battle->players[i].alive = 1;
 

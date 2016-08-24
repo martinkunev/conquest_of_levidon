@@ -17,6 +17,8 @@
  * along with Conquest of Levidon.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <assert.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <time.h>
@@ -75,7 +77,20 @@ static int play_battle(struct game *restrict game, struct region *restrict regio
 
 	struct position (*movements)[MOVEMENT_STEPS + 1];
 
-	if (battlefield_init(game, &battle, region, assault) < 0) return -1;
+	unsigned players_local = 0;
+
+	if (battlefield_init(game, &battle, region, assault) < 0)
+		return -1;
+
+	if (game->hotseat)
+	{
+		struct state_report state;
+		for(player = 0; player < game->players_count; player += 1)
+			if ((game->players[player].type == Local) && battle.players[player].alive)
+				state.players[players_local++] = player;
+		state.players_count = players_local;
+		input_prepare_battle(&state);
+	}
 
 	movements = malloc(battle.pawns_count * sizeof(*movements));
 	if (!movements)
@@ -87,7 +102,7 @@ static int play_battle(struct game *restrict game, struct region *restrict regio
 	battle.round = 0;
 
 	// Ask each player to position their pawns.
-	for(player = 0; player < game->players_count; ++player)
+	for(player = 0; player < game->players_count; player += 1)
 	{
 		if (!battle.players[player].alive) continue;
 
@@ -102,6 +117,8 @@ static int play_battle(struct game *restrict game, struct region *restrict regio
 			break;
 
 		case Local:
+			if (players_local > 1)
+				input_prepare_player(game, player);
 			if (input_formation(game, &battle, player) < 0)
 				goto finally;
 			break;
@@ -123,6 +140,8 @@ static int play_battle(struct game *restrict game, struct region *restrict regio
 		if (!obstacles[PLAYER_NEUTRAL]) abort();
 
 		battlefield_index_build(&battle);
+
+		// TODO if there are no local players, resolve the battle automatically
 
 		// Ask each player to give commands to their pawns.
 		for(player = 0; player < game->players_count; ++player)
@@ -157,7 +176,7 @@ static int play_battle(struct game *restrict game, struct region *restrict regio
 		}
 
 		// Deal damage from shooters.
-		input_animation_shoot(game, &battle); // TODO this should be part of player-specific input
+		input_animation_shoot(game, &battle);
 		combat_ranged(&battle, obstacles[PLAYER_NEUTRAL]); // treat all gates as closed for shooting
 		if (battlefield_clean(game, &battle)) round_activity_last = battle.round;
 
@@ -184,9 +203,9 @@ static int play_battle(struct game *restrict game, struct region *restrict regio
 		for(i = 0; i < battle.pawns_count; ++i)
 			movements[i][step] = battle.pawns[i].position;
 
-		input_animation(game, &battle, movements); // TODO this should be part of player-specific input
+		input_animation_move(game, &battle, movements);
 
-		// TODO fight animation // TODO this should be part of player-specific input
+		// TODO input_animation_fight()
 		combat_melee(game, &battle);
 		if (battlefield_clean(game, &battle)) round_activity_last = battle.round;
 
@@ -218,7 +237,7 @@ static int play_battle(struct game *restrict game, struct region *restrict regio
 		battle.round += 1;
 	}
 
-	input_report_battle(game, &battle); // TODO this is player-specific
+	input_report_battle(game, &battle);
 
 finally:
 	free(movements);
@@ -226,6 +245,7 @@ finally:
 	return winner;
 }
 
+// Returns whether there is a winner. On error, returns error code.
 static int play(struct game *restrict game)
 {
 	unsigned char player;
@@ -236,7 +256,15 @@ static int play(struct game *restrict game)
 
 	uint16_t alliances; // this limits the alliance numbers to the number of bits
 
+	unsigned players_local = 0;
+
 	int status;
+
+	assert(PLAYERS_LIMIT <= 16); // TODO this should be compile-time assert
+
+	for(player = 0; player < game->players_count; ++player)
+		players_local += (game->players[player].type == Local);
+	game->hotseat = (players_local > 1);
 
 	do
 	{
@@ -256,16 +284,21 @@ static int play(struct game *restrict game)
 				continue;
 
 			case Local:
+				if (game->hotseat)
+					input_prepare_player(game, player);
 				status = input_map(game, player);
-				if (status < 0) return status;
+				if (status < 0)
+					return status;
 				break;
 
 			case Computer:
 				status = computer_map(game, player);
-				if (status < 0) return status;
+				if (status < 0)
+					return status;
 #if defined(DEBUG)
 				status = input_map(game, player);
-				if (status < 0) return status;
+				if (status < 0)
+					return status;
 #endif
 				break;
 			}
@@ -446,26 +479,37 @@ static int play(struct game *restrict game)
 
 		// Perform player-specific actions.
 		alliances = 0;
+		players_local = 0;
 		for(player = 0; player < game->players_count; ++player)
 		{
-			if (game->players[player].type == Neutral) continue;
-
 			// Set player as dead, if not marked as alive.
-			if (alive[player])
+			if (!alive[player])
+				game->players[player].type = Neutral;
+
+			switch (game->players[player].type)
 			{
-				// Mark the alliance of each alive player as alive.
-				alliances |= (1 << game->players[player].alliance);
+			case Neutral:
+				continue;
+
+			case Local:
+				players_local += 1;
+				break;
 			}
-			else game->players[player].type = Neutral;
+
+			// Mark the alliance of each alive player as alive.
+			alliances |= (1 << game->players[player].alliance);
 
 			// Adjust player treasury for the income and expenses.
 			resource_spend(&game->players[player].treasury, expenses + player);
 		}
 
 		game->turn += 1;
+
+		if (!players_local)
+			return 0;
 	} while (alliances & (alliances - 1)); // while there is more than 1 alliance
 
-	return alliances; // TODO ? convert this to alliance number
+	return alliances;
 }
 
 int main(int argc, char *argv[])

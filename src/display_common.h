@@ -24,7 +24,7 @@
 #define PLAYERS_X 384
 #define PLAYERS_Y 32
 #define PLAYERS_INDICATOR_SIZE 32
-#define PLAYERS_PADDING 4
+#define PLAYERS_PADDING 8
 
 #define WORLDS_X 32
 #define WORLDS_Y 56

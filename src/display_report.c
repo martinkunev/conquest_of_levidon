@@ -29,6 +29,7 @@
 #include "input_report.h"
 #include "display_common.h"
 #include "display_report.h"
+#include "image.h"
 #include "pathfinding.h"
 #include "movement.h"
 #include "battle.h"
@@ -42,12 +43,13 @@
 #define REPORT_AFTER_X 416
 
 #define REPORT_PLAYER_X 32
-#define REPORT_REGIONS_X 96
-#define REPORT_GOLD_X 160
-#define REPORT_FOOD_X 224
-#define REPORT_WOOD_X 288
-#define REPORT_IRON_X 352
-#define REPORT_STONE_X 416
+#define REPORT_TYPE_X 96
+#define REPORT_REGIONS_X 160
+#define REPORT_GOLD_X 224
+#define REPORT_FOOD_X 288
+#define REPORT_WOOD_X 352
+#define REPORT_IRON_X 416
+#define REPORT_STONE_X 480
 
 #define MARGIN_X 40
 #define MARGIN_Y 60
@@ -55,11 +57,12 @@
 #define TITLE_SIZE_LIMIT 64
 
 #define REPORT_MAP_TITLE S("Winners")
+#define PREPARE_PLAYER_TITLE S("Next player")
+#define PREPARE_BATTLE_TITLE S("Battle")
 
-void if_report_battle(const void *argument, const struct game *game_)
+void if_report_battle(const void *argument, const struct game *game)
 {
 	const struct state_report *restrict state = argument;
-	const struct game *restrict game = state->game;
 	const struct battle *restrict battle = state->battle;
 
 	size_t player;
@@ -134,6 +137,7 @@ void if_report_map(const void *argument, const struct game *game)
 
 	// Display table headings.
 	draw_string(S("player"), REPORT_PLAYER_X, LABEL_Y, &font12, White);
+	draw_string(S("type"), REPORT_TYPE_X, LABEL_Y, &font12, White);
 	draw_string(S("regions"), REPORT_REGIONS_X, LABEL_Y, &font12, White);
 	draw_string(S("gold"), REPORT_GOLD_X, LABEL_Y, &font12, White);
 	draw_string(S("food"), REPORT_FOOD_X, LABEL_Y, &font12, White);
@@ -155,6 +159,17 @@ void if_report_map(const void *argument, const struct game *game)
 		end = format_uint(buffer, regions_owned[player], 10);
 		draw_string(buffer, end - buffer, REPORT_REGIONS_X, LABEL_Y + offset, &font12, White);
 
+		switch (game->players[player].type)
+		{
+		case Local:
+			draw_string(S("Local"), REPORT_TYPE_X, LABEL_Y + offset, &font12, White);
+			break;
+
+		case Computer:
+			draw_string(S("Computer"), REPORT_TYPE_X, LABEL_Y + offset, &font12, White);
+			break;
+		}
+
 		// Display player resources.
 		end = format_uint(buffer, game->players[player].treasury.gold, 10);
 		draw_string(buffer, end - buffer, REPORT_GOLD_X, LABEL_Y + offset, &font12, White);
@@ -167,6 +182,39 @@ void if_report_map(const void *argument, const struct game *game)
 		end = format_uint(buffer, game->players[player].treasury.stone, 10);
 		draw_string(buffer, end - buffer, REPORT_STONE_X, LABEL_Y + offset, &font12, White);
 	}
+
+	show_button(S("Close"), BUTTON_EXIT_X, BUTTON_EXIT_Y);
+}
+
+void if_prepare_player(const void *argument, const struct game *game)
+{
+	const struct state_report *restrict state = argument;
+	struct box box;
+	unsigned y;
+
+	box = string_box(PREPARE_PLAYER_TITLE, &font24);
+	y = (WINDOW_HEIGHT - box.height) / 2;
+	draw_string(PREPARE_PLAYER_TITLE, (WINDOW_WIDTH - box.width) / 2, y, &font24, White);
+
+	show_flag((WINDOW_WIDTH - image_flag.width) / 2, y + box.height + PLAYERS_PADDING, state->player);
+
+	show_button(S("Close"), BUTTON_EXIT_X, BUTTON_EXIT_Y);
+}
+
+void if_prepare_battle(const void *argument, const struct game *game)
+{
+	const struct state_report *restrict state = argument;
+	struct box box;
+	unsigned x, y;
+
+	box = string_box(PREPARE_BATTLE_TITLE, &font24);
+	y = (WINDOW_HEIGHT - box.height) / 2;
+	draw_string(PREPARE_BATTLE_TITLE, (WINDOW_WIDTH - box.width) / 2, y, &font24, White);
+
+	x = (WINDOW_WIDTH - (image_flag.width + PLAYERS_PADDING) * state->players_count - PLAYERS_PADDING) / 2;
+	y += box.height + PLAYERS_PADDING;
+	for(size_t i = 0; i < state->players_count; ++i)
+		show_flag(x + (image_flag.width + PLAYERS_PADDING) * i, y, state->player);
 
 	show_button(S("Close"), BUTTON_EXIT_X, BUTTON_EXIT_Y);
 }

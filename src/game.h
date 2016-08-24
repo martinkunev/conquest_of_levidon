@@ -58,6 +58,8 @@ struct game
 	size_t regions_count;
 
 	unsigned turn; // TODO implement this
+
+	int hotseat; // whether there are multiple players playing locally
 };
 
 struct unit

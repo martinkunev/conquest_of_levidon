@@ -21,7 +21,15 @@ struct state_report
 {
 	const struct game *game;
 	const struct battle *battle;
+
+	size_t players_count;
+	unsigned char players[PLAYERS_LIMIT];
+
+	unsigned char player;
 };
 
 int input_report_battle(const struct game *restrict game, const struct battle *restrict battle);
 int input_report_map(const struct game *restrict game);
+
+int input_prepare_player(const struct game *restrict game, unsigned char player);
+int input_prepare_battle(struct state_report *restrict state);
