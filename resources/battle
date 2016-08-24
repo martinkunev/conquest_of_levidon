@@ -4,9 +4,6 @@
 
 keep the gate open the whole round if something passes through it; that way good players may find a way to enter a fortress
 
-AI
-	I need to set position (path.data[0]), action and target
-
 ----
 
 format.c			string formatting library
@@ -61,3 +58,20 @@ tile				coordinates of battlefield tile								// TODO
 position			battlefield position
 array_moves			battle pawn moves
 point				screen point
+
+----
+
+min     0
+max     1
+
+priorities:
+* resources (farm, irrigation, sawmill, mine, bloomery)
+* scouting (watch tower)
+* defense (palisade, fortress, troops except battering ram)
+* future defense (barracks, archery range, stables, forge), attack (all troops)
+* future attack (workshop)
+
+find what troops are needed
+find what buildings are needed (depending on troops)
+find what resources are needed (depending on troops and buildings)
+find what income buildings are needed (depending on resources)

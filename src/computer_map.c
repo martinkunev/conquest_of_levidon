@@ -264,7 +264,7 @@ static double building_value(const struct region_info *restrict region_info, con
 	case BuildingFortress:
 		//value = region_info->troops.ranged * desire_buildings[index];
 		value = region_info->importance / 1000.0;
-		value *= neighbors_dangerous / region_info->neighbors;
+		value *= (double)neighbors_dangerous / region_info->neighbors;
 		break;
 
 	default:
@@ -285,15 +285,15 @@ static double building_value(const struct region_info *restrict region_info, con
 			if (troops_info->total)
 			{
 				if (class & UNIT_VANGUARD)
-					value = troops_info->vanguard / troops_info->total;
+					value = (double)troops_info->vanguard / troops_info->total;
 				else if (class & UNIT_ASSAULT)
-					value = troops_info->assault / troops_info->total;
+					value = (double)troops_info->assault / troops_info->total;
 				else if (class & UNIT_RANGED)
-					value = troops_info->ranged / troops_info->total;
+					value = (double)troops_info->ranged / troops_info->total;
 				else
 				{
 					assert(class & UNIT_FAST);
-					value = troops_info->fast / troops_info->total;
+					value = (double)troops_info->fast / troops_info->total;
 				}
 			}
 			else value = 0.0;
@@ -826,7 +826,7 @@ static double region_importance(const struct region *restrict region)
 	return 1000.0;
 }
 
-static struct region_info *regions_info_collect(const struct game *restrict game, unsigned char player, struct context *restrict context)
+             struct region_info *regions_info_collect(const struct game *restrict game, unsigned char player, struct context *restrict context)
 {
 	size_t i, j;
 
@@ -1071,6 +1071,54 @@ int computer_map(const struct game *restrict game, unsigned char player)
 finally:
 	free(regions_info);
 	return status;
+}
+
+//////////////////////////////////
+
+double tvalue(const struct game *restrict game, unsigned char player, struct region_info *restrict regions_info, const struct context *restrict context, const struct region *restrict region, size_t unit)
+{
+	struct resources income = {0};
+	struct troop_info troops_info = {0};
+
+	// Collect information about each region.
+	income_calculate(game, &income, player);
+
+	// Count how many regions need a given troop.
+	for(size_t i = 0; i < game->regions_count; ++i)
+	{
+		troops_info.ranged += regions_info[i].troops.ranged;
+		troops_info.assault += regions_info[i].troops.assault;
+		troops_info.fast += regions_info[i].troops.fast;
+		troops_info.vanguard += regions_info[i].troops.vanguard;
+		troops_info.total += regions_info[i].troops.total;
+	}
+
+	bool income_shortage = ((income.gold < 0) || (income.food < 0) || (income.wood < 0) || (income.iron < 0) || (income.stone < 0));
+
+	return troop_value(context, regions_info + (region - game->regions), &troops_info, &income, income_shortage, unit);
+}
+
+double bvalue(const struct game *restrict game, unsigned char player, struct region_info *restrict regions_info, const struct context *restrict context, const struct region *restrict region, size_t building)
+{
+	struct resources income = {0};
+	struct troop_info troops_info = {0};
+
+	// Collect information about each region.
+	income_calculate(game, &income, player);
+
+	// Count how many regions need a given troop.
+	for(size_t i = 0; i < game->regions_count; ++i)
+	{
+		troops_info.ranged += regions_info[i].troops.ranged;
+		troops_info.assault += regions_info[i].troops.assault;
+		troops_info.fast += regions_info[i].troops.fast;
+		troops_info.vanguard += regions_info[i].troops.vanguard;
+		troops_info.total += regions_info[i].troops.total;
+	}
+
+	bool income_shortage = ((income.gold < 0) || (income.food < 0) || (income.wood < 0) || (income.iron < 0) || (income.stone < 0));
+
+	return building_value(regions_info + (region - game->regions), &troops_info, &income, income_shortage, building);
 }
 
 /*double rate(const struct game *restrict game, unsigned char player, struct region_info *restrict regions_info, const struct context *restrict context)
