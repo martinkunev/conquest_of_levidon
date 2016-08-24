@@ -4,6 +4,7 @@ H	battering ram is not moving when assault target is set
 	// make assault command possible only when the troop is close enough to an obstacle
 H	two horses blocked during battle (neither attacks an archer)
 	// when they start moving, they collide again
+H	battle crash when too many pawns attack a given pawn (their expected position is the position of the victim; when these pawns are > 8, the game crashes)
 M	if_init fails (in glXMakeContextCurrent) when used with ssh forwarding
 M	fast units cannot always catch up with slow units even when they are close enough (seen with light cavalry and peasant)
 
@@ -12,50 +13,8 @@ http://stackoverflow.com/questions/6543924/is-double-buffering-needed-any-more#6
 flickering
 	https://groups.google.com/forum/#!topic/android-developers/om5Utez9PgA
 
-#0  0x00007ffff692d0a7 in raise () from /lib64/libc.so.6
-#1  0x00007ffff692e419 in abort () from /lib64/libc.so.6
-#2  0x00007ffff69261c6 in __assert_fail_base () from /lib64/libc.so.6
-#3  0x00007ffff6926272 in __assert_fail () from /lib64/libc.so.6
-#4  0x00000000004115d6 in path_moves_tangent (pawn=0x6aa718, obstacle=0x6aa5e0, distance_covered=0.041666666666666664, moves=0x7ffffffee950) at pathfinding.c:787
-#5  0x000000000040c6e7 in movement_collisions_resolve (game=0x7fffffffe100, battle=0x7ffffffeead0, graph=0x7ffffffee9d0, obstacles=0x7ffffffeea50) at movement.c:400
-#6  0x00000000004035e0 in play_battle (game=0x7fffffffe100, region=0x6b3880, assault=0) at main.c:196
-#7  0x00000000004040c4 in play (game=0x7fffffffe100) at main.c:399
-#8  0x00000000004047ce in main (argc=1, argv=0x7fffffffe218) at main.c:522
-(gdb) frame 4
-#4  0x00000000004115d6 in path_moves_tangent (pawn=0x6aa718, obstacle=0x6aa5e0, distance_covered=0.041666666666666664, moves=0x7ffffffee950) at pathfinding.c:787
-787		assert(moves_count <= 2);
-(gdb) print moves_count
-$3 = 4
-(gdb) print origin
-$8 = {x = 1.00006962, y = 0}
-(gdb) print *obstacle
-$9 = {troop = 0x6b3a20, count = 25, hurt = 0, position = {x = 5, y = 1}, position_next = {x = 5, y = 1}, path = {count = 0, capacity = 8, data = 0x6aa820}, moves = {count = 0, capacity = 8, data = 0x6aa7d0}, action = ACTION_DEFAULT, 
-  target = {pawn = 0x1, position = {x = 1.40129846e-45, y = 0}, field = 0x1}, startup = 2}
-(gdb) print *pawn
-$10 = {troop = 0x690590, count = 25, hurt = 0, position = {x = 6.00006962, y = 1}, position_next = {x = 5.95840311, y = 1}, path = {count = 1, capacity = 8, data = 0x6aa910}, moves = {count = 1, capacity = 8, data = 0x6aa8c0}, 
-  action = ACTION_DEFAULT, target = {pawn = 0x6b3628, position = {x = 9.84582569e-39, y = 0}, field = 0x6b3628}, startup = 2}
-(gdb) print distance_covered
-$11 = 0.041666666666666664
-(gdb) print moves[0]
-$12 = {x = 5.99961901, y = 1.04166424}
-(gdb) print moves[1]
-$13 = {x = 5.99961901, y = 0.958335757}
-(gdb) print moves[2]
-$14 = {x = 5.99961901, y = 1.04166424}
-(gdb) print moves[3]
-$15 = {x = 5.99961901, y = 0.958335757}
-(gdb) print distance2
-$16 = 1.0001392364501953
-(gdb) print distance_tangent_point
-$17 = 0.01179984958358845
-(gdb) print minus_b
-$18 = 0.98826894715692482
-(gdb) print discriminant
-$19 = 0
-
 -- features --
 H	AI improvements
-	F computer map movement is weak
 	computer map orders are weak
 	computer cannot recover well from having negative food income
 		// solution: dismiss troops
@@ -65,11 +24,11 @@ H	AI improvements
 	in battle, AI is too slow when there are many pawns
 	in battle, pawns move randomly when there are too many pawns
 	when shooters attack a melee pawn and there is nowhere to run, the melee should attack back
+	enemy pawn seems to know where ally pawn will move to
 	computer doesn't move the pawns during an assault
 		// probably tries to attack unreachable pawns or the rating doesn't make the pawns approach the obstacles
 	enemy should stay inside garrison when there are shooters
 	shooters don't always shoot when they can
-H	when only neutral and computer players remain, end game
 H	error reporting on invalid map
 	fix crash on invalid map (while freeing resources)
 H	use a separate thread to calculate computer turns while the local player is choosing what to play
@@ -83,6 +42,8 @@ H	balance battles
 	improve auto combat
 	most of the pawn->count usually get killed at the same time (the round when the pawn dies)
 H	when a region is invaded, garrison troops should have the option to fight
+H	tell local players when they are defeated (use input_report_players())
+H	when there is no local player left fighting in a battle, resolve the battle automatically
 M	when a target is impossible, set target to the closest possible (e.g. if shooting range is not enough or a position is outside the battlefield)
 M	region-specific features (income, population, units, buildings, battlefield)
 	use BLOCKAGE_TERRAIN
@@ -105,7 +66,7 @@ M	water and ships
 	ships are displayed as a single ship on the map; when one clicks, one can see all the ships and the troops in each ship
 	// troops on board of ships are stored in troop stacks - one troop stack for each ship
 M	sound
-M	improve AI (formation AI, predicting troops in unknown regions, etc.)
+M	improve AI (formation AI, predicting troops in unknown regions, batter map behavior, better battle behavior, etc.)
 M	do something when there is not enough food for all troops (?kill some troops)
 M	keyboard support in various places in the interface; mouse support in various places in the interface
 M	improve world loading/saving
@@ -117,7 +78,7 @@ M	improve world loading/saving
 	refactor (simplify) the code using these ideas
 M	? melee units should go closer to the shooter to prevent them from escaping far enough to shoot
 M	make formation consistent with the new battle mechanics
-L	better support for hotseat (choose player names; set game->hotseat to false when only 1 local player remains)
+L	better support for hotseat (choose player names)
 L	fast ships, big ships, battle ships; naval battles; ships participating in assault
 L	battle: don't allow attacking if the attacker cannot do damage to the defender (due to weapon and armor type)
 L	editor: position region neighbors properly
@@ -201,6 +162,8 @@ report
 H	in battle report, display which players retreated (maybe show white flag)
 M	group players by alliances and show indicator for the alliance
 M	? display minimap
+M	when there are too many pawns, the report looks awful
+L	when all local players are defeated, the report screen has title "Winners" and lists all computer players (but they are not really winners)
 
 map
 H	improve boxes for field and garrison troops (it's not obvious one can place units there until there are units)

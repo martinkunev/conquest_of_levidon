@@ -17,19 +17,22 @@
  * along with Conquest of Levidon.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#define REPORT_TITLE_NEXT "Next player"
+#define REPORT_TITLE_DEFEATED "Player defeated"
+#define REPORT_TITLE_BATTLE "Battle"
+
 struct state_report
 {
 	const struct game *game;
 	const struct battle *battle;
 
+	const char *title;
+	size_t title_size;
+
 	size_t players_count;
 	unsigned char players[PLAYERS_LIMIT];
-
-	unsigned char player;
 };
 
 int input_report_battle(const struct game *restrict game, const struct battle *restrict battle);
 int input_report_map(const struct game *restrict game);
-
-int input_prepare_player(const struct game *restrict game, unsigned char player);
-int input_prepare_battle(struct state_report *restrict state);
+int input_report_players(struct state_report *state);

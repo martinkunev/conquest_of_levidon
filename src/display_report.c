@@ -37,8 +37,6 @@
 
 #define FORMAT_BUFFER_INT (1 + sizeof(uintmax_t) * 3) /* buffer size that is sufficient for base-10 representation of any integer */
 
-#define S(s) (s), sizeof(s) - 1
-
 #define REPORT_BEFORE_X 32
 #define REPORT_AFTER_X 416
 
@@ -54,11 +52,10 @@
 #define MARGIN_X 40
 #define MARGIN_Y 60
 
-#define TITLE_SIZE_LIMIT 64
+#define S(s) (s), sizeof(s) - 1
 
+#define TITLE_SIZE_LIMIT 64
 #define REPORT_MAP_TITLE S("Winners")
-#define PREPARE_PLAYER_TITLE S("Next player")
-#define PREPARE_BATTLE_TITLE S("Battle")
 
 void if_report_battle(const void *argument, const struct game *game)
 {
@@ -186,35 +183,20 @@ void if_report_map(const void *argument, const struct game *game)
 	show_button(S("Close"), BUTTON_EXIT_X, BUTTON_EXIT_Y);
 }
 
-void if_prepare_player(const void *argument, const struct game *game)
-{
-	const struct state_report *restrict state = argument;
-	struct box box;
-	unsigned y;
-
-	box = string_box(PREPARE_PLAYER_TITLE, &font24);
-	y = (WINDOW_HEIGHT - box.height) / 2;
-	draw_string(PREPARE_PLAYER_TITLE, (WINDOW_WIDTH - box.width) / 2, y, &font24, White);
-
-	show_flag((WINDOW_WIDTH - image_flag.width) / 2, y + box.height + PLAYERS_PADDING, state->player);
-
-	show_button(S("Close"), BUTTON_EXIT_X, BUTTON_EXIT_Y);
-}
-
-void if_prepare_battle(const void *argument, const struct game *game)
+void if_report_players(const void *argument, const struct game *game)
 {
 	const struct state_report *restrict state = argument;
 	struct box box;
 	unsigned x, y;
 
-	box = string_box(PREPARE_BATTLE_TITLE, &font24);
+	box = string_box(state->title, state->title_size, &font24);
 	y = (WINDOW_HEIGHT - box.height) / 2;
-	draw_string(PREPARE_BATTLE_TITLE, (WINDOW_WIDTH - box.width) / 2, y, &font24, White);
+	draw_string(state->title, state->title_size, (WINDOW_WIDTH - box.width) / 2, y, &font24, White);
 
 	x = (WINDOW_WIDTH - (image_flag.width + PLAYERS_PADDING) * state->players_count - PLAYERS_PADDING) / 2;
 	y += box.height + PLAYERS_PADDING;
 	for(size_t i = 0; i < state->players_count; ++i)
-		show_flag(x + (image_flag.width + PLAYERS_PADDING) * i, y, state->player);
+		show_flag(x + (image_flag.width + PLAYERS_PADDING) * i, y, state->players[i]);
 
 	show_button(S("Close"), BUTTON_EXIT_X, BUTTON_EXIT_Y);
 }

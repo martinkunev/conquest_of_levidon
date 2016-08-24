@@ -19,6 +19,4 @@
 
 void if_report_battle(const void *, const struct game *);
 void if_report_map(const void *, const struct game *);
-
-void if_prepare_player(const void *, const struct game *);
-void if_prepare_battle(const void *, const struct game *);
+void if_report_players(const void *, const struct game *);

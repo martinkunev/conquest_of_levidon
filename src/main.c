@@ -50,9 +50,7 @@
 #define WINNER_NOBODY -1
 #define WINNER_BATTLE -2
 
-// WARNING: Player 0 and alliance 0 are hard-coded as neutral.
-
-// TODO in some circumstances player 0 is used for objects without owner
+// WARNING: Player 0 is hard-coded as neutral.
 
 /*
 Invariants at the beginning of a turn:
@@ -64,6 +62,16 @@ Invariants at the beginning of a turn:
 */
 
 enum {ROUNDS_STALE_LIMIT_OPEN = 10, ROUNDS_STALE_LIMIT_ASSAULT = 20};
+
+static void player_next(unsigned char player)
+{
+	struct state_report state;
+	state.title = REPORT_TITLE_NEXT;
+	state.title_size = sizeof(REPORT_TITLE_NEXT) - 1;
+	state.players[0] = player;
+	state.players_count = 1;
+	input_report_players(&state);
+}
 
 // Returns the number of the alliance that won the battle.
 static int play_battle(struct game *restrict game, struct region *restrict region, int assault)
@@ -85,11 +93,13 @@ static int play_battle(struct game *restrict game, struct region *restrict regio
 	if (game->hotseat)
 	{
 		struct state_report state;
+		state.title = REPORT_TITLE_BATTLE;
+		state.title_size = sizeof(REPORT_TITLE_BATTLE) - 1;
 		for(player = 0; player < game->players_count; player += 1)
 			if ((game->players[player].type == Local) && battle.players[player].alive)
 				state.players[players_local++] = player;
 		state.players_count = players_local;
-		input_prepare_battle(&state);
+		input_report_players(&state);
 	}
 
 	movements = malloc(battle.pawns_count * sizeof(*movements));
@@ -118,7 +128,7 @@ static int play_battle(struct game *restrict game, struct region *restrict regio
 
 		case Local:
 			if (players_local > 1)
-				input_prepare_player(game, player);
+				player_next(player);
 			if (input_formation(game, &battle, player) < 0)
 				goto finally;
 			break;
@@ -136,12 +146,16 @@ static int play_battle(struct game *restrict game, struct region *restrict regio
 		unsigned step;
 		size_t i;
 
-		obstacles[PLAYER_NEUTRAL] = path_obstacles_alloc(game, &battle, PLAYER_NEUTRAL);
-		if (!obstacles[PLAYER_NEUTRAL]) abort();
-
-		battlefield_index_build(&battle);
+		unsigned char alliance_neutral = game->players[PLAYER_NEUTRAL].alliance;
 
 		// TODO if there are no local players, resolve the battle automatically
+
+		obstacles[alliance_neutral] = path_obstacles_alloc(game, &battle, PLAYER_NEUTRAL);
+		if (!obstacles[alliance_neutral]) abort();
+		graph[alliance_neutral] = visibility_graph_build(&battle, obstacles[alliance_neutral], 2); // 2 vertices for origin and target
+		if (!graph[alliance_neutral]) abort();
+
+		battlefield_index_build(&battle);
 
 		// Ask each player to give commands to their pawns.
 		for(player = 0; player < game->players_count; ++player)
@@ -161,8 +175,6 @@ static int play_battle(struct game *restrict game, struct region *restrict regio
 			switch (game->players[player].type)
 			{
 			case Neutral:
-				continue;
-
 			case Computer:
 				if (computer_battle(game, &battle, player, graph[alliance], obstacles[alliance]) < 0)
 					goto finally;
@@ -177,7 +189,7 @@ static int play_battle(struct game *restrict game, struct region *restrict regio
 
 		// Deal damage from shooters.
 		input_animation_shoot(game, &battle);
-		combat_ranged(&battle, obstacles[PLAYER_NEUTRAL]); // treat all gates as closed for shooting
+		combat_ranged(&battle, obstacles[alliance_neutral]); // treat all gates as closed for shooting
 		if (battlefield_clean(game, &battle)) round_activity_last = battle.round;
 
 		// Perform pawn movement in steps.
@@ -285,7 +297,7 @@ static int play(struct game *restrict game)
 
 			case Local:
 				if (game->hotseat)
-					input_prepare_player(game, player);
+					player_next(player);
 				status = input_map(game, player);
 				if (status < 0)
 					return status;
@@ -502,6 +514,7 @@ static int play(struct game *restrict game)
 			// Adjust player treasury for the income and expenses.
 			resource_spend(&game->players[player].treasury, expenses + player);
 		}
+		game->hotseat = (players_local > 1);
 
 		game->turn += 1;
 
@@ -537,7 +550,7 @@ int main(int argc, char *argv[])
 		if_display();
 
 		status = play(&game);
-		if (status > 0) input_report_map(&game);
+		if (status >= 0) input_report_map(&game);
 
 		if_storage_term();
 		world_unload(&game);

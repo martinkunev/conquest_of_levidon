@@ -95,7 +95,7 @@ int input_report_map(const struct game *restrict game)
 	return input_local(areas, sizeof(areas) / sizeof(*areas), if_report_map, game, 0);
 }
 
-int input_prepare_player(const struct game *restrict game, unsigned char player)
+int input_report_players(struct state_report *restrict state)
 {
 	struct area areas[] = {
 		{
@@ -114,31 +114,5 @@ int input_prepare_player(const struct game *restrict game, unsigned char player)
 		},
 	};
 
-	struct state_report state;
-	state.game = game;
-	state.player = player;
-
-	return input_local(areas, sizeof(areas) / sizeof(*areas), if_prepare_player, game, &state);
-}
-
-int input_prepare_battle(struct state_report *restrict state)
-{
-	struct area areas[] = {
-		{
-			.left = 0,
-			.right = WINDOW_WIDTH - 1,
-			.top = 0,
-			.bottom = WINDOW_HEIGHT - 1,
-			.callback = input_report,
-		},
-		{
-			.left = BUTTON_EXIT_X,
-			.right = BUTTON_EXIT_X + BUTTON_WIDTH,
-			.top = BUTTON_EXIT_Y,
-			.bottom = BUTTON_EXIT_Y + BUTTON_HEIGHT,
-			.callback = input_finish,
-		},
-	};
-
-	return input_local(areas, sizeof(areas) / sizeof(*areas), if_prepare_battle, 0, state);
+	return input_local(areas, sizeof(areas) / sizeof(*areas), if_report_players, 0, state);
 }

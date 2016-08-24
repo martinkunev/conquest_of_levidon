@@ -430,7 +430,7 @@ static int command_remember(struct pawn_command *restrict command, struct pawn *
 		if ((command->path.capacity < pawn->path.count) && (array_moves_expand(&command->path, pawn->path.count) < 0))
 			return ERROR_MEMORY;
 
-		memcpy(command->path.data, pawn->path.data, pawn->path.count);
+		memcpy(command->path.data, pawn->path.data, pawn->path.count * sizeof(*pawn->path.data));
 	}
 	command->path.count = pawn->path.count;
 
@@ -456,7 +456,7 @@ static int command_remember(struct pawn_command *restrict command, struct pawn *
 static void command_restore(struct pawn *restrict pawn, struct pawn_command *restrict command)
 {
 	if (command->path.count)
-		memcpy(pawn->path.data, command->path.data, command->path.count);
+		memcpy(pawn->path.data, command->path.data, command->path.count * sizeof(*command->path.data));
 	pawn->path.count = command->path.count;
 
 	pawn->action = command->action;
@@ -485,7 +485,7 @@ int computer_battle(const struct game *restrict game, struct battle *restrict ba
 	double (*reachable)[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH];
 
 	size_t pawns_count = battle->players[player].pawns_count;
-	struct pawn_command backup;
+	struct pawn_command backup = {0};
 
 	struct pawn *restrict pawn;
 

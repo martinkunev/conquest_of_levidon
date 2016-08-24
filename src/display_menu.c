@@ -32,7 +32,7 @@
 #include "menu.h"
 #include "world.h"
 
-#define TITLE "Conquest of Levidon"
+#define TITLE "Conquest of Levidon (beta)"
 #define TITLE_SAVE "Save game"
 
 // TODO display long filenames properly
