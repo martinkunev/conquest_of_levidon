@@ -319,7 +319,7 @@ int input_battle(const struct game *restrict game, struct battle *restrict battl
 	return input_local(areas, sizeof(areas) / sizeof(*areas), if_battle, game, &state);
 }
 
-int input_animation(const struct game *restrict game, const struct battle *restrict battle, struct position (*movements)[MOVEMENT_STEPS + 1])
+int input_animation_move(const struct game *restrict game, const struct battle *restrict battle, struct position (*movements)[MOVEMENT_STEPS + 1])
 {
 	unsigned steps_active = 0;
 
@@ -342,7 +342,7 @@ int input_animation(const struct game *restrict game, const struct battle *restr
 	}
 
 	if (steps_active)
-		return input_timer(if_animation, game, ANIMATION_DURATION * steps_active / MOVEMENT_STEPS, &state);
+		return input_timer(if_animation_move, game, ANIMATION_DURATION * steps_active / MOVEMENT_STEPS, &state);
 	else
 		return 0;
 }

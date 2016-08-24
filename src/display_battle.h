@@ -20,7 +20,7 @@
 void if_formation(const void *argument, const struct game *game);
 void if_battle(const void *argument, const struct game *game);
 
-void if_animation(const void *argument, const struct game *game, double progress);
+void if_animation_move(const void *argument, const struct game *game, double progress);
 void if_animation_shoot(const void *argument, const struct game *game, double progress);
 
 void if_set(struct battle *b);

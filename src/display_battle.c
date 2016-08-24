@@ -101,7 +101,7 @@ static void if_battlefield(unsigned char player, const struct game *game, const 
 	// TODO towers
 }
 
-void if_animation(const void *argument, const struct game *game, double progress)
+void if_animation_move(const void *argument, const struct game *game, double progress)
 {
 	const struct state_animation *state = argument;
 
