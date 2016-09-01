@@ -5,8 +5,8 @@ H	battering ram is not moving when assault target is set
 H	two horses blocked during battle (neither attacks an archer)
 	// when they start moving, they collide again
 H	battle crash when too many pawns attack a given pawn (their expected position is the position of the victim; when these pawns are > 8, the game crashes)
-M	if_init fails (in glXMakeContextCurrent) when used with ssh forwarding
 M	fast units cannot always catch up with slow units even when they are close enough (seen with light cavalry and peasant)
+L	if_init fails on mac (in glXMakeContextCurrent) when used with ssh forwarding
 
 http://stackoverflow.com/questions/6543924/is-double-buffering-needed-any-more#6544453
 
@@ -30,21 +30,22 @@ H	AI improvements
 		// probably tries to attack unreachable pawns or the rating doesn't make the pawns approach the obstacles
 	enemy should stay inside garrison when there are shooters
 	shooters don't always shoot when they can
+H	fix map AI for region population changes
 H	error reporting on invalid map
 	fix crash on invalid map (while freeing resources)
 H	use a separate thread to calculate computer turns while the local player is choosing what to play
 	add indicator (e.g. lighted bulb) for the players who have completed their turn
 H	handle different screen resolutions better
-H	region population
-	income should be calculated as a function of the population
-	one should be able to tell the population which resource to produce
-	better food mechanics; food should not be accumulated indefinately
 H	balance battles
 	improve auto combat
 	most of the pawn->count usually get killed at the same time (the round when the pawn dies)
 H	when a region is invaded, garrison troops should have the option to fight
 H	tell local players when they are defeated (use input_report_players())
 H	when there is no local player left fighting in a battle, resolve the battle automatically
+M	region population
+	better food mechanics; food should not be accumulated indefinately
+	each building should requires a number of workers to run; exclude them from other tasks
+M	town hall building (allows collecting taxes and producing resources)
 M	when a target is impossible, set target to the closest possible (e.g. if shooting range is not enough or a position is outside the battlefield)
 M	region-specific features (income, population, units, buildings, battlefield)
 	use BLOCKAGE_TERRAIN
@@ -56,7 +57,7 @@ M	catapult, balista
 M	add ACTION_GUARD in battle
 	the pawn is told an area which to guard; if an enemy goes into that area, the pawn sets ACTION_FIGHT on that enemy (this may happen in the middle between rounds)
 M	map scrolling
-M	network game (using SCTP?)
+M	network game with SCTP
 M	pawn morale
 	low morale can make a pawn skip a round or retreat
 M	water and ships
@@ -67,9 +68,10 @@ M	water and ships
 	ships are displayed as a single ship on the map; when one clicks, one can see all the ships and the troops in each ship
 	// troops on board of ships are stored in troop stacks - one troop stack for each ship
 M	sound
-M	improve AI (formation AI, predicting troops in unknown regions, batter map behavior, better battle behavior, etc.)
 M	do something when there is not enough food for all troops (?kill some troops)
 M	keyboard support in various places in the interface; mouse support in various places in the interface
+M	make formation consistent with the new battle mechanics
+M	maybe the bloomery should take from the stone resource
 M	improve world loading/saving
 	support JSON comments
 	support comma after last item
@@ -78,7 +80,7 @@ M	improve world loading/saving
 	log (level warning) when an optional field has the wrong type; assume the field is not present for the execution logic
 	refactor (simplify) the code using these ideas
 M	? melee units should go closer to the shooter to prevent them from escaping far enough to shoot
-M	make formation consistent with the new battle mechanics
+L	improve AI (formation AI, predicting troops in unknown regions, batter map behavior, better battle behavior, etc.)
 L	better support for hotseat (choose player names)
 L	fast ships, big ships, battle ships; naval battles; ships participating in assault
 L	battle: don't allow attacking if the attacker cannot do damage to the defender (due to weapon and armor type)

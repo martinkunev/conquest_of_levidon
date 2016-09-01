@@ -17,6 +17,7 @@
  * along with Conquest of Levidon.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
 
@@ -87,6 +88,27 @@ static struct context context;
 static struct region_info *regions_info;*/
 /////////////////////
 
+static void state_economy_set(struct state_map *restrict state, const struct region *restrict region)
+{
+	state->region_income = (struct resources){0};
+	region_income(region, &state->region_income);
+
+	state->workers_food = true;
+	state->workers_wood = false;
+	state->workers_stone = false;
+	state->workers_iron = false;
+	for(size_t i = 0; i < BUILDINGS_COUNT; ++i)
+		if (region->built & (1 << i))
+		{
+			if (BUILDINGS[i].income.wood)
+				state->workers_wood = true;
+			if (BUILDINGS[i].income.stone)
+				state->workers_stone = true;
+			if (BUILDINGS[i].income.iron)
+				state->workers_iron = true;
+		}
+}
+
 static int input_turn(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
 {
 	struct state_map *state = argument;
@@ -139,6 +161,7 @@ static int input_region(int code, unsigned x, unsigned y, uint16_t modifiers, co
 	if (code == EVENT_MOUSE_LEFT)
 	{
 		struct troop *troop;
+		struct region *region;
 
 		if (region_index < 0)
 		{
@@ -147,6 +170,8 @@ static int input_region(int code, unsigned x, unsigned y, uint16_t modifiers, co
 		}
 		else state->region = region_index;
 
+		region = game->regions + state->region;
+
 		state->troop = 0;
 
 		state->self_offset = 0;
@@ -154,7 +179,7 @@ static int input_region(int code, unsigned x, unsigned y, uint16_t modifiers, co
 
 		state->self_count = 0;
 		state->other_count = 0;
-		for(troop = game->regions[state->region].troops; troop; troop = troop->_next)
+		for(troop = region->troops; troop; troop = troop->_next)
 		{
 			if (troop->owner == state->player)
 			{
@@ -167,7 +192,10 @@ static int input_region(int code, unsigned x, unsigned y, uint16_t modifiers, co
 			}
 		}
 
-		state->economy = 0;
+		if ((state->player == region->owner) && (region->owner == region->garrison.owner))
+			state_economy_set(state, region);
+		else
+			state->economy = 0;
 
 		return 0;
 	}
@@ -579,7 +607,7 @@ static int input_economy(int code, unsigned x, unsigned y, uint16_t modifiers, c
 
 	struct state_map *state = argument;
 
-	if (!state->region)
+	if (state->region == REGION_NONE)
 		return INPUT_IGNORE;
 	region = game->regions + state->region;
 	if ((state->player != region->owner) || (region->owner != region->garrison.owner))
@@ -589,6 +617,8 @@ static int input_economy(int code, unsigned x, unsigned y, uint16_t modifiers, c
 		return INPUT_IGNORE;
 
 	state->economy = !state->economy;
+	if (state->economy)
+		state_economy_set(state, region);
 
 	return 0;
 }
@@ -613,23 +643,31 @@ static int input_workers(int code, unsigned x, unsigned y, uint16_t modifiers, c
 	unsigned *resources[] = {
 		&region->workers.food,
 		&region->workers.wood,
-		&region->workers.iron,
 		&region->workers.stone,
+		&region->workers.iron,
 	};
 
 	if (code == EVENT_SCROLL_UP)
 	{
 		unsigned unused = 100 - (*resources[0] + *resources[1] + *resources[2] + *resources[3]);
 		if (unused)
+		{
 			*resources[index] += 1;
+			state_economy_set(state, region);
+			return 0;
+		}
 	}
 	else // code == EVENT_SCROLL_DOWN
 	{
 		if (*resources[index])
+		{
 			*resources[index] -= 1;
+			state_economy_set(state, region);
+			return 0;
+		}
 	}
 
-	return 0;
+	return INPUT_IGNORE;
 }
 
 int input_map(const struct game *restrict game, unsigned char player)

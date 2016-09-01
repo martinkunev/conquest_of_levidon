@@ -184,28 +184,21 @@ static void show_progress(unsigned current, unsigned total, unsigned x, unsigned
 	else fill_rectangle(x, y, width, height, display_colors[Progress]);
 }
 
-static void show_resource(const struct image *restrict image, int treasury, int income, int expense, unsigned y)
+static void show_resource(const struct image *restrict image, int treasury, int income, unsigned x, unsigned y)
 {
-	unsigned x;
 	char buffer[32], *end; // TODO make sure this is enough
 
-	image_draw(image, PANEL_X, y);
-	end = format_uint(buffer, treasury, 10);
+	image_draw(image, x, y);
+	x += image->width;
 
-	x = PANEL_X + image->width;
+	// TODO draw the string just once
+	end = format_int(buffer, treasury, 10);
 	x += draw_string(buffer, end - buffer, x, y, &font12, Black);
 	if (income)
 	{
 		end = format_sint(buffer, income);
-		x += draw_string(buffer, end - buffer, x, y, &font12, Ally);
+		x += draw_string(buffer, end - buffer, x, y, &font12, ((income > 0) ? Self : Enemy));
 	}
-	if (expense)
-	{
-		end = format_sint(buffer, expense);
-		x += draw_string(buffer, end - buffer, x, y, &font12, Enemy);
-	}
-
-	// TODO draw the string just once
 }
 
 static void tooltip_cost(const char *restrict name, size_t name_length, const struct resources *restrict cost, unsigned time)
@@ -342,6 +335,41 @@ static void display_troop_destination(struct point p0, struct point p1)
 	struct point to = {xm - dx, ym + dy};
 
 	display_arrow(from, to, MAP_X, MAP_Y, Self); // TODO change color
+}
+
+static void display_economy_resource(struct point position, unsigned workers, unsigned workers_unused, const struct image *restrict image, int resource)
+{
+	unsigned offset;
+	char buffer[32], *end; // TODO make sure this is enough
+
+	offset = 100 - (workers + workers_unused);
+	fill_rectangle(position.x, position.y + offset, object_group[Workers].width, object_group[Workers].height - offset, display_colors[Black]);
+	fill_rectangle(position.x + 1, object_group[Workers].bottom - 1 - workers, object_group[Workers].width - 2, workers, display_colors[Self]);
+	end = format_uint(buffer, workers, 10); // TODO divide this by 100
+	draw_string(buffer, end - buffer, position.x, object_group[Workers].bottom + PROFIT_PADDING, &font12, Black);
+	show_resource(image, resource, 0, position.x, PROFIT_Y);
+}
+
+static void display_economy(const struct state_map *restrict state, const struct region *restrict region)
+{
+	char buffer[32], *end; // TODO make sure this is enough
+	unsigned workers_unused = 100 - (region->workers.food + region->workers.wood + region->workers.iron + region->workers.stone);
+
+	end = format_bytes(buffer, S("population: "));
+	end = format_uint(end, region->population, 10);
+	draw_string(buffer, end - buffer, POPULATION_X, POPULATION_Y, &font12, Black);
+
+	if (state->workers_food)
+		display_economy_resource(if_position(Workers, 0), region->workers.food, workers_unused, &image_food, state->region_income.food);
+	if (state->workers_wood)
+		display_economy_resource(if_position(Workers, 1), region->workers.wood, workers_unused, &image_wood, state->region_income.wood);
+	if (state->workers_stone)
+		display_economy_resource(if_position(Workers, 2), region->workers.stone, workers_unused, &image_stone, state->region_income.stone);
+	if (state->workers_iron)
+		display_economy_resource(if_position(Workers, 3), region->workers.iron, workers_unused, &image_iron, state->region_income.iron);
+
+	draw_string(S("tax savings:"), SAVINGS_X, SAVINGS_Y, &font12, Black);
+	show_resource(&image_gold, state->region_income.gold, 0, SAVINGS_X + 90, SAVINGS_Y); // TODO remove this 90
 }
 
 static void if_map_region(const struct region *region, const struct state_map *state, const struct game *game)
@@ -544,51 +572,7 @@ static void if_map_region(const struct region *region, const struct state_map *s
 
 		if (state->economy)
 		{
-			char buffer[32], *end; // TODO make sure this is enough
-			struct point position;
-			unsigned offset;
-			unsigned unused = 100 - (region->workers.food + region->workers.wood + region->workers.iron + region->workers.stone);
-
-			end = format_bytes(buffer, S("population: "));
-			end = format_uint(end, region->population, 10);
-			draw_string(buffer, end - buffer, POPULATION_X, POPULATION_Y, &font12, Black);
-
-			// TODO calculate the amount of each resource
-
-			position = if_position(Workers, 0);
-			offset = 100 - (unused + region->workers.food);
-			fill_rectangle(position.x, position.y + offset, object_group[Workers].width, object_group[Workers].height - offset, display_colors[Black]);
-			fill_rectangle(position.x + 1, object_group[Workers].bottom - 1 - region->workers.food, object_group[Workers].width - 2, region->workers.food, display_colors[Self]);
-			end = format_uint(buffer, region->workers.food, 10); // TODO divide this by 100
-			draw_string(buffer, end - buffer, position.x, object_group[Workers].bottom + PROFIT_PADDING, &font12, Black);
-			image_draw(&image_food, position.x + (object_group[Workers].width - image_food.width) / 2, PROFIT_Y);
-
-			position = if_position(Workers, 1);
-			offset = 100 - (unused + region->workers.wood);
-			fill_rectangle(position.x, position.y + offset, object_group[Workers].width, object_group[Workers].height - offset, display_colors[Black]);
-			fill_rectangle(position.x + 1, object_group[Workers].bottom - 1 - region->workers.wood, object_group[Workers].width - 2, region->workers.wood, display_colors[Self]);
-			end = format_uint(buffer, region->workers.wood, 10); // TODO divide this by 100
-			draw_string(buffer, end - buffer, position.x, object_group[Workers].bottom + PROFIT_PADDING, &font12, Black);
-			image_draw(&image_wood, position.x + (object_group[Workers].width - image_wood.width) / 2, PROFIT_Y);
-
-			position = if_position(Workers, 2);
-			offset = 100 - (unused + region->workers.iron);
-			fill_rectangle(position.x, position.y + offset, object_group[Workers].width, object_group[Workers].height - offset, display_colors[Black]);
-			fill_rectangle(position.x + 1, object_group[Workers].bottom - 1 - region->workers.iron, object_group[Workers].width - 2, region->workers.iron, display_colors[Self]);
-			end = format_uint(buffer, region->workers.iron, 10); // TODO divide this by 100
-			draw_string(buffer, end - buffer, position.x, object_group[Workers].bottom + PROFIT_PADDING, &font12, Black);
-			image_draw(&image_iron, position.x + (object_group[Workers].width - image_iron.width) / 2, PROFIT_Y);
-
-			position = if_position(Workers, 3);
-			offset = 100 - (unused + region->workers.stone);
-			fill_rectangle(position.x, position.y + offset, object_group[Workers].width, object_group[Workers].height - offset, display_colors[Black]);
-			fill_rectangle(position.x + 1, object_group[Workers].bottom - 1 - region->workers.stone, object_group[Workers].width - 2, region->workers.stone, display_colors[Self]);
-			end = format_uint(buffer, region->workers.stone, 10); // TODO divide this by 100
-			draw_string(buffer, end - buffer, position.x, object_group[Workers].bottom + PROFIT_PADDING, &font12, Black);
-			image_draw(&image_stone, position.x + (object_group[Workers].width - image_stone.width) / 2, PROFIT_Y);
-
-			draw_string(S("tax savings:"), SAVINGS_X, SAVINGS_Y, &font12, Black);
-			image_draw(&image_gold, SAVINGS_X + 100, SAVINGS_Y); // TODO remove this 100
+			display_economy(state, region);
 		}
 		else
 		{
@@ -685,7 +669,7 @@ void if_map(const void *argument, const struct game *game)
 
 	// Map
 
-	struct resources income = {0}, expenses = {0};
+	struct resources income = {0};
 	const struct troop *troop;
 
 	// TODO place income logic at a single place (now it's here and in main.c)
@@ -708,10 +692,10 @@ void if_map(const void *argument, const struct game *game)
 			if (region->owner != region->garrison.owner) // Troops expenses are covered by another region. Double expenses.
 			{
 				struct resources expense;
-				resource_multiply(&expense, &troop->unit->income, 2);
-				resource_add(&expenses, &expense);
+				resource_multiply(&expense, &troop->unit->support, 2);
+				resource_add(&income, &expense);
 			}
-			else resource_add(&expenses, &troop->unit->income);
+			else resource_add(&income, &troop->unit->support);
 		}
 	}
 
@@ -791,11 +775,11 @@ void if_map(const void *argument, const struct game *game)
 
 	// treasury
 	struct resources *treasury = &game->players[state->player].treasury;
-	show_resource(&image_gold, treasury->gold, income.gold, expenses.gold, RESOURCE_GOLD);
-	show_resource(&image_food, treasury->food, income.food, expenses.food, RESOURCE_FOOD);
-	show_resource(&image_wood, treasury->wood, income.wood, expenses.wood, RESOURCE_WOOD);
-	show_resource(&image_stone, treasury->stone, income.stone, expenses.stone, RESOURCE_STONE);
-	show_resource(&image_iron, treasury->iron, income.iron, expenses.iron, RESOURCE_IRON);
+	show_resource(&image_gold, treasury->gold, income.gold, PANEL_X, RESOURCE_GOLD);
+	show_resource(&image_food, treasury->food, income.food, PANEL_X, RESOURCE_FOOD);
+	show_resource(&image_wood, treasury->wood, income.wood, PANEL_X, RESOURCE_WOOD);
+	show_resource(&image_stone, treasury->stone, income.stone, PANEL_X, RESOURCE_STONE);
+	show_resource(&image_iron, treasury->iron, income.iron, PANEL_X, RESOURCE_IRON);
 
 	show_button(S("Ready"), BUTTON_READY_X, BUTTON_READY_Y);
 	show_button(S("Menu"), BUTTON_MENU_X, BUTTON_MENU_Y);

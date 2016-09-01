@@ -68,14 +68,40 @@ int troop_spawn(struct region *restrict region, struct troop **restrict troops, 
 	return 0;
 }
 
-void region_income(const struct region *restrict region, struct resources *restrict income)
+static inline unsigned workers_income(unsigned workers, unsigned income)
 {
-	income->gold += 1;
-	income->food += 1;
+	return (unsigned)(income * (workers / 1000.0));
+}
+
+void region_income(const struct region *restrict region, struct resources *restrict result)
+{
+	struct resources income = {0};
+
+	unsigned occupied = region->workers.food + region->workers.wood + region->workers.iron + region->workers.stone;
+
+	unsigned workers_food = (unsigned)(region->population * (region->workers.food / 100.0));
+	unsigned workers_wood = (unsigned)(region->population * (region->workers.wood / 100.0));
+	unsigned workers_stone = (unsigned)(region->population * (region->workers.stone / 100.0));
+	unsigned workers_iron = (unsigned)(region->population * (region->workers.iron / 100.0));
 
 	for(size_t i = 0; i < BUILDINGS_COUNT; ++i)
 		if (region->built & (1 << i))
-			resource_add(income, &BUILDINGS[i].income);
+		{
+			resource_add(result, &BUILDINGS[i].support);
+			resource_add(&income, &BUILDINGS[i].income);
+		}
+
+	result->food += workers_income(workers_food, income.food);
+	result->wood += workers_income(workers_wood, income.wood);
+	result->stone += workers_income(workers_stone, income.stone);
+	result->iron += workers_income(workers_iron, income.iron);
+
+	// Adjust food by what is produced and consumed by the population.
+	result->food += workers_income(workers_food, 20) - workers_income(region->population * (occupied / 100.0), 10);
+
+	// Adjust gold for collected taxes and paid salaires.
+	result->gold += workers_income(region->population, 10) - workers_income(workers_food + workers_wood + workers_stone + workers_iron, 20);
+	// TODO gold mine support
 }
 
 // Chooses new region owner from the troops in the given alliance.

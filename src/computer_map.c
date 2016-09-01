@@ -182,13 +182,13 @@ static void income_calculate(const struct game *restrict game, struct resources 
 				// Troops expenses are covered by the move region.
 				if (troop->move == LOCATION_GARRISON)
 					continue;
-				resource_add(result, &troop->unit->income);
+				resource_add(result, &troop->unit->support);
 			}
 			else
 			{
 				// Troop expenses are covered by another region. Double expenses.
 				struct resources expense;
-				resource_multiply(&expense, &troop->unit->income, 2);
+				resource_multiply(&expense, &troop->unit->support, 2);
 				resource_add(result, &expense);
 			}
 		}
@@ -251,7 +251,7 @@ static double building_value(const struct region_info *restrict region_info, con
 
 		// Check if the given building resolves a resource shortage.
 		// TODO this will not work if there is shortage of several resources and the building resolves just one of them
-		if (income_shortage && resource_enough(income, &BUILDINGS[index].income))
+		if (income_shortage && resource_enough(income, &BUILDINGS[index].support))
 			value *= 2;
 
 		// Check if the region is secure.
@@ -443,11 +443,11 @@ static void computer_map_orders_execute(struct heap_orders *restrict orders, con
 				break;
 			if (!resource_enough(&game->players[player].treasury, &BUILDINGS[order->target.building].cost))
 				break;
-			if (resources_adverse(income, &BUILDINGS[order->target.building].income))
+			if (resources_adverse(income, &BUILDINGS[order->target.building].support))
 				break;
 
 			resource_add(&game->players[player].treasury, &BUILDINGS[order->target.building].cost);
-			resource_add(income, &BUILDINGS[order->target.building].income); // TODO is this okay since the construction takes several turns?
+			resource_add(income, &BUILDINGS[order->target.building].support); // TODO is this okay since the construction takes several turns?
 			order->region->construct = order->target.building;
 			//LOG_DEBUG("BUILD %.*s in %.*s | %f", (int)BUILDINGS[order->target.building].name_length, BUILDINGS[order->target.building].name, (int)order->region->name_length, order->region->name, order->priority);
 			break;
@@ -457,11 +457,11 @@ static void computer_map_orders_execute(struct heap_orders *restrict orders, con
 				break;
 			if (!resource_enough(&game->players[player].treasury, &UNITS[order->target.unit].cost))
 				break;
-			if (resources_adverse(income, &UNITS[order->target.unit].income))
+			if (resources_adverse(income, &UNITS[order->target.unit].support))
 				break;
 
 			resource_add(&game->players[player].treasury, &UNITS[order->target.unit].cost);
-			resource_add(income, &UNITS[order->target.unit].income);
+			resource_add(income, &UNITS[order->target.unit].support);
 			order->region->train[0] = UNITS + order->target.unit;
 			//LOG_DEBUG("TRAIN %.*s in %.*s | %f", (int)UNITS[order->target.unit].name_length, UNITS[order->target.unit].name, (int)order->region->name_length, order->region->name, order->priority);
 			break;

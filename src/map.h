@@ -37,7 +37,8 @@ struct building
 	char name[NAME_LIMIT];
 	size_t name_length;
 
-	struct resources cost, income;
+	struct resources cost, support, income;
+	//unsigned workers;
 	unsigned char time;
 	uint32_t requires, conflicts;
 };

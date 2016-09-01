@@ -42,6 +42,8 @@ struct state_map
 	unsigned char regions_visible[REGIONS_LIMIT];
 
 	int economy; // whether to display region economy
+	struct resources region_income;
+	_Bool workers_food, workers_wood, workers_stone, workers_iron;
 };
 
 int input_map(const struct game *restrict game, unsigned char player);
