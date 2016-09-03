@@ -222,7 +222,7 @@ path_find_next:
 			{
 				// Find the closest enemy pawn.
 				double distance_min = INFINITY;
-				const struct pawn *restrict enemy;
+				const struct pawn *restrict enemy = 0;
 				for(size_t j = 0; j < battle->pawns_count; ++j)
 				{
 					const struct pawn *restrict other = battle->pawns + j;
@@ -230,7 +230,7 @@ path_find_next:
 						continue;
 					if (allies(game, pawn->troop->owner, other->troop->owner))
 						continue;
-					distance = battlefield_distance(pawn->position, other->position);
+					distance = battlefield_distance(position, other->position);
 					if (distance < distance_min)
 					{
 						distance_min = distance;
@@ -238,9 +238,10 @@ path_find_next:
 					}
 				}
 
-				if (distance_min <= DISTANCE_GUARD)
+				// TODO improve this: the pawn should look for the next closest pawn if this one is too far
+				if (enemy && (battlefield_distance(pawn->target.position, enemy->position) <= DISTANCE_GUARD))
 					destination = enemy->position;
-				else if (!position_eq(pawn->position, pawn->target.position))
+				else if (!position_eq(position, pawn->target.position))
 					destination = pawn->target.position;
 				else
 				{
@@ -278,7 +279,8 @@ path_find_next:
 			// Remove the position just reached from the queue of moves.
 			pawn->moves.count -= 1;
 			if (pawn->moves.count) memmove(pawn->moves.data, pawn->moves.data + 1, pawn->moves.count * sizeof(*pawn->moves.data));
-			else
+			else if (!pawn->path.count) goto path_find_next; // the move corresponds to an action
+			else // the move corresponds to user-specified path
 			{
 				// Remove the position just reached from the queue of paths.
 				pawn->path.count -= 1;

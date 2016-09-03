@@ -79,6 +79,7 @@ static int input_round(int code, unsigned x, unsigned y, uint16_t modifiers, con
 			if (!pawn || (pawn->troop->owner != state->player)) return INPUT_IGNORE;
 
 			pawn->action = ACTION_GUARD;
+			pawn->target.position = (pawn->path.count ? pawn->path.data[pawn->path.count - 1] : pawn->position);
 			return 0;
 		}
 
