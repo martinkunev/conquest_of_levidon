@@ -43,58 +43,58 @@ const struct unit UNITS[UNITS_COUNT] =
 {
 	[UnitPeasant] = {
 		.index = UnitPeasant, NAME("Peasant"), .speed = 4, .health = 4, .armor = ARMOR_NONE,
-		.cost = {.gold = -20}, .support = {.food = -20}, .time = 1, .troops_count = 25,
+		.cost = {.gold = -25}, .support = {.food = -1}, .time = 1, .troops_count = 25,
 		.melee = {.weapon = WEAPON_CLUB, .damage = 1.0, .agility = 0.75},
 	},
 	[UnitMilitia] = {
 		.index = UnitMilitia, NAME("Militia"), .speed = 5, .health = 5, .armor = ARMOR_LEATHER,
-		.cost = {.gold = -20, .wood = -20}, .support = {.food = -20}, .time = 1, .troops_count = 25, .requires = (1 << BuildingBarracks),
+		.cost = {.gold = -35, .wood = -20}, .support = {.food = -1}, .time = 1, .troops_count = 25, .requires = (1 << BuildingBarracks),
 		.melee = {.weapon = WEAPON_CLEAVING, .damage = 1.5, .agility = 1.0},
 	},
 	[UnitPikeman] = {
 		.index = UnitPikeman, NAME("Pikeman"), .speed = 5, .health = 5, .armor = ARMOR_CHAINMAIL,
-		.cost = {.gold = -20, .iron = -20}, .support = {.food = -20}, .time = 1, .troops_count = 25, .requires = (1 << BuildingForge),
+		.cost = {.gold = -40, .iron = -20}, .support = {.food = -1}, .time = 1, .troops_count = 25, .requires = (1 << BuildingForge),
 		.melee = {.weapon = WEAPON_POLEARM, .damage = 2.0, .agility = 1.0},
 	},
 	[UnitArcher] = {
 		.index = UnitArcher, NAME("Archer"), .speed = 4, .health = 4, .armor = ARMOR_NONE,
-		.cost = {.gold = -20, .wood = -20}, .support = {.food = -20}, .time = 1, .troops_count = 25, .requires = (1 << BuildingArcheryRange),
+		.cost = {.gold = -30, .wood = -20}, .support = {.food = -1}, .time = 1, .troops_count = 25, .requires = (1 << BuildingArcheryRange),
 		.melee = {.weapon = WEAPON_CLUB, .damage = 0.75, .agility = 0.75},
 		.ranged = {.weapon = WEAPON_ARROW, .damage = 1.0, .range = 5},
 	},
 	[UnitLongbow] = {
 		.index = UnitLongbow, NAME("Longbow"), .speed = 4, .health = 5, .armor = ARMOR_LEATHER,
-		.cost = {.gold = -20, .wood = -40}, .support = {.food = -20}, .time = 1, .troops_count = 25, .requires = (1 << BuildingBarracks) | (1 << BuildingArcheryRange),
+		.cost = {.gold = -40, .wood = -40}, .support = {.food = -1}, .time = 1, .troops_count = 25, .requires = (1 << BuildingBarracks) | (1 << BuildingArcheryRange),
 		.melee = {.weapon = WEAPON_CLEAVING, .damage = 1.0, .agility = 1.0},
 		.ranged = {.weapon = WEAPON_ARROW, .damage = 2.0, .range = 6},
 	},
 	[UnitLightCavalry] = {
 		.index = UnitLightCavalry, NAME("Light Cavalry"), .speed = 9, .health = 10, .armor = ARMOR_LEATHER,
-		.cost = {.gold = -30, .wood = -20}, .support = {.food = -40}, .time = 2, .troops_count = 16, .requires = (1 << BuildingBarracks) | (1 << BuildingStables),
+		.cost = {.gold = -48, .wood = -20}, .support = {.food = -2}, .time = 2, .troops_count = 16, .requires = (1 << BuildingBarracks) | (1 << BuildingStables),
 		.melee = {.weapon = WEAPON_CLEAVING, .damage = 2.0, .agility = 1.0},
 	},
 	[UnitBatteringRam] = {
 		.index = UnitBatteringRam, NAME("Battering Ram"), .speed = 3, .health = 60, .armor = ARMOR_WOODEN,
-		.cost = {.gold = -40, .wood = -100}, .support = {.food = -40}, .time = 2, .troops_count = 1, .requires = (1 << BuildingWorkshop),
+		.cost = {.gold = -50, .wood = -100}, .support = {.food = -6}, .time = 2, .troops_count = 1, .requires = (1 << BuildingWorkshop),
 		.melee = {.weapon = WEAPON_BLUNT, .damage = 50.0, .agility = 0.25},
 	},
 };
 
 const struct building BUILDINGS[] =
 {
-	[BuildingFarm] = {NAME("Farm"), .cost = {.gold = -60}, .income = {.food = 5}, .time = 2},
-	[BuildingIrrigation] = {NAME("Irrigation"), .cost = {.gold = -100}, .income = {.food = 5}, .time = 4, .requires = (1 << BuildingFarm)},
-	[BuildingSawmill] = {NAME("Sawmill"), .cost = {.gold = -80}, .income = {.wood = 10}, .time = 3},
-	[BuildingMine] = {NAME("Mine"), .cost = {.gold = -80, .wood = -80}, .income = {.stone = 10}, .time = 4},
-	[BuildingBloomery] = {NAME("Bloomery"), .cost = {.gold = -160, .stone = -200}, .income = {.iron = 5}, .time = 5, .requires = (1 << BuildingMine)},
-	[BuildingBarracks] = {NAME("Barracks"), .cost = {.gold = -100, .wood = -100, .stone = -50}, .time = 4},
-	[BuildingArcheryRange] = {NAME("Archery range"), .cost = {.gold = -60, .wood = -80}, .time = 2},
-	[BuildingStables] = {NAME("Stables"), .cost = {.gold = -120, .food = -200, .wood = -300}, .support = {.food = -50}, .time = 6, .requires = (1 << BuildingFarm)},
-	[BuildingWatchTower] = {NAME("Watch tower"), .cost = {.gold = -60, .wood = -100}, .time = 2},
-	[BuildingPalisade] = {NAME("Palisade"), .cost = {.gold = -200, .wood = -400}, .time = 4, .conflicts = (1 << BuildingFortress)},
-	[BuildingFortress] = {NAME("Fortress"), .cost = {.gold = -400, .stone = -400}, .time = 8, .requires = (1 << BuildingPalisade)},
-	[BuildingWorkshop] = {NAME("Workshop"), .cost = {.gold = -200, .wood = -200, .stone = -100}, .time = 5, .requires = (1 << BuildingSawmill)},
-	[BuildingForge] = {NAME("Forge"), .cost = {.gold = -120, .wood = -200, .stone = -100, .iron = -40}, .time = 4, .requires = (1 << BuildingBarracks)},
+	[BuildingFarm] = {NAME("Farm"), .cost = {.gold = -100}, .income = {.food = 5}, .time = 2},
+	[BuildingIrrigation] = {NAME("Irrigation"), .cost = {.gold = -160}, .income = {.food = 5}, .time = 4, .requires = (1 << BuildingFarm)},
+	[BuildingSawmill] = {NAME("Sawmill"), .cost = {.gold = -120}, .income = {.wood = 10}, .time = 3},
+	[BuildingMine] = {NAME("Mine"), .cost = {.gold = -200, .wood = -80}, .income = {.stone = 10}, .time = 4},
+	[BuildingBloomery] = {NAME("Bloomery"), .cost = {.gold = -350, .stone = -200}, .income = {.iron = 5}, .time = 5, .requires = (1 << BuildingMine)},
+	[BuildingBarracks] = {NAME("Barracks"), .cost = {.gold = -180, .wood = -100, .stone = -50}, .time = 4},
+	[BuildingArcheryRange] = {NAME("Archery range"), .cost = {.gold = -110, .wood = -80}, .time = 2},
+	[BuildingStables] = {NAME("Stables"), .cost = {.gold = -220, .food = -200, .wood = -300}, .support = {.food = -50}, .time = 6, .requires = (1 << BuildingFarm)},
+	[BuildingWatchTower] = {NAME("Watch tower"), .cost = {.gold = -80, .wood = -100}, .time = 2},
+	[BuildingPalisade] = {NAME("Palisade"), .cost = {.gold = -300, .wood = -400}, .time = 4, .conflicts = (1 << BuildingFortress)},
+	[BuildingFortress] = {NAME("Fortress"), .cost = {.gold = -800, .stone = -400}, .time = 8, .requires = (1 << BuildingPalisade)},
+	[BuildingWorkshop] = {NAME("Workshop"), .cost = {.gold = -320, .wood = -200, .stone = -100}, .time = 5, .requires = (1 << BuildingSawmill)},
+	[BuildingForge] = {NAME("Forge"), .cost = {.gold = -250, .wood = -200, .stone = -100, .iron = -40}, .time = 4, .requires = (1 << BuildingBarracks)},
 };
 const size_t BUILDINGS_COUNT = sizeof(BUILDINGS) / sizeof(*BUILDINGS);
 

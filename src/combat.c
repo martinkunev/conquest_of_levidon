@@ -33,6 +33,8 @@
 
 #define MISS_MAX 20 /* 20% */
 
+#define VICTIMS_MELEE_LIMIT 7 /* at most 7 pawns can be placed at distance <= DISTANCE_MELEE from a given pawn */
+
 const double damage_boost[7][6] =
 {
 // ARMOR:					NONE		LEATHER		CHAINMAIL	PLATE		WOODEN		STONE
@@ -90,13 +92,13 @@ static void assault(const struct pawn *restrict fighter, struct battlefield *res
 
 	unsigned damage_final = (unsigned)(fighter->troop->unit->melee.damage * fighter->count * damage_boost[weapon][armor] + 0.5);
 
-	if (damage_final >= target->strength) target->strength = 0; // TODO handle towers
+	if (damage_final >= target->strength) target->strength = 0;
 	else target->strength -= damage_final;
 }
 
 static void fight(const struct pawn *restrict fighter, struct pawn *restrict victims[], size_t victims_count)
 {
-	assert(victims_count <= 8);
+	assert(victims_count <= VICTIMS_MELEE_LIMIT);
 
 	size_t i;
 
@@ -106,7 +108,7 @@ static void fight(const struct pawn *restrict fighter, struct pawn *restrict vic
 	// Distribute the attacking troops equally between the victims.
 	// Choose targets for the remainder randomly.
 	unsigned attackers = fighter->count / victims_count;
-	unsigned targets_attackers[8] = {0};
+	unsigned targets_attackers[VICTIMS_MELEE_LIMIT] = {0};
 	unsigned left = fighter->count % victims_count;
 	while (left--)
 		targets_attackers[random() % victims_count] += 1;
@@ -212,10 +214,8 @@ void combat_melee(const struct game *restrict game, struct battle *restrict batt
 		}
 		else
 		{
-			struct pawn *victims[8]; // TODO is this big enough?
+			struct pawn *victims[VICTIMS_MELEE_LIMIT];
 			unsigned victims_count = 0;
-
-			// TODO what if one of the pawns is on a tower
 
 			// If the pawn has a specific fight target and is able to fight it, fight only that target.
 			// Otherwise, fight all enemy pawns nearby.
@@ -234,7 +234,7 @@ void combat_melee(const struct game *restrict game, struct battle *restrict batt
 					victims[victims_count++] = victim;
 			}
 
-			assert(victims_count <= 8);
+			assert(victims_count <= VICTIMS_MELEE_LIMIT);
 
 			if (victims_count)
 				fight(fighter, victims, victims_count);
@@ -258,7 +258,6 @@ void combat_ranged(struct battle *restrict battle, const struct obstacles *restr
 		unsigned range;
 		double distance, miss;
 
-		// TODO what if there is a tower on one of the fields
 		// TODO add option for the shooters to spread their arrows
 
 		range = shooter->troop->unit->ranged.range;
@@ -345,7 +344,6 @@ int battlefield_clean(const struct game *restrict game, struct battle *restrict 
 int combat_fight(const struct game *restrict game, const struct battle *restrict battle, const struct obstacles *restrict obstacles, struct pawn *restrict fighter, struct pawn *restrict victim)
 {
 	// TODO verify that the target is reachable
-	// TODO what if one of the pawns is on a tower
 
 	if (allies(game, fighter->troop->owner, victim->troop->owner))
 		return 0;
@@ -359,9 +357,12 @@ int combat_fight(const struct game *restrict game, const struct battle *restrict
 int combat_assault(const struct game *restrict game, struct pawn *restrict fighter, struct battlefield *restrict target)
 {
 	// TODO verify that the target is reachable
-	// TODO what if the fighter attacks a tower with pawn on it
 
 	if ((target->blockage != BLOCKAGE_WALL) && (target->blockage != BLOCKAGE_GATE))
+		return 0;
+
+	// TODO should this check be here?
+	if (!can_assault((fighter->path.count ? fighter->path.data[fighter->path.count - 1] : fighter->position), target))
 		return 0;
 
 	fighter->action = ACTION_ASSAULT;
@@ -383,7 +384,6 @@ int combat_shoot(const struct game *restrict game, const struct battle *restrict
 
 	// Check if the target is in shooting range.
 	// If there is an obstacle between the pawn and its target, decrease shooting range by 1.
-	// TODO what if there is a tower on one of the fields
 	range = shooter->troop->unit->ranged.range;
 	if (!path_visible(shooter->position, target, obstacles))
 		range -= 1;

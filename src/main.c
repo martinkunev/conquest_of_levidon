@@ -178,6 +178,10 @@ static int play_battle(struct game *restrict game, struct region *restrict regio
 			case Computer:
 				if (computer_battle(game, &battle, player, graph[alliance], obstacles[alliance]) < 0)
 					goto finally;
+#if defined(DEBUG)
+				if (input_battle(game, &battle, player, graph[alliance], obstacles[alliance]) < 0)
+					goto finally;
+#endif
 				break;
 
 			case Local:
@@ -318,6 +322,8 @@ static int play(struct game *restrict game)
 		// Perform region-specific actions.
 		for(index = 0; index < game->regions_count; ++index)
 		{
+			struct resources expense;
+
 			region = game->regions + index;
 
 			// TODO improve the code below
@@ -339,13 +345,12 @@ static int play(struct game *restrict game)
 				for(troop = region->troops; troop; troop = troop->_next)
 				{
 					if (troop->move == LOCATION_GARRISON) continue;
-					else if (troop->move->owner != region->owner)
-					{
-						struct resources expense;
-						resource_multiply(&expense, &troop->unit->support, 2);
-						resource_add(expenses + troop->owner, &expense);
-					}
-					else resource_add(expenses + troop->owner, &troop->unit->support);
+
+					if (troop->move->owner != region->owner)
+						resource_multiply(&expense, &troop->unit->support, 2 * troop->count);
+					else
+						resource_multiply(&expense, &troop->unit->support, troop->count);
+					resource_add(expenses + troop->owner, &expense);
 				}
 			}
 			else
@@ -355,7 +360,7 @@ static int play(struct game *restrict game)
 				{
 					struct resources expense;
 					if (troop->move == LOCATION_GARRISON) continue;
-					resource_multiply(&expense, &troop->unit->support, 2);
+					resource_multiply(&expense, &troop->unit->support, 2 * troop->count);
 					resource_add(expenses + troop->owner, &expense);
 				}
 			}

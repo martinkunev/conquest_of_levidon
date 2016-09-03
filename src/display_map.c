@@ -363,10 +363,10 @@ static void display_economy(const struct state_map *restrict state, const struct
 		display_economy_resource(if_position(Workers, 0), region->workers.food, workers_unused, &image_food, state->region_income.food);
 	if (state->workers_wood)
 		display_economy_resource(if_position(Workers, 1), region->workers.wood, workers_unused, &image_wood, state->region_income.wood);
-	if (state->workers_stone)
-		display_economy_resource(if_position(Workers, 2), region->workers.stone, workers_unused, &image_stone, state->region_income.stone);
 	if (state->workers_iron)
-		display_economy_resource(if_position(Workers, 3), region->workers.iron, workers_unused, &image_iron, state->region_income.iron);
+		display_economy_resource(if_position(Workers, 2), region->workers.iron, workers_unused, &image_iron, state->region_income.iron);
+	if (state->workers_stone)
+		display_economy_resource(if_position(Workers, 3), region->workers.stone, workers_unused, &image_stone, state->region_income.stone);
 
 	draw_string(S("tax savings:"), SAVINGS_X, SAVINGS_Y, &font12, Black);
 	show_resource(&image_gold, state->region_income.gold, 0, SAVINGS_X + 90, SAVINGS_Y); // TODO remove this 90
@@ -686,16 +686,16 @@ void if_map(const void *argument, const struct game *game)
 		if (region->owner == state->player) region_income(region, &income);
 		for(troop = region->troops; troop; troop = troop->_next)
 		{
+			struct resources expense;
+
 			if (troop->owner != state->player) continue;
 			if (troop->location == LOCATION_GARRISON) continue;
 
 			if (region->owner != region->garrison.owner) // Troops expenses are covered by another region. Double expenses.
-			{
-				struct resources expense;
-				resource_multiply(&expense, &troop->unit->support, 2);
-				resource_add(&income, &expense);
-			}
-			else resource_add(&income, &troop->unit->support);
+				resource_multiply(&expense, &troop->unit->support, 2 * troop->count);
+			else
+				resource_multiply(&expense, &troop->unit->support, troop->count);
+			resource_add(&income, &expense);
 		}
 	}
 

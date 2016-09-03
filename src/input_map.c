@@ -112,12 +112,12 @@ static void state_economy_set(struct state_map *restrict state, const struct reg
 static int input_turn(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
 {
 	struct state_map *state = argument;
-	if (state->economy)
-		return INPUT_IGNORE;
 
 	switch (code)
 	{
 	case EVENT_MOTION:
+		if (state->economy)
+			return INPUT_IGNORE;
 		if (state->hover_object != HOVER_NONE)
 		{
 			state->hover_object = HOVER_NONE;
@@ -127,6 +127,8 @@ static int input_turn(int code, unsigned x, unsigned y, uint16_t modifiers, cons
 		return INPUT_IGNORE;
 
 	case XK_Delete:
+		if (state->economy)
+			return INPUT_IGNORE;
 		if (state->troop && (state->troop->move != LOCATION_GARRISON))
 		{
 			state->troop->dismiss = !state->troop->dismiss;
@@ -608,10 +610,10 @@ static int input_economy(int code, unsigned x, unsigned y, uint16_t modifiers, c
 	struct state_map *state = argument;
 
 	if (state->region == REGION_NONE)
-		return INPUT_IGNORE;
+		return INPUT_NOTME;
 	region = game->regions + state->region;
 	if ((state->player != region->owner) || (region->owner != region->garrison.owner))
-		return INPUT_IGNORE;
+		return INPUT_NOTME;
 
 	if (code != EVENT_MOUSE_LEFT)
 		return INPUT_IGNORE;
@@ -630,12 +632,12 @@ static int input_workers(int code, unsigned x, unsigned y, uint16_t modifiers, c
 	struct state_map *state = argument;
 
 	if (!state->economy)
-		return INPUT_IGNORE;
+		return INPUT_NOTME;
 
 	if ((code != EVENT_SCROLL_UP) && (code != EVENT_SCROLL_DOWN))
 		return INPUT_IGNORE;
 
-	// Find which troop was clicked.
+	// Find which resource was clicked.
 	index = if_index(Workers, (struct point){x, y});
 	if (index < 0) return INPUT_IGNORE; // no index clicked
 
@@ -643,8 +645,8 @@ static int input_workers(int code, unsigned x, unsigned y, uint16_t modifiers, c
 	unsigned *resources[] = {
 		&region->workers.food,
 		&region->workers.wood,
-		&region->workers.stone,
 		&region->workers.iron,
+		&region->workers.stone,
 	};
 
 	if (code == EVENT_SCROLL_UP)

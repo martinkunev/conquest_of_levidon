@@ -1,8 +1,8 @@
 Conquest of Levidon is a turn-based strategic game.
 
-Each player controls one or more regions. Regions generate income for their owner in the form of resources (gold, wood, stone, iron, food). Resources are used to construct and support buildings, train new troops and support the existing troops. Players can attack each other in order to conquer more regions. When troops of enemies encounter each other, the conflict is resolved in a battle. Some regions have garrisons which must be conquered by siege or assault.
+Each player controls one or more regions. Regions generate income for their owner in the form of resources (gold, wood, stone, iron, food). The amount of each resource produced depends on the population of the region and on how the player distributes the workers. Resources are used to construct and support buildings, train new troops and support the existing troops. Players can attack each other in order to conquer more regions. When troops of enemies encounter each other, the conflict is resolved in a battle. In a battle, the player commands their troops how to move and attack enemy troops. Some regions may be protected by a garrison, which can only be conquered by an assault battle or siege.
 
-There are several play worlds with different set of regions and different alliances. To win, a player has to defeat all enemies. The game supports computer players and hotseat multiplayer. The number of players is limited to 16.
+There are several play worlds with different set of regions and different alliances. To win, a player has to defeat all enemies. The game supports computer players and hotseat multiplayer. The number of players is limited to 16. The number of regions is limited to 256.
 
 -- Install --
 The game is tested on Linux and MacOS X, but without or with very few Makefile changes, it should be able to run on any UNIX-like operating system with X window system.
@@ -44,9 +44,9 @@ The game is still under development. For details about future plans, see the TOD
 Due to my lack of painting skills, current in-game images are very ugly. I'll be happy if you want to help with that.
 The AI implementation is currently only rudimentary (can be beaten easily by a player knowing the mechanics of the game).
 
-There is an editor that can be used for creating worlds. It is just a helper utility and not a fully functioning editor (you still have to set players and region owners by editing the JSON). Some world elements like buildings and troops can only be added via JSON.
-
 Currently the game is designed for resolution 1024x768. It is written in C. The images used in the game are in PNG format. They are exported from the XFC images with the same name. Maps are stored in JSON format.
+
+There is an editor that can be used for creating worlds. It is just a helper utility and not a fully functioning editor (you still have to set players and region owners by editing the JSON). Some world elements like buildings and troops can only be added via JSON.
 
 Any gameplay ideas or contributions to the graphics are welcome :)
 
@@ -56,7 +56,7 @@ What is Levidon?
 - It's the name of a continent on an imaginary planet. The name was created by a name generator program.
 
 How was the game created?
-- The game started more as a learning exercise than a serious project. It is the result of the desire of the author to create something simple instead of aiming for something complex and never finishing it.
+- The game started more as a learning exercise than a serious project. It is the result of the desire of the author to create something simple, instead of aiming for something complex and never finishing it.
 
 What is the main principle that determined the gameplay format?
 - The game is turn-based, but all players are equal with respect to game rules (the order in which the players play does not influence the actual gameplay). All players play their turns independently of each other (both on the map and in battles). Actions take effect only after all players have set their actions. Computer players have no more information than a well-educated human player - no artificial techniques are used to make computer players stronger (no seeing invisible parts of the map, no handicap, etc.).
@@ -65,4 +65,4 @@ How flexible are computer players with respect to different maps, units, battlef
 - Computer players do not hardcode game details that can change. They are designed to operate on any map (including customly made one). They evaluate units by their indicators and can handle units that didn't exist or had different indicators at the time the AI was conceived. Computer players can also handle battlefields with obstacles at different positions.
 
 What are the future plans for the game?
-- Improving the graphics (going into the XXIst century!), interface improvements, networking support, making regions distinct (population, climate, resources, etc.), diversifying the gameplay (economy, diplomacy), add more elements to assault battles (attack tower, moat, catapult), naval battles, stronger AI.
+- Improving the graphics (going into the XXIst century!), interface improvements, networking support, diversifying the gameplay (economy, diplomacy, make regions have distinct features), add more elements to assault battles (attack tower, moat, catapult), naval battles, stronger AI.
