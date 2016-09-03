@@ -318,6 +318,11 @@ static void if_battle_pawn(const struct game *game, const struct state_battle *r
 	switch (pawn->action)
 	{
 		struct position target;
+	case ACTION_GUARD:
+		target = pawn->target.position;
+		image_draw(&image_pawn_guard, BATTLEFIELD_X(target.x), BATTLEFIELD_Y(target.y));
+		break;
+
 	case ACTION_SHOOT:
 		target = pawn->target.position;
 		image_draw(&image_pawn_shoot, BATTLEFIELD_X(target.x), BATTLEFIELD_Y(target.y));

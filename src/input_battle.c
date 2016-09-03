@@ -39,6 +39,11 @@
 #define ANIMATION_DURATION 3.0 /* 3s */
 #define ANIMATION_SHOOT_DURATION 2.0 /* 2s */
 
+//////////////////////////
+/*#include <stdio.h>
+double rate(const struct game *restrict game, struct battle *restrict battle, unsigned char player, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles);*/
+//////////////////////////
+
 extern struct battle *battle;
 
 extern unsigned WINDOW_WIDTH, WINDOW_HEIGHT;
@@ -60,14 +65,22 @@ static int input_round(int code, unsigned x, unsigned y, uint16_t modifiers, con
 			if (!pawn || (pawn->troop->owner != state->player)) return INPUT_IGNORE;
 
 			// Cancel the commands given to the current pawn.
-			pawn->action = 0;
+			pawn->action = ACTION_HOLD;
 			pawn_stay(pawn);
 
 			// TODO init distances for reachable locations for the current pawn
 
 			return 0;
 		}
-		return 0;
+
+	case 'g':
+		{
+			struct pawn *pawn = state->pawn;
+			if (!pawn || (pawn->troop->owner != state->player)) return INPUT_IGNORE;
+
+			pawn->action = ACTION_GUARD;
+			return 0;
+		}
 
 	case 'q':
 		battle_retreat(battle, state->player);
@@ -160,7 +173,10 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 		if (modifiers & XCB_MOD_MASK_CONTROL)
 		{
 			if (combat_shoot(game, battle, state->obstacles, pawn, position))
+			{
+//printf("rating=%f\n", rate(game, battle, state->player, state->graph, state->obstacles));
 				return 0;
+			}
 			return INPUT_IGNORE;
 		}
 		else
@@ -172,6 +188,7 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 			switch (status = pawn_command(game, battle, pawn, position, state->graph, state->obstacles, state->reachable))
 			{
 			case 0:
+//printf("rating=%f\n", rate(game, battle, state->player, state->graph, state->obstacles));
 				break;
 
 			case ERROR_INPUT:
@@ -315,6 +332,8 @@ int input_battle(const struct game *restrict game, struct battle *restrict battl
 
 	state.obstacles = obstacles;
 	state.graph = graph;
+
+//rate(game, battle, player, graph, obstacles);
 
 	return input_local(areas, sizeof(areas) / sizeof(*areas), if_battle, game, &state);
 }

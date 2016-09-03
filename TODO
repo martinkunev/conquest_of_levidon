@@ -19,17 +19,16 @@ H	AI improvements
 		computer doesn't want to train good units because there are not enough resources; then an income building is constructed and the computer trains worse units
 	computer cannot recover well from having negative food income
 		// solution: dismiss troops
-	////
 	treating each troop separately when finding local maximum in AI will have bad results
 	////
 	in battle, AI is too slow when there are many pawns
 	in battle, pawns move randomly when there are too many pawns
 	when shooters attack a melee pawn and there is nowhere to run, the melee should attack back
-	enemy pawn seems to know where ally pawn will move to
 	computer doesn't move the pawns during an assault
 		// probably tries to attack unreachable pawns or the rating doesn't make the pawns approach the obstacles
 	enemy should stay inside garrison when there are shooters
-	shooters don't always shoot when they can
+	shooters don't always shoot when they can (as shooting is an isolated maximum, the pawn can often not reach it after a certain step)
+	// it seems like ACTION_GUARD is necessary to fix shooters behavior
 H	fix map AI for region population changes
 H	error reporting on invalid map
 	fix crash on invalid map (while freeing resources)
@@ -40,8 +39,8 @@ H	balance battles
 	improve auto combat
 	most of the pawn->count usually get killed at the same time (the round when the pawn dies)
 H	when a region is invaded, garrison troops should have the option to fight
-H	tell local players when they are defeated (use input_report_players())
 H	when there is no local player left fighting in a battle, resolve the battle automatically
+M	tell local players when they are defeated (use input_report_players())
 M	region population
 	better food mechanics; food should not be accumulated indefinately
 	each building should requires a number of workers to run; exclude them from other tasks
@@ -54,7 +53,6 @@ M	region-specific features (income, population, units, buildings, battlefield)
 	population loyalty; revolts and civil wars
 M	assault towers
 M	catapult, balista
-M	add ACTION_GUARD in battle
 	the pawn is told an area which to guard; if an enemy goes into that area, the pawn sets ACTION_FIGHT on that enemy (this may happen in the middle between rounds)
 M	map scrolling
 M	network game with SCTP

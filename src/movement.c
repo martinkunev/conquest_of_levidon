@@ -39,6 +39,8 @@
 
 #define PATH_QUEUE_LIMIT 8
 
+#define DISTANCE_GUARD 3
+
 struct collision
 {
 	struct array_pawns pawns;
@@ -194,9 +196,14 @@ int movement_plan(const struct game *restrict game, struct battle *restrict batt
 		distance_covered = (double)pawn->troop->unit->speed / MOVEMENT_STEPS;
 
 		// Delete moves if they represent fighting target (the target may have moved).
-		// TODO optimization: only do this if the target moved
-		if (!pawn->path.count && ((pawn->action == ACTION_FIGHT) || (pawn->action == ACTION_ASSAULT)))
-			pawn->moves.count = 0;
+		if (!pawn->path.count)
+			switch (pawn->action)
+			{
+			case ACTION_GUARD:
+			case ACTION_FIGHT: // TODO optimization: only do this if the target moved
+			case ACTION_ASSAULT:
+				pawn->moves.count = 0;
+			}
 
 		// Make sure there are precalculated moves for the pawn.
 		if (!pawn->moves.count)
@@ -211,6 +218,36 @@ path_find_next:
 				destination = pawn->target.pawn->position;
 			else if ((pawn->action == ACTION_ASSAULT) && !can_assault(position, pawn->target.field))
 				destination = (struct position){pawn->target.field->tile.x, pawn->target.field->tile.y};
+			else if (pawn->action == ACTION_GUARD)
+			{
+				// Find the closest enemy pawn.
+				double distance_min = INFINITY;
+				const struct pawn *restrict enemy;
+				for(size_t j = 0; j < battle->pawns_count; ++j)
+				{
+					const struct pawn *restrict other = battle->pawns + j;
+					if (!other->count)
+						continue;
+					if (allies(game, pawn->troop->owner, other->troop->owner))
+						continue;
+					distance = battlefield_distance(pawn->position, other->position);
+					if (distance < distance_min)
+					{
+						distance_min = distance;
+						enemy = other;
+					}
+				}
+
+				if (distance_min <= DISTANCE_GUARD)
+					destination = enemy->position;
+				else if (!position_eq(pawn->position, pawn->target.position))
+					destination = pawn->target.position;
+				else
+				{
+					pawn->position_next = position;
+					continue; // nothing to do for this pawn
+				}
+			}
 			else
 			{
 				pawn->position_next = position;

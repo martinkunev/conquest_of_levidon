@@ -37,7 +37,7 @@ void image_unload(struct image *restrict image);
 
 extern struct image image_flag, image_flag_small;
 extern struct image image_selected, image_panel, image_construction, image_movement, image_assault, image_dismiss;
-extern struct image image_pawn_fight, image_pawn_assault, image_pawn_shoot;
+extern struct image image_pawn_guard, image_pawn_fight, image_pawn_assault, image_pawn_shoot;
 extern struct image image_shoot_right, image_shoot_up, image_shoot_left, image_shoot_down;
 extern struct image image_terrain[1];
 extern struct image image_garrisons[2];
