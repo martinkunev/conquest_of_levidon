@@ -182,6 +182,72 @@ struct position movement_position(const struct pawn *restrict pawn)
 	return position;
 }
 
+static int movement_find_next(const struct game *restrict game, const struct battle *restrict battle, struct pawn *restrict pawn, struct position position, struct adjacency_list *restrict graph, struct obstacles *restrict obstacles)
+{
+	struct position destination;
+
+	// Determine the next destination.
+	if (pawn->path.count)
+		destination = pawn->path.data[0];
+	else switch (pawn->action)
+	{
+	case ACTION_FIGHT:
+		if (can_fight(position, pawn->target.pawn))
+			return 0;
+		destination = pawn->target.pawn->position;
+		break;
+
+	case ACTION_ASSAULT:
+		if (can_assault(position, pawn->target.field))
+			return 0;
+		destination = (struct position){pawn->target.field->tile.x, pawn->target.field->tile.y};
+		break;
+
+	case ACTION_GUARD:
+		{
+			// Find the closest enemy pawn.
+			double distance, distance_min = INFINITY;
+			const struct pawn *restrict enemy = 0;
+			for(size_t j = 0; j < battle->pawns_count; ++j)
+			{
+				const struct pawn *restrict other = battle->pawns + j;
+				if (!other->count)
+					continue;
+				if (allies(game, pawn->troop->owner, other->troop->owner))
+					continue;
+				distance = battlefield_distance(position, other->position);
+				if (distance < distance_min)
+				{
+					distance_min = distance;
+					enemy = other;
+				}
+			}
+
+			// TODO improve this: the pawn should look for the next closest pawn if this one is too far
+			if (enemy && (battlefield_distance(pawn->target.position, enemy->position) <= DISTANCE_GUARD))
+				destination = enemy->position;
+			else if (!position_eq(position, pawn->target.position))
+				destination = pawn->target.position;
+			else
+				return 0; // nothing to do for this pawn
+		}
+		break;
+
+	default:
+		return 0; // nothing to do for this pawn
+	}
+
+	switch (path_find(pawn, destination, graph, obstacles))
+	{
+	case ERROR_MEMORY:
+		return ERROR_MEMORY;
+
+	case ERROR_MISSING: // cannot reach destination at this time
+	default: // path found
+		return 0;
+	}
+}
+
 // Calculates the expected position of each pawn at the next step.
 int movement_plan(const struct game *restrict game, struct battle *restrict battle, struct adjacency_list *restrict graph[static PLAYERS_LIMIT], struct obstacles *restrict obstacles[static PLAYERS_LIMIT])
 {
@@ -191,7 +257,6 @@ int movement_plan(const struct game *restrict game, struct battle *restrict batt
 		unsigned char alliance = game->players[pawn->troop->owner].alliance;
 		struct position position = pawn->position;
 		double distance, distance_covered;
-		double progress;
 
 		distance_covered = (double)pawn->troop->unit->speed / MOVEMENT_STEPS;
 
@@ -200,78 +265,36 @@ int movement_plan(const struct game *restrict game, struct battle *restrict batt
 			switch (pawn->action)
 			{
 			case ACTION_GUARD:
-			case ACTION_FIGHT: // TODO optimization: only do this if the target moved
+			case ACTION_FIGHT:
 			case ACTION_ASSAULT:
 				pawn->moves.count = 0;
 			}
 
-		// Make sure there are precalculated moves for the pawn.
-		if (!pawn->moves.count)
-		{
-			struct position destination;
-
-path_find_next:
-			// Determine the next destination.
-			if (pawn->path.count)
-				destination = pawn->path.data[0];
-			else if ((pawn->action == ACTION_FIGHT) && !can_fight(position, pawn->target.pawn))
-				destination = pawn->target.pawn->position;
-			else if ((pawn->action == ACTION_ASSAULT) && !can_assault(position, pawn->target.field))
-				destination = (struct position){pawn->target.field->tile.x, pawn->target.field->tile.y};
-			else if (pawn->action == ACTION_GUARD)
-			{
-				// Find the closest enemy pawn.
-				double distance_min = INFINITY;
-				const struct pawn *restrict enemy = 0;
-				for(size_t j = 0; j < battle->pawns_count; ++j)
-				{
-					const struct pawn *restrict other = battle->pawns + j;
-					if (!other->count)
-						continue;
-					if (allies(game, pawn->troop->owner, other->troop->owner))
-						continue;
-					distance = battlefield_distance(position, other->position);
-					if (distance < distance_min)
-					{
-						distance_min = distance;
-						enemy = other;
-					}
-				}
-
-				// TODO improve this: the pawn should look for the next closest pawn if this one is too far
-				if (enemy && (battlefield_distance(pawn->target.position, enemy->position) <= DISTANCE_GUARD))
-					destination = enemy->position;
-				else if (!position_eq(position, pawn->target.position))
-					destination = pawn->target.position;
-				else
-				{
-					pawn->position_next = position;
-					continue; // nothing to do for this pawn
-				}
-			}
-			else
-			{
-				pawn->position_next = position;
-				continue; // nothing to do for this pawn
-			}
-
-			switch (path_find(pawn, destination, graph[alliance], obstacles[alliance]))
-			{
-			case ERROR_MEMORY:
-				return ERROR_MEMORY;
-
-			case ERROR_MISSING:
-				pawn->position_next = position;
-				continue; // cannot reach destination at this time
-			}
-		}
-
 		// Determine which is the move in progress and how much of the distance is covered.
 		while (1)
 		{
+			// Make sure there are precalculated moves for the pawn.
+			if (!pawn->moves.count)
+			{
+				int status = movement_find_next(game, battle, pawn, position, graph[alliance], obstacles[alliance]);
+				if (status < 0) return status;
+				if (!pawn->moves.count)
+				{
+					// The pawn has nowhere to move right now.
+					pawn->position_next = position;
+					break;
+				}
+			}
+
 			distance = battlefield_distance(position, pawn->moves.data[0]);
 			if (distance_covered < distance)
+			{
+				// Calculate the next position of the pawn.
+				double progress = distance_covered / distance;
+				pawn->position_next.x = position.x * (1 - progress) + pawn->moves.data[0].x * progress;
+				pawn->position_next.y = position.y * (1 - progress) + pawn->moves.data[0].y * progress;
 				break;
+			}
 
 			distance_covered -= distance;
 			position = pawn->moves.data[0];
@@ -279,21 +302,13 @@ path_find_next:
 			// Remove the position just reached from the queue of moves.
 			pawn->moves.count -= 1;
 			if (pawn->moves.count) memmove(pawn->moves.data, pawn->moves.data + 1, pawn->moves.count * sizeof(*pawn->moves.data));
-			else if (!pawn->path.count) goto path_find_next; // the move corresponds to an action
-			else // the move corresponds to user-specified path
+			else if (pawn->path.count) // the move corresponds to user-specified path
 			{
 				// Remove the position just reached from the queue of paths.
 				pawn->path.count -= 1;
 				if (pawn->path.count) memmove(pawn->path.data, pawn->path.data + 1, pawn->path.count * sizeof(*pawn->path.data));
-
-				goto path_find_next;
 			}
 		}
-
-		// Calculate the next position of the pawn.
-		progress = distance_covered / distance;
-		pawn->position_next.x = position.x * (1 - progress) + pawn->moves.data[0].x * progress;
-		pawn->position_next.y = position.y * (1 - progress) + pawn->moves.data[0].y * progress;
 	}
 
 	return 0;
