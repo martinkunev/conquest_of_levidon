@@ -1,10 +1,7 @@
 -- bugs --
-H	battering ram is not moving when assault target is set
-	the destination is inside an obstacle and path_find fails
-	// make assault command possible only when the troop is close enough to an obstacle
 H	two horses blocked during battle (neither attacks an archer)
 	// when they start moving, they collide again
-H	battle crash when too many pawns attack a given pawn (their expected position is the position of the victim; when these pawns are > 8, the game crashes)
+H	F battle crash when too many pawns attack a given pawn (their expected position is the position of the victim; when these pawns are > 8, the game crashes)
 M	fast units cannot always catch up with slow units even when they are close enough (seen with light cavalry and peasant)
 L	if_init fails on mac (in glXMakeContextCurrent) when used with ssh forwarding
 
@@ -27,8 +24,8 @@ H	AI improvements
 	computer doesn't move the pawns during an assault
 		// probably tries to attack unreachable pawns or the rating doesn't make the pawns approach the obstacles
 	enemy should stay inside garrison when there are shooters
-	shooters don't always shoot when they can (as shooting is an isolated maximum, the pawn can often not reach it after a certain step)
-	// it seems like ACTION_GUARD is necessary to fix shooters behavior
+	shooters don't always shoot when they can
+		this is still a problem
 H	fix map AI for region population changes
 H	error reporting on invalid map
 	fix crash on invalid map (while freeing resources)
@@ -43,6 +40,7 @@ H	when there is no local player left fighting in a battle, resolve the battle au
 M	tell local players when they are defeated (use input_report_players())
 M	region population
 	better food mechanics; food should not be accumulated indefinately
+	excess food should lead to population increase
 	each building should requires a number of workers to run; exclude them from other tasks
 M	town hall building (allows collecting taxes and producing resources)
 M	when a target is impossible, set target to the closest possible (e.g. if shooting range is not enough or a position is outside the battlefield)
@@ -119,6 +117,7 @@ refactoring
 	store region troops in stacks (like troops on ships); one special stack for garrison
 	rename open battle to field battle (the same name can be applied at other places)
 	revise user/computer battle input functions: combat_fight, combat_shoot, combat_assault, movement_queue; it should be clear what they do and how they interact
+	? rename support to maintenance
 
 -- interface --
 

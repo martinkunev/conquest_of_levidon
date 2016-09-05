@@ -36,7 +36,7 @@
 
 struct pawn_distance
 {
-	const struct pawn *pawn;
+	struct pawn *pawn;
 	double distance;
 };
 
@@ -47,9 +47,15 @@ struct pawn_distance
 
 #define FIGHT_ERROR 0.8 /* multiplier that adjustes for the chance of pawns being too far to fight */
 
+#define NEIGHBOR_STATES_LIMIT 10
+
 struct pawn_command
 {
-	struct array_moves path;
+	struct
+	{
+		size_t count;
+		struct position data[PATH_QUEUE_LIMIT];
+	} path;
 	enum pawn_action action;
     union
     {
@@ -62,163 +68,9 @@ struct pawn_command
 
 #include <stdio.h>
 
-static unsigned battle_state_neighbors(const struct game *restrict game, const struct battle *restrict battle, struct pawn *restrict pawn, double reachable[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH], struct tile neighbors[static 8])
-{
-	struct position position = (pawn->path.count ? *pawn->path.data : pawn->position);
-	struct tile target;
-	double distance_limit;
-
-	unsigned neighbors_count = 0;
-
-	distance_limit = pawn->troop->unit->speed + DISTANCE_MELEE;
-	if (pawn->troop->unit->ranged.range > distance_limit)
-		distance_limit = pawn->troop->unit->ranged.range;
-
-	// TODO don't add neighbor if there are too many pawns on the field
-	// TODO some of the neighbors may be unreachable (due to blockages)
-
-	target = (struct tile){(unsigned)(position.x + 1), (unsigned)position.y};
-	if (in_battlefield(target.x, target.y) && (reachable[target.y][target.x] <= distance_limit))
-		neighbors[neighbors_count++] = target;
-
-	target = (struct tile){(unsigned)(position.x + M_SQRT2 / 2), (unsigned)(position.y + M_SQRT2 / 2)};
-	if (in_battlefield(target.x, target.y) && (reachable[target.y][target.x] <= distance_limit))
-		neighbors[neighbors_count++] = target;
-
-	target = (struct tile){(unsigned)position.x, (unsigned)(position.y - 1)};
-	if (in_battlefield(target.x, target.y) && (reachable[target.y][target.x] <= distance_limit))
-		neighbors[neighbors_count++] = target;
-
-	target = (struct tile){(unsigned)(position.x - M_SQRT2 / 2), (unsigned)(position.y - M_SQRT2 / 2)};
-	if (in_battlefield(target.x, target.y) && (reachable[target.y][target.x] <= distance_limit))
-		neighbors[neighbors_count++] = target;
-
-	target = (struct tile){(unsigned)(position.x - 1), (unsigned)position.y};
-	if (in_battlefield(target.x, target.y) && (reachable[target.y][target.x] <= distance_limit))
-		neighbors[neighbors_count++] = target;
-
-	target = (struct tile){(unsigned)(position.x - M_SQRT2 / 2), (unsigned)(position.y + M_SQRT2 / 2)};
-	if (in_battlefield(target.x, target.y) && (reachable[target.y][target.x] <= distance_limit))
-		neighbors[neighbors_count++] = target;
-
-	target = (struct tile){(unsigned)position.x, (unsigned)(position.y + 1)};
-	if (in_battlefield(target.x, target.y) && (reachable[target.y][target.x] <= distance_limit))
-		neighbors[neighbors_count++] = target;
-
-	target = (struct tile){(unsigned)(position.x + M_SQRT2 / 2), (unsigned)(position.y + M_SQRT2 / 2)};
-	if (in_battlefield(target.x, target.y) && (reachable[target.y][target.x] <= distance_limit))
-		neighbors[neighbors_count++] = target;
-
-	return neighbors_count;
-}
-
-static struct position pawn_action_position(const struct pawn *restrict pawn)
-{
-	switch (pawn->action)
-	{
-	case ACTION_FIGHT:
-		return pawn->target.pawn->position;
-
-	case ACTION_ASSAULT:
-		return (struct position){pawn->target.field->tile.x, pawn->target.field->tile.y};
-
-	default:
-		return (pawn->path.count ? pawn->path.data[pawn->path.count - 1] : pawn->position);
-	}
-}
-
-static void battle_state_set(struct pawn *restrict pawn, struct tile neighbor, const struct game *restrict game, struct battle *restrict battle, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles, struct position *restrict position)
-{
-	struct battlefield *restrict field = battle_field(battle, neighbor);
-	struct position destination = {neighbor.x, neighbor.y};
-
-	pawn_stay(pawn);
-	pawn->action = 0;
-
-	if (*field->pawns && !allies(game, field->pawns[0]->troop->owner, pawn->troop->owner))
-	{
-		// TODO what if there is more than one pawn at the field
-		// TODO shooters are biased - they prefer shooting over fighting; they should choose the better option instead
-
-		if (combat_shoot(game, battle, obstacles, pawn, field->pawns[0]->position))
-			goto finally;
-		else if (combat_shoot(game, battle, obstacles, pawn, destination))
-			goto finally;
-		else if (battlefield_distance(pawn->position, field->pawns[0]->position) <= pawn->troop->unit->speed + DISTANCE_MELEE) // TODO why is this check necessary
-		{
-			if (combat_fight(game, battle, obstacles, pawn, *field->pawns))
-				goto finally;
-		}
-	}
-	else if ((field->blockage == BLOCKAGE_WALL) || (field->blockage == BLOCKAGE_GATE))
-	{
-		if (battlefield_distance(pawn->position, destination) <= pawn->troop->unit->speed + DISTANCE_MELEE) // TODO why is this check necessary
-		{
-			if (combat_assault(game, pawn, field))
-				goto finally;
-		}
-	}
-
-	// TODO what if the destination is unreachable due to wall
-
-	// TODO what should I do when I'm unable to set the state
-	if (!position_eq(pawn->position, destination))
-		if (movement_queue(pawn, destination, graph, obstacles) < 0)
-			goto finally; // unable to set state
-
-	pawn->path.data[0] = movement_position(pawn);
-	pawn->moves.count = 0;
-
-finally:
-	*position = pawn_action_position(pawn);
-}
-
-// TODO is 8 enough for victims?
-static unsigned victims_fight_find(const struct game *restrict game, const struct battle *restrict battle, const struct pawn *restrict fighter, const struct position *restrict positions, const struct pawn *restrict victims[static 8])
-{
-	unsigned char fighter_alliance = game->players[fighter->troop->owner].alliance;
-	struct position fighter_position = positions[fighter - battle->pawns];
-	unsigned victims_count = 0;
-
-	// TODO what if one of the pawns is on a tower
-
-	// If the pawn has a fight target and is close enough to it, set that pawn as a victim.
-	if (fighter->action == ACTION_FIGHT)
-	{
-		struct position target_position = positions[fighter->target.pawn - battle->pawns];
-		if (battlefield_distance(fighter_position, target_position) <= DISTANCE_MELEE)
-		{
-			victims[victims_count++] = fighter->target.pawn;
-			return victims_count;
-		}
-	}
-
-	// Set all enemy pawns close enough as victims.
-	for(size_t i = 0; i < battle->pawns_count; ++i)
-	{
-		struct pawn *victim = battle->pawns + i;
-		if (!victim->count)
-			continue;
-		if (game->players[victim->troop->owner].alliance == fighter_alliance)
-			continue;
-		if (battlefield_distance(fighter_position, positions[i]) <= DISTANCE_MELEE)
-			victims[victims_count++] = victim;
-	}
-
-	assert(victims_count <= 8);
-	return victims_count;
-}
-
-static double attack_rating(double damage_expected, unsigned victim_count, const struct unit *restrict victim_unit, const struct garrison_info *restrict info)
-{
-	double deaths = damage_expected / victim_unit->health;
-	if (deaths > victim_count)
-		deaths = victim_count;
-	return unit_importance(victim_unit, info) * deaths;
-}
-
 static void distance_sort(struct heap_pawn_distance *closeness)
 {
+	size_t pawns_count = closeness->count;
 	heap_pawn_distance_heapify(closeness);
 	while (closeness->count)
 	{
@@ -226,6 +78,24 @@ static void distance_sort(struct heap_pawn_distance *closeness)
 		heap_pawn_distance_pop(closeness);
 		closeness->data[closeness->count] = pawn_distance;
 	}
+	closeness->count = pawns_count;
+}
+
+// Returns the number of pawns that are no farther than distance.
+static size_t distance_search(const struct heap_pawn_distance *restrict closeness, double distance)
+{
+	size_t left = 0, right = closeness->count;
+
+	while (left < right)
+	{
+		size_t index = (right - left) / 2 + left;
+		if (closeness->data[index].distance <= distance)
+			left = index + 1;
+		else
+			right = index;
+	}
+
+	return left;
 }
 
 static struct heap_pawn_distance *closeness_index(const struct battle *restrict battle)
@@ -240,18 +110,22 @@ static struct heap_pawn_distance *closeness_index(const struct battle *restrict 
 	buffer += battle->pawns_count * sizeof(*closeness);
 	for(size_t i = 0; i < battle->pawns_count; ++i)
 	{
-		closeness[i].count = battle->pawns_count - 1;
+		if (!battle->pawns[i].count)
+			continue;
+
+		closeness[i].count = 0;
 		closeness[i].data = (void *)buffer;
-		buffer += battle->pawns_count * sizeof(*closeness->data);
+		buffer += (battle->pawns_count - 1) * sizeof(*closeness->data);
 
 		for(size_t j = 0; j < battle->pawns_count; ++j)
 		{
-			size_t index;
-
-			if (j == i) continue;
-			index = j - (j > i);
-			closeness[i].data[index].pawn = battle->pawns + j;
-			closeness[i].data[index].distance = battlefield_distance(battle->pawns[i].position, battle->pawns[j].position);
+			if (!battle->pawns[j].count)
+				continue;
+			if (j == i)
+				continue;
+			closeness[i].data[closeness[i].count].pawn = battle->pawns + j;
+			closeness[i].data[closeness[i].count].distance = battlefield_distance(battle->pawns[i].position, battle->pawns[j].position);
+			closeness[i].count += 1;
 		}
 
 		// Sort the pawns by distance.
@@ -269,6 +143,9 @@ static void closeness_index_update(struct heap_pawn_distance *restrict closeness
 		double distance;
 		struct pawn_distance swap;
 		size_t position;
+
+		if (!battle->pawns[i].count)
+			continue;
 
 		if (i == index)
 		{
@@ -314,6 +191,250 @@ static void closeness_index_update(struct heap_pawn_distance *restrict closeness
 		swap.distance = distance;
 		closeness[i].data[j] = swap;
 	}
+}
+
+static unsigned neighbors_shoot(const struct game *restrict game, const struct pawn *restrict pawn, const struct heap_pawn_distance *restrict closeness, struct pawn_command neighbors[static NEIGHBOR_STATES_LIMIT - 1])
+{
+	unsigned neighbors_count = 0;
+
+	// TODO what if the target is too far due to a wall
+
+	size_t targets_count = distance_search(closeness, pawn->troop->unit->ranged.range);
+	for(size_t i = 0; i < targets_count; ++i)
+	{
+		const struct pawn *restrict target = closeness->data[i].pawn;
+		if ((pawn->action == ACTION_SHOOT) && position_eq(pawn->target.position, target->position))
+			continue; // don't add current state as neighbor
+
+		if (!allies(game, pawn->troop->owner, target->troop->owner))
+		{
+			neighbors[neighbors_count].action = ACTION_SHOOT;
+			neighbors[neighbors_count].target.position = target->position;
+			neighbors[neighbors_count].position = pawn->position;
+
+			neighbors_count += 1;
+			if (neighbors_count == NEIGHBOR_STATES_LIMIT - 1)
+				break;
+		}
+	}
+
+	return neighbors_count;
+}
+
+static unsigned neighbors_static(struct position position, enum pawn_action action, struct pawn_command neighbors[static 1])
+{
+	neighbors->action = action;
+	neighbors->target.position = position;
+	neighbors->position = position;
+	return 1;
+}
+
+static unsigned neighbors_move(struct battle *restrict battle, const struct pawn *restrict pawn, double x, double y, const struct heap_pawn_distance *restrict closeness, double reachable[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH], struct pawn_command neighbors[static 1])
+{
+	struct tile tile = (struct tile){(unsigned)x, (unsigned)y};
+	struct battlefield *restrict field;
+
+	if (!in_battlefield(x, y))
+		return 0;
+	if (pawn->troop->unit->speed + 1 < reachable[tile.y][tile.x])
+		return 0;
+
+	field = &battle->field[tile.y][tile.x];
+	switch (field->blockage)
+	{
+	case BLOCKAGE_WALL:
+	case BLOCKAGE_GATE:
+		neighbors->action = ACTION_ASSAULT;
+		neighbors->target.field = field;
+		neighbors->position = (struct position){x, y};
+		return 1;
+
+	case BLOCKAGE_NONE:
+		// Don't add move if there is already a pawn at that position.
+		if (closeness->count && (closeness->data[0].distance < 2 * PAWN_RADIUS))
+			return 0;
+
+		neighbors->action = ACTION_HOLD;
+		neighbors->position = (struct position){x, y};
+		return 1;
+
+	default:
+		return 0;
+	}
+}
+
+static unsigned neighbors_fight(const struct game *restrict game, const struct pawn *restrict pawn, struct position position, const struct heap_pawn_distance *restrict closeness, struct pawn_command *neighbors, size_t neighbors_limit)
+{
+	size_t neighbors_count = 0;
+
+	for(size_t i = 0; i < closeness->count; ++i)
+	{
+		if (closeness->data[i].distance > DISTANCE_MELEE)
+			break;
+		if (!allies(game, pawn->troop->owner, closeness->data[i].pawn->troop->owner))
+		{
+			neighbors->action = ACTION_FIGHT;
+			neighbors->target.pawn = closeness->data[i].pawn;
+			neighbors->position = position;
+
+			neighbors_count += 1;
+			if (neighbors_count == neighbors_limit)
+				break;
+		}
+	}
+
+	return neighbors_count;
+}
+
+static unsigned battle_state_neighbors(const struct game *restrict game, struct battle *restrict battle, struct pawn *restrict pawn, double reachable[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH], struct pawn_command neighbors[static NEIGHBOR_STATES_LIMIT], struct heap_pawn_distance *restrict closeness)
+{
+	struct position position = (pawn->path.count ? *pawn->path.data : pawn->position);
+
+	// WARNING: path is not set by this function
+
+	unsigned neighbors_count = 0;
+
+	size_t i;
+
+	if (!pawn->path.count)
+		switch (pawn->action)
+		{
+		case ACTION_SHOOT:
+			neighbors_count += neighbors_shoot(game, pawn, closeness, neighbors + neighbors_count);
+			neighbors_count += neighbors_static(position, ACTION_GUARD, neighbors + neighbors_count);
+			return neighbors_count;
+
+		case ACTION_GUARD:
+			neighbors_count += neighbors_static(position, ACTION_HOLD, neighbors + neighbors_count);
+
+			// If no melee pawns are stopping the pawn from shooting, add shoot actions.
+			i = 0;
+			do
+			{
+				if ((i == closeness->count) || (closeness->data[i].distance > DISTANCE_MELEE))
+				{
+					neighbors_count += neighbors_shoot(game, pawn, closeness, neighbors + neighbors_count);
+					break;
+				}
+			} while (allies(game, pawn->troop->owner, closeness->data[i++].pawn->troop->owner));
+
+			return neighbors_count;
+
+		case ACTION_HOLD:
+			neighbors_count += neighbors_static(position, ACTION_GUARD, neighbors + neighbors_count);
+			break;
+		}
+
+	switch (pawn->action)
+	{
+	case ACTION_FIGHT:
+		neighbors_count += neighbors_static(position, ACTION_HOLD, neighbors + neighbors_count);
+		neighbors_count += neighbors_fight(game, pawn, position, closeness, neighbors + neighbors_count, NEIGHBOR_STATES_LIMIT - neighbors_count);
+		break;
+
+	case ACTION_ASSAULT:
+	case ACTION_HOLD:
+		// Add movement/assault neighbors.
+		// TODO some of the neighbors may be unreachable (due to blockages)
+		neighbors_count += neighbors_move(battle, pawn, position.x + 1, position.y, closeness, reachable, neighbors + neighbors_count);
+		neighbors_count += neighbors_move(battle, pawn, position.x + M_SQRT2 / 2, position.y + M_SQRT2 / 2, closeness, reachable, neighbors + neighbors_count);
+		neighbors_count += neighbors_move(battle, pawn, position.x, position.y - 1, closeness, reachable, neighbors + neighbors_count);
+		neighbors_count += neighbors_move(battle, pawn, position.x - M_SQRT2 / 2, position.y - M_SQRT2 / 2, closeness, reachable, neighbors + neighbors_count);
+		neighbors_count += neighbors_move(battle, pawn, position.x - 1, position.y, closeness, reachable, neighbors + neighbors_count);
+		neighbors_count += neighbors_move(battle, pawn, position.x - M_SQRT2 / 2, position.y + M_SQRT2 / 2, closeness, reachable, neighbors + neighbors_count);
+		neighbors_count += neighbors_move(battle, pawn, position.x, position.y + 1, closeness, reachable, neighbors + neighbors_count);
+		neighbors_count += neighbors_move(battle, pawn, position.x + M_SQRT2 / 2, position.y + M_SQRT2 / 2, closeness, reachable, neighbors + neighbors_count);
+
+		// Add the closest fight neighbors.
+		neighbors_count += neighbors_fight(game, pawn, position, closeness, neighbors + neighbors_count, NEIGHBOR_STATES_LIMIT - neighbors_count);
+
+		break;
+	}
+
+	return neighbors_count;
+}
+
+static void battle_state_set(struct pawn *restrict pawn, struct pawn_command *restrict neighbor, const struct game *restrict game, struct battle *restrict battle, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles, struct position *restrict position)
+{
+	pawn_stay(pawn);
+	pawn->action = 0;
+
+	// TODO what if the destination is unreachable due to wall
+	if (!position_eq(neighbor->position, pawn->position))
+		if (movement_queue(pawn, neighbor->position, graph, obstacles) < 0)
+			goto finally;
+
+	// TODO what to do when setting the state fails
+	switch (neighbor->action)
+	{
+	case ACTION_HOLD:
+		pawn->action = neighbor->action;
+		break;
+
+	case ACTION_GUARD:
+		pawn->action = neighbor->action;
+		pawn->target.position = neighbor->target.position;
+		break;
+
+	case ACTION_FIGHT:
+		combat_fight(game, battle, obstacles, pawn, neighbor->target.pawn);
+		break;
+
+	case ACTION_ASSAULT:
+		combat_assault(game, pawn, neighbor->target.field);
+		break;
+
+	case ACTION_SHOOT:
+		combat_shoot(game, battle, obstacles, pawn, neighbor->target.position);
+		break;
+	}
+
+finally:
+	*position = neighbor->position;
+}
+
+// TODO is 8 enough for victims?
+static unsigned victims_fight_find(const struct game *restrict game, const struct battle *restrict battle, const struct pawn *restrict fighter, const struct position *restrict positions, const struct pawn *restrict victims[static 8])
+{
+	unsigned char fighter_alliance = game->players[fighter->troop->owner].alliance;
+	struct position fighter_position = positions[fighter - battle->pawns];
+	unsigned victims_count = 0;
+
+	// TODO what if one of the pawns is on a tower
+
+	// If the pawn has a fight target and is close enough to it, set that pawn as a victim.
+	if (fighter->action == ACTION_FIGHT)
+	{
+		struct position target_position = positions[fighter->target.pawn - battle->pawns];
+		if (battlefield_distance(fighter_position, target_position) <= DISTANCE_MELEE)
+		{
+			victims[victims_count++] = fighter->target.pawn;
+			return victims_count;
+		}
+	}
+
+	// Set all enemy pawns close enough as victims.
+	for(size_t i = 0; i < battle->pawns_count; ++i)
+	{
+		struct pawn *victim = battle->pawns + i;
+		if (!victim->count)
+			continue;
+		if (game->players[victim->troop->owner].alliance == fighter_alliance)
+			continue;
+		if (battlefield_distance(fighter_position, positions[i]) <= DISTANCE_MELEE)
+			victims[victims_count++] = victim;
+	}
+
+	assert(victims_count <= 8);
+	return victims_count;
+}
+
+static double attack_rating(double damage_expected, unsigned victim_count, const struct unit *restrict victim_unit, const struct garrison_info *restrict info)
+{
+	double deaths = damage_expected / victim_unit->health;
+	if (deaths > victim_count)
+		deaths = victim_count;
+	return unit_importance(victim_unit, info) * deaths;
 }
 
 // TODO improve this
@@ -522,12 +643,7 @@ int computer_formation(const struct game *restrict game, struct battle *restrict
 static int command_remember(struct pawn_command *restrict command, struct pawn *restrict pawn, struct position *restrict position)
 {
 	if (pawn->path.count)
-	{
-		if ((command->path.capacity < pawn->path.count) && (array_moves_expand(&command->path, pawn->path.count) < 0))
-			return ERROR_MEMORY;
-
 		memcpy(command->path.data, pawn->path.data, pawn->path.count * sizeof(*pawn->path.data));
-	}
 	command->path.count = pawn->path.count;
 
 	command->action = pawn->action;
@@ -537,6 +653,7 @@ static int command_remember(struct pawn_command *restrict command, struct pawn *
 		command->target.pawn = pawn->target.pawn;
 		break;
 
+	case ACTION_GUARD:
 	case ACTION_SHOOT:
 		command->target.position = pawn->target.position;
 		break;
@@ -589,7 +706,7 @@ int computer_battle(const struct game *restrict game, struct battle *restrict ba
 	struct heap_pawn_distance *closeness = 0;
 	struct position *positions = 0;
 
-	struct tile neighbors[8];
+	struct pawn_command neighbors[NEIGHBOR_STATES_LIMIT];
 	unsigned neighbors_count;
 
 	struct pawn *restrict pawn;
@@ -634,13 +751,13 @@ int computer_battle(const struct game *restrict game, struct battle *restrict ba
 		pawn = battle->players[player].pawns[i];
 		pawn_index = pawn - battle->pawns;
 
-		neighbors_count = battle_state_neighbors(game, battle, pawn, reachable[i], neighbors);
+		neighbors_count = battle_state_neighbors(game, battle, pawn, reachable[i], neighbors, closeness + pawn_index);
 		if (!neighbors_count) continue;
 
 		// Remember current pawn command and set a new one.
 		status = command_remember(&backup, pawn, positions + pawn_index);
 		if (status < 0) goto finally;
-		battle_state_set(pawn, neighbors[random() % neighbors_count], game, battle, graph, obstacles, positions + pawn_index);
+		battle_state_set(pawn, neighbors + (random() % neighbors_count), game, battle, graph, obstacles, positions + pawn_index);
 		closeness_index_update(closeness, battle, positions, pawn_index);
 
 		// Calculate the rating of the new set of commands.
@@ -668,13 +785,13 @@ int computer_battle(const struct game *restrict game, struct battle *restrict ba
 		pawn_index = pawn - battle->pawns;
 
 search:
-		neighbors_count = battle_state_neighbors(game, battle, pawn, reachable[i], neighbors);
+		neighbors_count = battle_state_neighbors(game, battle, pawn, reachable[i], neighbors, closeness + pawn_index);
 		for(j = 0; j < neighbors_count; ++j)
 		{
 			// Remember current pawn command and set a new one.
 			status = command_remember(&backup, pawn, positions + pawn_index);
 			if (status < 0) goto finally;
-			battle_state_set(pawn, neighbors[j], game, battle, graph, obstacles, positions + pawn_index);
+			battle_state_set(pawn, neighbors + j, game, battle, graph, obstacles, positions + pawn_index);
 
 			// Calculate the rating of the new set of commands.
 			// Restore the original command if the new one is unacceptably worse.
@@ -694,7 +811,6 @@ search:
 finally:
 	free(positions);
 	free(closeness);
-	array_moves_term(&backup.path);
 	free(reachable);
 	return status;
 }

@@ -40,8 +40,8 @@
 #define ANIMATION_SHOOT_DURATION 2.0 /* 2s */
 
 //////////////////////////
-/*#include <stdio.h>
-double rate(const struct game *restrict game, struct battle *restrict battle, unsigned char player, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles);*/
+#include <stdio.h>
+double rate(const struct game *restrict game, struct battle *restrict battle, unsigned char player, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles);
 //////////////////////////
 
 extern struct battle *battle;
@@ -67,6 +67,7 @@ static int input_round(int code, unsigned x, unsigned y, uint16_t modifiers, con
 			// Cancel the commands given to the current pawn.
 			pawn->action = ACTION_HOLD;
 			pawn_stay(pawn);
+printf("rating=%f\n", rate(game, battle, state->player, state->graph, state->obstacles));
 
 			// TODO init distances for reachable locations for the current pawn
 
@@ -175,7 +176,7 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 		{
 			if (combat_shoot(game, battle, state->obstacles, pawn, position))
 			{
-//printf("rating=%f\n", rate(game, battle, state->player, state->graph, state->obstacles));
+printf("rating=%f\n", rate(game, battle, state->player, state->graph, state->obstacles));
 				return 0;
 			}
 			return INPUT_IGNORE;
@@ -189,7 +190,7 @@ static int input_field(int code, unsigned x, unsigned y, uint16_t modifiers, con
 			switch (status = pawn_command(game, battle, pawn, position, state->graph, state->obstacles, state->reachable))
 			{
 			case 0:
-//printf("rating=%f\n", rate(game, battle, state->player, state->graph, state->obstacles));
+printf("rating=%f\n", rate(game, battle, state->player, state->graph, state->obstacles));
 				break;
 
 			case ERROR_INPUT:

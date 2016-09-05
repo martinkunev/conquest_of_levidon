@@ -419,7 +419,7 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 
 		// pawns[i].position will be initialized during formation
 
-		pawns[i].path = (struct array_moves){0};
+		pawns[i].path.count = 0;
 		pawns[i].moves = (struct array_moves){0};
 
 		pawns[i].action = 0;
@@ -522,7 +522,6 @@ void battlefield_term(const struct game *restrict game, struct battle *restrict 
 	for(i = 0; i < battle->pawns_count; ++i)
 	{
 		battle->pawns[i].troop->count = battle->pawns[i].count;
-		array_moves_term(&battle->pawns[i].path);
 		array_moves_term(&battle->pawns[i].moves);
 	}
 	for(i = 0; i < game->players_count; ++i)

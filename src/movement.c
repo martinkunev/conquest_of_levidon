@@ -37,8 +37,6 @@
 #define array_type struct pawn *
 #include "generic/array.g"
 
-#define PATH_QUEUE_LIMIT 8
-
 #define DISTANCE_GUARD 3
 
 struct collision
@@ -551,9 +549,6 @@ int movement_queue(struct pawn *restrict pawn, struct position target, struct ad
 		return status;
 	}
 
-	status = array_moves_expand(&pawn->path, pawn->path.count + 1);
-	if (status < 0)
-		return ERROR_MEMORY;
 	pawn->path.data[pawn->path.count++] = target;
 	return 0;
 }

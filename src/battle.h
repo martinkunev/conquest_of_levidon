@@ -30,6 +30,8 @@
 
 #define ASSAULT_LIMIT 5
 
+#define PATH_QUEUE_LIMIT 8
+
 #define NEIGHBOR_SELF NEIGHBORS_LIMIT
 #define NEIGHBOR_GARRISON NEIGHBORS_LIMIT
 
@@ -44,7 +46,11 @@ struct pawn
 	struct position position; // current pawn position
 	struct position position_next; // expected pawn position at the next step
 
-	struct array_moves path; // user-specified path of not yet reached positions // TODO don't use a dynamic array for this
+	struct
+	{
+		size_t count;
+		struct position data[PATH_QUEUE_LIMIT];
+	} path; // user-specified path of not yet reached positions
 	struct array_moves moves; // pathfinding-generated movement to the next path position
 
 	enum pawn_action {ACTION_HOLD, ACTION_GUARD, ACTION_FIGHT, ACTION_SHOOT, ACTION_ASSAULT} action;
