@@ -53,7 +53,7 @@ struct pawn
 	} path; // user-specified path of not yet reached positions
 	struct array_moves moves; // pathfinding-generated movement to the next path position
 
-	enum pawn_action {ACTION_HOLD, ACTION_GUARD, ACTION_FIGHT, ACTION_SHOOT, ACTION_ASSAULT} action;
+	enum pawn_action {ACTION_HOLD, ACTION_GUARD, ACTION_FIGHT, ACTION_SHOOT, ACTION_ASSAULT} action; // TODO maybe rename ACTION_FIGHT to ACTION_FOLLOW
 	union
 	{
 		struct pawn *pawn; // for ACTION_FIGHT

@@ -24,6 +24,8 @@
 #define DISTANCE_MELEE ((PAWN_RADIUS * 2) + (1.0 / STEPS_FIELD)) /* 1.25 */
 #define DISTANCE_RANGED (PAWN_RADIUS * 2)
 
+#define VICTIMS_MELEE_LIMIT 7 /* at most 7 pawns can be placed at distance <= DISTANCE_MELEE from a given pawn */
+
 double damage_expected(const struct pawn *restrict fighter, double troops_count, const struct pawn *restrict victim);
 double damage_expected_ranged(const struct pawn *restrict shooter, double troops_count, const struct pawn *restrict victim);
 double damage_expected_assault(const struct pawn *restrict fighter, double troops_count, const struct battlefield *restrict field);

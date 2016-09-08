@@ -33,8 +33,6 @@
 
 #define MISS_MAX 20 /* 20% */
 
-#define VICTIMS_MELEE_LIMIT 7 /* at most 7 pawns can be placed at distance <= DISTANCE_MELEE from a given pawn */
-
 const double damage_boost[7][6] =
 {
 // ARMOR:					NONE		LEATHER		CHAINMAIL	PLATE		WOODEN		STONE
@@ -217,13 +215,8 @@ void combat_melee(const struct game *restrict game, struct battle *restrict batt
 			struct pawn *victims[VICTIMS_MELEE_LIMIT];
 			unsigned victims_count = 0;
 
-			// If the pawn has a specific fight target and is able to fight it, fight only that target.
-			// Otherwise, fight all enemy pawns nearby.
-			if ((fighter->action == ACTION_FIGHT) && can_fight(fighter->position, fighter->target.pawn))
-			{
-				victims[victims_count++] = fighter->target.pawn;
-			}
-			else for(size_t j = 0; j < battle->pawns_count; ++j)
+			// Fight all enemy pawns nearby.
+			for(size_t j = 0; j < battle->pawns_count; ++j)
 			{
 				struct pawn *victim = battle->pawns + j;
 				if (!victim->count)
