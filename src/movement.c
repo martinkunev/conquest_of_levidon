@@ -37,8 +37,6 @@
 #define array_type struct pawn *
 #include "generic/array.g"
 
-#define DISTANCE_GUARD 3
-
 struct collision
 {
 	struct array_pawns pawns;
@@ -221,8 +219,8 @@ static int movement_find_next(const struct game *restrict game, const struct bat
 				}
 			}
 
-			// TODO improve this: the pawn should look for the next closest pawn if this one is too far
-			if (enemy && (battlefield_distance(pawn->target.position, enemy->position) <= DISTANCE_GUARD))
+			// TODO maybe the pawn should look for the next closest pawn if this one is too far
+			if (enemy && (battlefield_distance(pawn->target.position, enemy->position) <= (pawn->troop->unit->speed / 2.0)))
 				destination = enemy->position;
 			else if (!position_eq(position, pawn->target.position))
 				destination = pawn->target.position;

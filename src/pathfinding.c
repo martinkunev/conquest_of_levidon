@@ -113,12 +113,9 @@ static int move_blocked_obstacle(struct position start, struct position end, con
 }
 
 // WARNING: The move must be a non-zero vector (end != start).
-// TODO do I need this function
-static int move_blocked_pawn(struct position start, struct position end, struct position pawn)
+int move_blocked_pawn(struct position start, struct position end, struct position pawn, double radius)
 {
 	// http://stackoverflow.com/a/1084899/515212
-
-	const double radius = PAWN_RADIUS * 2;
 
 	// Change the coordinate system so that the path starts from (0, 0).
 	end.x -= start.x;

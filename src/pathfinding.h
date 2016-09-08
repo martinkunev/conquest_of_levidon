@@ -50,6 +50,8 @@ struct obstacles *path_obstacles_alloc(const struct game *restrict game, const s
 struct adjacency_list *visibility_graph_build(const struct battle *restrict battle, const struct obstacles *restrict obstacles, unsigned vertices_reserved);
 void visibility_graph_free(struct adjacency_list *graph);
 
+int move_blocked_pawn(struct position start, struct position end, struct position pawn, double radius);
+
 int path_visible(struct position origin, struct position target, const struct obstacles *restrict obstacles);
 int path_find(struct pawn *restrict pawn, struct position destination, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles);
 double path_distance(struct pawn *restrict pawn, struct position destination, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles);

@@ -41,8 +41,8 @@ static void test_pawn_blocks(void **state)
 	struct position pawn0 = {3, 6};
 	struct position pawn1 = {2, 4};
 
-	assert_false(move_blocked_pawn(start, end, pawn0));
-	assert_true(move_blocked_pawn(start, end, pawn1));
+	assert_false(move_blocked_pawn(start, end, pawn0, PAWN_RADIUS * 2));
+	assert_true(move_blocked_pawn(start, end, pawn1, PAWN_RADIUS * 2));
 }
 
 int main(void)
