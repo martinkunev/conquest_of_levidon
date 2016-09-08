@@ -3,6 +3,8 @@
 use strict;
 use warnings;
 
+use Config;
+
 my $prefix = '/usr/local';
 my $debug = 0;
 
@@ -29,6 +31,8 @@ $prefix =~ s|/|\\/|g;
 #my $cflags = ($debug ? '-O0 -g -gstabs -DDEBUG' : '-O2 -fstrict-aliasing');
 my $cflags = ($debug ? '-O0 -g -DDEBUG' : '-O2 -fstrict-aliasing -DNDEBUG');
 my $strip = ($debug ? '' : '-s');
+
+$cflags .= ' -DOS_MAC' if ($Config{'osname'} eq 'darwin');
 
 unlink 'Makefile';
 qx(sed -e "s/\@{PREFIX}/$prefix/g" -e "s/\@{CFLAGS}/$cflags/g" -e "s/\@{STRIP}/$strip/g" Makefile.in > Makefile);
