@@ -1,7 +1,9 @@
 -- bugs --
-H	two horses blocked during battle (neither attacks an archer)
-	// when they start moving, they collide again
-H	F battle crash when too many pawns attack a given pawn (their expected position is the position of the victim; when these pawns are > 8, the game crashes)
+H	resolve more of the battle collisions
+	two horses blocked during battle (neither attacks an archer) // when they start moving, they collide again
+H	pawn trembling (sometimes when it tries to move to a certain position, but another one is there)
+H	if there are too many units on the battlefield, the last ones get placed at (0, 0) and this leads to crashes
+	handle too many units on the battlefield properly
 M	fast units cannot always catch up with slow units even when they are close enough (seen with light cavalry and peasant)
 L	if_init fails on mac (in glXMakeContextCurrent) when used with ssh forwarding
 
@@ -11,22 +13,15 @@ flickering
 	https://groups.google.com/forum/#!topic/android-developers/om5Utez9PgA
 
 -- features --
-H	AI improvements
+H	improve map AI
+	fix map AI for the region population feature
 	computer map orders are weak
 		computer doesn't want to train good units because there are not enough resources; then an income building is constructed and the computer trains worse units
 	computer cannot recover well from having negative food income
 		// solution: dismiss troops
-	treating each troop separately when finding local maximum in AI will have bad results
-	////
-	in battle, AI is too slow when there are many pawns
-	in battle, pawns move randomly when there are too many pawns
-	when shooters attack a melee pawn and there is nowhere to run, the melee should attack back
-	computer doesn't move the pawns during an assault
-		// probably tries to attack unreachable pawns or the rating doesn't make the pawns approach the obstacles
-	enemy should stay inside garrison when there are shooters
-	shooters don't always shoot when they can
-		this is still a problem
-H	fix map AI for region population changes
+H	improve assault AI
+		F computer doesn't move the pawns during an assault // probably tries to attack unreachable pawns or the rating doesn't make the pawns approach the obstacles
+		enemy should stay inside garrison when there are shooters
 H	error reporting on invalid map
 	fix crash on invalid map (while freeing resources)
 H	use a separate thread to calculate computer turns while the local player is choosing what to play
@@ -35,8 +30,21 @@ H	handle different screen resolutions better
 H	balance battles
 	improve auto combat
 	most of the pawn->count usually get killed at the same time (the round when the pawn dies)
+	stamina?
+	damage refactoring (combat.c, computer_battle.c)
+		raname shoot() to damage_shoot(), fight() to damage_fight(), assault() to damage_assault()
+		shoot() should return the damge; combat_ranged() should call damage_deal() after shoot()
+		fight() should be called once for each victim and it should return the damge; combat_melee() should call damage_deal() after fight()
+		damage calculation algorithm in damage_deal() should be improved (no more than 5 pawn troops can attack no more than 5 victims)
+		computer_battle.c should use fight() and shoot() to determine damage
 H	when a region is invaded, garrison troops should have the option to fight
 H	when there is no local player left fighting in a battle, resolve the battle automatically
+M	improve AI
+	treating each troop separately when finding local maximum in AI will have bad results
+	on the battlefield, the difference between states seems too small (the simulated annealing starts working too late)
+		currently the algorithm does pretty much nothing until the local maximum in the end
+	improve computer behavior in case of equal armies (the computer should attack when attacking a region and escape when defending a region)
+	when shooters attack a melee pawn and there is nowhere to run, the melee should attack back
 M	tell local players when they are defeated (use input_report_players())
 M	region population
 	better food mechanics; food should not be accumulated indefinately
@@ -52,17 +60,25 @@ M	region-specific features (income, population, units, buildings, battlefield)
 M	assault towers
 M	catapult, balista
 	the pawn is told an area which to guard; if an enemy goes into that area, the pawn sets ACTION_FIGHT on that enemy (this may happen in the middle between rounds)
-M	map scrolling
 M	network game with SCTP
 M	pawn morale
 	low morale can make a pawn skip a round or retreat
-M	water and ships
-	shipyard - building producing transport ships; each ship has a fixed capacity (number of troop stacks) and a fixed speed (distance it sails in one turn)
-	troops can set move destination to boarding the ship; at the same turn, the ship can start moving
-	the ship can move freely in the water and can moor; if it moors, it cannot move after that the same turn; if the ship is set to moor, the troops will land in the corresponding region
-	a moored ship is one that moored or was just produced at the shipyard; troops can board moored ships
-	ships are displayed as a single ship on the map; when one clicks, one can see all the ships and the troops in each ship
-	// troops on board of ships are stored in troop stacks - one troop stack for each ship
+M	map redesign (map scrolling, roads, water, ships)
+	water and ships
+		shipyard - building producing transport ships; each ship has a fixed capacity (number of troop stacks) and a fixed speed (distance it sails in one turn)
+		troops can set move destination to boarding the ship; at the same turn, the ship can start moving
+		the ship can move freely in the water and can moor; if it moors, it cannot move after that the same turn; if the ship is set to moor, the troops will land in the corresponding region
+		a moored ship is one that moored or was just produced at the shipyard; troops can board moored ships
+		ships are displayed as a single ship on the map; when one clicks, one can see all the ships and the troops in each ship
+		// troops on board of ships are stored in troop stacks - one troop stack for each ship
+	support map scrolling
+	the map is divided into hexagons (with two vertical and four diagonal edges so that up and down are not possible directions (they would look ugly))
+	each region spans a number of hexagons; some hexagons may be part of several regions; some hexagons may span the coastline
+	each hexagon may contain roads (one bit for each of the 6 directions; between 2 and 4 bits can be set)
+	each troop can move by a number of hexagons per turn (troop->unit->map_speed or something like this)
+	troops located in the same hexagon are shown together (they form a single troop stack); battles happen when enemy troops are in the same hexagon
+	regions are invaded when an enemy enters into a hexagon belonging to a given region
+	each region building occupies pre-determined hexagons; the garrison spans four hexagons and uses nearby roads as places to enter/exit; the shipyard is somewhere on the shore
 M	sound
 M	do something when there is not enough food for all troops (?kill some troops)
 M	keyboard support in various places in the interface; mouse support in various places in the interface
@@ -77,7 +93,7 @@ M	improve world loading/saving
 	refactor (simplify) the code using these ideas
 M	? melee units should go closer to the shooter to prevent them from escaping far enough to shoot
 L	improve AI (formation AI, predicting troops in unknown regions, batter map behavior, better battle behavior, etc.)
-L	better support for hotseat (choose player names)
+L	better support for hotseat (choose player names, timer (to limit player turn duration))
 L	fast ships, big ships, battle ships; naval battles; ships participating in assault
 L	battle: don't allow attacking if the attacker cannot do damage to the defender (due to weapon and armor type)
 L	editor: position region neighbors properly
@@ -85,18 +101,17 @@ L	retreat can be abused for scouting (25 peasants can go and retreat for 1 food)
 	maybe make retreat take some time (1 or 2 rounds); that way only fast units will be able to retreat
 	maybe allow retreat only when the pawns are near the border of the battlefield?
 	currently attackers retreating from an assault are killed; is this okay?
-L	support splitting troops
+L	? support splitting troops
 L	limited number of shots
 L	building destruction and repair
 	buildings get damaged after an open battle; garrisons get damaged after an assault
 L	armory, swordsman, crossbowman, heavy cavalry, horse archer
 L	assault moat
-L	roads
 L	trade
 L	religions, ethnicities, languages
 L	dynamic alliances
 L	seasons
-L	? buildings should not generate income on the day they are built
+L	? buildings should not generate income on the turn they are built
 L	? implement exit game while in battle
 L	troops of dead players in allied regions remain alive
 	they should either die, join the player or become neutral
@@ -118,9 +133,9 @@ refactoring
 	rename open battle to field battle (the same name can be applied at other places)
 	revise user/computer battle input functions: combat_fight, combat_shoot, combat_assault, movement_queue; it should be clear what they do and how they interact
 	? rename support to maintenance
+	rename if_display to if_render
 
 -- interface --
-
 M	display a mirror image of enemy troops
 	? display an ellipse with the owner below the troop (instead of changing some pixels in the sprite)
 M	custom mouse pointer

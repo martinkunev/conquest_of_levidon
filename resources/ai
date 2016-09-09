@@ -1,4 +1,4 @@
-map AI
+-- map AI --
 	collect information for each region
 		how important is it
 		how much danger there is of it being attacked
@@ -42,8 +42,3 @@ map AI
 
 	each region determines what troops it needs
 	troop orders are evaluated based on how easy that order can satisfy a region's need
-
-----
-
-regions and garrisons are constant on each turn; rating_max for each region and for each region garrison is 1
-rating is also given for each surviving troop
