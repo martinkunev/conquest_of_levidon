@@ -35,6 +35,8 @@
 #define NEIGHBOR_SELF NEIGHBORS_LIMIT
 #define NEIGHBOR_GARRISON NEIGHBORS_LIMIT
 
+enum battle_type {BATTLE_NONE, BATTLE_ASSAULT, BATTLE_OPEN, BATTLE_OPEN_REINFORCED};
+
 struct battlefield;
 
 struct pawn
@@ -118,7 +120,7 @@ size_t formation_reachable_assault(const struct game *restrict game, const struc
 // Returns whether a pawn owned by the given player can pass through the field.
 int battlefield_passable(const struct battlefield *restrict field, unsigned player);
 
-int battlefield_init(const struct game *restrict game, struct battle *restrict battle, struct region *restrict region, int assault);
+int battlefield_init(const struct game *restrict game, struct battle *restrict battle, struct region *restrict region, enum battle_type battle_type);
 void battlefield_term(const struct game *restrict game, struct battle *restrict battle);
 
 void battle_retreat(struct battle *restrict battle, unsigned char player);

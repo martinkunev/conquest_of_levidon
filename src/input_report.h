@@ -31,8 +31,17 @@ struct state_report
 
 	size_t players_count;
 	unsigned char players[PLAYERS_LIMIT];
+
+	int answer;
+};
+
+struct state_question
+{
+	const struct region *region;
+	int answer;
 };
 
 int input_report_battle(const struct game *restrict game, const struct battle *restrict battle);
 int input_report_map(const struct game *restrict game);
 int input_report_players(struct state_report *state);
+int input_report_invasion(struct state_question *restrict state);
