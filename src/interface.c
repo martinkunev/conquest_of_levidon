@@ -84,11 +84,8 @@ int if_init(void)
 	screen = iterator.data;
 
 	// Choose a framebuffer configuration.
-#if defined(OS_MAC)
-	const int attributes[] = {GLX_BUFFER_SIZE, 32, GLX_DEPTH_SIZE, 24, GLX_RENDER_TYPE, GLX_RGBA_BIT, None};
-#else
-	const int attributes[] = {GLX_BUFFER_SIZE, 32, GLX_DEPTH_SIZE, 24, GLX_RENDER_TYPE, GLX_RGBA_BIT, GLX_DOUBLEBUFFER, True, None};
-#endif
+	//const int attributes[] = {GLX_BUFFER_SIZE, 32, GLX_DEPTH_SIZE, 24, GLX_RENDER_TYPE, GLX_RGBA_BIT, GLX_DOUBLEBUFFER, True, None};
+	const int attributes[] = {GLX_RENDER_TYPE, GLX_RGBA_BIT, None};
 	int fb_configs_count = 0;
 	GLXFBConfig *fb_configs = glXChooseFBConfig(display, screen_index, attributes, &fb_configs_count);
 	if (!fb_configs || (fb_configs_count == 0)) goto error;
@@ -98,9 +95,8 @@ int if_init(void)
 
 	// Create the window and make it fullscreen.
 	{
+		// Create colorman and query visual_id.
 		xcb_colormap_t colormap = xcb_generate_id(connection);
-
-		// config and query visual_id
 		int visual_id = 0;
 		glXGetFBConfigAttrib(display, fb_config, GLX_VISUAL_ID, &visual_id);
 		xcb_create_colormap(connection, XCB_COLORMAP_ALLOC_NONE, colormap, screen->root, visual_id);
@@ -123,7 +119,7 @@ int if_init(void)
 		event.xclient.data.l[1] = XInternAtom(display, WM_STATE_FULLSCREEN, 0);
 
 		// TODO set window parameters
-		// TODO set window title, border, etc.
+		// TODO set window title, etc.
 		xcb_create_window(connection, XCB_COPY_FROM_PARENT, window, screen->root, 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, 0, XCB_WINDOW_CLASS_INPUT_OUTPUT, visual_id, valuemask, valuelist);
 		xcb_map_window(connection, window); // NOTE: window must be mapped before glXMakeContextCurrent
 
@@ -220,22 +216,15 @@ void input_display(void (*if_display)(const void *, const struct game *), const 
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	if_display(state, game);
-#if defined(OS_MAC)
 	glFlush();
-#else
-	glXSwapBuffers(display, drawable);
-#endif
+	glFinish();
 }
 
 void input_display_timer(void (*if_display)(const void *, const struct game *, double), const struct game *restrict game, double progress, void *state)
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	if_display(state, game, progress);
-#if defined(OS_MAC)
 	glFlush();
-#else
-	glXSwapBuffers(display, drawable);
-#endif
 	glFinish();
 }
 
