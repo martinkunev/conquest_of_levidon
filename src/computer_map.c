@@ -1073,6 +1073,12 @@ finally:
 	return status;
 }
 
+int computer_invasion(const struct game *restrict game, const struct region *restrict region, unsigned char player)
+{
+	// TODO implement this
+	return 1;
+}
+
 //////////////////////////////////
 
 double tvalue(const struct game *restrict game, unsigned char player, struct region_info *restrict regions_info, const struct context *restrict context, const struct region *restrict region, size_t unit)

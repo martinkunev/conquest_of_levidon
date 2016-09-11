@@ -81,6 +81,7 @@
 
 #define TITLE_Y 16
 #define LABEL_Y 48
+#define REPORT_X 32
 #define REPORT_Y 80
 
 #define BUTTON_WIDTH 120
@@ -94,6 +95,11 @@
 
 #define BUTTON_EXIT_X 900
 #define BUTTON_EXIT_Y 744
+
+#define BUTTON_YES_X REPORT_X
+#define BUTTON_YES_Y 400
+#define BUTTON_NO_X REPORT_X + 160
+#define BUTTON_NO_Y 400
 
 #define BUTTON_READY_X 6
 #define BUTTON_READY_Y 620

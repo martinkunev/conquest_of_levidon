@@ -37,8 +37,8 @@
 
 #define FORMAT_BUFFER_INT (1 + sizeof(uintmax_t) * 3) /* buffer size that is sufficient for base-10 representation of any integer */
 
-#define REPORT_BEFORE_X 32
-#define REPORT_AFTER_X 416
+#define REPORT_BEFORE_X REPORT_X
+#define REPORT_AFTER_X (REPORT_X + 384)
 
 #define REPORT_PLAYER_X 32
 #define REPORT_TYPE_X 96
@@ -56,6 +56,8 @@
 
 #define TITLE_SIZE_LIMIT 64
 #define REPORT_MAP_TITLE S("Winners")
+#define REPORT_INVASION_TITLE S(" invaded")
+#define REPORT_INVASION_QUESTION S("Do you want the troops in the garrison to defend the region?")
 
 void if_report_battle(const void *argument, const struct game *game)
 {
@@ -199,4 +201,34 @@ void if_report_players(const void *argument, const struct game *game)
 		show_flag(x + (image_flag.width + PLAYERS_PADDING) * i, y, state->players[i]);
 
 	show_button(S("Close"), BUTTON_EXIT_X, BUTTON_EXIT_Y);
+}
+
+void if_report_invasion(const void *argument, const struct game *game)
+{
+	const struct state_question *restrict state = argument;
+	char buffer[NAME_LIMIT + sizeof(" invaded") - 1], *end; // TODO the literal is repeated
+	struct box box;
+	unsigned x;
+
+	// Display title, indicating the invaded region.
+	end = format_bytes(buffer, state->region->name, state->region->name_length);
+	end = format_bytes(end, REPORT_INVASION_TITLE);
+	box = string_box(buffer, end - buffer, &font24);
+	draw_string(buffer, end - buffer, (WINDOW_WIDTH - box.width) / 2, TITLE_Y, &font24, White);
+
+	draw_string(REPORT_INVASION_QUESTION, REPORT_X, REPORT_Y, &font12, White);
+
+	// Display the troops in the garrison.
+	x = REPORT_X;
+	for(const struct troop *restrict troop = state->region->troops; troop; troop = troop->_next)
+	{
+		if ((troop->move == LOCATION_GARRISON) && (troop->owner == state->region->garrison.owner))
+		{
+			display_troop(troop->unit->index, x, REPORT_Y + MARGIN_Y, Player + troop->owner, White, troop->count);
+			x += MARGIN_X;
+		}
+	}
+
+	show_button(S("Yes"), BUTTON_YES_X, BUTTON_YES_Y);
+	show_button(S("No"), BUTTON_NO_X, BUTTON_NO_Y);
 }

@@ -47,6 +47,29 @@ static int input_report(int code, unsigned x, unsigned y, uint16_t modifiers, co
 	}
 }
 
+static int input_ignore(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
+{
+	return INPUT_IGNORE;
+}
+
+static int input_yes(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
+{
+	struct state_question *restrict state = argument;
+	if (code != EVENT_MOUSE_LEFT)
+		return INPUT_IGNORE;
+	state->answer = 1;
+	return INPUT_FINISH;
+}
+
+static int input_no(int code, unsigned x, unsigned y, uint16_t modifiers, const struct game *restrict game, void *argument)
+{
+	struct state_question *restrict state = argument;
+	if (code != EVENT_MOUSE_LEFT)
+		return INPUT_IGNORE;
+	state->answer = 0;
+	return INPUT_FINISH;
+}
+
 int input_report_battle(const struct game *restrict game, const struct battle *restrict battle)
 {
 	struct area areas[] = {
@@ -115,4 +138,36 @@ int input_report_players(struct state_report *restrict state)
 	};
 
 	return input_local(areas, sizeof(areas) / sizeof(*areas), if_report_players, 0, state);
+}
+
+int input_report_invasion(struct state_question *restrict state)
+{
+	struct area areas[] = {
+		{
+			.left = 0,
+			.right = WINDOW_WIDTH - 1,
+			.top = 0,
+			.bottom = WINDOW_HEIGHT - 1,
+			.callback = input_ignore,
+		},
+		{
+			.left = BUTTON_YES_X,
+			.right = BUTTON_YES_X + BUTTON_WIDTH - 1,
+			.top = BUTTON_YES_Y,
+			.bottom = BUTTON_YES_Y + BUTTON_HEIGHT - 1,
+			.callback = input_yes,
+		},
+		{
+			.left = BUTTON_NO_X,
+			.right = BUTTON_NO_X + BUTTON_WIDTH - 1,
+			.top = BUTTON_NO_Y,
+			.bottom = BUTTON_NO_Y + BUTTON_HEIGHT - 1,
+			.callback = input_no,
+		},
+	};
+
+	int status = input_local(areas, sizeof(areas) / sizeof(*areas), if_report_invasion, 0, state);
+	if (status)
+		return status;
+	return state->answer;
 }

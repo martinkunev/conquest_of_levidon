@@ -770,7 +770,6 @@ static void if_regions(const void *restrict argument, const struct game *restric
 	}
 
 	glFlush();
-	glXSwapBuffers(display, drawable);
 }
 
 static void draw_line(struct point start, struct point end)
@@ -831,7 +830,6 @@ static void if_points(const void *argument, const struct game *game)
 	show_button(S("Regions tool"), BUTTON_REGIONS_X, BUTTON_REGIONS_Y);
 
 	glFlush();
-	glXSwapBuffers(display, drawable);
 }
 
 static int input_regions(const struct game *restrict game, struct state *restrict state)

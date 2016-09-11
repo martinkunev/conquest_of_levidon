@@ -160,7 +160,7 @@ static void battlefield_init_open(const struct game *restrict game, struct battl
 		signed char startup;
 
 		// Find the prefered startup position for the pawn.
-		if (troop->location == battle->region)
+		if ((troop->location == battle->region) || (troop->location == LOCATION_GARRISON))
 		{
 			if (!allies(game, owner, battle->region->owner))
 			{
@@ -334,7 +334,7 @@ static void battlefield_init_assault(const struct game *restrict game, struct ba
 	battle->defender = game->players[battle->region->garrison.owner].alliance;
 }
 
-int battlefield_init(const struct game *restrict game, struct battle *restrict battle, struct region *restrict region, int assault)
+int battlefield_init(const struct game *restrict game, struct battle *restrict battle, struct region *restrict region, enum battle_type battle_type)
 {
 	unsigned troops_speed_count[1 + UNIT_SPEED_LIMIT] = {0};
 	size_t troops_count = 0;
@@ -345,6 +345,8 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 	size_t pawn_offset[PLAYERS_LIMIT] = {0};
 
 	size_t i;
+
+	int assault = (battle_type == BATTLE_ASSAULT);
 
 	// Initialize each battle field as empty.
 	size_t x, y;
@@ -364,7 +366,7 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 	for(i = 0; i < PLAYERS_LIMIT; ++i) battle->players[i].pawns_count = 0;
 	for(troop = region->troops; troop; troop = troop->_next)
 	{
-		if (!assault && (troop->location == LOCATION_GARRISON)) continue; // garrison troops don't participate in open battle
+		if ((battle_type == BATTLE_OPEN) && (troop->location == LOCATION_GARRISON)) continue; // garrison troops don't participate in open battle
 		if (assault && (troop->move != LOCATION_GARRISON)) continue; // only troops that specified it participate in assault
 
 		troops_count += 1;
@@ -408,7 +410,7 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 	// Initialize pawn for each troop.
 	for(troop = region->troops; troop; troop = troop->_next)
 	{
-		if (!assault && (troop->location == LOCATION_GARRISON)) continue; // garrison troops don't participate in open battle
+		if ((battle_type == BATTLE_OPEN) && (troop->location == LOCATION_GARRISON)) continue; // garrison troops don't participate in open battle
 		if (assault && (troop->move != LOCATION_GARRISON)) continue; // only troops that specified it participate in assault
 
 		i = offset[troop->unit->speed]++;
@@ -448,6 +450,7 @@ void battle_retreat(struct battle *restrict battle, unsigned char player)
 	unsigned garrison_places;
 
 	// TODO currently attacker troops retreating from assault are killed; is this okay?
+	// TODO currently open battle garrison reinforcements are killed; is this okay?
 
 	info = garrison_info(battle->region);
 	if (info && (battle->region->garrison.owner == player))

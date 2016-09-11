@@ -74,7 +74,7 @@ static void player_next(unsigned char player)
 }
 
 // Returns the number of the alliance that won the battle.
-static int play_battle(struct game *restrict game, struct region *restrict region, int assault)
+static int play_battle(struct game *restrict game, struct region *restrict region, enum battle_type battle_type)
 {
 	unsigned player, alliance;
 
@@ -87,7 +87,7 @@ static int play_battle(struct game *restrict game, struct region *restrict regio
 
 	unsigned players_local = 0;
 
-	if (battlefield_init(game, &battle, region, assault) < 0)
+	if (battlefield_init(game, &battle, region, battle_type) < 0)
 		return -1;
 
 	if (game->hotseat)
@@ -232,7 +232,7 @@ static int play_battle(struct game *restrict game, struct region *restrict regio
 		}
 
 		// Cancel the battle if nothing is killed/destroyed for a certain number of rounds.
-		if ((battle.round - round_activity_last) >= (assault ? ROUNDS_STALE_LIMIT_ASSAULT : ROUNDS_STALE_LIMIT_OPEN))
+		if ((battle.round - round_activity_last) >= ((battle_type == BATTLE_ASSAULT) ? ROUNDS_STALE_LIMIT_ASSAULT : ROUNDS_STALE_LIMIT_OPEN))
 		{
 			// Attacking troops retreat to the region they came from.
 			for(i = 0; i < battle.pawns_count; ++i)
@@ -288,7 +288,7 @@ static int play(struct game *restrict game)
 		unsigned char alive[PLAYERS_LIMIT] = {0};
 		struct
 		{
-			enum {BATTLE_OPEN = 1, BATTLE_ASSAULT} type;
+			enum battle_type type;
 			unsigned char winner;
 		} battle_info[REGIONS_LIMIT] = {0};
 
@@ -400,6 +400,8 @@ static int play(struct game *restrict game)
 			unsigned alliances_assault = 0, alliances_open = 0;
 			int manual_assault = 0, manual_open = 0;
 
+			int status;
+
 			region = game->regions + index;
 
 			// Start open battle if troops of two different alliances occupy the region.
@@ -409,6 +411,7 @@ static int play(struct game *restrict game)
 				if (troop->move == LOCATION_GARRISON)
 				{
 					alliances_assault |= (1 << game->players[troop->owner].alliance);
+					alliances_open |= (1 << game->players[troop->owner].alliance);
 					if (game->players[troop->owner].type == Local) manual_assault = 1;
 				}
 				else
@@ -419,21 +422,55 @@ static int play(struct game *restrict game)
 			}
 			if (alliances_open & (alliances_open - 1))
 			{
-				int status = (manual_open ? play_battle(game, region, 0) : calculate_battle(game, region, 0));
+				battle_info[index].type = BATTLE_OPEN;
+
+				// Check if the owner of the garrison has troops in the garrison and wants to reinforce the defense.
+				if (alliances_assault & (1 << game->players[region->garrison.owner].alliance))
+				{
+					switch (game->players[region->garrison.owner].type)
+					{
+					case Neutral:
+						status = 0;
+						break;
+
+					case Local:
+						{
+							struct state_question state = {.region = region};
+							if (game->hotseat)
+								player_next(region->garrison.owner);
+							status = input_report_invasion(&state);
+						}
+						break;
+
+					case Computer:
+						status = computer_invasion(game, region, region->garrison.owner);
+						break;
+					}
+					if (status < 0)
+						return status;
+
+					if (status)
+					{
+						if (game->players[region->garrison.owner].type == Local) manual_open = 1;
+						battle_info[index].type = BATTLE_OPEN_REINFORCED;
+					}
+				}
+
+				status = (manual_open ? play_battle(game, region, battle_info[index].type) : calculate_battle(game, region, 0));
 				if (status < 0) return status;
 
 				battle_info[index].winner = status;
-				battle_info[index].type = BATTLE_OPEN;
 			}
 			else if (alliances_assault & (alliances_assault - 1))
 			{
-				int status = (manual_assault ? play_battle(game, region, 1) : calculate_battle(game, region, 1));
+				battle_info[index].type = BATTLE_ASSAULT;
+
+				status = (manual_assault ? play_battle(game, region, battle_info[index].type) : calculate_battle(game, region, 1));
 				if (status < 0) return status;
 
 				battle_info[index].winner = status;
-				battle_info[index].type = BATTLE_ASSAULT;
 			}
-			else battle_info[index].type = 0;
+			else battle_info[index].type = BATTLE_NONE;
 		}
 
 		// Perform post-battle cleanup actions.
@@ -445,7 +482,7 @@ static int play(struct game *restrict game)
 			region_owner_old = region->owner;
 
 			if (battle_info[index].type)
-				region_battle_cleanup(game, region, ((battle_info[index].type == BATTLE_OPEN) ? 0 : 1), battle_info[index].winner);
+				region_battle_cleanup(game, region, (battle_info[index].type == BATTLE_ASSAULT), battle_info[index].winner);
 
 			region_turn_process(game, region);
 

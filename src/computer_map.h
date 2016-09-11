@@ -17,4 +17,5 @@
  * along with Conquest of Levidon.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-int computer_map(const struct game *restrict game, unsigned char player);
+int computer_map(const struct game *restrict, unsigned char);
+int computer_invasion(const struct game *restrict, const struct region *restrict, unsigned char);

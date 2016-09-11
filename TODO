@@ -22,11 +22,6 @@ H	improve map AI
 H	improve assault AI
 		F computer doesn't move the pawns during an assault // probably tries to attack unreachable pawns or the rating doesn't make the pawns approach the obstacles
 		enemy should stay inside garrison when there are shooters
-H	error reporting on invalid map
-	fix crash on invalid map (while freeing resources)
-H	use a separate thread to calculate computer turns while the local player is choosing what to play
-	add indicator (e.g. lighted bulb) for the players who have completed their turn
-H	handle different screen resolutions better
 H	balance battles
 	improve auto combat
 	most of the pawn->count usually get killed at the same time (the round when the pawn dies)
@@ -37,8 +32,12 @@ H	balance battles
 		fight() should be called once for each victim and it should return the damge; combat_melee() should call damage_deal() after fight()
 		damage calculation algorithm in damage_deal() should be improved (no more than 5 pawn troops can attack no more than 5 victims)
 		computer_battle.c should use fight() and shoot() to determine damage
-H	when a region is invaded, garrison troops should have the option to fight
-H	when there is no local player left fighting in a battle, resolve the battle automatically
+H	error reporting on invalid map
+	fix crash on invalid map (while freeing resources)
+H	handle different screen resolutions better
+H	use a separate thread to calculate computer turns while the local player is choosing what to play
+	add indicator (e.g. lighted bulb) for the players who have completed their turn
+M	when there is no local player left fighting in a battle, resolve the battle automatically
 M	improve AI
 	treating each troop separately when finding local maximum in AI will have bad results
 	on the battlefield, the difference between states seems too small (the simulated annealing starts working too late)
