@@ -17,6 +17,7 @@
  * along with Conquest of Levidon.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -98,6 +99,9 @@ void region_income(const struct region *restrict region, struct resources *restr
 
 	// Adjust food by what is produced and consumed by the population.
 	result->food += workers_income(workers_food, 20) - workers_income(region->population * (occupied / 100.0), 10);
+
+	// Adjust gold for region governing.
+	result->gold -= 10 * sqrt(region->population / 1000.0);
 
 	// Adjust gold for collected taxes and paid salaires.
 	result->gold += workers_income(region->population, 10) - workers_income(workers_food + workers_wood + workers_stone + workers_iron, 20);

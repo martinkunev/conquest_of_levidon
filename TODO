@@ -32,8 +32,6 @@ H	balance battles
 		fight() should be called once for each victim and it should return the damge; combat_melee() should call damage_deal() after fight()
 		damage calculation algorithm in damage_deal() should be improved (no more than 5 pawn troops can attack no more than 5 victims)
 		computer_battle.c should use fight() and shoot() to determine damage
-H	error reporting on invalid map
-	fix crash on invalid map (while freeing resources)
 H	handle different screen resolutions better
 H	use a separate thread to calculate computer turns while the local player is choosing what to play
 	add indicator (e.g. lighted bulb) for the players who have completed their turn
@@ -91,6 +89,7 @@ M	improve world loading/saving
 	log (level warning) when an optional field has the wrong type; assume the field is not present for the execution logic
 	refactor (simplify) the code using these ideas
 M	? melee units should go closer to the shooter to prevent them from escaping far enough to shoot
+L	improve error reporting on invalid map
 L	improve AI (formation AI, predicting troops in unknown regions, batter map behavior, better battle behavior, etc.)
 L	better support for hotseat (choose player names, timer (to limit player turn duration))
 L	fast ships, big ships, battle ships; naval battles; ships participating in assault
