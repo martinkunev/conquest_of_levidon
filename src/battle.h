@@ -42,8 +42,7 @@ struct battlefield;
 struct pawn
 {
 	struct troop *troop;
-	unsigned count;
-	unsigned hurt;
+	unsigned count, hurt, attackers;
 
 	struct position position; // current pawn position
 	struct position position_next; // expected pawn position at the next step

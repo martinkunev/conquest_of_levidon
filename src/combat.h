@@ -22,16 +22,31 @@
 // TODO try to fix this without the work-around
 #define STEPS_FIELD 4
 #define DISTANCE_MELEE ((PAWN_RADIUS * 2) + (1.0 / STEPS_FIELD)) /* 1.25 */
-#define DISTANCE_RANGED (PAWN_RADIUS * 2)
+#define DISTANCE_RANGED (PAWN_RADIUS * 2) /* 1.0 */
 
-#define VICTIMS_MELEE_LIMIT 7 /* at most 7 pawns can be placed at distance <= DISTANCE_MELEE from a given pawn */
+// A pawn can have at most 7 pawns as victims.
+// melee: 7 pawns placed at distance <= DISTANCE_MELEE from the attacker
+// ranged: 1 pawn placed at the target and 6 pawns placed at distance <= DISTANCE_RANGED from it
+#define VICTIMS_LIMIT 7
 
-double damage_expected(const struct pawn *restrict fighter, double troops_count, const struct pawn *restrict victim);
-double damage_expected_ranged(const struct pawn *restrict shooter, double troops_count, const struct pawn *restrict victim);
-double damage_expected_assault(const struct pawn *restrict fighter, double troops_count, const struct battlefield *restrict field);
+struct victim_shoot
+{
+	struct pawn *restrict pawn;
+	double distance;
+};
 
-int can_assault(const struct position position, const struct battlefield *restrict field);
+unsigned combat_fight_troops(const struct pawn *restrict fighter, unsigned fighter_troops, unsigned victim_troops);
+double combat_fight_damage(const struct pawn *restrict fighter, unsigned fighter_troops, const struct pawn *restrict victim);
+
+double combat_assault_distance(const struct position position, const struct obstacle *restrict obstacle);
+double combat_assault_damage(const struct pawn *restrict fighter, const struct battlefield *restrict target);
+
+unsigned combat_shoot_victims(struct battle *restrict battle, const struct pawn *restrict shooter, struct victim_shoot victims[static VICTIMS_LIMIT]);
+double combat_shoot_inaccuracy(const struct pawn *restrict shooter, const struct obstacles *restrict obstacles);
+double combat_shoot_damage(const struct pawn *restrict shooter, double inaccuracy, double distance_victim, const struct pawn *restrict victim);
+
 int can_fight(const struct position position, const struct pawn *restrict pawn);
+int can_assault(const struct position position, const struct battlefield *restrict field);
 
 void combat_melee(const struct game *restrict game, struct battle *restrict battle);
 void combat_ranged(struct battle *battle, const struct obstacles *restrict obstacles);

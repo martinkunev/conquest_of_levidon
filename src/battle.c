@@ -418,6 +418,7 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 		pawns[i].troop = troop;
 		pawns[i].count = troop->count;
 		pawns[i].hurt = 0;
+		pawns[i].attackers = 0;
 
 		// pawns[i].position will be initialized during formation
 

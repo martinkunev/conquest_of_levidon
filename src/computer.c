@@ -58,6 +58,8 @@ double expense_significance(const struct resources *restrict expense)
 // Returns how valuable is the unit by its skills.
 double unit_importance(const struct unit *restrict unit, const struct garrison_info *restrict garrison)
 {
+	// TODO the troop can be garrison obstacle
+
 	// TODO more sophisticated logic here
 	// TODO importance should depend on battle obstacles (e.g. the more they are, the more important is battering ram); if the battering ram is owned by the defender, it is not that important
 

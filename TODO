@@ -2,6 +2,7 @@
 H	resolve more of the battle collisions
 	two horses blocked during battle (neither attacks an archer) // when they start moving, they collide again
 H	pawn trembling (sometimes when it tries to move to a certain position, but another one is there)
+H	possible division by zero: when distance between shooter and target is 0
 H	if there are too many units on the battlefield, the last ones get placed at (0, 0) and this leads to crashes
 	handle too many units on the battlefield properly
 M	fast units cannot always catch up with slow units even when they are close enough (seen with light cavalry and peasant)
@@ -22,19 +23,14 @@ H	improve map AI
 H	improve assault AI
 		F computer doesn't move the pawns during an assault // probably tries to attack unreachable pawns or the rating doesn't make the pawns approach the obstacles
 		enemy should stay inside garrison when there are shooters
-H	balance battles
-	improve auto combat
-	most of the pawn->count usually get killed at the same time (the round when the pawn dies)
-	stamina?
-	damage refactoring (combat.c, computer_battle.c)
-		raname shoot() to damage_shoot(), fight() to damage_fight(), assault() to damage_assault()
-		shoot() should return the damge; combat_ranged() should call damage_deal() after shoot()
-		fight() should be called once for each victim and it should return the damge; combat_melee() should call damage_deal() after fight()
-		damage calculation algorithm in damage_deal() should be improved (no more than 5 pawn troops can attack no more than 5 victims)
-		computer_battle.c should use fight() and shoot() to determine damage
 H	handle different screen resolutions better
 H	use a separate thread to calculate computer turns while the local player is choosing what to play
 	add indicator (e.g. lighted bulb) for the players who have completed their turn
+M	balance battles
+	improve auto combat
+	F most of the pawn->count usually get killed at the same time (the round when the pawn dies)
+	stamina?
+	chance to miss? (in deaths(), randomly choose how many troops did not hit the target)
 M	when there is no local player left fighting in a battle, resolve the battle automatically
 M	improve AI
 	treating each troop separately when finding local maximum in AI will have bad results
@@ -89,6 +85,7 @@ M	improve world loading/saving
 	log (level warning) when an optional field has the wrong type; assume the field is not present for the execution logic
 	refactor (simplify) the code using these ideas
 M	? melee units should go closer to the shooter to prevent them from escaping far enough to shoot
+L	add option for shooters to cover larger area while shooting
 L	improve error reporting on invalid map
 L	improve AI (formation AI, predicting troops in unknown regions, batter map behavior, better battle behavior, etc.)
 L	better support for hotseat (choose player names, timer (to limit player turn duration))

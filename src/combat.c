@@ -29,10 +29,6 @@
 #include "battle.h"
 #include "combat.h"
 
-#define ACCURACY 0.5
-
-#define MISS_MAX 20 /* 20% */
-
 const double damage_boost[7][6] =
 {
 // ARMOR:					NONE		LEATHER		CHAINMAIL	PLATE		WOODEN		STONE
@@ -45,112 +41,129 @@ const double damage_boost[7][6] =
 	[WEAPON_BLUNT] = {		1.0,		1.0,		1.0,		0.5,		1.0,		0.7},
 };
 
-// TODO merge these functions
-double damage_expected(const struct pawn *restrict fighter, double troops_count, const struct pawn *restrict victim)
+static inline unsigned combat_damage(unsigned attacker_troops, double damage, enum weapon weapon, const struct unit *restrict victim)
 {
-	enum weapon weapon = fighter->troop->unit->melee.weapon;
-	enum armor armor = victim->troop->unit->armor;
-	double damage = fighter->troop->unit->melee.damage * fighter->troop->unit->melee.agility;
-	return troops_count * damage * damage_boost[weapon][armor] + victim->hurt;
-}
-double damage_expected_ranged(const struct pawn *restrict shooter, double troops_count, const struct pawn *restrict victim)
-{
-	// TODO this is not that simple - it should take into account accuracy and damage to neighboring fields
-	enum weapon weapon = shooter->troop->unit->ranged.weapon;
-	enum armor armor = victim->troop->unit->armor;
-	double damage = shooter->troop->unit->ranged.damage;
-	return troops_count * damage * damage_boost[weapon][armor] + victim->hurt;
-}
-double damage_expected_assault(const struct pawn *restrict fighter, double troops_count, const struct battlefield *restrict field)
-{
-	enum weapon weapon = fighter->troop->unit->melee.weapon;
-	enum armor armor = field->unit->armor;
-	double damage = fighter->troop->unit->melee.damage;
-	return troops_count * damage * damage_boost[weapon][armor] + (field->unit->health - field->strength);
-}
-
-static void damage_deal(double damage, unsigned attacker_troops, struct pawn *restrict victim)
-{
-	const struct unit *restrict unit = victim->troop->unit;
-
-	// Attacking troops can sometimes miss.
-	damage *= (100 - random() % (MISS_MAX + 1)) / 100.0;
+	damage *= damage_boost[weapon][victim->armor];
 
 	// Each attacker deals damage to a single troop.
 	// The attacker cannot deal more damage than the health of the troop.
-	if (damage > unit->health) damage = unit->health;
+	if (damage > victim->health) damage = victim->health;
 
-	victim->hurt += (unsigned)(damage * attacker_troops + 0.5);
+	return (unsigned)(damage * attacker_troops + 0.5);
 }
 
-static void assault(const struct pawn *restrict fighter, struct battlefield *restrict target)
+unsigned combat_fight_troops(const struct pawn *restrict fighter, unsigned fighter_troops, unsigned victim_troops)
 {
-	enum armor armor = target->unit->armor;
-	enum weapon weapon = fighter->troop->unit->melee.weapon;
+	unsigned max;
 
-	unsigned damage_final = (unsigned)(fighter->troop->unit->melee.damage * fighter->count * damage_boost[weapon][armor] + 0.5);
+	// No more than half the troops can attack a single pawn.
+	max = fighter->count / 2;
+	if (fighter_troops > max)
+		fighter_troops = max;
 
-	if (damage_final >= target->strength) target->strength = 0;
-	else target->strength -= damage_final;
+	// No more than two troops can attack a single troop.
+	max = victim_troops * 2;
+	if (fighter_troops > max)
+		fighter_troops = max;
+
+	return fighter_troops;
 }
 
-static void fight(const struct pawn *restrict fighter, struct pawn *restrict victims[], size_t victims_count)
+double combat_fight_damage(const struct pawn *restrict fighter, unsigned fighter_troops, const struct pawn *restrict victim)
 {
-	assert(victims_count <= VICTIMS_MELEE_LIMIT);
-
-	size_t i;
-
 	enum weapon weapon = fighter->troop->unit->melee.weapon;
 	double damage = fighter->troop->unit->melee.damage * fighter->troop->unit->melee.agility;
-
-	// Distribute the attacking troops equally between the victims.
-	// Choose targets for the remainder randomly.
-	unsigned attackers = fighter->count / victims_count;
-	unsigned targets_attackers[VICTIMS_MELEE_LIMIT] = {0};
-	unsigned left = fighter->count % victims_count;
-	while (left--)
-		targets_attackers[random() % victims_count] += 1;
-
-	for(i = 0; i < victims_count; ++i)
-	{
-		targets_attackers[i] += attackers;
-		damage_deal(damage * damage_boost[weapon][victims[i]->troop->unit->armor], targets_attackers[i], victims[i]);
-	}
+	return combat_damage(fighter_troops, damage, weapon, victim->troop->unit);
 }
 
-static void shoot(const struct pawn *shooter, struct pawn *victim, double damage, double miss, double distance_victim)
+// Returns the distance from a position to an obstacle.
+double combat_assault_distance(const struct position position, const struct obstacle *restrict obstacle)
+{
+	float dx, dy;
+
+	if (obstacle->left > position.x) dx = obstacle->left - position.x;
+	else if (position.x > obstacle->right) dx = position.x - obstacle->right;
+	else dx = 0;
+
+	if (obstacle->top > position.y) dy = obstacle->top - position.y;
+	else if (position.y > obstacle->bottom) dy = position.y - obstacle->bottom;
+	else dy = 0;
+
+	return sqrt(dx * dx + dy * dy);
+}
+
+double combat_assault_damage(const struct pawn *restrict fighter, const struct battlefield *restrict target)
+{
+	// No more than half the troops can attack the obstacle.
+	double damage = combat_damage(fighter->count / 2, fighter->troop->unit->melee.damage, fighter->troop->unit->melee.weapon, target->unit);
+	if (damage > target->strength)
+		damage = target->strength;
+	return damage;
+}
+
+unsigned combat_shoot_victims(struct battle *restrict battle, const struct pawn *restrict shooter, struct victim_shoot victims[static VICTIMS_LIMIT])
+{
+	// Shooters deal damage in an area around the target.
+	// There is friendly fire.
+
+	// TODO use closest index to loop through the pawns (don't loop through all of them)
+
+	unsigned victims_count = 0;
+	for(size_t i = 0; i < battle->pawns_count; ++i)
+	{
+		double distance = battlefield_distance(shooter->target.position, battle->pawns[i].position);
+		if (distance > DISTANCE_RANGED)
+			continue;
+
+		victims[victims_count].pawn = battle->pawns + i;
+		victims[victims_count].distance = distance;
+		victims_count += 1;
+	}
+	return victims_count;
+}
+
+double combat_shoot_inaccuracy(const struct pawn *restrict shooter, const struct obstacles *restrict obstacles)
+{
+	double distance = battlefield_distance(shooter->position, shooter->target.position);
+	unsigned range = shooter->troop->unit->ranged.range;
+
+	if (!path_visible(shooter->position, shooter->target.position, obstacles))
+		range -= 1;
+
+	return distance / range;
+}
+
+double combat_shoot_damage(const struct pawn *restrict shooter, double inaccuracy, double distance_victim, const struct pawn *restrict victim)
 {
 	// The larger the distance to the target, the more the damage is spread around it.
 
 	// Shoot accuracy at the center and at the periphery of the target area for minimum and maximum distance.
 	static const double target_accuracy[2][2] = {{1, 0.5}, {0, 0.078125}}; // {{1, 1/2}, {0, 5/64}}
 
-	enum armor armor = victim->troop->unit->armor;
-	enum weapon weapon = shooter->troop->unit->ranged.weapon;
+	double impact_center = target_accuracy[0][0] * (1 - inaccuracy) + target_accuracy[0][1] * inaccuracy;
+	double impact_periphery = target_accuracy[1][0] * (1 - inaccuracy) + target_accuracy[1][1] * inaccuracy;
 
-	double on_target_center = target_accuracy[0][0] * (1 - miss) + target_accuracy[0][1] * miss;
-	double on_target_periphery = target_accuracy[1][0] * (1 - miss) + target_accuracy[1][1] * miss;
+	double damage = combat_damage(shooter->count, shooter->troop->unit->ranged.damage, shooter->troop->unit->ranged.weapon, victim->troop->unit);
+	double offtarget = distance_victim / DISTANCE_RANGED;
 
-	double miss_victim = distance_victim / DISTANCE_RANGED;
-	damage *= on_target_center * (1 - miss_victim) + on_target_periphery * miss_victim;
-	damage *= damage_boost[weapon][armor];
-
-	// Assume all troops can shoot this victim.
-	damage_deal(damage, shooter->count, victim);
+	return damage * impact_center * (1 - offtarget) + impact_periphery * offtarget;
 }
 
-static unsigned deaths(unsigned damage, unsigned troops, unsigned health)
+static unsigned deaths(const struct pawn *restrict pawn)
 {
-	unsigned min, max;
-	unsigned damage_withstand = (health - 1) * troops;
+	unsigned deaths_max, deaths_min;
+	double deaths_actual;
 
-	if (damage_withstand >= damage) min = 0;
-	else min = (damage - damage_withstand);
-	max = damage / health;
-	if (max > troops) max = troops;
-	if (min > max) min = max;
+	// Maximum deaths are achieved when the damage is concentrated to single troops.
+	deaths_max = pawn->hurt / pawn->troop->unit->health;
 
-	return min + random() % (max - min + 1);
+	// Each attacker can kill at most 1 troop.
+	if (deaths_max > pawn->attackers) deaths_max = pawn->attackers;
+
+	deaths_min = deaths_max / 2;
+
+	deaths_actual = deaths_min + random() % (deaths_max - deaths_min + 1);
+	return ((deaths_actual > pawn->count) ? pawn->count : deaths_actual);
 }
 
 // Determine whether the target obstacle is close enough to be attacked.
@@ -208,12 +221,16 @@ void combat_melee(const struct game *restrict game, struct battle *restrict batt
 		if (fighter->action == ACTION_ASSAULT)
 		{
 			if (can_assault(fighter->position, fighter->target.field))
-				assault(fighter, fighter->target.field);
+				fighter->target.field->strength -= (unsigned)combat_assault_damage(fighter, fighter->target.field);
 		}
 		else
 		{
-			struct pawn *victims[VICTIMS_MELEE_LIMIT];
+			struct pawn *victims[VICTIMS_LIMIT];
 			unsigned victims_count = 0;
+			unsigned victims_troops = 0;
+
+			unsigned targets_attackers[VICTIMS_LIMIT];
+			unsigned attackers_left = fighter->count;
 
 			// Fight all enemy pawns nearby.
 			for(size_t j = 0; j < battle->pawns_count; ++j)
@@ -224,114 +241,63 @@ void combat_melee(const struct game *restrict game, struct battle *restrict batt
 				if (game->players[victim->troop->owner].alliance == fighter_alliance)
 					continue;
 				if (can_fight(fighter->position, victim))
+				{
+					assert(victims_count < VICTIMS_LIMIT);
 					victims[victims_count++] = victim;
+					victims_troops += victim->count;
+				}
 			}
 
-			assert(victims_count <= VICTIMS_MELEE_LIMIT);
+			if (!victims_count)
+				continue;
 
-			if (victims_count)
-				fight(fighter, victims, victims_count);
+			// Distribute the attacking troops proportionally between victim troops.
+			// Choose targets for the remainder randomly.
+			for(size_t i = 0; i < victims_count; ++i)
+			{
+				// The number of troops, truncated to integer, is smaller than the mathematical value of the expression.
+				// This guarantees that attackers_left cannot become negative.
+				targets_attackers[i] = fighter->count * victims[i]->count / victims_troops;
+				attackers_left -= targets_attackers[i];
+			}
+			while (attackers_left--)
+				targets_attackers[random() % victims_count] += 1;
+
+			for(size_t i = 0; i < victims_count; ++i)
+			{
+				double fight_troops = combat_fight_troops(fighter, targets_attackers[i], victims[i]->count);
+				victims[i]->hurt += (unsigned)combat_fight_damage(fighter, fight_troops, victims[i]);
+				victims[i]->attackers += fight_troops;
+			}
 		}
 	}
 }
 
 void combat_ranged(struct battle *restrict battle, const struct obstacles *restrict obstacles)
 {
-	// Shooters deal damage in an area around the target.
-	// There is friendly fire.
-
 	for(size_t i = 0; i < battle->pawns_count; ++i)
 	{
 		struct pawn *shooter = battle->pawns + i;
 
-		if (!shooter->count) continue;
-		if (shooter->action != ACTION_SHOOT) continue;
+		double inaccuracy;
+		struct victim_shoot victims[VICTIMS_LIMIT];
+		unsigned victims_count;
 
-		double damage_total = shooter->troop->unit->ranged.damage;
-		unsigned range;
-		double distance, miss;
+		if (!shooter->count)
+			continue;
+		if (shooter->action != ACTION_SHOOT)
+			continue;
 
-		// TODO add option for the shooters to spread their arrows
+		inaccuracy = combat_shoot_inaccuracy(shooter, obstacles);
 
-		range = shooter->troop->unit->ranged.range;
-		if (!path_visible(shooter->position, shooter->target.position, obstacles))
+		victims_count = combat_shoot_victims(battle, shooter, victims);
+		for(size_t j = 0; j < victims_count; ++j)
 		{
-			damage_total *= ACCURACY;
-			range -= 1;
-		}
-		distance = battlefield_distance(shooter->position, shooter->target.position);
-		if (range < distance) continue; // no shooting if the target is too far // TODO is this necessary?
-
-		miss = distance / shooter->troop->unit->ranged.range;
-
-		for(size_t j = 0; j < battle->pawns_count; ++j)
-		{
-			struct pawn *victim = battle->pawns + j;
-			double distance_victim = battlefield_distance(shooter->target.position, victim->position);
-			if (distance_victim <= DISTANCE_RANGED)
-				shoot(shooter, victim, damage_total, miss, distance_victim);
+			// Assume all troops can shoot this victim.
+			victims[j].pawn->hurt += (unsigned)combat_shoot_damage(shooter, inaccuracy, victims[j].distance, victims[j].pawn);
+			victims[j].pawn->attackers += shooter->count;
 		}
 	}
-}
-
-int battlefield_clean(const struct game *restrict game, struct battle *restrict battle)
-{
-	size_t p;
-	size_t x, y;
-
-	int activity = 0;
-
-	// Remove destroyed obstacles.
-	for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
-		for(x = 0; x < BATTLEFIELD_HEIGHT; ++x)
-		{
-			struct battlefield *restrict field = &battle->field[y][x];
-			if (((field->blockage == BLOCKAGE_WALL) || (field->blockage == BLOCKAGE_GATE)) && !field->strength)
-			{
-				activity = 1;
-				field->blockage = BLOCKAGE_NONE;
-			}
-		}
-
-	// Calculate casualties and remove dead pawns.
-	for(p = 0; p < battle->pawns_count; ++p)
-	{
-		struct pawn *pawn = battle->pawns + p;
-		unsigned health = pawn->troop->unit->health;
-
-		if (!pawn->count) continue;
-
-		unsigned dead = deaths(pawn->hurt, pawn->count, health);
-		if (dead)
-		{
-			activity = 1;
-
-			pawn->hurt -= dead * health;
-			if (pawn->count <= dead)
-				pawn->count = 0;
-			else
-				pawn->count -= dead;
-		}
-	}
-
-	// Reset pawn action if the target is no longer valid.
-	for(p = 0; p < battle->pawns_count; ++p)
-	{
-		struct pawn *pawn = battle->pawns + p;
-		if (!pawn->count) continue;
-
-		// Stop pawns from attacking dead pawns and destroyed obstacles.
-		if ((pawn->action == ACTION_SHOOT) && !can_shoot(game, battle, pawn, pawn->target.position))
-			pawn->action = 0;
-		if ((pawn->action == ACTION_FIGHT) && !pawn->target.pawn->count)
-			pawn->action = 0;
-		if ((pawn->action == ACTION_ASSAULT) && !pawn->target.field->blockage)
-			pawn->action = 0;
-
-		// TODO what if the target pawn is no longer reachable?
-	}
-
-	return activity;
 }
 
 int combat_fight(const struct game *restrict game, const struct battle *restrict battle, const struct obstacles *restrict obstacles, struct pawn *restrict fighter, struct pawn *restrict victim)
@@ -388,4 +354,62 @@ int combat_shoot(const struct game *restrict game, const struct battle *restrict
 	shooter->target.position = target;
 
 	return 1;
+}
+
+int battlefield_clean(const struct game *restrict game, struct battle *restrict battle)
+{
+	size_t p;
+	size_t x, y;
+
+	int activity = 0;
+
+	// Remove destroyed obstacles.
+	for(y = 0; y < BATTLEFIELD_HEIGHT; ++y)
+		for(x = 0; x < BATTLEFIELD_HEIGHT; ++x)
+		{
+			struct battlefield *restrict field = &battle->field[y][x];
+			if (((field->blockage == BLOCKAGE_WALL) || (field->blockage == BLOCKAGE_GATE)) && !field->strength)
+			{
+				activity = 1;
+				field->blockage = BLOCKAGE_NONE;
+			}
+		}
+
+	// Calculate casualties and remove dead pawns.
+	for(p = 0; p < battle->pawns_count; ++p)
+	{
+		struct pawn *pawn = battle->pawns + p;
+		unsigned dead;
+
+		if (!pawn->count) continue;
+
+		if (dead = deaths(pawn))
+		{
+			activity = 1;
+
+			pawn->hurt -= dead * pawn->troop->unit->health;
+			pawn->count -= dead;
+		}
+
+		pawn->attackers = 0;
+	}
+
+	// Reset pawn action if the target is no longer valid.
+	for(p = 0; p < battle->pawns_count; ++p)
+	{
+		struct pawn *pawn = battle->pawns + p;
+		if (!pawn->count) continue;
+
+		// Stop pawns from attacking dead pawns and destroyed obstacles.
+		if ((pawn->action == ACTION_SHOOT) && !can_shoot(game, battle, pawn, pawn->target.position))
+			pawn->action = 0;
+		if ((pawn->action == ACTION_FIGHT) && !pawn->target.pawn->count)
+			pawn->action = 0;
+		if ((pawn->action == ACTION_ASSAULT) && !pawn->target.field->blockage)
+			pawn->action = 0;
+
+		// TODO what if the target pawn is no longer reachable?
+	}
+
+	return activity;
 }
