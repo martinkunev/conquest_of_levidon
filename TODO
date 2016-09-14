@@ -14,13 +14,15 @@ flickering
 	https://groups.google.com/forum/#!topic/android-developers/om5Utez9PgA
 
 -- features --
+H	improve battle AI
+	ACTION_GUARD should treat very closely located pawns as victims
 H	improve map AI
 	fix map AI for the region population feature
 	computer map orders are weak
 		computer doesn't want to train good units because there are not enough resources; then an income building is constructed and the computer trains worse units
 	computer cannot recover well from having negative food income
 		// solution: dismiss troops
-H	improve assault AI
+M	improve assault AI
 		F computer doesn't move the pawns during an assault // probably tries to attack unreachable pawns or the rating doesn't make the pawns approach the obstacles
 		enemy should stay inside garrison when there are shooters
 H	handle different screen resolutions better
@@ -153,14 +155,14 @@ L	directory tabs images
 
 battle
 H	display region name during battle
-H	display calculated pawn moves (not a straight line)
 H	when two pawns from different alliances are next to each other, display red line between them (to show that they are fighting)
-H	fight animation (display which units are fighting)
 H	display round number and number of rounds until retreat
 H	new wall and gate images; open gate image
 	display open gate when there is a pawn on top of the gate
 H	tell all players if somebody is retreating
 H	show gate strength even if there is a pawn on top of it
+M	display calculated pawn moves (not a straight line)
+M	fight animation (display which units are fighting)
 M	hide mouse pointer during animation
 M	support showing more pawn stats (not just health)
 M	change image for pawn selection
@@ -179,7 +181,7 @@ map
 H	improve boxes for field and garrison troops (it's not obvious one can place units there until there are units)
 H	show income/expenses adjusted for troop movement (troops moved to garrison, attacking troops, etc.)
 H	troop bar for just battering ram is not displayed on the map (because it's just 1 troop)
-H	place the flag properly
+M	place the flag properly
 M	troop movement animation
 M	display current month and year
 M	one should be able to tell all troops to go on assault

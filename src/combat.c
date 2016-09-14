@@ -57,7 +57,7 @@ unsigned combat_fight_troops(const struct pawn *restrict fighter, unsigned fight
 	unsigned max;
 
 	// No more than half the troops can attack a single pawn.
-	max = fighter->count / 2;
+	max = fighter->troop->unit->troops_count / 2;
 	if (fighter_troops > max)
 		fighter_troops = max;
 
@@ -152,6 +152,8 @@ double combat_shoot_damage(const struct pawn *restrict shooter, double inaccurac
 static unsigned deaths(const struct pawn *restrict pawn)
 {
 	unsigned deaths_max, deaths_min;
+	unsigned hurt_withstand;
+	unsigned deaths_certain;
 	double deaths_actual;
 
 	// Maximum deaths are achieved when the damage is concentrated to single troops.
@@ -160,8 +162,19 @@ static unsigned deaths(const struct pawn *restrict pawn)
 	// Each attacker can kill at most 1 troop.
 	if (deaths_max > pawn->attackers) deaths_max = pawn->attackers;
 
-	deaths_min = deaths_max / 2;
+	// Minimum deaths are achieved when the damage is spread between troops.
+	hurt_withstand = (pawn->troop->unit->health - 1) * pawn->count;
+	deaths_min = ((pawn->hurt > hurt_withstand) ? (pawn->hurt - hurt_withstand) : 0);
 
+	// Check if the minimum number of deaths is enough to kill all troops.
+	if (deaths_min > pawn->count)
+		return pawn->count;
+
+	// Attackers tend to attack vulnerable targets which ensures a minimum number of deaths.
+	deaths_certain = deaths_max / 2;
+	if (deaths_min < deaths_certain) deaths_min = deaths_certain;
+
+	assert(deaths_max >= deaths_min);
 	deaths_actual = deaths_min + random() % (deaths_max - deaths_min + 1);
 	return ((deaths_actual > pawn->count) ? pawn->count : deaths_actual);
 }
@@ -265,7 +278,7 @@ void combat_melee(const struct game *restrict game, struct battle *restrict batt
 
 			for(size_t i = 0; i < victims_count; ++i)
 			{
-				double fight_troops = combat_fight_troops(fighter, targets_attackers[i], victims[i]->count);
+				unsigned fight_troops = combat_fight_troops(fighter, targets_attackers[i], victims[i]->count);
 				victims[i]->hurt += (unsigned)combat_fight_damage(fighter, fight_troops, victims[i]);
 				victims[i]->attackers += fight_troops;
 			}
