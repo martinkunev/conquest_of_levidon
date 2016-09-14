@@ -408,13 +408,13 @@ static int world_populate(const union json *restrict json, struct game *restrict
 
 	game->turn = 0; // TODO get this from the world file
 
-	game->players_count = node->array.count;
-	game->players = malloc(game->players_count * sizeof(struct player));
-	if (!game->players) goto error;
-
 	if (json_type(json) != JSON_OBJECT) goto error;
 	node = value_get(&json->object, "players", JSON_ARRAY);
 	if (!node || (node->array.count < 1) || (node->array.count > PLAYERS_LIMIT)) goto error;
+
+	game->players_count = node->array.count;
+	game->players = malloc(game->players_count * sizeof(struct player));
+	if (!game->players) goto error;
 
 	for(index = 0; index < game->players_count; ++index)
 	{
