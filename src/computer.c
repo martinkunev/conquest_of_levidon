@@ -98,11 +98,11 @@ int state_wanted(double rate, double rate_new, double temperature)
 
 int main(void)
 {
-	printf("%16s %8s %12s %16s %16s\n", "name", "count", "importance", "total importance", "usefulness");
+	printf("%16s %8s %12s %16s %16s %12s\n", "name", "count", "importance", "total importance", "usefulness", "expense");
 	for(size_t i = 0; i < UNITS_COUNT; ++i)
 	{
 		double importance = unit_importance(UNITS + i, 0);
-		printf("%16.*s %8u %12f %16f %16f\n", (int)UNITS[i].name_length, UNITS[i].name, (unsigned)UNITS[i].troops_count, importance, importance * UNITS[i].troops_count, importance * UNITS[i].troops_count / expense_significance(&UNITS[i].cost));
+		printf("%16.*s %8u %12f %16f %16f %12f\n", (int)UNITS[i].name_length, UNITS[i].name, (unsigned)UNITS[i].troops_count, importance, importance * UNITS[i].troops_count, importance * UNITS[i].troops_count / expense_significance(&UNITS[i].cost), expense_significance(&UNITS[i].cost));
 	}
 	return 0;
 }

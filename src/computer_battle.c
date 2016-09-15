@@ -506,6 +506,9 @@ static double battle_state_rating(const struct game *restrict game, struct battl
 		}
 		else if (pawn->action == ACTION_ASSAULT)
 		{
+			if (game->players[player].alliance == battle->defender)
+				continue; // no rating for attacking own obstacles
+
 			// estimate assault impact
 			damage = combat_assault_damage(pawn, pawn->target.field);
 			rating += attack_rating(damage, pawn->target.field->unit, 1, info);
@@ -529,6 +532,8 @@ static double battle_state_rating(const struct game *restrict game, struct battl
 		double rating_attack, rating_attack_max;
 
 		const struct pawn *restrict attacker = battle->pawns + i;
+		if (!attacker->count)
+			continue;
 		if (allies(game, attacker->troop->owner, player) && (attacker->troop->owner != player))
 			continue; // skip pawns owned by allied players
 
@@ -598,7 +603,7 @@ static double battle_state_rating(const struct game *restrict game, struct battl
 				double rating_ranged;
 
 				// TODO make a better estimation for inaccuracy
-				damage = combat_shoot_damage(attacker, 1, attacker->troop->unit->ranged.range, victim);
+				damage = combat_shoot_damage(attacker, 1, 0, victim);
 				impact = attack_rating(damage, victim->troop->unit, counts[j], info);
 
 				rating_ranged = impact / (defenders_ranged * (1 + distance_coefficient(distance, attacker->troop->unit->ranged.range, attacker->troop->unit->speed)));
