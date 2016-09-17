@@ -1,10 +1,13 @@
 -- bugs --
-H	resolve more of the battle collisions
+H	F resolve more of the battle collisions
 	two horses blocked during battle (neither attacks an archer) // when they start moving, they collide again
-H	pawn trembling (sometimes when it tries to move to a certain position, but another one is there)
-H	possible division by zero: when distance between shooter and target is 0
 H	if there are too many units on the battlefield, the last ones get placed at (0, 0) and this leads to crashes
 	handle too many units on the battlefield properly
+H	crash: retreat take effect immediately and if there only one other player that is computer, its rating_max will be 0
+H	F battle report displayed when an empty region is invaded (and taken without battle)
+H	F pawn getting too close to an obstacle
+H	either the AI algorithm or the neighbor state graph are buggy
+M	pawn trembling (sometimes when it tries to move to a certain position, but another one is there)
 M	fast units cannot always catch up with slow units even when they are close enough (seen with light cavalry and peasant)
 L	if_init fails on mac (in glXMakeContextCurrent) when used with ssh forwarding
 
@@ -14,20 +17,19 @@ flickering
 	https://groups.google.com/forum/#!topic/android-developers/om5Utez9PgA
 
 -- features --
-H	improve battle AI
-	ACTION_GUARD should treat very closely located pawns as victims
 H	improve map AI
 	fix map AI for the region population feature
 	computer map orders are weak
 		computer doesn't want to train good units because there are not enough resources; then an income building is constructed and the computer trains worse units
 	computer cannot recover well from having negative food income
 		// solution: dismiss troops
-M	improve assault AI
-		F computer doesn't move the pawns during an assault // probably tries to attack unreachable pawns or the rating doesn't make the pawns approach the obstacles
-		enemy should stay inside garrison when there are shooters
 H	handle different screen resolutions better
 H	use a separate thread to calculate computer turns while the local player is choosing what to play
+	use the threads for all input actions (invasion, formation, battle)
 	add indicator (e.g. lighted bulb) for the players who have completed their turn
+	individual graph for each player (because they are mutable)
+M	improve assault AI
+		enemy should stay inside garrison when there are shooters
 M	balance battles
 	improve auto combat
 	F most of the pawn->count usually get killed at the same time (the round when the pawn dies)
@@ -133,6 +135,7 @@ refactoring
 	rename if_display to if_render
 
 -- interface --
+M	support up to 24 players
 M	display a mirror image of enemy troops
 	? display an ellipse with the owner below the troop (instead of changing some pixels in the sprite)
 M	custom mouse pointer

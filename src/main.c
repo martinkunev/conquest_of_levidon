@@ -22,6 +22,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <time.h>
+#include <unistd.h>
 
 #include "errors.h"
 #include "game.h"
@@ -44,6 +45,7 @@
 #include "display_map.h"
 #include "display_battle.h"
 #include "menu.h"
+#include "players.h"
 
 #define S(s) s, sizeof(s) - 1
 
@@ -279,7 +281,20 @@ static int play(struct game *restrict game)
 	assert(PLAYERS_LIMIT <= 16); // TODO this should be compile-time assert
 
 	for(player = 0; player < game->players_count; ++player)
-		players_local += (game->players[player].type == Local);
+	{
+		switch (game->players[player].type)
+		{
+		case Local:
+			players_local += 1;
+			break;
+
+		case Neutral:
+		case Computer:
+			if (player_init(game->players + player, player) < 0)
+				abort();
+			break;
+		}
+	}
 	game->hotseat = (players_local > 1);
 
 	do
@@ -292,29 +307,38 @@ static int play(struct game *restrict game)
 			unsigned char winner;
 		} battle_info[REGIONS_LIMIT] = {0};
 
+		for(player = 0; player < game->players_count; ++player)
+			switch (game->players[player].type)
+			{
+			case Computer:
+				player_map(game, player);
+				break;
+			}
+
 		// Ask each player to perform map actions.
 		for(player = 0; player < game->players_count; ++player)
 			switch (game->players[player].type)
 			{
-			case Neutral:
-				continue;
-
 			case Local:
 				if (game->hotseat)
 					player_next(player);
 				status = input_map(game, player);
 				if (status < 0)
-					return status;
+					goto finally;
 				break;
+			}
 
+		for(player = 0; player < game->players_count; ++player)
+			switch (game->players[player].type)
+			{
 			case Computer:
-				status = computer_map(game, player);
+				status = player_response(game, player);
 				if (status < 0)
-					return status;
+					goto finally;
 #if defined(DEBUG)
 				status = input_map(game, player);
 				if (status < 0)
-					return status;
+					goto finally;
 #endif
 				break;
 			}
@@ -397,21 +421,19 @@ static int play(struct game *restrict game)
 		// Settle conflicts by battles.
 		for(index = 0; index < game->regions_count; ++index)
 		{
-			unsigned alliances_assault = 0, alliances_open = 0;
+			uint32_t alliances_assault = 0, alliances_open = 0, alliances;
 			int manual_assault = 0, manual_open = 0;
 
 			int status;
 
 			region = game->regions + index;
 
-			// Start open battle if troops of two different alliances occupy the region.
-			// If there is no open battle and there are troops preparing for assault, start assault battle.
+			// Collect information about the troops in each region.
 			for(troop = region->troops; troop; troop = troop->_next)
 			{
 				if (troop->move == LOCATION_GARRISON)
 				{
 					alliances_assault |= (1 << game->players[troop->owner].alliance);
-					alliances_open |= (1 << game->players[troop->owner].alliance);
 					if (game->players[troop->owner].type == Local) manual_assault = 1;
 				}
 				else
@@ -420,44 +442,50 @@ static int play(struct game *restrict game)
 					if (game->players[troop->owner].type == Local) manual_open = 1;
 				}
 			}
+
+			// Check if the owner of the garrison has troops in the garrison and wants to reinforce the defense.
+			alliances = alliances_open | alliances_assault;
+			if ((alliances & (alliances - 1)) && (alliances_assault & (1 << game->players[region->garrison.owner].alliance)))
+			{
+				switch (game->players[region->garrison.owner].type)
+				{
+				case Neutral:
+					status = 0;
+					break;
+
+				case Local:
+					{
+						struct state_question state = {.region = region};
+						if (game->hotseat)
+							player_next(region->garrison.owner);
+						status = input_report_invasion(&state);
+					}
+					break;
+
+				case Computer:
+					status = computer_invasion(game, region, region->garrison.owner);
+					break;
+				}
+				if (status < 0)
+					goto finally;
+
+				if (status)
+				{
+					if (game->players[region->garrison.owner].type == Local) manual_open = 1;
+					alliances_open |= (1 << game->players[region->garrison.owner].alliance);
+					battle_info[index].type = BATTLE_OPEN_REINFORCED;
+				}
+			}
+
+			// Start open battle if troops of two different alliances occupy the region.
+			// If there is no open battle and there are troops preparing for assault, start assault battle.
 			if (alliances_open & (alliances_open - 1))
 			{
-				battle_info[index].type = BATTLE_OPEN;
-
-				// Check if the owner of the garrison has troops in the garrison and wants to reinforce the defense.
-				if (alliances_assault & (1 << game->players[region->garrison.owner].alliance))
-				{
-					switch (game->players[region->garrison.owner].type)
-					{
-					case Neutral:
-						status = 0;
-						break;
-
-					case Local:
-						{
-							struct state_question state = {.region = region};
-							if (game->hotseat)
-								player_next(region->garrison.owner);
-							status = input_report_invasion(&state);
-						}
-						break;
-
-					case Computer:
-						status = computer_invasion(game, region, region->garrison.owner);
-						break;
-					}
-					if (status < 0)
-						return status;
-
-					if (status)
-					{
-						if (game->players[region->garrison.owner].type == Local) manual_open = 1;
-						battle_info[index].type = BATTLE_OPEN_REINFORCED;
-					}
-				}
+				if (!battle_info[index].type)
+					battle_info[index].type = BATTLE_OPEN;
 
 				status = (manual_open ? play_battle(game, region, battle_info[index].type) : calculate_battle(game, region, 0));
-				if (status < 0) return status;
+				if (status < 0) goto finally;
 
 				battle_info[index].winner = status;
 			}
@@ -466,7 +494,7 @@ static int play(struct game *restrict game)
 				battle_info[index].type = BATTLE_ASSAULT;
 
 				status = (manual_assault ? play_battle(game, region, battle_info[index].type) : calculate_battle(game, region, 1));
-				if (status < 0) return status;
+				if (status < 0) goto finally;
 
 				battle_info[index].winner = status;
 			}
@@ -560,11 +588,26 @@ static int play(struct game *restrict game)
 
 		game->turn += 1;
 
-		if (!players_local)
-			return 0;
-	} while (alliances & (alliances - 1)); // while there is more than 1 alliance
+		if (!players_local) // no more human-controlled players
+		{
+			status = 0;
+			goto finally;
+		}
+	} while (1 || (alliances & (alliances - 1))); // while there is more than 1 alliance
 
-	return alliances;
+	status = alliances;
+
+finally:
+	for(player = 0; player < game->players_count; ++player)
+		switch (game->players[player].type)
+		{
+		case Neutral:
+		case Computer:
+			player_term(game->players + player);
+			break;
+		}
+
+	return status;
 }
 
 int main(int argc, char *argv[])

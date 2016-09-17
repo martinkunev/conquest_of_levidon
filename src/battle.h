@@ -47,12 +47,17 @@ struct pawn
 	struct position position; // current pawn position
 	struct position position_next; // expected pawn position at the next step
 
+	struct array_moves moves; // pathfinding-generated movement to the next path position
+
+	unsigned startup; // index of startup location on the battlefield or NEIGHBOR_SELF/NEIGHBOR_GARRISON
+
+	// Player-specific input variables below.
+
 	struct
 	{
 		size_t count;
 		struct position data[PATH_QUEUE_LIMIT];
 	} path; // user-specified path of not yet reached positions
-	struct array_moves moves; // pathfinding-generated movement to the next path position
 
 	enum pawn_action {ACTION_HOLD, ACTION_GUARD, ACTION_FIGHT, ACTION_SHOOT, ACTION_ASSAULT} action; // TODO maybe rename ACTION_FIGHT to ACTION_FOLLOW
 	union
@@ -61,8 +66,6 @@ struct pawn
 		struct position position; // for ACTION_GUARD and ACTION_SHOOT
 		struct battlefield *field; // for ACTION_ASSAULT
 	} target;
-
-	unsigned startup; // index of startup location on the battlefield or NEIGHBOR_SELF/NEIGHBOR_GARRISON
 };
 
 enum {POSITION_RIGHT = 0x1, POSITION_TOP = 0x2, POSITION_LEFT = 0x4, POSITION_BOTTOM = 0x8};

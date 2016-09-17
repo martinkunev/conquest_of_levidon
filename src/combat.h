@@ -35,13 +35,18 @@ struct victim_shoot
 	double distance;
 };
 
+static inline double guard_distance(const struct unit *restrict unit)
+{
+	return unit->speed / 2.0;
+}
+
 unsigned combat_fight_troops(const struct pawn *restrict fighter, unsigned fighter_troops, unsigned victim_troops);
 double combat_fight_damage(const struct pawn *restrict fighter, unsigned fighter_troops, const struct pawn *restrict victim);
 
 double combat_assault_distance(const struct position position, const struct obstacle *restrict obstacle);
 double combat_assault_damage(const struct pawn *restrict fighter, const struct battlefield *restrict target);
 
-unsigned combat_shoot_victims(struct battle *restrict battle, const struct pawn *restrict shooter, struct victim_shoot victims[static VICTIMS_LIMIT]);
+unsigned combat_shoot_victims(const struct battle *restrict battle, const struct pawn *restrict shooter, struct victim_shoot victims[static VICTIMS_LIMIT]);
 double combat_shoot_inaccuracy(const struct pawn *restrict shooter, const struct obstacles *restrict obstacles);
 double combat_shoot_damage(const struct pawn *restrict shooter, double inaccuracy, double distance_victim, const struct pawn *restrict victim);
 

@@ -264,15 +264,15 @@ static unsigned neighbors_static(struct position position, enum pawn_action acti
 	return 1;
 }
 
-static unsigned neighbors_move(struct battle *restrict battle, const struct pawn *restrict pawn, struct position *restrict positions, double x, double y, const struct heap_pawn_distance *restrict closest, double reachable[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH], struct pawn_command neighbors[static 1])
+static unsigned neighbors_move(const struct battle *restrict battle, const struct pawn *restrict pawn, struct position *restrict positions, double x, double y, const struct heap_pawn_distance *restrict closest, double reachable[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH], struct pawn_command neighbors[static 1])
 {
 	struct position destination = {x, y};
 	struct tile tile = {(unsigned)x, (unsigned)y};
-	struct battlefield *restrict field;
+	const struct battlefield *restrict field;
 
 	if (!in_battlefield(x, y))
 		return 0;
-	if (pawn->troop->unit->speed + 1 < reachable[tile.y][tile.x])
+	if (pawn->troop->unit->speed + PAWN_RADIUS < reachable[tile.y][tile.x])
 		return 0; // destination is too far
 
 	field = &battle->field[tile.y][tile.x];
@@ -281,7 +281,7 @@ static unsigned neighbors_move(struct battle *restrict battle, const struct pawn
 	case BLOCKAGE_WALL:
 	case BLOCKAGE_GATE:
 		neighbors->action = ACTION_ASSAULT;
-		neighbors->target.field = field;
+		neighbors->target.field = (struct battlefield *)field; // TODO fix this cast
 		neighbors->position = positions[pawn - battle->pawns];
 		return 1;
 
@@ -304,7 +304,7 @@ static unsigned neighbors_move(struct battle *restrict battle, const struct pawn
 	}
 }
 
-static unsigned battle_state_neighbors(const struct game *restrict game, struct battle *restrict battle, struct position *restrict positions, struct pawn *restrict pawn, double reachable[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH], struct pawn_command neighbors[static NEIGHBOR_STATES_LIMIT], struct heap_pawn_distance *restrict closest, const struct obstacles *restrict obstacles)
+static unsigned battle_state_neighbors(const struct game *restrict game, const struct battle *restrict battle, struct position *restrict positions, struct pawn *restrict pawn, double reachable[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH], struct pawn_command neighbors[static NEIGHBOR_STATES_LIMIT], struct heap_pawn_distance *restrict closest, const struct obstacles *restrict obstacles)
 {
 	struct position position = (pawn->path.count ? *pawn->path.data : pawn->position);
 
@@ -359,7 +359,7 @@ static unsigned battle_state_neighbors(const struct game *restrict game, struct 
 	return neighbors_count;
 }
 
-static void battle_state_set(struct pawn *restrict pawn, struct pawn_command *restrict neighbor, const struct game *restrict game, struct battle *restrict battle, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles, struct position *restrict position)
+static void battle_state_set(struct pawn *restrict pawn, struct pawn_command *restrict neighbor, const struct game *restrict game, const struct battle *restrict battle, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles, struct position *restrict position)
 {
 	pawn_stay(pawn);
 	pawn->action = 0;
@@ -398,23 +398,25 @@ finally:
 	*position = neighbor->position;
 }
 
-/*static unsigned victims_fight_find(const struct game *restrict game, const struct pawn *restrict fighter, const struct heap_pawn_distance *restrict closest, const struct pawn *restrict victims[static VICTIMS_LIMIT])
+static unsigned victims_find(const struct game *restrict game, const struct pawn *restrict fighter, const struct heap_pawn_distance *restrict closest, double distance, const struct pawn *restrict victims[static VICTIMS_LIMIT])
 {
 	unsigned char fighter_alliance = game->players[fighter->troop->owner].alliance;
 	unsigned victims_count = 0;
 
-	// All enemy pawns which are close enough are victims.
 	for(size_t i = 0; i < closest->count; ++i)
 	{
-		if (closest->data[i].distance > DISTANCE_MELEE)
+		if (closest->data[i].distance > distance)
 			break;
 		if (game->players[closest->data[i].pawn->troop->owner].alliance != fighter_alliance)
+		{
 			victims[victims_count++] = closest->data[i].pawn;
+			if (victims_count == VICTIMS_LIMIT)
+				return victims_count;
+		}
 	}
 
-	assert(victims_count <= VICTIMS_LIMIT);
 	return victims_count;
-}*/
+}
 
 // Returns the statistical expected value of deaths.
 static inline double deaths_expected(double damage, const struct unit *restrict victim, unsigned victims_count)
@@ -442,18 +444,15 @@ static inline double distance_coefficient(double distance, double goal, unsigned
 }
 
 // TODO think how to optimize this (O(n^3) is too high)
-static double battle_state_rating(const struct game *restrict game, struct battle *restrict battle, unsigned char player, struct position *restrict positions, struct heap_pawn_distance *restrict closest, const struct obstacles *restrict obstacles)
+static double battle_state_rating(const struct game *restrict game, const struct battle *restrict battle, unsigned char player, struct position *restrict positions, struct heap_pawn_distance *restrict closest, const struct obstacles *restrict obstacles)
 {
 	size_t i, j, k;
 
 	const struct garrison_info *info;
-	size_t pawn_index;
 
 	double offense = ((game->players[player].alliance == battle->defender) ? 1 : 1.1);
-
-	unsigned *counts;
-
 	double damage;
+	unsigned *counts;
 
 	double rating = 0.0, rating_max = 0.0;
 
@@ -463,7 +462,6 @@ static double battle_state_rating(const struct game *restrict game, struct battl
 	for(i = 0; i < battle->pawns_count; ++i)
 		counts[i] = battle->pawns[i].count;
 
-	// TODO verify that rating_max does not depend on the current state
 	// TODO think whether subtracting from rating is a good idea
 
 	info = garrison_info(battle->region);
@@ -475,6 +473,7 @@ static double battle_state_rating(const struct game *restrict game, struct battl
 	for(i = 0; i < battle->players[player].pawns_count; ++i) // loop the pawns the player controls
 	{
 		const struct pawn *restrict pawn = battle->players[player].pawns[i];
+		size_t pawn_index;
 		if (!pawn->count)
 			continue;
 
@@ -521,6 +520,20 @@ static double battle_state_rating(const struct game *restrict game, struct battl
 			damage = combat_fight_damage(pawn, combat_fight_troops(pawn, pawn->count, victim->count), victim);
 			rating += attack_rating(damage, victim->troop->unit, victim->count, info);
 			printf("fight %f (%f,%f)\n", attack_rating(damage, victim->troop->unit, victim->count, info), pawn->position.x, pawn->position.y);
+		}
+		else
+		{
+			double distance = ((pawn->action == ACTION_GUARD) ? guard_distance(pawn->troop->unit) : DISTANCE_MELEE);
+			const struct pawn *victims[VICTIMS_LIMIT];
+			unsigned victims_count = victims_find(game, pawn, closest + pawn_index, distance, victims);
+
+			// estimate fight impact while guarding
+			for(j = 0; j < victims_count; ++j)
+			{
+				damage = combat_fight_damage(pawn, combat_fight_troops(pawn, pawn->count, victims[j]->count), victims[j]);
+				rating += attack_rating(damage, victims[j]->troop->unit, victims[j]->count, info) / (FIGHT_ERROR * victims_count);
+				printf("maybe fight %f (%f,%f)\n", attack_rating(damage, victims[j]->troop->unit, victims[j]->count, info), pawn->position.x, pawn->position.y);
+			}
 		}
 	}
 
@@ -583,12 +596,14 @@ static double battle_state_rating(const struct game *restrict game, struct battl
 			for(k = 0; k < closest[victim_index].count; ++k)
 			{
 				const struct pawn_distance *restrict middleman = closest[victim_index].data + k;
+				unsigned rounds_position; // number of rounds necessary to reach the calculated position
 				if (middleman->pawn->troop->owner != victim->troop->owner)
 					continue;
 
-				if (distance_rounds(middleman->distance, DISTANCE_MELEE, victim->troop->unit->speed + middleman->pawn->troop->unit->speed) < rounds_melee)
+				rounds_position = (victim->troop->owner == player);
+				if ((rounds_position + distance_rounds(middleman->distance, DISTANCE_MELEE, victim->troop->unit->speed + middleman->pawn->troop->unit->speed)) < rounds_melee)
 					defenders += 1;
-				if (distance_rounds(middleman->distance + attacker->troop->unit->speed, DISTANCE_MELEE, victim->troop->unit->speed + middleman->pawn->troop->unit->speed) < rounds_ranged)
+				if ((rounds_position + distance_rounds(middleman->distance + attacker->troop->unit->speed, DISTANCE_MELEE, victim->troop->unit->speed + middleman->pawn->troop->unit->speed)) < rounds_ranged)
 					defenders_ranged += 1; // TODO this is supposed to indicate that ranged attack may not be possible
 			}
 
@@ -641,7 +656,7 @@ printf("future harm %f: %.*s <- %.*s\n", rating_attack, (int)victim->troop->unit
 		for(j = 0; j < obstacles->count; ++j)
 		{
 			const struct obstacle *restrict obstacle = obstacles->obstacle + j;
-			const struct battlefield *restrict field = &battle->field[(size_t)obstacle->top][(size_t)obstacle->left];
+			const struct battlefield *restrict field = &battle->field[(size_t)(obstacle->top + PAWN_RADIUS)][(size_t)(obstacle->left + PAWN_RADIUS)];
 
 			distance = combat_assault_distance(positions[i], obstacle);
 			distance_original = combat_assault_distance(attacker->position, obstacle);
@@ -673,7 +688,7 @@ printf("rating=%f rating_max=%f | %f\n", rating, rating_max, rating / rating_max
 	return rating / rating_max;
 }
 
-int computer_formation(const struct game *restrict game, struct battle *restrict battle, unsigned char player)
+int computer_formation(const struct game *restrict game, const struct battle *restrict battle, unsigned char player)
 {
 	// TODO implement this
 	return 0;
@@ -733,7 +748,7 @@ static void command_restore(struct pawn *restrict pawn, struct pawn_command *res
 }
 
 // Determine the behavior of the computer using simulated annealing.
-int computer_battle(const struct game *restrict game, struct battle *restrict battle, unsigned char player, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles)
+int computer_battle(const struct game *restrict game, const struct battle *restrict battle, unsigned char player, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles)
 {
 	double rating, rating_new;
 	double temperature = 1.0;

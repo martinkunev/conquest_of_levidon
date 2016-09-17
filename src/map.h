@@ -50,6 +50,8 @@ struct troop
 	unsigned count;
 	unsigned char owner;
 
+	// Player-specific input variables below.
+
 	unsigned char dismiss;
 
 	struct region *location, *move;
@@ -67,9 +69,25 @@ struct region
 	struct polygon *location;
 	struct point location_garrison, center;
 
+	struct troop *troops;
+
 	unsigned char owner;
 
 	unsigned char train_progress;
+	unsigned char build_progress;
+	uint32_t built;
+
+	struct
+	{
+		// enum {East, NorthEast, North, NorthWest, West, SouthWest, South, SouthEast} position;
+
+		// TODO implement this: const struct garrison_info *restrict info;
+		unsigned char owner;
+		unsigned siege;
+	} garrison;
+
+	// Player-specific input variables below.
+
 	const struct unit *train[TRAIN_QUEUE];
 
 	unsigned population;
@@ -82,22 +100,7 @@ struct region
 		unsigned stone;
 	} workers;
 
-	struct troop *troops;
-
-	struct
-	{
-		// enum {East, NorthEast, North, NorthWest, West, SouthWest, South, SouthEast} position;
-
-		// TODO implement this: const struct garrison_info *restrict info;
-
-		unsigned char owner;
-
-		unsigned siege;
-	} garrison;
-
-	uint32_t built;
 	signed char construct; // -1 == no construction
-	unsigned char build_progress;
 };
 
 enum {PALISADE, FORTRESS, /* dummy */ GARRISONS_COUNT};

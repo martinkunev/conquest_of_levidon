@@ -101,7 +101,7 @@ double combat_assault_damage(const struct pawn *restrict fighter, const struct b
 	return damage;
 }
 
-unsigned combat_shoot_victims(struct battle *restrict battle, const struct pawn *restrict shooter, struct victim_shoot victims[static VICTIMS_LIMIT])
+unsigned combat_shoot_victims(const struct battle *restrict battle, const struct pawn *restrict shooter, struct victim_shoot victims[static VICTIMS_LIMIT])
 {
 	// Shooters deal damage in an area around the target.
 	// There is friendly fire.

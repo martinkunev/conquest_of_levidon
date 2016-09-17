@@ -47,6 +47,16 @@ struct player
 
 	char name[NAME_LIMIT];
 	size_t name_length;
+
+	struct
+	{
+		int in, out;
+	} control;
+	struct player_info
+	{
+		int in, out;
+		unsigned char player;
+	} info;
 };
 
 struct game
