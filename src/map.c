@@ -92,20 +92,20 @@ void region_income(const struct region *restrict region, struct resources *restr
 			resource_add(&income, &BUILDINGS[i].income);
 		}
 
-	result->food += workers_income(workers_food, income.food);
-	result->wood += workers_income(workers_wood, income.wood);
-	result->stone += workers_income(workers_stone, income.stone);
-	result->iron += workers_income(workers_iron, income.iron);
+	result->food += workers_income(workers_food, 20); // produced by workers
+	result->food += workers_income(workers_food, income.food); // produced by workers from buildings
+	result->food -= workers_income(region->population * (occupied / 100.0), 10); // consumed by workers
 
-	// Adjust food by what is produced and consumed by the population.
-	result->food += workers_income(workers_food, 20) - workers_income(region->population * (occupied / 100.0), 10);
-
-	// Adjust gold for region governing.
-	result->gold -= 10 * sqrt(region->population / 1000.0);
-
-	// Adjust gold for collected taxes and paid salaires.
-	result->gold += workers_income(region->population, 10) - workers_income(workers_food + workers_wood + workers_stone + workers_iron, 20);
+	result->gold += workers_income(region->population, 10); // collected taxes
+	result->gold -= 10 * sqrt(region->population / 1000.0); // region governing
+	result->gold -= workers_income(workers_food + workers_wood + workers_stone + workers_iron, 20); // paid salaries
 	// TODO gold mine support
+
+	result->wood += workers_income(((workers_wood > 2000) ? 2000 : workers_wood), income.wood); // produced by workers from buildings
+
+	result->stone += workers_income(((workers_stone > 2000) ? 2000 : workers_stone), income.stone); // produced by workers from buildings
+
+	result->iron += workers_income(((workers_iron > 2000) ? 2000 : workers_iron), income.iron); // produced by workers from buildings
 }
 
 // Chooses new region owner from the troops in the given alliance.
