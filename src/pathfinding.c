@@ -59,11 +59,6 @@ struct adjacency_list
 	} list[];
 };
 
-static inline int sign(int number)
-{
-	return ((number > 0) - (number < 0));
-}
-
 // Determines the relative position of a point and a line described by a vector.
 // Returns 1 if the point is on the right side, -1 if the point is on the left side and 0 if the point is on the line.
 static int point_side(struct position p, struct position v0, struct position v1)
@@ -142,7 +137,7 @@ int move_blocked_pawn(struct position start, struct position end, struct positio
 
 static inline void obstacle_insert(struct obstacles *obstacles, float left, float right, float top, float bottom)
 {
-	obstacles->obstacle[obstacles->count] = (struct obstacle){left, right, top, bottom};
+	obstacles->obstacle[obstacles->count] = (struct obstacle){left - PAWN_RADIUS, right + PAWN_RADIUS, top - PAWN_RADIUS, bottom + PAWN_RADIUS};
 	obstacles->count += 1;
 }
 
@@ -363,10 +358,10 @@ struct adjacency_list *visibility_graph_build(const struct battle *restrict batt
 	for(i = 0; i < obstacles->count; ++i)
 	{
 		const struct obstacle *restrict obstacle = obstacles->obstacle + i;
-		graph_vertex_add(graph, obstacle->left - PAWN_RADIUS, obstacle->bottom + PAWN_RADIUS, occupied);
-		graph_vertex_add(graph, obstacle->right + PAWN_RADIUS, obstacle->bottom + PAWN_RADIUS, occupied);
-		graph_vertex_add(graph, obstacle->right + PAWN_RADIUS, obstacle->top - PAWN_RADIUS, occupied);
-		graph_vertex_add(graph, obstacle->left - PAWN_RADIUS, obstacle->top - PAWN_RADIUS, occupied);
+		graph_vertex_add(graph, obstacle->left, obstacle->bottom, occupied);
+		graph_vertex_add(graph, obstacle->right, obstacle->bottom, occupied);
+		graph_vertex_add(graph, obstacle->right, obstacle->top, occupied);
+		graph_vertex_add(graph, obstacle->left, obstacle->top, occupied);
 	}
 
 	// Free the unused part of the adjacency graph buffer.

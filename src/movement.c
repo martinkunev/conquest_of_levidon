@@ -178,7 +178,7 @@ struct position movement_position(const struct pawn *restrict pawn)
 	return position;
 }
 
-static int movement_find_next(const struct game *restrict game, const struct battle *restrict battle, struct pawn *restrict pawn, struct position position, struct adjacency_list *restrict graph, struct obstacles *restrict obstacles)
+static int movement_find_next(const struct game *restrict game, const struct battle *restrict battle, struct pawn *restrict pawn, struct position position, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles)
 {
 	struct position destination;
 
@@ -245,7 +245,7 @@ static int movement_find_next(const struct game *restrict game, const struct bat
 }
 
 // Calculates the expected position of each pawn at the next step.
-int movement_plan(const struct game *restrict game, struct battle *restrict battle, struct adjacency_list *restrict graph[static PLAYERS_LIMIT], struct obstacles *restrict obstacles[static PLAYERS_LIMIT])
+int movement_plan(const struct game *restrict game, struct battle *restrict battle, struct adjacency_list *restrict graph[static PLAYERS_LIMIT], const struct obstacles *restrict obstacles[static PLAYERS_LIMIT])
 {
 	for(size_t i = 0; i < battle->pawns_count; ++i)
 	{
@@ -272,7 +272,7 @@ int movement_plan(const struct game *restrict game, struct battle *restrict batt
 			// Make sure there are precalculated moves for the pawn.
 			if (!pawn->moves.count)
 			{
-				int status = movement_find_next(game, battle, pawn, position, graph[alliance], obstacles[alliance]);
+				int status = movement_find_next(game, battle, pawn, position, graph[pawn->troop->owner], obstacles[alliance]);
 				if (status < 0) return status;
 				if (!pawn->moves.count)
 				{
@@ -364,7 +364,12 @@ static inline double cross_product(double fx, double fy, double sx, double sy)
 	return (fx * sy - sx * fy);
 }
 
-int movement_collisions_resolve(const struct game *restrict game, struct battle *restrict battle, struct adjacency_list *restrict graph[static PLAYERS_LIMIT], struct obstacles *restrict obstacles[static PLAYERS_LIMIT])
+static inline int sign(double number)
+{
+	return ((number > 0) - (number < 0));
+}
+
+int movement_collisions_resolve(const struct game *restrict game, struct battle *restrict battle)
 {
 	struct collision *restrict collisions;
 	size_t i;
@@ -458,18 +463,26 @@ int movement_collisions_resolve(const struct game *restrict game, struct battle 
 			struct position moves[2];
 			unsigned moves_count;
 
+			int obstacle_side, move_side;
+
 			double direction_x = pawn->position_next.x - pawn->position.x;
 			double direction_y = pawn->position_next.y - pawn->position.y;
 
 			// Find the moves in direction of the tangent of the obstacle pawn.
-			// Choose the move on the right side of the collision direction.
+			// Choose the move on the opposite side of the obstacle with respect to pawn movement.
+
+			obstacle_side = sign(cross_product(obstacle->position_next.x - pawn->position.x, obstacle->position_next.y - pawn->position.y, direction_x, direction_y));
+
 			moves_count = path_moves_tangent(pawn, obstacle, distance_covered, moves);
 			while (moves_count--)
-				if (cross_product(moves[moves_count].x - pawn->position.x, moves[moves_count].y - pawn->position.y, direction_x, direction_y) > 0)
+			{
+				move_side = cross_product(moves[moves_count].x - pawn->position.x, moves[moves_count].y - pawn->position.y, direction_x, direction_y);
+				if (obstacle_side * move_side <= 0)
 				{
 					pawn->position_next = moves[moves_count];
 					break;
 				}
+			}
 		}
 		else
 		{
