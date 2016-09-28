@@ -10,6 +10,22 @@ future goals:
 
 ----
 
+economy thoughts
+* increase population; make only 0.5 of the population labor-capable
+
+resources should be different
+	currently there is not a lof of skill in setting economic parameters
+
+mine - "Allows mining ores and producing stone"; ores increase income from trading; required for bloomery
+
+non-battle troops
+	scout
+	miner - needed for stone production
+
+blast furnace - increase iron production
+
+----
+
 medieval technologies site:
 http://www.engr.psu.edu/mtah/
 
@@ -98,6 +114,7 @@ drift mine (requires: mine)
 gold mine (requires mine)
 	+1 gold
 foundry
+blast furnace
 
 region-specific characteristics
 	wood (required for sawmill)

@@ -1073,10 +1073,10 @@ finally:
 	return status;
 }
 
-int computer_invasion(const struct game *restrict game, const struct region *restrict region, unsigned char player)
+int computer_invasion(const struct game *restrict game, unsigned char player, struct region *restrict region)
 {
-	// TODO implement this
-	return 1;
+	region->garrison.reinforce = true;
+	return 0;
 }
 
 //////////////////////////////////

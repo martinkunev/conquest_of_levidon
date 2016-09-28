@@ -688,7 +688,7 @@ printf("rating=%f rating_max=%f | %f\n", rating, rating_max, rating / rating_max
 	return rating / rating_max;
 }
 
-int computer_formation(const struct game *restrict game, const struct battle *restrict battle, unsigned char player)
+int computer_formation(const struct game *restrict game, struct battle *restrict battle, unsigned char player)
 {
 	// TODO implement this
 	return 0;
@@ -748,7 +748,7 @@ static void command_restore(struct pawn *restrict pawn, struct pawn_command *res
 }
 
 // Determine the behavior of the computer using simulated annealing.
-int computer_battle(const struct game *restrict game, const struct battle *restrict battle, unsigned char player, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles)
+int computer_battle(const struct game *restrict game, struct battle *restrict battle, unsigned char player, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles)
 {
 	double rating, rating_new;
 	double temperature = 1.0;
@@ -879,7 +879,7 @@ finally:
 	return status;
 }
 
-double rate(const struct game *restrict game, struct battle *restrict battle, unsigned char player, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles)
+double rate(const struct game *restrict game, const struct battle *restrict battle, unsigned char player, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles)
 {
 	double rating;
 

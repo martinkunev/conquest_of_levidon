@@ -31,6 +31,7 @@
 #include "pathfinding.h"
 #include "input.h"
 #include "input_map.h"
+#include "input_report.h"
 #include "input_menu.h"
 #include "display_common.h"
 #include "display_map.h"
@@ -782,6 +783,18 @@ int input_map(const struct game *restrict game, unsigned char player)
 	map_visible(game, player, state.regions_visible);
 
 	state.economy = 0;
+
+	// If playing in hotseat mode, announce which player will be playing.
+	if (game->players_local_count >= 2)
+	{
+		struct state_report state = {
+			.title = REPORT_TITLE_NEXT,
+			.title_size = sizeof(REPORT_TITLE_NEXT) - 1,
+			.players[0] = player,
+			.players_count = 1,
+		};
+		input_report_players(&state);
+	}
 
 //regions_info = regions_info_collect(game, player, &context);
 //printf("rating=%f\n", rate(game, state.player, regions_info, &context));

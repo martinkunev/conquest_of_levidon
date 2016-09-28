@@ -51,7 +51,7 @@ struct pawn
 
 	unsigned startup; // index of startup location on the battlefield or NEIGHBOR_SELF/NEIGHBOR_GARRISON
 
-	// Player-specific input variables below.
+	// WARNING: Player-specific input variables below.
 
 	struct
 	{

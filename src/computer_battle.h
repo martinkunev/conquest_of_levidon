@@ -17,7 +17,7 @@
  * along with Conquest of Levidon.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-int computer_formation(const struct game *restrict, const struct battle *restrict, unsigned char);
-int computer_battle(const struct game *restrict, const struct battle *restrict, unsigned char, struct adjacency_list *restrict, const struct obstacles *restrict);
+int computer_formation(const struct game *restrict, struct battle *restrict, unsigned char);
+int computer_battle(const struct game *restrict, struct battle *restrict, unsigned char, struct adjacency_list *restrict, const struct obstacles *restrict);
 
 unsigned calculate_battle(const struct game *restrict, struct region *restrict, int);

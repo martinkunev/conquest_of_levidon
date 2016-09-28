@@ -54,7 +54,7 @@ struct state_animation
 	unsigned char traversed[BATTLEFIELD_HEIGHT][BATTLEFIELD_WIDTH];
 };
 
-int input_formation(const struct game *restrict game, struct battle *restrict battle, unsigned char player);
+int input_formation(const struct game *restrict game, struct battle *restrict battle, unsigned char player, int hotseat);
 int input_battle(const struct game *restrict game, struct battle *restrict battle, unsigned char player, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles);
 int input_animation_move(const struct game *restrict game, const struct battle *restrict battle, struct position (*movements)[MOVEMENT_STEPS + 1]);
 int input_animation_shoot(const struct game *restrict game, const struct battle *restrict battle);

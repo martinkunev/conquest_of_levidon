@@ -55,7 +55,6 @@ struct player
 	struct player_info
 	{
 		int in, out;
-		unsigned char player;
 	} info;
 };
 
@@ -69,7 +68,11 @@ struct game
 
 	unsigned turn; // TODO implement this
 
-	int hotseat; // whether there are multiple players playing locally
+	size_t players_local[PLAYERS_LIMIT];
+	size_t players_local_count;
+
+	pthread_mutex_t mutex_input; // used for accessing input_ready while handling individual players
+	uint32_t input_ready, input_all;
 };
 
 struct unit

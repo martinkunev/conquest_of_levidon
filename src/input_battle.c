@@ -33,6 +33,7 @@
 #include "combat.h"
 #include "input.h"
 #include "input_battle.h"
+#include "input_report.h"
 #include "display_common.h"
 #include "display_battle.h"
 
@@ -41,7 +42,7 @@
 
 //////////////////////////
 #include <stdio.h>
-double rate(const struct game *restrict game, struct battle *restrict battle, unsigned char player, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles);
+double rate(const struct game *restrict game, const struct battle *restrict battle, unsigned char player, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles);
 //////////////////////////
 
 extern struct battle *battle;
@@ -257,7 +258,7 @@ reachable:
 	return INPUT_IGNORE;
 }
 
-int input_formation(const struct game *restrict game, struct battle *restrict battle, unsigned char player)
+int input_formation(const struct game *restrict game, struct battle *restrict battle, unsigned char player, int hotseat)
 {
 	struct area areas[] = {
 		{
@@ -289,6 +290,18 @@ int input_formation(const struct game *restrict game, struct battle *restrict ba
 
 	state.pawn = 0;
 	//state.hover = POINT_NONE;
+
+	// If playing in hotseat mode, announce which player will be playing.
+	if (hotseat)
+	{
+		struct state_report state = {
+			.title = REPORT_TITLE_NEXT,
+			.title_size = sizeof(REPORT_TITLE_NEXT) - 1,
+			.players[0] = player,
+			.players_count = 1,
+		};
+		input_report_players(&state);
+	}
 
 	if_set(battle); // TODO remove this
 

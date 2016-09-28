@@ -18,4 +18,4 @@
  */
 
 int computer_map(const struct game *restrict, unsigned char);
-int computer_invasion(const struct game *restrict, const struct region *restrict, unsigned char);
+int computer_invasion(const struct game *restrict, unsigned char, struct region *restrict);

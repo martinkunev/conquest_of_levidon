@@ -3,10 +3,9 @@ H	F resolve more of the battle collisions
 	two horses blocked during battle (neither attacks an archer) // when they start moving, they collide again
 H	if there are too many units on the battlefield, the last ones get placed at (0, 0) and this leads to crashes
 	handle too many units on the battlefield properly
-H	crash: retreat take effect immediately and if there only one other player that is computer, its rating_max will be 0
-H	F battle report displayed when an empty region is invaded (and taken without battle)
-H	F pawn getting too close to an obstacle
+H	crash: retreat take effect immediately and if there is only one other player that is computer, its rating_max will be 0
 H	either the AI algorithm or the neighbor state graph are buggy
+H	F battle report displayed when an empty region is invaded (and taken without battle)
 M	pawn trembling (sometimes when it tries to move to a certain position, but another one is there)
 M	fast units cannot always catch up with slow units even when they are close enough (seen with light cavalry and peasant)
 L	if_init fails on mac (in glXMakeContextCurrent) when used with ssh forwarding
@@ -24,17 +23,14 @@ H	improve map AI
 	computer cannot recover well from having negative food income
 		// solution: dismiss troops
 H	handle different screen resolutions better
-H	use a separate thread to calculate computer turns while the local player is choosing what to play
-	use the threads for all input actions (invasion, formation, battle)
-	add indicator (e.g. lighted bulb) for the players who have completed their turn
-	individual graph for each player (because they are mutable)
+M	add indicator (e.g. lighted bulb) to mark the players who have completed their turn
 M	improve assault AI
 		enemy should stay inside garrison when there are shooters
 M	balance battles
 	improve auto combat
-	F most of the pawn->count usually get killed at the same time (the round when the pawn dies)
 	stamina?
 	chance to miss? (in deaths(), randomly choose how many troops did not hit the target)
+	battle->...alive is set by battle_retreat for players individually (this should be documented)
 M	when there is no local player left fighting in a battle, resolve the battle automatically
 M	improve AI
 	treating each troop separately when finding local maximum in AI will have bad results
@@ -133,9 +129,9 @@ refactoring
 	revise user/computer battle input functions: combat_fight, combat_shoot, combat_assault, movement_queue; it should be clear what they do and how they interact
 	? rename support to maintenance
 	rename if_display to if_render
+L	support up to 24 players
 
 -- interface --
-M	support up to 24 players
 M	display a mirror image of enemy troops
 	? display an ellipse with the owner below the troop (instead of changing some pixels in the sprite)
 M	custom mouse pointer

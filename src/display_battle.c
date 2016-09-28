@@ -238,7 +238,7 @@ void if_formation(const void *argument, const struct game *game)
 		{
 			// Display at which fields the pawn can be placed.
 			for(j = 0; j < state->reachable_count; ++j)
-				if (!battle_field(battle, state->reachable[j])->pawn)
+				if (!battle->field[state->reachable[j].y][state->reachable[j].x].pawn)
 					fill_rectangle(BATTLE_X + state->reachable[j].x * object_group[Battlefield].width, BATTLE_Y + state->reachable[j].y * object_group[Battlefield].height, object_group[Battlefield].width, object_group[Battlefield].height, display_colors[FieldReachable]);
 
 			// Display the selected pawn in the control section.

@@ -17,39 +17,10 @@
  * along with Conquest of Levidon.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-enum {REQUEST_MAP = 1, REQUEST_INVASION, REQUEST_FORMATION, REQUEST_BATTLE};
+int players_init(struct game *restrict game);
+int players_term(struct game *restrict game);
 
-struct request_map
-{
-	const struct game *game;
-};
-
-struct request_invasion
-{
-	const struct game *game;
-	const struct region *region;
-};
-
-struct request_formation
-{
-	const struct game *game;
-	const struct battle *battle;
-};
-
-struct request_battle
-{
-	const struct game *game;
-	const struct battle *battle;
-	struct adjacency_list *restrict graph;
-	const struct obstacles *restrict obstacles;
-};
-
-int player_init(struct player *restrict player, unsigned char id);
-int player_term(struct player *restrict player);
-
-void player_map(const struct game *restrict game, unsigned char player);
-void player_invasion(const struct game *restrict game, const struct region *restrict region, unsigned char player);
-void player_formation(const struct game *restrict game, const struct battle *restrict battle, unsigned char player);
-void player_battle(const struct game *restrict game, const struct battle *restrict battle, unsigned char player, struct adjacency_list *restrict graph, const struct obstacles *restrict obstacles);
-
-int player_response(const struct game *restrict game, unsigned char player);
+int players_map(struct game *restrict game);
+int players_invasion(struct game *restrict game, struct region *restrict region);
+int players_formation(struct game *restrict game, struct battle *restrict battle, int hotseat);
+int players_battle(struct game *restrict game, struct battle *restrict battle, const struct obstacles *restrict obstacles[static PLAYERS_LIMIT], struct adjacency_list *restrict graph[static PLAYERS_LIMIT]);

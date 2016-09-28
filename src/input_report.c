@@ -17,6 +17,7 @@
  * along with Conquest of Levidon.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <stdbool.h>
 #include <stdlib.h>
 
 #include <X11/keysym.h>
@@ -57,7 +58,7 @@ static int input_yes(int code, unsigned x, unsigned y, uint16_t modifiers, const
 	struct state_question *restrict state = argument;
 	if (code != EVENT_MOUSE_LEFT)
 		return INPUT_IGNORE;
-	state->answer = 1;
+	state->region->garrison.reinforce = true;
 	return INPUT_FINISH;
 }
 
@@ -66,7 +67,7 @@ static int input_no(int code, unsigned x, unsigned y, uint16_t modifiers, const 
 	struct state_question *restrict state = argument;
 	if (code != EVENT_MOUSE_LEFT)
 		return INPUT_IGNORE;
-	state->answer = 0;
+	state->region->garrison.reinforce = false;
 	return INPUT_FINISH;
 }
 
@@ -140,7 +141,7 @@ int input_report_players(struct state_report *restrict state)
 	return input_local(areas, sizeof(areas) / sizeof(*areas), if_report_players, 0, state);
 }
 
-int input_report_invasion(struct state_question *restrict state)
+int input_report_invasion(const struct game *restrict game, unsigned char player, struct region *restrict region)
 {
 	struct area areas[] = {
 		{
@@ -166,8 +167,22 @@ int input_report_invasion(struct state_question *restrict state)
 		},
 	};
 
-	int status = input_local(areas, sizeof(areas) / sizeof(*areas), if_report_invasion, 0, state);
-	if (status)
-		return status;
-	return state->answer;
+	struct state_question state;
+	state.game = game;
+	state.player = player;
+	state.region = region;
+
+	// If playing in hotseat mode, announce which player will be playing.
+	if (game->players_local_count >= 2)
+	{
+		struct state_report state = {
+			.title = REPORT_TITLE_NEXT,
+			.title_size = sizeof(REPORT_TITLE_NEXT) - 1,
+			.players[0] = player,
+			.players_count = 1,
+		};
+		input_report_players(&state);
+	}
+
+	return input_local(areas, sizeof(areas) / sizeof(*areas), if_report_invasion, 0, &state);
 }

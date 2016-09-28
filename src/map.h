@@ -50,7 +50,7 @@ struct troop
 	unsigned count;
 	unsigned char owner;
 
-	// Player-specific input variables below.
+	// WARNING: Player-specific input variables below.
 
 	unsigned char dismiss;
 
@@ -84,9 +84,11 @@ struct region
 		// TODO implement this: const struct garrison_info *restrict info;
 		unsigned char owner;
 		unsigned siege;
+
+		_Bool reinforce; // WARNING: player-specific input variable
 	} garrison;
 
-	// Player-specific input variables below.
+	// WARNING: Player-specific input variables below.
 
 	const struct unit *train[TRAIN_QUEUE];
 
