@@ -19,6 +19,7 @@
 
 #include <assert.h>
 #include <math.h>
+#include <pthread.h>
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdint.h>

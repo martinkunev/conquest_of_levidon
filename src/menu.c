@@ -19,6 +19,7 @@
 
 #include <dirent.h>
 #include <errno.h>
+#include <pthread.h>
 #include <stdlib.h>
 #if !defined(_DIRENT_HAVE_D_NAMLEN)
 # include <string.h>

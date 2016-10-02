@@ -90,7 +90,10 @@ shooters should be weaker against better garrison
 
 units that attack while moving (quite rare in games)
 
-retraining (restores count to unit->troops_count)
+----
+
+accuracy - how close to the target is the average shot
+precision - the average distance from the target
 
 ----
 
