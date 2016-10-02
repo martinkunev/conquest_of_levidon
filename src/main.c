@@ -275,7 +275,8 @@ static int play(struct game *restrict game)
 				// Troops expenses are covered by current region.
 				for(troop = region->troops; troop; troop = troop->_next)
 				{
-					if (troop->move == LOCATION_GARRISON) continue;
+					if (troop->move == LOCATION_GARRISON)
+						continue;
 
 					if (troop->move->owner != region->owner)
 						resource_multiply(&expense, &troop->unit->support, 2 * troop->count);
@@ -289,8 +290,9 @@ static int play(struct game *restrict game)
 				// Troops expenses are covered by another region. Double expenses.
 				for(troop = region->troops; troop; troop = troop->_next)
 				{
-					struct resources expense;
-					if (troop->move == LOCATION_GARRISON) continue;
+					if ((troop->move == LOCATION_GARRISON) && (troop->owner == region->garrison.owner))
+						continue; // sieged troop
+
 					resource_multiply(&expense, &troop->unit->support, 2 * troop->count);
 					resource_add(expenses + troop->owner, &expense);
 				}
@@ -496,7 +498,8 @@ int main(int argc, char *argv[])
 	struct game game;
 	int status;
 
-	assert(!sigaction(SIGPIPE, &(struct sigaction){.sa_handler = SIG_IGN}, 0));
+	status = sigaction(SIGPIPE, &(struct sigaction){.sa_handler = SIG_IGN}, 0);
+	assert(!status);
 
 	srandom(time(0));
 

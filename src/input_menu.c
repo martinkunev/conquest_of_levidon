@@ -17,6 +17,7 @@
  * along with Conquest of Levidon.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <pthread.h>
 #include <X11/keysym.h>
 
 #include "errors.h"

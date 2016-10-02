@@ -139,7 +139,8 @@ static int request_read(int input, union request *restrict request)
 	assert(status == sizeof(request->generic.type));
 
 	read_size = request_size[request->generic.type] - sizeof(request->generic.type);
-	assert(read(input, (unsigned char *)request + sizeof(request->generic.type), read_size) == read_size);
+	status = read(input, (unsigned char *)request + sizeof(request->generic.type), read_size);
+	assert(status == read_size);
 
 	return 0;
 }
@@ -294,7 +295,8 @@ static int players_wait(struct pollfd *restrict ready, size_t ready_count, struc
 
 	while (input_processed != game->input_all)
 	{
-		assert(poll(ready, ready_count, -1) > 0);
+		int status = poll(ready, ready_count, -1);
+		assert(status > 0);
 
 		for(size_t i = 0; i < ready_count; ++i)
 		{
@@ -306,7 +308,8 @@ static int players_wait(struct pollfd *restrict ready, size_t ready_count, struc
 			assert(ready[i].revents == POLLIN);
 			ready[i].revents = 0;
 
-			assert(read(ready[i].fd, &response, sizeof(response)) == sizeof(response));
+			status = read(ready[i].fd, &response, sizeof(response));
+			assert(status == sizeof(response));
 			if (response.status)
 				return response.status;
 
@@ -334,7 +337,8 @@ int players_map(struct game *restrict game)
 		switch (game->players[player].type)
 		{
 		case Computer:
-			assert(write(game->players[player].control.out, &parameters, sizeof(parameters)));
+			status = write(game->players[player].control.out, &parameters, sizeof(parameters));
+			assert(status == sizeof(parameters));
 
 			ready[ready_count].fd = game->players[player].control.in;
 			ready[ready_count].events = POLLIN;
@@ -395,7 +399,8 @@ int players_invasion(struct game *restrict game, struct region *restrict region)
 			struct pollfd ready;
 			struct request_invasion parameters = {.request.type = REQUEST_INVASION, .request.player = region->garrison.owner, .request.game = game, .region = region};
 
-			assert(write(game->players[region->garrison.owner].control.out, &parameters, sizeof(parameters)));
+			status = write(game->players[region->garrison.owner].control.out, &parameters, sizeof(parameters));
+			assert(status == sizeof(parameters));
 
 			ready.fd = game->players[region->garrison.owner].control.in;
 			ready.events = POLLIN;
@@ -427,7 +432,9 @@ int players_formation(struct game *restrict game, struct battle *restrict battle
 		switch (game->players[player].type)
 		{
 		case Computer:
-			assert(write(game->players[player].control.out, &parameters, sizeof(parameters)));
+			status = write(game->players[player].control.out, &parameters, sizeof(parameters));
+			assert(status == sizeof(parameters));
+
 			ready[ready_count].fd = game->players[player].control.in;
 			ready[ready_count].events = POLLIN;
 			ready[ready_count].revents = 0;
@@ -479,7 +486,8 @@ int players_battle(struct game *restrict game, struct battle *restrict battle, c
 		{
 		case Neutral:
 		case Computer:
-			assert(write(game->players[player].control.out, &parameters, sizeof(parameters)));
+			status = write(game->players[player].control.out, &parameters, sizeof(parameters));
+			assert(status == sizeof(parameters));
 
 			ready[ready_count].fd = game->players[player].control.in;
 			ready[ready_count].events = POLLIN;

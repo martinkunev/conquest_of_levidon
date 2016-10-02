@@ -19,6 +19,7 @@
 
 // WARNING: The AI logic assumes that troops have only negative income (used in expense_significance() and map_state_rating()).
 
+#include <pthread.h>
 #include <stdint.h>
 #include <stdlib.h>
 

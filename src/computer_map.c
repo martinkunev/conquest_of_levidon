@@ -19,6 +19,7 @@
 
 #include <assert.h>
 #include <math.h>
+#include <pthread.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -169,6 +170,7 @@ static void income_region(const struct region *restrict region, unsigned char pl
 	for(const struct troop *restrict troop = region->troops; troop; troop = troop->_next)
 	{
 		const struct region *restrict destination;
+		struct resources expense;
 
 		if (troop->owner != player)
 			continue;
@@ -176,16 +178,23 @@ static void income_region(const struct region *restrict region, unsigned char pl
 		destination = ((troop->move == LOCATION_GARRISON) ? region : troop->move);
 		if ((troop->owner == destination->owner) && (destination->owner == destination->garrison.owner))
 		{
-			// Troops expenses are covered by the move region.
 			if (troop->move == LOCATION_GARRISON)
 				continue;
-			resource_add(income, &troop->unit->support);
+
+			// Troops expenses are covered by the move region.
+			if (troop->move->owner != region->owner)
+				resource_multiply(&expense, &troop->unit->support, 2 * troop->count);
+			else
+				resource_multiply(&expense, &troop->unit->support, troop->count);
+			resource_add(income, &expense);
 		}
 		else
 		{
+			if ((troop->move == LOCATION_GARRISON) && (troop->owner == region->garrison.owner))
+				continue; // sieged troop
+
 			// Troop expenses are covered by another region. Double expenses.
-			struct resources expense;
-			resource_multiply(&expense, &troop->unit->support, 2);
+			resource_multiply(&expense, &troop->unit->support, 2 * troop->count);
 			resource_add(income, &expense);
 		}
 
@@ -1112,11 +1121,13 @@ static int economy_manage(const struct game *restrict game, unsigned char player
 	{
 		struct region *restrict region = game->regions + i;
 
-		population += region->population;
 		income_region(region, player, &income);
 
 		if ((region->owner == player) && (region->owner == region->garrison.owner))
+		{
+			population += region->population;
 			regions.data[regions.count++] = region;
+		}
 	}
 
 	// Determine how to distribute workers for resource production.
@@ -1132,63 +1143,55 @@ static int economy_manage(const struct game *restrict game, unsigned char player
 		workers_food += workers;
 		population -= workers * 2; // workers + equal amount of taxpayers to provide salaries
 	}
-	if (income.gold - 2 * income.food > 0) // if gold income will be positive after ensuring enough food income
+	// TODO handle negative income of wood, stone and iron
+	if (shortage->gold)
 	{
-		// TODO handle negative income of wood, stone and iron
+		unsigned nonworkers = -shortage->gold * 100;
 
-		if (shortage->gold)
-		{
-			unsigned nonworkers = -shortage->gold * 100;
+		if (nonworkers > population)
+			nonworkers = population;
+		taxpayers += nonworkers;
+		population -= taxpayers;
+	}
+	if (shortage->food)
+	{
+		unsigned workers = -shortage->food * 100;
+		unsigned population_available = population / 2;
 
-			if (nonworkers > population)
-				nonworkers = population;
-			taxpayers += nonworkers;
-			population -= taxpayers;
-		}
+		if (workers > population_available)
+			workers = population_available;
+		workers_food += workers;
+		population -= workers * 2; // workers + equal amount of taxpayers to provide salaries
+	}
+	if (shortage->wood)
+	{
+		unsigned workers = -shortage->wood * 100;
+		unsigned population_available = population / 2;
 
-		if (shortage->food)
-		{
-			unsigned workers = -shortage->food * 100;
-			unsigned population_available = population / 2;
+		if (workers > population_available)
+			workers = population_available;
+		workers_wood += workers;
+		population -= workers * 2; // workers + equal amount of taxpayers to provide salaries
+	}
+	if (shortage->stone)
+	{
+		unsigned workers = -shortage->stone * 100;
+		unsigned population_available = population / 2;
 
-			if (workers > population_available)
-				workers = population_available;
-			workers_food += workers;
-			population -= workers * 2; // workers + equal amount of taxpayers to provide salaries
-		}
+		if (workers > population_available)
+			workers = population_available;
+		workers_stone += workers;
+		population -= workers * 2; // workers + equal amount of taxpayers to provide salaries
+	}
+	if (shortage->iron)
+	{
+		unsigned workers = -shortage->iron * 200;
+		unsigned population_available = population / 2;
 
-		if (shortage->wood)
-		{
-			unsigned workers = -shortage->wood * 100;
-			unsigned population_available = population / 2;
-
-			if (workers > population_available)
-				workers = population_available;
-			workers_wood += workers;
-			population -= workers * 2; // workers + equal amount of taxpayers to provide salaries
-		}
-
-		if (shortage->stone)
-		{
-			unsigned workers = -shortage->stone * 100;
-			unsigned population_available = population / 2;
-
-			if (workers > population_available)
-				workers = population_available;
-			workers_stone += workers;
-			population -= workers * 2; // workers + equal amount of taxpayers to provide salaries
-		}
-
-		if (shortage->iron)
-		{
-			unsigned workers = -shortage->iron * 200;
-			unsigned population_available = population / 2;
-
-			if (workers > population_available)
-				workers = population_available;
-			workers_iron += workers;
-			population -= workers * 2; // workers + equal amount of taxpayers to provide salaries
-		}
+		if (workers > population_available)
+			workers = population_available;
+		workers_iron += workers;
+		population -= workers * 2; // workers + equal amount of taxpayers to provide salaries
 	}
 
 	// Loop regions in such way that we can set workers greedily.
@@ -1196,6 +1199,7 @@ static int economy_manage(const struct game *restrict game, unsigned char player
 	{
 		struct region *region = regions.data[0];
 		unsigned hire_population = workers_population(region, 1), use_population = hire_population * 2;
+		unsigned workers_limit = (2000 + hire_population - 1) / hire_population;
 		unsigned population_available = region->population;
 		unsigned production;
 
@@ -1236,12 +1240,15 @@ static int economy_manage(const struct game *restrict game, unsigned char player
 				if (population_available < use_population)
 					goto after;
 
-				region->workers.wood += 1;
-				if (production > workers_wood)
+				if (hire_population > workers_wood)
 					workers_wood = 0;
 				else
-					workers_wood -= production;
+					workers_wood -= hire_population;
 				population_available -= use_population;
+
+				region->workers.wood += 1;
+				if (region->workers.wood == workers_limit)
+					break;
 			}
 
 		if (region_built(region, BuildingMine))
@@ -1250,12 +1257,15 @@ static int economy_manage(const struct game *restrict game, unsigned char player
 				if (population_available < use_population)
 					goto after;
 
-				region->workers.stone += 1;
-				if (production > workers_stone)
+				if (hire_population > workers_stone)
 					workers_stone = 0;
 				else
-					workers_stone -= production;
+					workers_stone -= hire_population;
 				population_available -= use_population;
+
+				region->workers.stone += 1;
+				if (region->workers.wood == workers_limit)
+					break;
 			}
 
 		if (region_built(region, BuildingBloomery))
@@ -1264,12 +1274,15 @@ static int economy_manage(const struct game *restrict game, unsigned char player
 				if (population_available < use_population)
 					goto after;
 
-				region->workers.iron += 1;
-				if (production > workers_iron)
+				if (hire_population > workers_iron)
 					workers_iron = 0;
 				else
-					workers_iron -= production;
+					workers_iron -= hire_population;
 				population_available -= use_population;
+
+				region->workers.iron += 1;
+				if (region->workers.wood == workers_limit)
+					break;
 			}
 
 after:
