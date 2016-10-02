@@ -164,13 +164,13 @@ wait:
 	}
 }
 
-static double timer_progress(const struct timespec *restrict start, double duration)
+static double timer_progress(const struct timeval *restrict start, double duration)
 {
-	struct timespec now;
+	struct timeval now;
 	unsigned long time_difference;
-	clock_gettime(CLOCK_MONOTONIC, &now);
-	time_difference = (now.tv_sec * 1000000000l + now.tv_nsec - start->tv_sec * 1000000000l - start->tv_nsec);
-	return time_difference / (duration * 1000000000.0);
+	gettimeofday(&now, 0);
+	time_difference = (now.tv_sec * 1000000 + now.tv_usec - start->tv_sec * 1000000 - start->tv_usec);
+	return time_difference / (duration * 1000000.0);
 }
 
 int input_timer(void (*display)(const void *, const struct game *, double), const struct game *restrict game, double duration, void *state)
@@ -182,13 +182,13 @@ int input_timer(void (*display)(const void *, const struct game *, double), cons
 
 	int code = 0; // TODO this is oversimplification
 
-	struct timespec start; // start time of the animation
+	struct timeval start; // start time of the animation
 
 	// Ignore all the queued events.
 	while (event = xcb_poll_for_event(connection))
 		free(event);
 
-	clock_gettime(CLOCK_MONOTONIC, &start);
+	gettimeofday(&start, 0);
 
 	do
 	{
