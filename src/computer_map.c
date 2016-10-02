@@ -63,6 +63,12 @@ struct region_order
 #define array_name array_orders
 #include "generic/array.g"
 
+static bool region_before(const struct region *restrict a, const struct region *restrict b);
+#define heap_type struct region *
+#define heap_name heap_regions
+#define heap_above(a, b) region_before((a), (b))
+#include "generic/heap.g"
+
 #define heap_type struct region_order *
 #define heap_name heap_orders
 #define heap_above(a, b) ((a)->priority >= (b)->priority)
@@ -154,6 +160,46 @@ static void distances_compute(const struct game *restrict game, unsigned char re
 				if (!regions_distances[j][k] || (regions_distances[j][k] > distance))
 					regions_distances[j][k] = distance;
 			}
+		}
+	}
+}
+
+static void income_region(const struct region *restrict region, unsigned char player, struct resources *restrict income)
+{
+	for(const struct troop *restrict troop = region->troops; troop; troop = troop->_next)
+	{
+		const struct region *restrict destination;
+
+		if (troop->owner != player)
+			continue;
+
+		destination = ((troop->move == LOCATION_GARRISON) ? region : troop->move);
+		if ((troop->owner == destination->owner) && (destination->owner == destination->garrison.owner))
+		{
+			// Troops expenses are covered by the move region.
+			if (troop->move == LOCATION_GARRISON)
+				continue;
+			resource_add(income, &troop->unit->support);
+		}
+		else
+		{
+			// Troop expenses are covered by another region. Double expenses.
+			struct resources expense;
+			resource_multiply(&expense, &troop->unit->support, 2);
+			resource_add(income, &expense);
+		}
+
+		if ((region->owner == player) || (region->owner == region->garrison.owner))
+		{
+			// Add expenses for region governing.
+			income->gold -= 10 * sqrt(region->population / 1000.0);
+		}
+
+		if ((region->owner == player) && (region->owner == region->garrison.owner))
+		{
+			for(size_t i = 0; i < BUILDINGS_COUNT; ++i)
+				if (region->built & (1 << i))
+					resource_add(income, &BUILDINGS[i].support);
 		}
 	}
 }
@@ -353,8 +399,6 @@ static int computer_map_orders_list(struct array_orders *restrict orders, const 
 	// Make a list of the orders available for the player.
 	*orders = (struct array_orders){0};
 
-	//printf(">>> start <<<\n");
-
 	for(i = 0; i < game->regions_count; ++i)
 	{
 		struct region *restrict region = game->regions + i;
@@ -389,8 +433,6 @@ static int computer_map_orders_list(struct array_orders *restrict orders, const 
 			}
 		}
 
-		// TODO don't add to orders if the order is too bad (negative rating) // TODO are there such orders?
-
 		if (!region->train[0]) // no training in progress
 		{
 			for(j = 0; j < UNITS_COUNT; ++j)
@@ -423,7 +465,7 @@ error:
 }
 
 // Executes orders from the heap greedily until order priority becomes too low.
-static void computer_map_orders_execute(struct heap_orders *restrict orders, const struct game *restrict game, unsigned char player, struct resources *restrict income)
+static void computer_map_orders_execute(struct heap_orders *restrict orders, const struct game *restrict game, unsigned char player, struct resources *restrict income, struct resources *restrict resources_shortage)
 {
 	// Perform map orders until all actions are complete or until the priority becomes too low.
 	// Skip orders for which there are not enough resources.
@@ -433,32 +475,43 @@ static void computer_map_orders_execute(struct heap_orders *restrict orders, con
 		struct region_order *order = orders->data[0];
 		heap_orders_pop(orders);
 
-		if (order->priority < MAP_COMMAND_PRIORITY_THRESHOLD)
-			break;
+		// TODO if there are not enough resources for something, remember how much resources we lack
 
 		switch (order->type)
 		{
 		case ORDER_BUILD:
 			if (order->region->construct >= 0)
-				break;
+				continue;
 			if (!resource_enough(&game->players[player].treasury, &BUILDINGS[order->target.building].cost))
+			{
+				resource_add(resources_shortage, &BUILDINGS[order->target.building].cost);
 				break;
+			}
 			if (resources_adverse(income, &BUILDINGS[order->target.building].support))
+			{
+				resource_add(resources_shortage, &BUILDINGS[order->target.building].support);
 				break;
+			}
 
 			resource_add(&game->players[player].treasury, &BUILDINGS[order->target.building].cost);
-			resource_add(income, &BUILDINGS[order->target.building].support); // TODO is this okay since the construction takes several turns?
+			resource_add(income, &BUILDINGS[order->target.building].support); // TODO is this okay when the construction takes several turns?
 			order->region->construct = order->target.building;
 			//LOG_DEBUG("BUILD %.*s in %.*s | %f", (int)BUILDINGS[order->target.building].name_length, BUILDINGS[order->target.building].name, (int)order->region->name_length, order->region->name, order->priority);
 			break;
 
 		case ORDER_TRAIN:
 			if (order->region->train[0])
-				break;
+				continue;
 			if (!resource_enough(&game->players[player].treasury, &UNITS[order->target.unit].cost))
+			{
+				resource_add(resources_shortage, &UNITS[order->target.unit].cost);
 				break;
+			}
 			if (resources_adverse(income, &UNITS[order->target.unit].support))
+			{
+				resource_add(resources_shortage, &UNITS[order->target.unit].support);
 				break;
+			}
 
 			resource_add(&game->players[player].treasury, &UNITS[order->target.unit].cost);
 			resource_add(income, &UNITS[order->target.unit].support);
@@ -622,6 +675,8 @@ static double map_state_rating(const struct game *restrict game, const struct ar
 	// TODO better handling for allies; maybe less rating for region/garrison owned by an ally
 	// TODO do I rate assault properly
 
+	// TODO there seems to be a problem with the income logic
+
 	struct survivors survivors[REGIONS_LIMIT] = {0};
 
 	struct resources income = {0};
@@ -652,7 +707,7 @@ static double map_state_rating(const struct game *restrict game, const struct ar
 	rating_max += (income.food + income.wood + income.stone + income.gold + income.iron) * 200.0; // TODO this number is completely arbitrary
 
 	// Adjust rating for income.
-	income_calculate(game, &income, player);
+	income_calculate(game, &income, player); // TODO shouldn't this use the pre-calculated income
 	rating += (income.food + income.wood + income.stone + income.gold + income.iron) * 200.0; // TODO this number is completely arbitrary
 //printf("income: %f\n", (income.food + income.wood + income.stone + income.gold + income.iron) * 200.0);
 
@@ -1010,9 +1065,225 @@ static double region_importance(const struct region *restrict region)
 	return regions_info;
 }
 
+static bool region_before(const struct region *restrict a, const struct region *restrict b)
+{
+	// Regions are ordered by grouping them.
+	// Each region is put in the first group for which it satisfies the criteria.
+	// * has Irrigation
+	// * has Farm
+	// * does not have any of Sawmill, Mine, Bloomery
+	// * does not have any of Mine, Bloomery
+	// * does not have Bloomery
+	// * has bloomery
+
+	unsigned priority_a, priority_b;
+
+	if (region_built(a, BuildingIrrigation))
+		return true;
+	else if (region_built(b, BuildingIrrigation))
+		return false;
+	else if (region_built(a, BuildingFarm))
+		return true;
+	else if (region_built(b, BuildingFarm))
+		return false;
+
+	priority_a = !region_built(a, BuildingBloomery) * (1 + !region_built(a, BuildingMine) * (1 + !region_built(a, BuildingSawmill)));
+	priority_b = !region_built(b, BuildingBloomery) * (1 + !region_built(b, BuildingMine) * (1 + !region_built(b, BuildingSawmill)));
+
+	return priority_a >= priority_b;
+}
+
+static int economy_manage(const struct game *restrict game, unsigned char player, const struct resources *restrict shortage)
+{
+	unsigned population = 0;
+	struct resources income = {0};
+
+	unsigned workers_food = 0, workers_wood = 0, workers_stone = 0, workers_iron = 0;
+	unsigned taxpayers = 0;
+	unsigned taxpayers_current = 0;
+
+	struct heap_regions regions = {0};
+
+	regions.data = malloc(game->regions_count * sizeof(*regions.data));
+	if (!regions.data)
+		return ERROR_MEMORY;
+
+	for(size_t i = 0; i < game->regions_count; ++i)
+	{
+		struct region *restrict region = game->regions + i;
+
+		population += region->population;
+		income_region(region, player, &income);
+
+		if ((region->owner == player) && (region->owner == region->garrison.owner))
+			regions.data[regions.count++] = region;
+	}
+
+	// Determine how to distribute workers for resource production.
+	if (income.food < 0)
+	{
+		// TODO account for Farm and Irrigation buildings better
+
+		unsigned workers = -income.food * 100;
+		unsigned population_available = population / 2;
+
+		if (workers > population_available)
+			workers = population_available;
+		workers_food += workers;
+		population -= workers * 2; // workers + equal amount of taxpayers to provide salaries
+	}
+	if (income.gold - 2 * income.food > 0) // if gold income will be positive after ensuring enough food income
+	{
+		// TODO handle negative income of wood, stone and iron
+
+		if (shortage->gold)
+		{
+			unsigned nonworkers = -shortage->gold * 100;
+
+			if (nonworkers > population)
+				nonworkers = population;
+			taxpayers += nonworkers;
+			population -= taxpayers;
+		}
+
+		if (shortage->food)
+		{
+			unsigned workers = -shortage->food * 100;
+			unsigned population_available = population / 2;
+
+			if (workers > population_available)
+				workers = population_available;
+			workers_food += workers;
+			population -= workers * 2; // workers + equal amount of taxpayers to provide salaries
+		}
+
+		if (shortage->wood)
+		{
+			unsigned workers = -shortage->wood * 100;
+			unsigned population_available = population / 2;
+
+			if (workers > population_available)
+				workers = population_available;
+			workers_wood += workers;
+			population -= workers * 2; // workers + equal amount of taxpayers to provide salaries
+		}
+
+		if (shortage->stone)
+		{
+			unsigned workers = -shortage->stone * 100;
+			unsigned population_available = population / 2;
+
+			if (workers > population_available)
+				workers = population_available;
+			workers_stone += workers;
+			population -= workers * 2; // workers + equal amount of taxpayers to provide salaries
+		}
+
+		if (shortage->iron)
+		{
+			unsigned workers = -shortage->iron * 200;
+			unsigned population_available = population / 2;
+
+			if (workers > population_available)
+				workers = population_available;
+			workers_iron += workers;
+			population -= workers * 2; // workers + equal amount of taxpayers to provide salaries
+		}
+	}
+
+	// Loop regions in such way that we can set workers greedily.
+	for(heap_regions_heapify(&regions); regions.count; heap_regions_pop(&regions))
+	{
+		struct region *region = regions.data[0];
+		unsigned hire_population = workers_population(region, 1), use_population = hire_population * 2;
+		unsigned population_available = region->population;
+		unsigned production;
+
+		region->workers.food = 0;
+		region->workers.wood = 0;
+		region->workers.stone = 0;
+		region->workers.iron = 0;
+
+		// Order of importance of resources:
+		// food > gold > wood > stone > iron
+
+		production = (unsigned)(hire_population * (1 + region_built(region, BuildingFarm) * 0.5 + region_built(region, BuildingIrrigation) * 0.5));
+		while (workers_food)
+		{
+			if (population_available < use_population)
+				goto after;
+
+			region->workers.food += 1;
+			if (production > workers_food)
+				workers_food = 0;
+			else
+				workers_food -= production;
+			population_available -= use_population;
+		}
+
+		while (taxpayers_current < taxpayers)
+		{
+			if (population_available < hire_population)
+				goto after;
+
+			taxpayers_current += hire_population;
+			population_available -= hire_population;
+		}
+
+		if (region_built(region, BuildingSawmill))
+			while (workers_wood)
+			{
+				if (population_available < use_population)
+					goto after;
+
+				region->workers.wood += 1;
+				if (production > workers_wood)
+					workers_wood = 0;
+				else
+					workers_wood -= production;
+				population_available -= use_population;
+			}
+
+		if (region_built(region, BuildingMine))
+			while (workers_stone)
+			{
+				if (population_available < use_population)
+					goto after;
+
+				region->workers.stone += 1;
+				if (production > workers_stone)
+					workers_stone = 0;
+				else
+					workers_stone -= production;
+				population_available -= use_population;
+			}
+
+		if (region_built(region, BuildingBloomery))
+			while (workers_iron)
+			{
+				if (population_available < use_population)
+					goto after;
+
+				region->workers.iron += 1;
+				if (production > workers_iron)
+					workers_iron = 0;
+				else
+					workers_iron -= production;
+				population_available -= use_population;
+			}
+
+after:
+		// TODO this is susceptible to rounding errors (population_available may not be accurate)
+		taxpayers_current += population_available;
+	}
+
+	free(regions.data);
+	return 0;
+}
+
 int computer_map(const struct game *restrict game, unsigned char player)
 {
-	struct resources income = {0};
+	struct resources income = {0}, resources_shortage = {0};
 	struct context context;
 	struct region_info *restrict regions_info;
 	struct troop_info troops_info = {0};
@@ -1041,7 +1312,7 @@ int computer_map(const struct game *restrict game, unsigned char player)
 	}
 
 	// Move player troops.
-	status = computer_map_move(game, player, context.regions_visible, regions_info, &troops_info, regions_distances);
+	status = computer_map_move(game, player, context.regions_visible, regions_info, &troops_info, regions_distances); // TODO pass income as an argument
 
 	// TODO support cancelling constructions and trainings
 	status = computer_map_orders_list(&orders, game, player, &context, regions_info, &troops_info, &income);
@@ -1063,7 +1334,10 @@ int computer_map(const struct game *restrict game, unsigned char player)
 	heap_orders_heapify(&orders_queue);
 
 	// Choose greedily which orders to execute.
-	computer_map_orders_execute(&orders_queue, game, player, &income);
+	computer_map_orders_execute(&orders_queue, game, player, &income, &resources_shortage);
+
+	// Adjust resource production.
+	status = economy_manage(game, player, &resources_shortage);
 
 	free(orders_queue.data);
 	array_orders_term(&orders);

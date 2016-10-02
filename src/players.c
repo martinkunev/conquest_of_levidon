@@ -42,8 +42,8 @@
 #include "players.h"
 
 // TODO can a read()/write() call be interrupted by a signal?
-// TODO is uint32_t available everywhere
 // TODO assertion for PIPE_BUF
+// TODO is uint32_t available everywhere
 
 struct request_generic
 {
@@ -235,6 +235,7 @@ int players_init(struct game *restrict game)
 	if (pthread_mutex_init(&game->mutex_input, 0))
 		return ERROR_MEMORY;
 
+	game->players_local_count = 0;
 	for(size_t player = 0; player < game->players_count; player += 1)
 	{
 		switch (game->players[player].type)

@@ -149,6 +149,11 @@ static inline int region_building_available(const struct region *restrict region
 	return ((region->built & (building->requires | building->conflicts)) == building->requires);
 }
 
+static inline unsigned workers_population(const struct region *restrict region, unsigned workers)
+{
+	return (unsigned)(region->population * (workers / 100.0));
+}
+
 void troop_attach(struct troop **troops, struct troop *troop);
 void troop_detach(struct troop **troops, struct troop *troop);
 void troop_remove(struct troop **troops, struct troop *troop);
