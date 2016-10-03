@@ -6,6 +6,40 @@ keep the gate open the whole round if something passes through it; that way good
 
 ----
 
+left: attacker; top: victim
+
+                peasant     militia     pikeman     light cavalry
+peasant         9 (1-2)     7.2 (0-1)   6.3 (0-1)   7.2 (0)
+militia         18 (2-4)    16.2 (1-3)  12.6 (1-2)  16.2 (0-1)
+pikeman         24 (3-6)    24 (2-4)    16.8 (1-3)  24 (1-2)
+light cavalry   20 (2-5)    18 (1-3)    14 (1-2)    18 (0-1)
+
+maybe the damages are a little too low
+
+peasant		6hp 2d
+militia		8hp 3d
+pikeman		8hp 4d
+l cavalry	16hp 3d
+
+                peasant     militia     pikeman     light cavalry
+peasant         18 (1-3)    14.4 (0-1)	12.6 (0-1)  14.4 (0)
+militia         36 (3-6)    32.4 (2-4)  25.2 (1-3)  32.4 (1-2)
+pikeman         48 (4-8)    48 (3-6)    33.6 (2-4)  48 (1-3)
+light cavalry   40 (3-6)    36 (2-4)    28 (1-3)    36 (1-2)
+
+peasant		5hp 2d
+militia		8hp 3d
+pikeman		8hp 4d
+l cavalry	16hp 3d
+
+                peasant     militia     pikeman     light cavalry
+peasant         18 (1-3)    14.4 (0-1)	12.6 (0-1)  14.4 (0)
+militia         36 (3-7)    32.4 (2-4)  25.2 (1-3)  32.4 (1-2)
+pikeman         48 (4-9)    48 (3-6)    33.6 (2-4)  48 (1-3)
+light cavalry   40 (4-8)    36 (2-4)    28 (1-3)    36 (1-2)
+
+----
+
 format.c			string formatting library
 hashmap.c			hash map data structure
 json.c				JSON parser/serializer

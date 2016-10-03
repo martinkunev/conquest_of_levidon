@@ -683,20 +683,8 @@ void if_map(const void *argument, const struct game *game)
 		fill_polygon(region->location, MAP_X, MAP_Y, display_colors[color], 1.0);
 
 		// Remember income and expenses.
-		if (region->owner == state->player) region_income(region, &income);
-		for(troop = region->troops; troop; troop = troop->_next)
-		{
-			struct resources expense;
-
-			if (troop->owner != state->player) continue;
-			if (troop->location == LOCATION_GARRISON) continue;
-
-			if (region->owner != region->garrison.owner) // Troops expenses are covered by another region. Double expenses.
-				resource_multiply(&expense, &troop->unit->support, 2 * troop->count);
-			else
-				resource_multiply(&expense, &troop->unit->support, troop->count);
-			resource_add(&income, &expense);
-		}
+		if (region->owner == state->player) region_production(region, &income);
+		region_income(region, state->player, &income);
 	}
 
 	// Draw region borders.

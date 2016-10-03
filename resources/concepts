@@ -22,6 +22,8 @@ non-battle troops
 	scout
 	miner - needed for stone production
 
+sawmill, mine and bloomery should actually be on a map hexagon; workers must go there to produce the resource
+
 blast furnace - increase iron production
 
 ----

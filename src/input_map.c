@@ -82,7 +82,7 @@ struct context
     unsigned count_expected;
     unsigned char regions_visible[REGIONS_LIMIT];
 };
-struct region_info *regions_info_collect(const struct game *restrict game, unsigned char player, struct context *restrict context);
+struct region_info *regions_info_collect_(const struct game *restrict game, unsigned char player, struct context *restrict context);
 double tvalue(const struct game *restrict game, unsigned char player, struct region_info *restrict regions_info, const struct context *restrict context, const struct region *restrict region, size_t unit);
 double bvalue(const struct game *restrict game, unsigned char player, struct region_info *restrict regions_info, const struct context *restrict context, const struct region *restrict region, size_t building);
 double rate(const struct game *restrict game, unsigned char player, struct region_info *restrict regions_info, const struct context *restrict context);
@@ -93,7 +93,7 @@ static struct region_info *regions_info;*/
 static void state_economy_set(struct state_map *restrict state, const struct region *restrict region)
 {
 	state->region_income = (struct resources){0};
-	region_income(region, &state->region_income);
+	region_production(region, &state->region_income);
 
 	state->workers_food = true;
 	state->workers_wood = false;

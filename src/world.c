@@ -48,7 +48,7 @@ const struct unit UNITS[UNITS_COUNT] =
 	},
 	[UnitMilitia] = {
 		.index = UnitMilitia, NAME("Militia"), .speed = 5, .health = 5, .armor = ARMOR_LEATHER,
-		.cost = {.gold = -35, .wood = -20}, .support = {.food = -1}, .time = 1, .troops_count = 25, .requires = (1 << BuildingBarracks),
+		.cost = {.gold = -30, .wood = -20}, .support = {.food = -1}, .time = 1, .troops_count = 25, .requires = (1 << BuildingBarracks),
 		.melee = {.weapon = WEAPON_CLEAVING, .damage = 1.5, .agility = 1.0},
 	},
 	[UnitPikeman] = {
@@ -58,7 +58,7 @@ const struct unit UNITS[UNITS_COUNT] =
 	},
 	[UnitArcher] = {
 		.index = UnitArcher, NAME("Archer"), .speed = 4, .health = 4, .armor = ARMOR_NONE,
-		.cost = {.gold = -30, .wood = -20}, .support = {.food = -1}, .time = 1, .troops_count = 25, .requires = (1 << BuildingArcheryRange),
+		.cost = {.gold = -30, .wood = -10}, .support = {.food = -1}, .time = 1, .troops_count = 25, .requires = (1 << BuildingArcheryRange),
 		.melee = {.weapon = WEAPON_CLUB, .damage = 0.75, .agility = 0.75},
 		.ranged = {.weapon = WEAPON_ARROW, .damage = 1.0, .range = 5},
 	},
@@ -70,8 +70,8 @@ const struct unit UNITS[UNITS_COUNT] =
 	},
 	[UnitLightCavalry] = {
 		.index = UnitLightCavalry, NAME("Light Cavalry"), .speed = 9, .health = 10, .armor = ARMOR_LEATHER,
-		.cost = {.gold = -48, .wood = -20}, .support = {.food = -2}, .time = 2, .troops_count = 16, .requires = (1 << BuildingBarracks) | (1 << BuildingStables),
-		.melee = {.weapon = WEAPON_CLEAVING, .damage = 2.0, .agility = 1.0},
+		.cost = {.gold = -48, .wood = -15}, .support = {.food = -2}, .time = 2, .troops_count = 16, .requires = (1 << BuildingBarracks) | (1 << BuildingStables),
+		.melee = {.weapon = WEAPON_CLEAVING, .damage = 2.0, .agility = 1.25},
 	},
 	[UnitBatteringRam] = {
 		.index = UnitBatteringRam, NAME("Battering Ram"), .speed = 3, .health = 60, .armor = ARMOR_WOODEN,

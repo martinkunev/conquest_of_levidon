@@ -1,6 +1,7 @@
 *.o
 src/conquest_of_levidon
 src/editor
+src/units
 src/generic/*
 test/check
 Makefile

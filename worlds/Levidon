@@ -1,13 +1,13 @@
 {
 	"players": [
 		{"gold":0,"stone":0,"iron":0,"wood":0,"alliance":0,"food":0,"name":""},
-		{"gold":10,"stone":6,"iron":0,"wood":6,"alliance":1,"food":6,"name":"G"},
-		{"gold":10,"stone":3,"iron":0,"wood":5,"alliance":2,"food":6,"name":"Potam"},
-		{"gold":2,"stone":0,"iron":0,"wood":2,"alliance":3,"food":2,"name":"Sand"},
-		{"gold":5,"stone":5,"iron":2,"wood":5,"alliance":4,"food":2,"name":"Mathhims"},
-		{"gold":10,"stone":0,"iron":0,"wood":8,"alliance":5,"food":6,"name":"Nicorin"},
-		{"gold":1,"stone":0,"iron":0,"wood":1,"alliance":3,"food":1,"name":"Sand"},
-		{"gold":1,"stone":0,"iron":0,"wood":1,"alliance":3,"food":1,"name":"Sand"}
+		{"gold":100,"stone":60,"iron":0,"wood":60,"alliance":1,"food":60,"name":"G"},
+		{"gold":100,"stone":30,"iron":0,"wood":50,"alliance":2,"food":60,"name":"Potam"},
+		{"gold":20,"stone":0,"iron":0,"wood":20,"alliance":3,"food":20,"name":"Sand"},
+		{"gold":50,"stone":50,"iron":20,"wood":50,"alliance":4,"food":20,"name":"Mathhims"},
+		{"gold":100,"stone":0,"iron":0,"wood":80,"alliance":5,"food":60,"name":"Nicorin"},
+		{"gold":10,"stone":0,"iron":0,"wood":1,"alliance":3,"food":10,"name":"Sand"},
+		{"gold":10,"stone":0,"iron":0,"wood":1,"alliance":3,"food":10,"name":"Sand"}
 	],
 	"regions": {
 		"33":{"population":14800,"troops":[],"neighbors":["32","Mathhim",null,null,null,null,null,null],"train_progress":0,"train":[],"location_garrison":[154,25],"owner":4,"center":[111,38],"location":[[254,46],[277,32],[238,4],[184,4],[73,18],[86,46],[116,71],[143,39],[166,41],[169,18],[192,18],[220,34]],"built":["Mine", "Bloomery"]},

@@ -23,7 +23,7 @@
 
 // TODO don't use struct point here
 
-#define region_built(region, building) ((int)((region)->built & (1 << (building))))
+#define region_built(region, building) ((_Bool)((region)->built & (1 << (building))))
 
 #define COUNT_ROUND_PRECISION 10
 #define count_round(count) (((count) + (COUNT_ROUND_PRECISION / 2)) / COUNT_ROUND_PRECISION)
@@ -160,7 +160,8 @@ void troop_remove(struct troop **troops, struct troop *troop);
 
 int troop_spawn(struct region *restrict region, struct troop **restrict troops, const struct unit *restrict unit, unsigned count, unsigned char owner);
 
-void region_income(const struct region* restrict region, struct resources *restrict income);
+void region_income(const struct region *restrict region, unsigned char player, struct resources *restrict income);
+void region_production(const struct region* restrict region, struct resources *restrict income);
 
 void region_battle_cleanup(const struct game *restrict game, struct region *restrict region, int assault, unsigned winner_alliance);
 void region_turn_process(const struct game *restrict game, struct region *restrict region);

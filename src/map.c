@@ -74,7 +74,52 @@ static inline unsigned population_income(unsigned workers, unsigned income)
 	return (unsigned)(income * (workers / 1000.0));
 }
 
-void region_income(const struct region *restrict region, struct resources *restrict result)
+void region_income(const struct region *restrict region, unsigned char player, struct resources *restrict income)
+{
+	for(const struct troop *restrict troop = region->troops; troop; troop = troop->_next)
+	{
+		const struct region *restrict destination;
+		struct resources expense;
+
+		if (troop->owner != player)
+			continue;
+
+		destination = ((troop->move == LOCATION_GARRISON) ? region : troop->move);
+		if ((troop->owner == destination->owner) && (destination->owner == destination->garrison.owner))
+		{
+			if (troop->move == LOCATION_GARRISON)
+				continue;
+
+			// Troops expenses are covered by the move region.
+			if (troop->move->owner != region->owner)
+				resource_multiply(&expense, &troop->unit->support, 2 * troop->count);
+			else
+				resource_multiply(&expense, &troop->unit->support, troop->count);
+			resource_add(income, &expense);
+		}
+		else
+		{
+			if ((troop->move == LOCATION_GARRISON) && (troop->owner == region->garrison.owner))
+				continue; // sieged troop
+
+			// Troop expenses are covered by another region. Double expenses.
+			resource_multiply(&expense, &troop->unit->support, 2 * troop->count);
+			resource_add(income, &expense);
+		}
+
+		if ((region->owner == player) && (region->owner == region->garrison.owner))
+			income->gold -= 10 * sqrt(region->population / 1000.0); // region governing
+
+		if ((region->owner == player) && (region->owner == region->garrison.owner))
+		{
+			for(size_t i = 0; i < BUILDINGS_COUNT; ++i)
+				if (region->built & (1 << i))
+					resource_add(income, &BUILDINGS[i].support);
+		}
+	}
+}
+
+void region_production(const struct region *restrict region, struct resources *restrict result)
 {
 	struct resources income = {0};
 
@@ -87,16 +132,13 @@ void region_income(const struct region *restrict region, struct resources *restr
 
 	for(size_t i = 0; i < BUILDINGS_COUNT; ++i)
 		if (region->built & (1 << i))
-		{
-			resource_add(result, &BUILDINGS[i].support);
 			resource_add(&income, &BUILDINGS[i].income);
-		}
 
 	result->food += population_income(workers_food, 20); // produced by workers
 	result->food += population_income(workers_food, income.food); // produced by workers from buildings
 	result->food -= population_income(region->population * (occupied / 100.0), 10); // consumed by workers
 
-	result->gold -= 10 * sqrt(region->population / 1000.0); // region governing
+	//result->gold -= 10 * sqrt(region->population / 1000.0); // region governing
 	result->gold -= population_income(workers_food + workers_wood + workers_stone + workers_iron, 20); // paid salaries
 	result->gold += population_income(region->population, 10); // collected taxes
 	// TODO gold mine support

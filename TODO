@@ -6,9 +6,13 @@ H	if there are too many units on the battlefield, the last ones get placed at (0
 H	crash: retreat take effect immediately and if there is only one other player that is computer, its rating_max will be 0
 H	either the AI algorithm or the neighbor state graph are buggy
 H	F battle report displayed when an empty region is invaded (and taken without battle)
+H	who pays building support when the garrison is under siege?
 M	pawn trembling (sometimes when it tries to move to a certain position, but another one is there)
 M	fast units cannot always catch up with slow units even when they are close enough (seen with light cavalry and peasant)
 L	if_init fails on mac (in glXMakeContextCurrent) when used with ssh forwarding
+
+font no longer appears
+	use libxft (? it uses freetype and xrender)
 
 http://stackoverflow.com/questions/6543924/is-double-buffering-needed-any-more#6544453
 
@@ -17,12 +21,13 @@ flickering
 
 -- features --
 H	improve map AI
-	fix map AI for the region population feature
+	F fix map AI for the region population feature
 	computer map orders are weak
 		computer doesn't want to train good units because there are not enough resources; then an income building is constructed and the computer trains worse units
-	computer cannot recover well from having negative food income
-		// solution: dismiss troops
-H	handle different screen resolutions better
+M	improve economy AI
+	dismiss troops when resources are not enough
+	when sorting regions before setting workers for production, ignore buildings for resources for which there is no shortage
+M	handle different screen resolutions better
 M	add indicator (e.g. lighted bulb) to mark the players who have completed their turn
 M	improve assault AI
 		enemy should stay inside garrison when there are shooters
@@ -110,8 +115,7 @@ L	? buildings should not generate income on the turn they are built
 L	? implement exit game while in battle
 L	troops of dead players in allied regions remain alive
 	they should either die, join the player or become neutral
-
-? rename WEAPON_ARROW to WEAPON_PIERCING and change archer melee weapon to WEAPON_PIERCING
+L	support up to 24 players
 
 ? dynamic battlefield size
 ? deal damage to each pawn escaping from enemy pawns
@@ -129,7 +133,8 @@ refactoring
 	revise user/computer battle input functions: combat_fight, combat_shoot, combat_assault, movement_queue; it should be clear what they do and how they interact
 	? rename support to maintenance
 	rename if_display to if_render
-L	support up to 24 players
+	? rename WEAPON_ARROW to WEAPON_PIERCING and change archer melee weapon to WEAPON_PIERCING
+	rename struct building income to production
 
 -- interface --
 M	display a mirror image of enemy troops
