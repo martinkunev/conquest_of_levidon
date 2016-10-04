@@ -1,11 +1,7 @@
 -- bugs --
 H	F resolve more of the battle collisions
 	two horses blocked during battle (neither attacks an archer) // when they start moving, they collide again
-H	if there are too many units on the battlefield, the last ones get placed at (0, 0) and this leads to crashes
-	handle too many units on the battlefield properly
-H	crash: retreat take effect immediately and if there is only one other player that is computer, its rating_max will be 0
 H	either the AI algorithm or the neighbor state graph are buggy
-H	F battle report displayed when an empty region is invaded (and taken without battle)
 H	who pays building support when the garrison is under siege?
 M	pawn trembling (sometimes when it tries to move to a certain position, but another one is there)
 M	fast units cannot always catch up with slow units even when they are close enough (seen with light cavalry and peasant)
@@ -35,7 +31,6 @@ M	balance battles
 	improve auto combat
 	stamina?
 	chance to miss? (in deaths(), randomly choose how many troops did not hit the target)
-	battle->...alive is set by battle_retreat for players individually (this should be documented)
 M	when there is no local player left fighting in a battle, resolve the battle automatically
 M	improve AI
 	treating each troop separately when finding local maximum in AI will have bad results
@@ -90,6 +85,7 @@ M	improve world loading/saving
 	log (level warning) when an optional field has the wrong type; assume the field is not present for the execution logic
 	refactor (simplify) the code using these ideas
 M	? melee units should go closer to the shooter to prevent them from escaping far enough to shoot
+M	support more than PAWNS_LIMIT pawns on a given location during battle (limited in battlefield_init() and by REPORT_AFTER_X)
 L	add option for shooters to cover larger area while shooting
 L	improve error reporting on invalid map
 L	improve AI (formation AI, predicting troops in unknown regions, batter map behavior, better battle behavior, etc.)

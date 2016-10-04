@@ -20,8 +20,6 @@
 #define BATTLEFIELD_WIDTH 25
 #define BATTLEFIELD_HEIGHT 25
 
-#define PAWNS_LIMIT 12
-
 #define BATTLEFIELD_PAWNS_LIMIT 7
 
 #define REACHABLE_LIMIT (BATTLEFIELD_WIDTH * BATTLEFIELD_HEIGHT)
@@ -100,7 +98,7 @@ struct battle
 	{
 		size_t pawns_count;
 		struct pawn **pawns;
-		int alive; // TODO this should be renamed to reflect its real use; it is currently used for aliveness and retreat
+		enum {PLAYER_DEAD, PLAYER_ALIVE, PLAYER_RETREAT} state;
 	} players[PLAYERS_LIMIT];
 
 	unsigned round;

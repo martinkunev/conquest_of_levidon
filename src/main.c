@@ -87,7 +87,7 @@ static int play_battle(struct game *restrict game, struct region *restrict regio
 		state.title = REPORT_TITLE_BATTLE;
 		state.title_size = sizeof(REPORT_TITLE_BATTLE) - 1;
 		for(size_t player = 0; player < game->players_count; player += 1)
-			if ((game->players[player].type == Local) && battle.players[player].alive)
+			if ((game->players[player].type == Local) && (battle.players[player].state == PLAYER_ALIVE))
 				state.players[players_local++] = player;
 		state.players_count = players_local;
 		input_report_players(&state);
@@ -138,7 +138,7 @@ static int play_battle(struct game *restrict game, struct region *restrict regio
 				obstacles[alliance] = path_obstacles_alloc(game, &battle, player);
 				if (!obstacles[alliance]) abort();
 			}
-			graph[player] = visibility_graph_build(&battle, obstacles[player], 2); // 2 vertices for origin and target
+			graph[player] = visibility_graph_build(&battle, obstacles[alliance], 2); // 2 vertices for origin and target
 			if (!graph[player])
 				abort();
 		}

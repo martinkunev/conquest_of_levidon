@@ -35,6 +35,8 @@
 #include "movement.h"
 #include "battle.h"
 
+#define PAWNS_LIMIT 12
+
 #define FORMATION_RADIUS_ATTACK 3
 #define FORMATION_RADIUS_DEFEND 4
 #define FORMATION_RADIUS_FREE 10
@@ -370,6 +372,10 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 		if ((battle_type == BATTLE_OPEN) && (troop->location == LOCATION_GARRISON)) continue; // garrison troops don't participate in open battle
 		if (assault && (troop->move != LOCATION_GARRISON)) continue; // only troops that specified it participate in assault
 
+		// TODO temporary workaround
+		if (battle->players[troop->owner].pawns_count == PAWNS_LIMIT)
+			continue;
+
 		troops_count += 1;
 
 		// Count the troops owned by the given player.
@@ -387,7 +393,7 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 		if (!battle->players[i].pawns_count)
 		{
 			battle->players[i].pawns = 0;
-			battle->players[i].alive = 0;
+			battle->players[i].state = PLAYER_DEAD;
 			continue;
 		}
 
@@ -398,7 +404,7 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 			free(pawns);
 			return ERROR_MEMORY;
 		}
-		battle->players[i].alive = 1;
+		battle->players[i].state = PLAYER_ALIVE;
 	}
 
 	// Sort the pawns by speed descending, using bucket sort.
@@ -413,6 +419,10 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 	{
 		if ((battle_type == BATTLE_OPEN) && (troop->location == LOCATION_GARRISON)) continue; // garrison troops don't participate in open battle
 		if (assault && (troop->move != LOCATION_GARRISON)) continue; // only troops that specified it participate in assault
+
+		// TODO temporary workaround
+		if (pawn_offset[troop->owner] == PAWNS_LIMIT)
+			continue;
 
 		i = offset[troop->unit->speed]++;
 
@@ -446,6 +456,16 @@ int battlefield_init(const struct game *restrict game, struct battle *restrict b
 }
 
 void battle_retreat(struct battle *restrict battle, unsigned char player)
+{
+	for(size_t i = 0; i < battle->players[player].pawns_count; ++i)
+	{
+		battle->players[player].pawns[i]->action = ACTION_HOLD;
+		battle->players[player].pawns[i]->path.count = 0;
+	}
+	battle->players[player].state = PLAYER_RETREAT;
+}
+
+static void retreat(struct battle *restrict battle, unsigned char player)
 {
 	const struct garrison_info *restrict info;
 	struct troop *restrict troop;
@@ -487,7 +507,7 @@ void battle_retreat(struct battle *restrict battle, unsigned char player)
 		else troop->move = troop->location;
 	}
 
-	battle->players[player].alive = 0;
+	battle->players[player].state = PLAYER_DEAD;
 }
 
 // Returns winner alliance number if the battle ended and -1 otherwise.
@@ -500,16 +520,19 @@ int battle_end(const struct game *restrict game, struct battle *restrict battle)
 	{
 		unsigned char alliance;
 
-		if (!battle->players[i].alive) continue;
+		if (battle->players[i].state == PLAYER_RETREAT)
+			retreat(battle, i);
+		if (!battle->players[i].state)
+			continue;
 
 		alliance = game->players[i].alliance;
 
-		battle->players[i].alive = 0;
+		battle->players[i].state = PLAYER_DEAD;
 		for(size_t j = 0; j < battle->players[i].pawns_count; ++j)
 		{
 			if (battle->players[i].pawns[j]->count)
 			{
-				battle->players[i].alive = 1;
+				battle->players[i].state = PLAYER_ALIVE;
 
 				if (winner < 0) winner = alliance;
 				else if (alliance != winner) end = 0;

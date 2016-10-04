@@ -94,32 +94,11 @@ struct response
 };
 
 // 3 structs have members that can be modified by the owner of the given entity (possibly in a thread for that owner):
-// struct region				(modifiable by region->owner)
-// struct region . garrison		(modifiable by region->garrison.owner)
-// struct troop					(modifiable by troop->owner)
-// struct pawn					(modifiable by pawn->troop->owner)
-
-/*static bool writeall(int fd, const void *restrict buffer, size_t total)
-{
-	ssize_t size;
-	for(size_t offset = 0; offset < total; offset += size)
-	{
-		size = write(fd, (const unsigned char *)buffer + offset, total - offset);
-		if (size < 0) return false;
-	}
-	return true;
-}
-
-static bool readall(int fd, void *restrict buffer, size_t total)
-{
-	ssize_t size;
-	for(size_t offset = 0; offset < total; offset += size)
-	{
-		size = read(fd, (unsigned char *)buffer + offset, total - offset);
-		if (size <= 0) return false;
-	}
-	return true;
-}*/
+// struct_region					(modifiable by region->owner)
+// struct_region.garrison.reinforce	(modifiable by region->garrison.owner)
+// struct_troop						(modifiable by troop->owner)
+// struct_pawn						(modifiable by pawn->troop->owner)
+// struct_battle.players[p].alive	(modifiable by p)
 
 static int request_read(int input, union request *restrict request)
 {
@@ -426,7 +405,7 @@ int players_formation(struct game *restrict game, struct battle *restrict battle
 	{
 		struct request_formation parameters = {.request.type = REQUEST_FORMATION, .request.player = player, .request.game = game, .battle = battle};
 
-		if (!battle->players[player].alive)
+		if (battle->players[player].state != PLAYER_ALIVE)
 			continue;
 
 		switch (game->players[player].type)
@@ -448,7 +427,7 @@ int players_formation(struct game *restrict game, struct battle *restrict battle
 	for(size_t i = 0; i < game->players_local_count; ++i)
 	{
 		player = game->players_local[i];
-		if (!battle->players[player].alive)
+		if (battle->players[player].state != PLAYER_ALIVE)
 			continue;
 
 		status = input_formation(game, battle, player, hotseat);
@@ -475,11 +454,11 @@ int players_battle(struct game *restrict game, struct battle *restrict battle, c
 
 	for(player = 0; player < game->players_count; ++player)
 	{
-		struct request_battle parameters = {.request.type = REQUEST_FORMATION, .request.player = player, .request.game = game, .battle = battle};
+		struct request_battle parameters = {.request.type = REQUEST_BATTLE, .request.player = player, .request.game = game, .battle = battle};
 		parameters.obstacles = obstacles[game->players[player].alliance];
 		parameters.graph = graph[player];
 
-		if (!battle->players[player].alive)
+		if (battle->players[player].state != PLAYER_ALIVE)
 			continue;
 
 		switch (game->players[player].type)
@@ -503,7 +482,7 @@ int players_battle(struct game *restrict game, struct battle *restrict battle, c
 	for(size_t i = 0; i < game->players_local_count; ++i)
 	{
 		player = game->players_local[i];
-		if (!battle->players[player].alive)
+		if (battle->players[player].state != PLAYER_ALIVE)
 			continue;
 
 		status = input_battle(game, battle, player, graph[player], obstacles[game->players[player].alliance]);

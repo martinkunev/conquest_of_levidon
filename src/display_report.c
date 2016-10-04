@@ -38,7 +38,7 @@
 #define FORMAT_BUFFER_INT (1 + sizeof(uintmax_t) * 3) /* buffer size that is sufficient for base-10 representation of any integer */
 
 #define REPORT_BEFORE_X REPORT_X
-#define REPORT_AFTER_X (REPORT_X + 384)
+#define REPORT_AFTER_X (REPORT_X + 480)
 
 #define REPORT_PLAYER_X 32
 #define REPORT_TYPE_X 96
