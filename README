@@ -15,6 +15,7 @@ Required packages (I may have missed some):
 		x11-libs/libxcb
 		x11-libs/libXext
 		media-fonts/dejavu
+		media-libs/freetype
 	Debian 7
 		libpng12-dev
 		libgl1-mesa-glx
@@ -23,6 +24,7 @@ Required packages (I may have missed some):
 		libx11-xcb-dev
 		libxext6
 		ttf-dejavu-core
+		libfreetype6
 
 Installation steps:
 $ ./configure

@@ -43,9 +43,11 @@ light cavalry   40 (4-8)    36 (2-4)    28 (1-3)    36 (1-2)
 format.c			string formatting library
 hashmap.c			hash map data structure
 json.c				JSON parser/serializer
-image.c				image handing library for OpenGL
+image.c				image handing functions for OpenGL
+font.c				font handling functions for OpenGL
 
-main.c				program flow; invokes input and output
+main.c				drives program flow
+players.c			handles player input and output
 menu.c				game menu primitives
 map.c				map primitives
 resources.c			resource handling functions for the map

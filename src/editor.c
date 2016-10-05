@@ -35,6 +35,7 @@
 #include "json.h"
 #include "game.h"
 #include "draw.h"
+#include "font.h"
 #include "map.h"
 #include "interface.h"
 #include "input.h"
@@ -87,9 +88,6 @@ struct vertex
 
 static GLuint map_framebuffer;
 static GLuint map_renderbuffer;
-
-extern Display *display;
-extern GLXDrawable drawable;
 
 struct state
 {

@@ -17,7 +17,6 @@
  * along with Conquest of Levidon.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-extern struct font font9, font12, font24;
 extern unsigned WINDOW_WIDTH, WINDOW_HEIGHT;
 
 struct game;

@@ -23,6 +23,7 @@
 
 #include "log.h"
 #include "draw.h"
+#include "font.h"
 #include "interface.h"
 
 // http://xcb.freedesktop.org/opengl/
@@ -48,15 +49,13 @@
 static xcb_screen_t *screen;
 static xcb_window_t window;
 static GLXContext context;
+static GLXDrawable drawable;
 
 Display *display;
-GLXDrawable drawable;
 xcb_connection_t *connection;
 KeySym *keymap;
 int keysyms_per_keycode;
 int keycode_min, keycode_max;
-
-struct font font9, font12, font24;
 
 unsigned WINDOW_WIDTH, WINDOW_HEIGHT;
 
@@ -133,40 +132,24 @@ int if_init(void)
 	context = glXCreateNewContext(display, fb_config, GLX_RGBA_TYPE, 0, 1);
 	if (!context)
 	{
+		glXDestroyWindow(display, drawable);
 		xcb_destroy_window(connection, window);
 		goto error;
 	}
 	if (!glXMakeContextCurrent(display, drawable, drawable, context))
 	{
+		glXDestroyWindow(display, drawable);
 		glXDestroyContext(display, context);
 		xcb_destroy_window(connection, window);
 		goto error;
 	}
 
-	// TODO use DPI-based font size
-	// https://wiki.archlinux.org/index.php/X_Logical_Font_Description
-	if ((font_init(&font9, "-*-dejavu sans-bold-r-normal--9-*-*-*-p-0-ascii-0") < 0) && (font_init(&font9, "-*-*-bold-r-normal--9-*-*-*-p-0-ascii-0") < 0))
+	if (font_init() < 0)
 	{
-		xcb_destroy_window(connection, window);
+		LOG_ERROR("Cannot loading fonts");
+		glXDestroyWindow(display, drawable);
 		glXDestroyContext(display, context);
-		LOG_ERROR("Cannot load font with size 9");
-		goto error;
-	}
-	if ((font_init(&font12, "-*-dejavu sans-bold-r-normal--12-*-*-*-p-0-ascii-0") < 0) && (font_init(&font12, "-*-*-bold-r-normal--12-*-*-*-p-0-ascii-0") < 0))
-	{
-		font_term(&font9);
 		xcb_destroy_window(connection, window);
-		glXDestroyContext(display, context);
-		LOG_ERROR("Cannot load font with size 12");
-		goto error;
-	}
-	if ((font_init(&font24, "-*-dejavu sans-bold-r-normal--24-*-*-*-p-0-ascii-0") < 0) && (font_init(&font24, "-*-*-bold-r-normal--24-*-*-*-p-0-ascii-0") < 0))
-	{
-		font_term(&font9);
-		font_term(&font12);
-		xcb_destroy_window(connection, window);
-		glXDestroyContext(display, context);
-		LOG_ERROR("Cannot load font with size 24");
 		goto error;
 	}
 
@@ -179,13 +162,14 @@ int if_init(void)
 	keymap = XGetKeyboardMapping(display, keycode_min, (keycode_max - keycode_min + 1), &keysyms_per_keycode);
 	if (!keymap)
 	{
-		font_term(&font24);
-		font_term(&font12);
-		font_term(&font9);
-		goto error; // TODO error
+		font_term();
+		glXDestroyWindow(display, drawable);
+		glXDestroyContext(display, context);
+		xcb_destroy_window(connection, window);
+		goto error;
 	}
 
-	// enable transparency
+	// Enable transparency.
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -231,12 +215,10 @@ void input_display_timer(void (*if_display)(const void *, const struct game *, d
 void if_term(void)
 {
 	XFree(keymap);
-	font_term(&font24);
-	font_term(&font12);
-	font_term(&font9);
+	font_term();
 
 	glXDestroyWindow(display, drawable);
-	xcb_destroy_window(connection, window);
 	glXDestroyContext(display, context);
+	xcb_destroy_window(connection, window);
 	XCloseDisplay(display);
 }

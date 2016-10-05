@@ -28,6 +28,7 @@
 #include "format.h"
 #include "game.h"
 #include "draw.h"
+#include "font.h"
 #include "map.h"
 #include "pathfinding.h"
 #include "movement.h"
@@ -46,9 +47,6 @@
 
 #define BATTLEFIELD_X(x) (unsigned)(BATTLE_X + ((x) - PAWN_RADIUS) * FIELD_SIZE + 0.5)
 #define BATTLEFIELD_Y(y) (unsigned)(BATTLE_Y + ((y) - PAWN_RADIUS) * FIELD_SIZE + 0.5)
-
-extern Display *display;
-extern GLXDrawable drawable;
 
 // TODO Create a struct that stores all the information about the battle (battlefield, players, etc.)
 struct battle *battle;
@@ -242,7 +240,7 @@ void if_formation(const void *argument, const struct game *game)
 					fill_rectangle(BATTLE_X + state->reachable[j].x * object_group[Battlefield].width, BATTLE_Y + state->reachable[j].y * object_group[Battlefield].height, object_group[Battlefield].width, object_group[Battlefield].height, display_colors[FieldReachable]);
 
 			// Display the selected pawn in the control section.
-			fill_rectangle(CTRL_X, CTRL_Y + CTRL_MARGIN, FIELD_SIZE + MARGIN * 2, FIELD_SIZE + font12.height + MARGIN * 2, display_colors[Self]);
+			fill_rectangle(CTRL_X, CTRL_Y + CTRL_MARGIN, FIELD_SIZE + MARGIN * 2, FIELD_SIZE + font12.size + MARGIN * 2, display_colors[Self]);
 			display_troop(troop->unit->index, CTRL_X + MARGIN, CTRL_Y + CTRL_MARGIN + MARGIN, Player + troop->owner, Black, pawns[i]->count);
 		}
 		else
@@ -276,7 +274,7 @@ static void show_health(const struct pawn *pawn, unsigned x, unsigned y)
 
 	// HEALTH_BAR * left / total
 	// HEALTH_BAR * total / total == HEALTH_BAR
-	//fill_rectangle(CTRL_X, CTRL_Y + CTRL_MARGIN, FIELD_SIZE + MARGIN * 2, FIELD_SIZE + font12.height + MARGIN * 2, display_colors[color]);
+	//fill_rectangle(CTRL_X, CTRL_Y + CTRL_MARGIN, FIELD_SIZE + MARGIN * 2, FIELD_SIZE + font12.size + MARGIN * 2, display_colors[color]);
 	//
 }
 
@@ -393,10 +391,10 @@ void if_battle(const void *argument, const struct game *game)
 		if (pawn->troop->owner == state->player) color = Self;
 		else if (allies(game, state->player, pawn->troop->owner)) color = Ally;
 		else color = Enemy;
-		fill_rectangle(CTRL_X, CTRL_Y + CTRL_MARGIN, FIELD_SIZE + MARGIN * 2, FIELD_SIZE + font12.height + MARGIN * 2, display_colors[color]);
+		fill_rectangle(CTRL_X, CTRL_Y + CTRL_MARGIN, FIELD_SIZE + MARGIN * 2, FIELD_SIZE + font12.size + MARGIN * 2, display_colors[color]);
 		display_troop(pawn->troop->unit->index, CTRL_X + MARGIN, CTRL_Y + CTRL_MARGIN + MARGIN, Player + pawn->troop->owner, Black, pawn->count);
 
-		show_health(pawn, CTRL_X, CTRL_Y + CTRL_MARGIN + FIELD_SIZE + font12.height + MARGIN * 2 + MARGIN);
+		show_health(pawn, CTRL_X, CTRL_Y + CTRL_MARGIN + FIELD_SIZE + font12.size + MARGIN * 2 + MARGIN);
 
 		if (pawn->troop->owner == state->player)
 			if_battle_pawn(game, state, pawn);
@@ -414,52 +412,6 @@ void if_battle(const void *argument, const struct game *game)
 
 	show_button(S("Ready"), BUTTON_ENTER_X, BUTTON_ENTER_Y);
 
-	// TODO finish this test
-	/*{
-		// http://xcb.freedesktop.org/tutorial/mousecursors/
-		// https://github.com/eBrnd/i3lock-color/blob/master/xcb.c	  create_cursor()
-		// http://xcb-util.sourcearchive.com/documentation/0.3.3-1/group__xcb____image__t_g029605b47d6ab95eac66b125a9a7dd64.html
-		// https://en.wikipedia.org/wiki/X_BitMap#Format
-
-		xcb_pixmap_t bitmap;
-		xcb_pixmap_t mask;
-		xcb_cursor_t cursor;
-
-		uint32_t width = 32, height = 32;
-
-		// in the example: curs_bits is unsigned char [50]
-		// width and height are 11 and 19
-		// The bitmap data is assumed to be in xbm format (i.e., 8-bit scanline unit, LSB-first, 8-bit pad). If depth is greater than 1, the bitmap will be expanded to a pixmap using the given foreground and background pixels fg and bg.
-
-		unsigned char curs_bits[...];
-		unsigned char mask_bits[...];
-
-		bitmap = xcb_create_pixmap_from_bitmap_data(connection, window,
-													curs_bits,
-													width, height,
-													1,
-													screen->white_pixel, screen->black_pixel,
-													0);
-		mask = xcb_create_pixmap_from_bitmap_data(connection, window,
-												  mask_bits,
-												  width, height,
-												  1,
-												  screen->white_pixel, screen->black_pixel,
-												  0);
-
-		cursor = xcb_generate_id(connection);
-		xcb_create_cursor(connection,
-						  cursor,
-						  bitmap,
-						  mask,
-						  65535, 65535, 65535,
-						  0, 0, 0,
-						  0, 0);
-
-		xcb_free_pixmap(connection, bitmap);
-		xcb_free_pixmap(connection, mask);
-	}*/
-
 #if defined(DEBUG)
 	/*for(size_t y = 0; y < BATTLEFIELD_HEIGHT; ++y)
 	{
@@ -469,7 +421,7 @@ void if_battle(const void *argument, const struct game *game)
 			end = format_uint(end, x, 10);
 			*end++ = ',';
 			end = format_uint(end, y, 10);
-			draw_string(buffer, end - buffer, BATTLE_X + x * object_group[Battlefield].width, BATTLE_Y + y * object_group[Battlefield].height, &font9, White);
+			draw_string(buffer, end - buffer, BATTLE_X + x * object_group[Battlefield].width, BATTLE_Y + y * object_group[Battlefield].height, &font10, White);
 		}
 	}*/
 #endif

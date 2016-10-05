@@ -1,19 +1,21 @@
-# Copyright 1999-2015 Gentoo Foundation
+# Copyright 1999-2016 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v3
 # $Id$
 
 # games-strategy/conquest_of_levidon
 
+# https://help.github.com/articles/creating-releases/
+
 EAPI="4"
 
 inherit eutils
-if [[ ${PV} == "9999" ]] ; then
-	ESVN_REPO_URI="svn://svn.savannah.gnu.org/nano/trunk/nano"
-	inherit subversion autotools
-else
+#if [[ ${PV} == "9999" ]] ; then
+#	ESVN_REPO_URI="svn://svn.savannah.gnu.org/nano/trunk/nano"
+#	inherit subversion autotools
+#else
 	MY_P=${PN}-${PV/_}
-	SRC_URI="http://www.nano-editor.org/dist/v${PV:0:3}/${MY_P}.tar.gz"
-fi
+	SRC_URI="https://github/martinkunev/${PN}/${P}.tar.gz"
+#fi
 
 DESCRIPTION="Turn-based medieval strategic game"
 HOMEPAGE="http://www.nano-editor.org/ https://www.gentoo.org/doc/en/nano-basics-guide.xml"
@@ -28,7 +30,8 @@ RDEPEND="media-libs/libpng
 	x11-libs/libX11
 	x11-libs/libxcb
 	x11-libs/libXext
-	media-fonts/dejavu"
+	media-fonts/dejavu
+	media-libs/freetype"
 DEPEND="${RDEPEND}
 	dev-lang/perl"
 

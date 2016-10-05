@@ -193,8 +193,8 @@ void image_mask(const struct image *restrict image, png_byte **rows)
 
 void image_draw(const struct image *restrict image, unsigned x, unsigned y)
 {
+//	glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 	glColor4ub(255, 255, 255, 255); // TODO why is this necessary
-	glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 	glBindTexture(GL_TEXTURE_2D, image->texture);
 
 	glEnable(GL_TEXTURE_2D);
@@ -218,8 +218,8 @@ void image_draw(const struct image *restrict image, unsigned x, unsigned y)
 
 void image_draw_mask(const struct image *restrict image, unsigned x, unsigned y, const unsigned char color[static 4])
 {
+//	glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	glColor4ub(color[0], color[1], color[2], color[3]);
-	glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	glBindTexture(GL_TEXTURE_2D, image->texture);
 
 	glEnable(GL_TEXTURE_2D);
@@ -243,8 +243,8 @@ void image_draw_mask(const struct image *restrict image, unsigned x, unsigned y,
 
 void display_image(const struct image *restrict image, unsigned x, unsigned y, unsigned width, unsigned height)
 {
+//	glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 	glColor4ub(255, 255, 255, 255); // TODO why is this necessary
-	glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 	glBindTexture(GL_TEXTURE_2D, image->texture);
 
 	glEnable(GL_TEXTURE_2D);

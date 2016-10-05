@@ -7,8 +7,7 @@ M	pawn trembling (sometimes when it tries to move to a certain position, but ano
 M	fast units cannot always catch up with slow units even when they are close enough (seen with light cavalry and peasant)
 L	if_init fails on mac (in glXMakeContextCurrent) when used with ssh forwarding
 
-font no longer appears
-	use libxft (? it uses freetype and xrender)
+http://nehe.gamedev.net/tutorial/freetype_fonts_in_opengl/24001/
 
 http://stackoverflow.com/questions/6543924/is-double-buffering-needed-any-more#6544453
 
@@ -135,7 +134,7 @@ refactoring
 -- interface --
 M	display a mirror image of enemy troops
 	? display an ellipse with the owner below the troop (instead of changing some pixels in the sprite)
-M	custom mouse pointer
+M	custom mouse cursor
 M	improve player colors
 M	flag patterns
 M	show troops count, health, etc. only when alt is pressed

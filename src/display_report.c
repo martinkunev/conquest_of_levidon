@@ -24,6 +24,7 @@
 #include "format.h"
 #include "game.h"
 #include "draw.h"
+#include "font.h"
 #include "map.h"
 #include "interface.h"
 #include "input_report.h"

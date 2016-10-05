@@ -22,6 +22,7 @@
 #include "base.h"
 #include "game.h"
 #include "draw.h"
+#include "font.h"
 #include "map.h"
 #include "interface.h"
 #include "input_menu.h"
@@ -76,11 +77,11 @@ void if_load(const void *argument, const struct game *game)
 			if (state->world_index == i) // selected
 			{
 				fill_rectangle(position.x, position.y, object_group[Worlds].width, object_group[Worlds].height, display_colors[White]);
-				draw_string(state->worlds->names[i]->data, state->worlds->names[i]->size, position.x, position.y + (object_group[Worlds].height - font12.height) / 2, &font12, Black);
+				draw_string(state->worlds->names[i]->data, state->worlds->names[i]->size, position.x, position.y + (object_group[Worlds].height - font12.size) / 2, &font12, Black);
 			}
 			else
 			{
-				draw_string(state->worlds->names[i]->data, state->worlds->names[i]->size, position.x, position.y + (object_group[Worlds].height - font12.height) / 2, &font12, White);
+				draw_string(state->worlds->names[i]->data, state->worlds->names[i]->size, position.x, position.y + (object_group[Worlds].height - font12.size) / 2, &font12, White);
 			}
 		}
 	}
@@ -90,7 +91,8 @@ void if_load(const void *argument, const struct game *game)
 
 	if (state->name_size)
 		draw_string(state->name, state->name_size, object_group[Worlds].left, object_group[Worlds].bottom + MARGIN, &font12, White);
-	draw_cursor(state->name, state->name_position, object_group[Worlds].left, object_group[Worlds].bottom + MARGIN, &font12, White);
+	if (!state->loaded)
+		draw_cursor(state->name, state->name_position, object_group[Worlds].left, object_group[Worlds].bottom + MARGIN, &font12, White);
 
 	if (state->loaded)
 	{
@@ -155,11 +157,11 @@ void if_save(const void *argument, const struct game *game)
 		if (state->world_index == i) // selected
 		{
 			fill_rectangle(position.x, position.y, object_group[Worlds].width, object_group[Worlds].height, display_colors[White]);
-			draw_string(state->worlds->names[i]->data, state->worlds->names[i]->size, position.x, position.y + (object_group[Worlds].height - font12.height) / 2, &font12, Black);
+			draw_string(state->worlds->names[i]->data, state->worlds->names[i]->size, position.x, position.y + (object_group[Worlds].height - font12.size) / 2, &font12, Black);
 		}
 		else
 		{
-			draw_string(state->worlds->names[i]->data, state->worlds->names[i]->size, position.x, position.y + (object_group[Worlds].height - font12.height) / 2, &font12, White);
+			draw_string(state->worlds->names[i]->data, state->worlds->names[i]->size, position.x, position.y + (object_group[Worlds].height - font12.size) / 2, &font12, White);
 		}
 	}
 

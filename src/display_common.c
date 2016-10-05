@@ -25,6 +25,7 @@
 #include "format.h"
 #include "game.h"
 #include "draw.h"
+#include "font.h"
 #include "map.h"
 #include "pathfinding.h"
 #include "image.h"
@@ -169,7 +170,7 @@ void display_troop(size_t unit, unsigned x, unsigned y, enum color player, enum 
 	{
 		char buffer[16];
 		size_t length = format_uint(buffer, count, 10) - (uint8_t *)buffer;
-		draw_string(buffer, length, x + (FIELD_SIZE - (length * 10)) / 2, y + FIELD_SIZE, &font12, text);
+		draw_string(buffer, length, x + (FIELD_SIZE - (length * 10)) / 2, y + FIELD_SIZE, &font10, text);
 	}
 }
 

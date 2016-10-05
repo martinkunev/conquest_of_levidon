@@ -27,6 +27,7 @@
 #include "format.h"
 #include "game.h"
 #include "draw.h"
+#include "font.h"
 #include "resources.h"
 #include "map.h"
 #include "pathfinding.h"
@@ -583,7 +584,7 @@ static void if_map_region(const struct region *region, const struct state_map *s
 				image_draw(&image_construction, position.x, position.y);
 			}
 
-			draw_string(S("train:"), PANEL_X + 2, object_group[Dismiss].top + (object_group[Dismiss].height - font12.height) / 2, &font12, Black);
+			draw_string(S("train:"), PANEL_X + 2, object_group[Dismiss].top + (object_group[Dismiss].height - font12.size) / 2, &font12, Black);
 
 			// Display train queue.
 			size_t index;
@@ -756,7 +757,7 @@ void if_map(const void *argument, const struct game *game)
 		const struct region *region = game->regions + state->region;
 
 		// Show the name of the selected region.
-		draw_string(region->name, region->name_length, PANEL_X + image_flag.width + MARGIN, PANEL_Y + (image_flag.height - font12.height) / 2, &font12, Black);
+		draw_string(region->name, region->name_length, PANEL_X + image_flag.width + MARGIN, PANEL_Y + (image_flag.height - font12.size) / 2, &font12, Black);
 
 		if (state->regions_visible[state->region]) if_map_region(region, state, game);
 	}
