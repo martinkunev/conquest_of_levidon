@@ -379,6 +379,14 @@ void if_battle(const void *argument, const struct game *game)
 		else color = Enemy;
 
 		display_troop(pawn->troop->unit->index, BATTLEFIELD_X(pawn->position.x), BATTLEFIELD_Y(pawn->position.y), color, 0, 0);
+
+		for(size_t j = 0; j < i; ++j)
+			if (!allies(game, pawn->troop->owner, battle->pawns[j].troop->owner) && can_fight(pawn->position, battle->pawns + j))
+			{
+				struct point a = {(int)(BATTLE_X + pawn->position.x * FIELD_SIZE + 0.5), (int)(BATTLE_Y + pawn->position.y * FIELD_SIZE + 0.5)};
+				struct point b = {(int)(BATTLE_X + battle->pawns[j].position.x * FIELD_SIZE + 0.5), (int)(BATTLE_Y + battle->pawns[j].position.y * FIELD_SIZE + 0.5)};
+				display_separator(a, b, Enemy);
+			}
 	}
 
 	// Display information about the selected pawn or field (or all pawns if nothing is selected).

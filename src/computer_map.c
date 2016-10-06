@@ -1314,6 +1314,7 @@ int computer_invasion(const struct game *restrict game, unsigned char player, st
 
 //////////////////////////////////
 
+/*
 struct region_info *regions_info_collect_(const struct game *restrict game, unsigned char player, struct context *restrict context)
 {
 	return regions_info_collect(game, player, context);
@@ -1364,6 +1365,7 @@ double bvalue(const struct game *restrict game, unsigned char player, struct reg
 
 	return building_value(regions_info + (region - game->regions), &troops_info, &income, income_shortage, building);
 }
+*/
 
 /*double rate(const struct game *restrict game, unsigned char player, struct region_info *restrict regions_info, const struct context *restrict context)
 {

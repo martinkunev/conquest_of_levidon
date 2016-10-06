@@ -6,6 +6,8 @@ M	pawn trembling (sometimes when it tries to move to a certain position, but ano
 M	fast units cannot always catch up with slow units even when they are close enough (seen with light cavalry and peasant)
 L	if_init fails on mac (in glXMakeContextCurrent) when used with ssh forwarding
 
+https://help.github.com/articles/creating-releases/
+
 http://nehe.gamedev.net/tutorial/freetype_fonts_in_opengl/24001/
 
 http://stackoverflow.com/questions/6543924/is-double-buffering-needed-any-more#6544453
@@ -152,7 +154,6 @@ L	directory tabs images
 
 battle
 H	display region name during battle
-H	when two pawns from different alliances are next to each other, display red line between them (to show that they are fighting)
 H	display round number and number of rounds until retreat
 H	new wall and gate images; open gate image
 	display open gate when there is a pawn on top of the gate

@@ -33,6 +33,8 @@
 #define HEAD_RADIUS 5 /* radius of the head of the arrow */
 #define HEAD_LENGTH 10 /* length of the head of the arrow */
 
+#define SEPARATOR_LENGTH 32
+
 extern Display *display;
 
 struct polygon_draw
@@ -269,5 +271,29 @@ void display_arrow(struct point from, struct point to, int offset_x, int offset_
 	glVertex2f(hx - FRONT_RADIUS * angle_y + offset_x, hy + FRONT_RADIUS * angle_x + offset_y);
 	glVertex2f(from.x - BACK_RADIUS * angle_y + offset_x, from.y + BACK_RADIUS * angle_x + offset_y);
 	glVertex2f(from.x + BACK_RADIUS * angle_y + offset_x, from.y - BACK_RADIUS * angle_x + offset_y);
+	glEnd();
+}
+
+void display_separator(struct point a, struct point b, enum color color)
+{
+	int x = b.x - a.x;
+	int y = b.y - a.y;
+
+	double xm = a.x + x / 2.0;
+	double ym = a.y + y / 2.0;
+
+	double length = sqrt(y * y + x * x);
+	double dx = SEPARATOR_LENGTH * y / (2 * length);
+	double dy = SEPARATOR_LENGTH * x / (2 * length);
+
+	a.x = xm + dx;
+	a.y = ym - dy;
+	b.x = xm - dx;
+	b.y = ym + dy;
+
+	glColor4ubv(display_colors[color]);
+	glBegin(GL_LINES);
+	glVertex2f(a.x, a.y);
+	glVertex2f(b.x, b.y);
 	glEnd();
 }

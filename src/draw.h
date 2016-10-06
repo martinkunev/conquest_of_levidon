@@ -52,3 +52,4 @@ void draw_polygon(const struct polygon *restrict polygon, int offset_x, int offs
 void fill_polygon(const struct polygon *restrict polygon, int offset_x, int offset_y, const unsigned char color[static 4], double scale);
 
 void display_arrow(struct point from, struct point to, int offset_x, int offset_y, enum color color);
+void display_separator(struct point a, struct point b, enum color color);
