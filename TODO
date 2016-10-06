@@ -45,6 +45,7 @@ H	if		battle: new wall and gate images; open gate image
 H	if		battle: tell all players if somebody is retreating
 H	if		battle: show gate strength even if there is a pawn on top of it
 H	if		in battle report, display which players retreated (maybe show white flag)
+H	if		support typing capital letters in game menu
 
 M	if		add indicator (e.g. lighted bulb) to mark the players who have completed their turn
 M	feature	battle: balance battles
