@@ -470,14 +470,14 @@ int movement_collisions_resolve(const struct game *restrict game, struct battle 
 			double direction_y = pawn->position_next.y - pawn->position.y;
 
 			// Find the moves in direction of the tangent of the obstacle pawn.
-			// Choose the move on the opposite side of the obstacle with respect to pawn movement.
+			// Choose the move on the opposite side of the obstacle movement direction with respect to pawn movement direction.
 
 			obstacle_side = sign(cross_product(obstacle->position_next.x - pawn->position.x, obstacle->position_next.y - pawn->position.y, direction_x, direction_y));
 
 			moves_count = path_moves_tangent(pawn, obstacle, distance_covered, moves);
 			while (moves_count--)
 			{
-				move_side = cross_product(moves[moves_count].x - pawn->position.x, moves[moves_count].y - pawn->position.y, direction_x, direction_y);
+				move_side = sign(cross_product(moves[moves_count].x - pawn->position.x, moves[moves_count].y - pawn->position.y, direction_x, direction_y));
 				if (obstacle_side * move_side <= 0)
 				{
 					pawn->position_next = moves[moves_count];
