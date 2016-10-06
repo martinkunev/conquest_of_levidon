@@ -284,12 +284,6 @@ static int play(struct game *restrict game)
 						resource_multiply(&expense, &troop->unit->support, troop->count);
 					resource_add(expenses + troop->owner, &expense);
 				}
-
-				expenses[region->owner].gold -= 10 * sqrt(region->population / 1000.0); // region governing
-
-				for(size_t i = 0; i < BUILDINGS_COUNT; ++i)
-					if (region->built & (1 << i))
-						resource_add(expenses + region->owner, &BUILDINGS[i].support);
 			}
 			else
 			{
@@ -303,6 +297,10 @@ static int play(struct game *restrict game)
 					resource_add(expenses + troop->owner, &expense);
 				}
 			}
+			expenses[region->owner].gold -= 10 * sqrt(region->population / 1000.0); // region governing
+			for(size_t i = 0; i < BUILDINGS_COUNT; ++i)
+				if (region->built & (1 << i))
+					resource_add(expenses + region->owner, &BUILDINGS[i].support);
 
 			region_orders_process(region);
 

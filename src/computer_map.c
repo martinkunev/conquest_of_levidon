@@ -636,8 +636,11 @@ static double map_state_rating(const struct game *restrict game, const struct ar
 		if (!regions_info[i].nearby)
 			continue;
 
-		region_production(region, &income_region);
-		resource_add(&income, &income_region);
+		if (region->owner == region->garrison.owner)
+		{
+			region_production(region, &income_region);
+			resource_add(&income, &income_region);
+		}
 
 		// Add rating proportional to the importance of the region.
 		rating += rating_region(game, region, regions_info + i, survivors + i, player) * regions_info[i].importance;

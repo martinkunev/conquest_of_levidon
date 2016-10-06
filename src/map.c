@@ -107,11 +107,10 @@ void region_income(const struct region *restrict region, unsigned char player, s
 			resource_add(income, &expense);
 		}
 
-		if ((region->owner == player) && (region->owner == region->garrison.owner))
+		if (region->owner == player)
+		{
 			income->gold -= 10 * sqrt(region->population / 1000.0); // region governing
 
-		if ((region->owner == player) && (region->owner == region->garrison.owner))
-		{
 			for(size_t i = 0; i < BUILDINGS_COUNT; ++i)
 				if (region->built & (1 << i))
 					resource_add(income, &BUILDINGS[i].support);

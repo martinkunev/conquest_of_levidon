@@ -2,7 +2,6 @@
 H	F resolve more of the battle collisions
 	two horses blocked during battle (neither attacks an archer) // when they start moving, they collide again
 H	either the AI algorithm or the neighbor state graph are buggy
-H	who pays building support when the garrison is under siege?
 M	pawn trembling (sometimes when it tries to move to a certain position, but another one is there)
 M	fast units cannot always catch up with slow units even when they are close enough (seen with light cavalry and peasant)
 L	if_init fails on mac (in glXMakeContextCurrent) when used with ssh forwarding
@@ -149,7 +148,6 @@ H	assault indicator on the map
 
 menu
 H	startup image
-M	no name editing after a world has been selected
 L	directory tabs images
 
 battle
@@ -178,7 +176,6 @@ L	when all local players are defeated, the report screen has title "Winners" and
 
 map
 H	improve boxes for field and garrison troops (it's not obvious one can place units there until there are units)
-H	show income/expenses adjusted for troop movement (troops moved to garrison, attacking troops, etc.)
 H	troop bar for just battering ram is not displayed on the map (because it's just 1 troop)
 M	place the flag properly
 M	troop movement animation
