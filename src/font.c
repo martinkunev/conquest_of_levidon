@@ -1,3 +1,22 @@
+/*
+ * Conquest of Levidon
+ * Copyright (C) 2016  Martin Kunev <martinkunev@gmail.com>
+ *
+ * This file is part of Conquest of Levidon.
+ *
+ * Conquest of Levidon is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation version 3 of the License.
+ *
+ * Conquest of Levidon is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with Conquest of Levidon.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include <ft2build.h>
 #include <freetype/freetype.h>
 #include <freetype/ftglyph.h>
@@ -7,36 +26,40 @@
 #include "draw.h"
 #include "font.h"
 
+#define TYPEFACE "/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf"
 #define FONT_DPI 72
-
-// TODO refactor the code (rename, etc.) and add comments
 
 // TODO improve return error codes
 // TODO cleanup on error
 
 struct font font10, font12, font24;
 
-static inline int next_p2(int a)
+static inline unsigned topower2(unsigned number)
 {
-	int rval = 1;
-	while (rval < a)
-		rval *= 2;
-	return rval;
+	// Round count up to the next power of 2 that is >= number.
+	unsigned result = 1;
+	while (result < number)
+		result *= 2;
+	return result;
 }
 
 static int bitmap_texture(FT_Bitmap *restrict bitmap, GLuint *restrict texture)
 {
-	unsigned width = next_p2(bitmap->width);
-	unsigned rows = next_p2(bitmap->rows);
+	unsigned width = topower2(bitmap->width);
+	unsigned rows = topower2(bitmap->rows);
 
-	GLubyte *buffer = calloc(rows * width, 2 * sizeof(GLubyte));
+	GLubyte *buffer = malloc(rows * width * 2 * sizeof(*buffer));
 	if (!buffer)
 		return ERROR_MEMORY;
 
 	for(size_t y = 0; y < rows; y++) {
 		for(size_t x = 0; x < width; x++) {
-			buffer[2 * (x + y * width)] = 255;
-			buffer[2 * (x + y * width) + 1] = (x >= bitmap->width || y >= bitmap->rows) ? 0 : bitmap->buffer[x + bitmap->width * y];
+			size_t index = 2 * (y * width + x);
+			buffer[index] = 0xff;
+			if ((x < bitmap->width) && (y < bitmap->rows))
+				buffer[index + 1] = bitmap->buffer[bitmap->width * y + x];
+			else
+				buffer[index + 1] = 0;
 		}
 	}
 
@@ -55,7 +78,7 @@ static int font_load(FT_Library *restrict library, struct font *restrict font, u
 	const size_t count = sizeof(font->textures) / sizeof(*font->textures);
 
 	FT_Face face;
-	if (FT_New_Face(*library, "/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf", 0, &face))
+	if (FT_New_Face(*library, TYPEFACE, 0, &face))
 		return ERROR_MISSING;
 	if (FT_Set_Char_Size(face, size * 64, size * 64, FONT_DPI, FONT_DPI))
 		return ERROR_INPUT;
@@ -80,41 +103,42 @@ static int font_load(FT_Library *restrict library, struct font *restrict font, u
 		if (bitmap_texture(&glyph_bitmap->bitmap, font->textures + i) < 0)
 			return ERROR_MEMORY;
 
+		// Calculate glyph size relative to texture size.
+		double x = (double)glyph_bitmap->bitmap.width / topower2(glyph_bitmap->bitmap.width);
+		double y = (double)glyph_bitmap->bitmap.rows / topower2(glyph_bitmap->bitmap.rows);
+
+		// Create display list for the glyph.
 		glNewList(font->base + i, GL_COMPILE);
-		glBindTexture(GL_TEXTURE_2D, font->textures[i]);
+		{
+			glPushMatrix();
 
-		glPushMatrix();
+			glTranslatef(glyph_bitmap->left, size - glyph_bitmap->top, 0);
+			glBindTexture(GL_TEXTURE_2D, font->textures[i]);
 
-		// Adjust for texture padding.
-		float x = (float)glyph_bitmap->bitmap.width / next_p2(glyph_bitmap->bitmap.width);
-		float y = (float)glyph_bitmap->bitmap.rows / next_p2(glyph_bitmap->bitmap.rows);
+			glBegin(GL_QUADS);
 
-		glTranslatef(glyph_bitmap->left, size - glyph_bitmap->top, 0);
+			glTexCoord2d(0, 0);
+			glVertex2f(0, 0);
 
-		glBegin(GL_QUADS);
+			glTexCoord2d(0, y);
+			glVertex2f(0, glyph_bitmap->bitmap.rows);
 
-		glTexCoord2d(0, 0);
-		glVertex2f(0, 0);
+			glTexCoord2d(x, y);
+			glVertex2f(glyph_bitmap->bitmap.width, glyph_bitmap->bitmap.rows);
 
-		glTexCoord2d(0, y);
-		glVertex2f(0, glyph_bitmap->bitmap.rows);
+			glTexCoord2d(x, 0);
+			glVertex2f(glyph_bitmap->bitmap.width, 0);
 
-		glTexCoord2d(x, y);
-		glVertex2f(glyph_bitmap->bitmap.width, glyph_bitmap->bitmap.rows);
+			glEnd();
 
-		glTexCoord2d(x, 0);
-		glVertex2f(glyph_bitmap->bitmap.width, 0);
+			glPopMatrix();
 
-		glEnd();
-
-		glPopMatrix();
-
-		glTranslatef(face->glyph->advance.x / 64, 0, 0);
+			glTranslatef(face->glyph->advance.x / 64, 0, 0);
+		}
+		glEndList();
 
 		font->advance[i].x = face->glyph->advance.x / 64;
 		font->advance[i].y = face->glyph->advance.y / 64;
-
-		glEndList();
 	}
 
 	FT_Done_Face(face);
